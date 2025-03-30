@@ -244,7 +244,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <pre>
      * <code>
-     *   final SQLTransaction tran = JdbcContext.beginTransaction(IsolationLevel.READ_COMMITTED);
+     *   final SQLTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
      *   try {
      *       // sqlExecutor.insert(...);
      *       // sqlExecutor.update(...);
@@ -372,7 +372,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             logger.warn("Failed to reset connection", e);
         } finally {
             if (_closeConnection) {
-                JdbcContext.releaseConnection(_conn, _ds);
+                JdbcUtil.releaseConnection(_conn, _ds);
             }
         }
     }

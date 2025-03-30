@@ -20,7 +20,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.landawn.abacus.jdbc.JdbcContext;
+import com.landawn.abacus.jdbc.JdbcUtil;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
@@ -30,20 +30,20 @@ public @interface PerfLog {
      *
      * @return
      */
-    long minExecutionTimeForSql() default JdbcContext.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
+    long minExecutionTimeForSql() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG; // 1000
 
     /**
      *
      *
      * @return
      */
-    int maxSqlLogLength() default JdbcContext.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
+    int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
     /**
      * start to log performance for Dao operation/method if the execution time >= the specified(or default) execution time in milliseconds.
      * @return
      */
-    long minExecutionTimeForOperation() default JdbcContext.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
+    long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
 
     /**
      * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.

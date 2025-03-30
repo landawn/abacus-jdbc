@@ -38,7 +38,6 @@ import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
-import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
@@ -198,7 +197,7 @@ import com.landawn.abacus.util.stream.Stream;
  * static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
  * ...
  *
- * final SQLTransaction tran = JdbcContext.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+ * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  *
  * try {
  *      userDao.getById(id);
@@ -818,7 +817,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see CrudDao#batchInsert(Collection)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(entitiesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
+        batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -840,7 +839,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see CrudDao#batchInsert(Collection)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
-        batchSave(entitiesToSave, propNamesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
+        batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -864,7 +863,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(namedInsertSQL, entitiesToSave, JdbcContext.DEFAULT_BATCH_SIZE);
+        batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -1343,8 +1342,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @see ConditionFactory.CF
      * @see AbstractQuery#queryForSingleResult(Class)
      */
-    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws SQLException;
+    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
      * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.

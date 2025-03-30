@@ -121,8 +121,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         final Method[] methods = PreparedStatement.class.getDeclaredMethods();
 
         for (final Method m : methods) {
-            if (Modifier.isPublic(m.getModifiers()) && m.getName().startsWith("set") && m.getParameterCount() == 2 && m.getParameterTypes()[0].equals(
-                    int.class)) {
+            if (Modifier.isPublic(m.getModifiers()) && m.getName().startsWith("set") && m.getParameterCount() == 2
+                    && m.getParameterTypes()[0].equals(int.class)) {
                 stmtParameterClasses.add(m.getParameterTypes()[1]);
             }
         }

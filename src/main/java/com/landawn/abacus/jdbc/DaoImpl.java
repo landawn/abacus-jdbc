@@ -596,11 +596,10 @@ final class DaoImpl {
             return false;
         }
 
-        return isBooleanReturnType
-                && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
-                        || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
-                        || (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
-                        || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8)))));
+        return isBooleanReturnType && ((methodName.startsWith("exists") && (methodName.length() == 6 || Character.isUpperCase(methodName.charAt(6))))
+                || (methodName.startsWith("exist") && (methodName.length() == 5 || Character.isUpperCase(methodName.charAt(5))))
+                || (methodName.startsWith("notExists") && (methodName.length() == 9 || Character.isUpperCase(methodName.charAt(9))))
+                || (methodName.startsWith("notExist") && (methodName.length() == 8 || Character.isUpperCase(methodName.charAt(8)))));
     }
 
     private static boolean isFindFirst(final Method method, final OP op) {
@@ -1713,7 +1712,7 @@ final class DaoImpl {
     }
 
     private static void logDaoMethodPerf(final Logger daoLogger, final String simpleClassMethodName, final PerfLog perfLogAnno, final long startTime) {
-        if (JdbcContext.isDaoMethodPerfLogAllowed && perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
+        if (JdbcUtil.isDaoMethodPerfLogAllowed && perfLogAnno.minExecutionTimeForOperation() >= 0 && daoLogger.isInfoEnabled()) {
             final long elapsedTime = System.currentTimeMillis() - startTime;
 
             if (elapsedTime >= perfLogAnno.minExecutionTimeForOperation()) {
@@ -2096,7 +2095,7 @@ final class DaoImpl {
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
                         : Stream.of(idPropNameList).map(propColumnNameMap::get).toArray(IntFunctions.ofStringArray()));
 
-        final Tuple3<Jdbc.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcContext.getIdGeneratorGetterSetter(daoInterface,
+        final Tuple3<Jdbc.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
                 entityClass, namingPolicy, idClass);
 
         final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder = new Holder<>();
@@ -2187,8 +2186,8 @@ final class DaoImpl {
             }
         }
 
-        final int capacity = daoClassCacheAnno == null ? JdbcContext.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
-        final long evictDelay = daoClassCacheAnno == null ? JdbcContext.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
+        final int capacity = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_CAPACITY : daoClassCacheAnno.capacity();
+        final long evictDelay = daoClassCacheAnno == null ? JdbcUtil.DEFAULT_CACHE_EVICT_DELAY : daoClassCacheAnno.evictDelay();
 
         final Jdbc.DaoCache daoCache = inputDaoCache == null
                 ? (daoClassCacheAnno == null || daoClassCacheAnno.impl() == null) ? Jdbc.DaoCache.create(capacity, evictDelay)
@@ -2413,7 +2412,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
@@ -2450,7 +2449,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
@@ -2483,7 +2482,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
@@ -3930,7 +3929,7 @@ final class DaoImpl {
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
@@ -4003,7 +4002,7 @@ final class DaoImpl {
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
@@ -4074,7 +4073,7 @@ final class DaoImpl {
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
@@ -4503,7 +4502,7 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("count") && paramLen == 1 && Collection.class.equals(paramTypes[0])) {
                         final Collection<String> selectPropNames = N.asList(SQLBuilder.COUNT_ALL);
-                        final int batchSize = JdbcContext.DEFAULT_BATCH_SIZE;
+                        final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
                         final String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
                         final String sql_in_query = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
 
@@ -4633,7 +4632,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 result = N.sum(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParameters(entities).batchUpdate());
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
@@ -4667,7 +4666,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 result = N.sum(proxy.prepareNamedQuery(query).addBatchParameters(entities).batchUpdate());
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
@@ -4713,7 +4712,7 @@ final class DaoImpl {
                         //        if (N.isEmpty(entityJoinInfo)) {
                         //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
                         //        } else {
-                        //            final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                        //            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //            long result = 0;
                         //
                         //            try {
@@ -4754,7 +4753,7 @@ final class DaoImpl {
                             if (idsOrEntities.size() <= batchSize) {
                                 return N.sum(proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(idsOrEntities, paramSetter).batchUpdate());
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 long result = 0;
 
                                 try {
@@ -4794,7 +4793,7 @@ final class DaoImpl {
                         //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
                         //
-                        //        final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                        //        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //        long result = 0;
                         //
                         //        try {
@@ -4913,7 +4912,7 @@ final class DaoImpl {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                         .getBatchSelectSQLBuilderAndParamSetter(sbc);
 
-                                Stream.of(entities).split(JdbcContext.DEFAULT_BATCH_SIZE).forEach(bp -> {
+                                Stream.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
                                         final Jdbc.BiRowMapper<Pair<Object, Object>> pairBiRowMapper = new Jdbc.BiRowMapper<>() {
                                             private Jdbc.BiRowMapper<Object> biRowMapper = null;
@@ -4968,7 +4967,7 @@ final class DaoImpl {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
                             } else {
                                 long result = 0;
-                                final SQLTransaction tran = JdbcContext.beginTransaction(joinEntityDao.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                 try {
                                     result = joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -5007,7 +5006,7 @@ final class DaoImpl {
                                     return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
                                 } else {
                                     int result = 0;
-                                    final SQLTransaction tran = JdbcContext.beginTransaction(joinEntityDao.dataSource());
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                     try {
                                         result = joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
@@ -5022,13 +5021,13 @@ final class DaoImpl {
                                 }
                             } else {
                                 long result = 0;
-                                final SQLTransaction tran = JdbcContext.beginTransaction(joinEntityDao.dataSource());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
                                             .getBatchDeleteSQLBuilderAndParamSetter(sbc);
 
-                                    result = Seq.of(entities).split(JdbcContext.DEFAULT_BATCH_SIZE).sumInt(bp -> {
+                                    result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
                                             return joinEntityDao.prepareQuery(tp._1.apply(bp.size())).setParameters(bp, tp._3).update();
                                         } else {
@@ -5532,7 +5531,7 @@ final class DaoImpl {
                                 }
 
                                 if (batchSize == 0) {
-                                    batchSize = JdbcContext.DEFAULT_BATCH_SIZE;
+                                    batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
                                 }
 
                                 N.checkArgPositive(batchSize, "batchSize");
@@ -5556,7 +5555,7 @@ final class DaoImpl {
 
                                     ids = preparedQuery.batchInsert(keyExtractor, isDefaultIdTester);
                                 } else {
-                                    final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
@@ -5649,7 +5648,7 @@ final class DaoImpl {
                                 }
 
                                 if (batchSize == 0) {
-                                    batchSize = JdbcContext.DEFAULT_BATCH_SIZE;
+                                    batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
                                 }
 
                                 N.checkArgPositive(batchSize, "batchSize");
@@ -5677,7 +5676,7 @@ final class DaoImpl {
                                         updatedRecordCount = N.sum(preparedQuery.batchUpdate());
                                     }
                                 } else {
-                                    final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource());
+                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
@@ -5773,19 +5772,19 @@ final class DaoImpl {
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
                         call = (proxy, args) -> {
-                            final SqlLogConfig sqlLogConfig = JdbcContext.isSQLLogEnabled_TL.get();
+                            final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcContext.minExecutionTimeForSqlPerfLog_TL.get();
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                             final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
-                                JdbcContext.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcContext.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -5798,11 +5797,11 @@ final class DaoImpl {
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcContext.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                 }
 
                                 if (hasSqlLogAnno) {
-                                    JdbcContext.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                    JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                 }
                             }
                         };
@@ -5812,24 +5811,24 @@ final class DaoImpl {
                 } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
                         call = (proxy, args) -> {
-                            final SqlLogConfig sqlLogConfig = JdbcContext.isSQLLogEnabled_TL.get();
+                            final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig SqlPerfLogConfig = JdbcContext.minExecutionTimeForSqlPerfLog_TL.get();
+                            final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                             final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                             final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
-                                JdbcContext.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                             }
 
                             if (hasPerfLogAnno) {
-                                JdbcContext.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                             }
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                            final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
 
                             try {
@@ -5846,11 +5845,11 @@ final class DaoImpl {
                                         }
 
                                         if (hasPerfLogAnno) {
-                                            JdbcContext.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                         }
 
                                         if (hasSqlLogAnno) {
-                                            JdbcContext.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                            JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                         }
                                     }
                                 } else {
@@ -5862,7 +5861,7 @@ final class DaoImpl {
                         };
                     } else {
                         call = (proxy, args) -> {
-                            final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
 
                             try {
@@ -5880,26 +5879,26 @@ final class DaoImpl {
                     call = (proxy, args) -> {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
 
-                        return JdbcContext.callNotInStartedTransaction(dataSource, () -> {
+                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
                             if (hasSqlLogAnno || hasPerfLogAnno) {
-                                final SqlLogConfig sqlLogConfig = JdbcContext.isSQLLogEnabled_TL.get();
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig SqlPerfLogConfig = JdbcContext.minExecutionTimeForSqlPerfLog_TL.get();
+                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                                 final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                                 final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
-                                    JdbcContext.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcContext.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
 
                                 try {
@@ -5916,11 +5915,11 @@ final class DaoImpl {
                                             }
 
                                             if (hasPerfLogAnno) {
-                                                JdbcContext.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                             }
 
                                             if (hasSqlLogAnno) {
-                                                JdbcContext.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                                JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                             }
                                         }
                                     } else {
@@ -5930,7 +5929,7 @@ final class DaoImpl {
 
                                 return result;
                             } else {
-                                final SQLTransaction tran = JdbcContext.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
 
                                 try {
@@ -5950,20 +5949,20 @@ final class DaoImpl {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
 
                         if (hasSqlLogAnno || hasPerfLogAnno) {
-                            return JdbcContext.callNotInStartedTransaction(dataSource, () -> {
-                                final SqlLogConfig sqlLogConfig = JdbcContext.isSQLLogEnabled_TL.get();
+                            return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig SqlPerfLogConfig = JdbcContext.minExecutionTimeForSqlPerfLog_TL.get();
+                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
                                 final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
                                 final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
-                                    JdbcContext.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
+                                    JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
                                 }
 
                                 if (hasPerfLogAnno) {
-                                    JdbcContext.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
+                                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(perfLogAnno.minExecutionTimeForSql(), perfLogAnno.maxSqlLogLength());
                                 }
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
@@ -5976,16 +5975,16 @@ final class DaoImpl {
                                     }
 
                                     if (hasPerfLogAnno) {
-                                        JdbcContext.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
                                     }
 
                                     if (hasSqlLogAnno) {
-                                        JdbcContext.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                        JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
                                     }
                                 }
                             });
                         } else {
-                            return JdbcContext.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
+                            return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
                         }
                     };
                 }
@@ -6009,8 +6008,8 @@ final class DaoImpl {
                 final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.liveTime();
                 final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTime();
 
-                final boolean isQueryMethod = JdbcContext.IS_QUERY_METHOD.test(method);
-                final boolean isUpdateMethod = JdbcContext.IS_UPDATE_METHOD.test(method);
+                final boolean isQueryMethod = JdbcUtil.IS_QUERY_METHOD.test(method);
+                final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method);
                 final boolean isAnnotatedCacheResult = cacheResultAnno != null && !cacheResultAnno.disabled();
                 final boolean isAnnotatedRefreshResult = (refreshResultAnno != null && !refreshResultAnno.disabled());
                 final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCache : null;
@@ -6051,12 +6050,12 @@ final class DaoImpl {
                     final Throwables.BiFunction<Dao, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
-                        final Jdbc.DaoCache localThreadCache = JdbcContext.localThreadCache_TL.get();
+                        final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
                         final boolean isLocalThreadCacheEnabled = isQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
                         final String cacheKey = isAnnotatedCacheResult || isAnnotatedRefreshResult || isLocalThreadCacheEnabled
-                                || isRefreshLocalThreadCacheRequired ? JdbcContext.createCacheKey(tableName, fullClassMethodName, args, daoLogger) : null;
+                                || isRefreshLocalThreadCacheRequired ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, args, daoLogger) : null;
 
                         Object result = null;
 

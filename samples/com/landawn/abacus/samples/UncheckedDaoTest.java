@@ -41,7 +41,6 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.samples.entity.Address;
@@ -106,7 +105,7 @@ public class UncheckedDaoTest {
 
     @Test
     public void test_orderBy() {
-        JdbcContext.enableSqlLog();
+        JdbcUtil.enableSqlLog();
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         uncheckedUserDao.save(user, N.asList("id", "firstName", "lastName", "email"));
 
@@ -157,13 +156,13 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(uncheckedUserDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 
@@ -177,8 +176,8 @@ public class UncheckedDaoTest {
             synchronized (JdbcUtil.class) {
                 if (idx % 2 == 0) {
                     System.out.println("###: enable log for Thread: " + Thread.currentThread());
-                    JdbcContext.enableSqlLog();
-                    JdbcContext.setMinExecutionTimeForSqlPerfLog(0);
+                    JdbcUtil.enableSqlLog();
+                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(0);
                 } else {
                     System.out.println("+++: Not enable log for Thread: " + Thread.currentThread());
                 }
@@ -192,8 +191,8 @@ public class UncheckedDaoTest {
 
                 if (idx % 2 == 0) {
                     System.out.println("###: disable log for Thread: " + Thread.currentThread());
-                    JdbcContext.disableSqlLog();
-                    JdbcContext.setMinExecutionTimeForSqlPerfLog(-1);
+                    JdbcUtil.disableSqlLog();
+                    JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
                 }
             }
         });
@@ -217,13 +216,13 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(uncheckedUserDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource)) {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 

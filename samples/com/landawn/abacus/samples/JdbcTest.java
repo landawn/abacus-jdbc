@@ -33,7 +33,6 @@ import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
-import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -75,28 +74,28 @@ public class JdbcTest {
                 (obj, args, methodSignature) -> N.println(">>>handler2.beforeInvoke: method: " + methodSignature._1.getName()),
                 (result, obj, args, methodSignature) -> N.println("<<<handler2.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result)));
 
-        JdbcContext.setIdExtractorForDao(EmployeeDao.class, rs -> rs.getInt(1));
-        JdbcContext.setIdExtractorForDao(UserDaoL.class, rs -> rs.getLong(1));
+        JdbcUtil.setIdExtractorForDao(EmployeeDao.class, rs -> rs.getInt(1));
+        JdbcUtil.setIdExtractorForDao(UserDaoL.class, rs -> rs.getLong(1));
     }
 
     static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");
     static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
-    static final UserDao userDao = JdbcContext.createDao(UserDao.class, dataSource);
-    static final UserDao userDao12 = JdbcContext.createDao(UserDao.class, "user2", dataSource);
-    static final UserDaoL userDao2 = JdbcContext.createDao(UserDaoL.class, dataSource);
-    static final MyUserDaoA myUserDaoA = JdbcContext.createDao(MyUserDaoA.class, dataSource);
-    static final UncheckedUserDao uncheckedUserDao = JdbcContext.createDao(UncheckedUserDao.class, dataSource);
-    static final UncheckedUserDaoL uncheckedUserDao2 = JdbcContext.createDao(UncheckedUserDaoL.class, dataSource);
-    static final NoUpdateUserDao noUpdateUserDao = JdbcContext.createDao(NoUpdateUserDao.class, dataSource);
-    static final ReadOnlyUserDao readOnlyUserDao = JdbcContext.createDao(ReadOnlyUserDao.class, dataSource);
+    static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+    static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, "user2", dataSource);
+    static final UserDaoL userDao2 = JdbcUtil.createDao(UserDaoL.class, dataSource);
+    static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
+    static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
+    static final UncheckedUserDaoL uncheckedUserDao2 = JdbcUtil.createDao(UncheckedUserDaoL.class, dataSource);
+    static final NoUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NoUpdateUserDao.class, dataSource);
+    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
 
-    static final EmployeeDao employeeDao = JdbcContext.createDao(EmployeeDao.class, dataSource);
-    static final ProjectDao projectDao = JdbcContext.createDao(ProjectDao.class, dataSource);
-    static final EmployeeProjectDao employeeProjectDao = JdbcContext.createDao(EmployeeProjectDao.class, dataSource);
-    static final EmployeeProjectDao2 employeeProjectDao2 = JdbcContext.createDao(EmployeeProjectDao2.class, dataSource);
+    static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
+    static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);
+    static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource);
+    static final EmployeeProjectDao2 employeeProjectDao2 = JdbcUtil.createDao(EmployeeProjectDao2.class, dataSource);
 
-    static final DeviceDao deviceDao = JdbcContext.createDao(DeviceDao.class, dataSource);
-    static final AddressDao addressDao = JdbcContext.createDao(AddressDao.class, dataSource);
+    static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
+    static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
 
     // static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
 
@@ -473,7 +472,7 @@ public class JdbcTest {
         final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
-        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
             userDao.queryForBoolean("firstName", CF.eq("id", 100)); // throw exception.
@@ -484,7 +483,7 @@ public class JdbcTest {
 
         assertEquals("Forrest", userDao.gett(100L).getFirstName());
 
-        try (SQLTransaction tran = JdbcContext.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
+        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
             tran.commit();

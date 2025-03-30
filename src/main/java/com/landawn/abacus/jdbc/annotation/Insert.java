@@ -21,7 +21,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.jdbc.JdbcContext;
+import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
  * The Interface Insert.
@@ -63,7 +63,7 @@ public @interface Insert {
      *
      * @return
      */
-    int batchSize() default JdbcContext.DEFAULT_BATCH_SIZE;
+    int batchSize() default JdbcUtil.DEFAULT_BATCH_SIZE;
 
     /**
      * Unit is seconds.

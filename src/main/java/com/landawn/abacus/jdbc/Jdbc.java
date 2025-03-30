@@ -5482,7 +5482,7 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.put(defaultCacheKey, result, JdbcContext.DEFAULT_CACHE_LIVE_TIME, JdbcContext.DEFAULT_CACHE_MAX_IDLE_TIME);
+            return cache.put(defaultCacheKey, result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME);
         }
 
         @Override
@@ -5497,13 +5497,13 @@ public final class Jdbc {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 
-            if (JdbcContext.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
                 if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
                     return;
                 }
             }
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcContext.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();
@@ -5558,13 +5558,13 @@ public final class Jdbc {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             final Method method = methodSignature._1;
 
-            if (JdbcContext.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
                 if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
                     return;
                 }
             }
 
-            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcContext.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
                 cache.clear();

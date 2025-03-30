@@ -24,7 +24,7 @@ final class JdbcSettings {
 
     //    public static final String DEFAULT_GENERATED_ID_PROP_NAME = "id";
     //
-    //    public static final int DEFAULT_BATCH_SIZE = JdbcContext.DEFAULT_BATCH_SIZE;
+    //    public static final int DEFAULT_BATCH_SIZE = JdbcUtil.DEFAULT_BATCH_SIZE;
     //
     //    public static final int DEFAULT_NO_GENERATED_KEYS = Statement.NO_GENERATED_KEYS;
     //

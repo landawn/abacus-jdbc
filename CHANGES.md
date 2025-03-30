@@ -1,3 +1,7 @@
+### 3.9.2
+
+* Rollback changes in `3.9.0`
+
 ### 3.9.0
 
 * Refactory `JdbcUtil`.

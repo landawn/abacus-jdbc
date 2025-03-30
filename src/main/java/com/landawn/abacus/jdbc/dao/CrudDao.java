@@ -31,7 +31,6 @@ import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.cs;
@@ -135,7 +134,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
-        return batchInsert(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -155,7 +154,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
-        return batchInsert(entities, propNamesToInsert, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -177,7 +176,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      */
     @Beta
     default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws SQLException {
-        return batchInsert(namedInsertSQL, entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchInsert(namedInsertSQL, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -540,7 +539,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -633,7 +632,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default int batchUpdate(final Collection<? extends T> entities) throws SQLException {
-        return batchUpdate(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -653,7 +652,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
-        return batchUpdate(entities, propNamesToUpdate, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpdate(entities, propNamesToUpdate, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -720,7 +719,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
-        return batchUpsert(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -753,7 +752,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws SQLException {
-        return batchUpsert(entities, uniquePropNamesForQuery, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -812,7 +811,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final List<T> entitiesToInsert = map.get(false);
 
         final List<T> result = new ArrayList<>(entities.size());
-        final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcContext.beginTransaction(dataSource()) : null;
+        final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
 
         try {
             if (N.notEmpty(entitiesToInsert)) {
@@ -906,7 +905,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities) throws SQLException {
-        return batchRefresh(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -938,7 +937,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
-        return batchRefresh(entities, propNamesToRefresh, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -1012,7 +1011,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default int batchDelete(final Collection<? extends T> entities) throws SQLException {
-        return batchDelete(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -1054,7 +1053,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException
      */
     default int batchDeleteByIds(final Collection<? extends ID> ids) throws SQLException {
-        return batchDeleteByIds(ids, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**

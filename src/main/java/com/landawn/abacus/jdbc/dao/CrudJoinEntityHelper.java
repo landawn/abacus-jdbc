@@ -21,7 +21,7 @@ import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
-import com.landawn.abacus.jdbc.JdbcContext;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
@@ -233,7 +233,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, null, JdbcContext.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
+        return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
     }
 
     /**
@@ -247,7 +247,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, null, JdbcContext.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
+        return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
     }
 
     /**
@@ -263,7 +263,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcContext.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
+        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
     }
 
     /**
@@ -279,7 +279,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcContext.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
+        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
     }
 
     /**
@@ -295,7 +295,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcContext.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
+        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
     }
 
     /**

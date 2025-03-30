@@ -31,7 +31,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.jdbc.JdbcContext;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.cs;
@@ -127,7 +126,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchInsert(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -149,7 +148,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UncheckedSQLException {
-        return batchInsert(entities, propNamesToInsert, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -173,7 +172,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     @Beta
     @Override
     default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchInsert(namedInsertSQL, entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchInsert(namedInsertSQL, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -561,7 +560,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames)
             throws DuplicatedResultException, UncheckedSQLException {
-        return batchGet(ids, selectPropNames, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -664,7 +663,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default int batchUpdate(final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchUpdate(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -686,7 +685,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UncheckedSQLException {
-        return batchUpdate(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -770,7 +769,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchUpsert(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -805,7 +804,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException {
-        return batchUpsert(entities, uniquePropNamesForQuery, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -860,7 +859,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final List<T> entitiesToInsert = map.get(false);
 
         final List<T> result = new ArrayList<>(entities.size());
-        final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcContext.beginTransaction(dataSource()) : null;
+        final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
 
         try {
             if (N.notEmpty(entitiesToInsert)) {
@@ -954,7 +953,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default int batchRefresh(final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchRefresh(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -986,7 +985,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws UncheckedSQLException {
-        return batchRefresh(entities, propNamesToRefresh, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -1064,7 +1063,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default int batchDelete(final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchDelete(entities, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -1108,7 +1107,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default int batchDeleteByIds(final Collection<? extends ID> ids) throws UncheckedSQLException {
-        return batchDeleteByIds(ids, JdbcContext.DEFAULT_BATCH_SIZE);
+        return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
