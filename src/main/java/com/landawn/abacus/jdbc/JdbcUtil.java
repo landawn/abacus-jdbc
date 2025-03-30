@@ -6560,6 +6560,8 @@ public final class JdbcUtil {
         return columnName;
     }
 
+    // <<==============================================Jdbc Context=======================================================
+
     /**
      * Turns off SQL logging globally.
      * This method sets the flag to disable SQL logging across the entire application.
@@ -8036,4 +8038,6 @@ public final class JdbcUtil {
     public static void closeDaoCacheOnCurrentThread() {
         localThreadCache_TL.remove();
     }
+
+    // ==============================================Jdbc Context=======================================================>>
 }
