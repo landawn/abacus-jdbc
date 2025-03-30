@@ -5381,15 +5381,15 @@ public final class Jdbc {
 
     public interface DaoCache {
 
-        public static DaoCache create(final int capacity, final long evictDelay) {
+        static DaoCache create(final int capacity, final long evictDelay) {
             return new DefaultDaoCache(capacity, evictDelay);
         }
 
-        public static DaoCache createByMap() {
+        static DaoCache createByMap() {
             return new DaoCacheByMap();
         }
 
-        public static DaoCache createByMap(Map<String, Object> map) {
+        static DaoCache createByMap(Map<String, Object> map) {
             return new DaoCacheByMap(map);
         }
 
