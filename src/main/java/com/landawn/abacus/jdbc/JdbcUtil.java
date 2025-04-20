@@ -6060,7 +6060,7 @@ public final class JdbcUtil {
             return getColumnValue(rs, 1);
         } else {
             final int columnCount = columnLabels.size();
-            final Seid id = Seid.of(Strings.EMPTY_STRING);
+            final Seid id = Seid.of(Strings.EMPTY);
 
             for (int i = 1; i <= columnCount; i++) {
                 id.set(columnLabels.get(i - 1), getColumnValue(rs, i));
@@ -6080,7 +6080,7 @@ public final class JdbcUtil {
             return getColumnValue(rs, 1);
         } else {
             final int columnCount = columnLabels.size();
-            final Seid id = Seid.of(Strings.EMPTY_STRING);
+            final Seid id = Seid.of(Strings.EMPTY);
 
             for (int i = 1; i <= columnCount; i++) {
                 id.set(columnLabels.get(i - 1), getColumnValue(rs, i));

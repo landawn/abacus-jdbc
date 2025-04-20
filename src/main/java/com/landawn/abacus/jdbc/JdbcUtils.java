@@ -78,7 +78,7 @@ public final class JdbcUtils {
 
     static final char[] ELEMENT_SEPARATOR_CHAR_ARRAY = Strings.ELEMENT_SEPARATOR.toCharArray();
 
-    static final char[] NULL_CHAR_ARRAY = Strings.NULL_STRING.toCharArray();
+    static final char[] NULL_CHAR_ARRAY = Strings.NULL.toCharArray();
 
     static final int DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER = 1024;
 

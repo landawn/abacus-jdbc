@@ -2092,7 +2092,7 @@ public final class Jdbc {
             @Override
             public EntityId apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                 final int columnCount = columnLabels.size();
-                final Seid entityId = Seid.of(Strings.EMPTY_STRING);
+                final Seid entityId = Seid.of(Strings.EMPTY);
 
                 for (int i = 1; i <= columnCount; i++) {
                     entityId.set(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));

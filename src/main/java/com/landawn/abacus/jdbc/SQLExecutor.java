@@ -4143,7 +4143,7 @@ final class SQLExecutor {
     //        N.checkArgNotNull(isolationLevel, "isolationLevel");
     //
     //        //    final DataSource ds = jdbcSettings != null && jdbcSettings.getQueryWithDataSource() != null
-    //        //            ? getDataSource(Strings.EMPTY_STRING, N.EMPTY_OBJECT_ARRAY, jdbcSettings)
+    //        //            ? getDataSource(Strings.EMPTY, N.EMPTY_OBJECT_ARRAY, jdbcSettings)
     //        //            : _ds;
     //
     //        //    final DataSource ds = _ds;
