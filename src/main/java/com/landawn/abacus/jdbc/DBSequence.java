@@ -24,7 +24,8 @@ import javax.sql.DataSource;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.util.DateUtil;
+import com.landawn.abacus.util.Dates;
+import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.Strings;
 
 // TODO: Auto-generated Javadoc
@@ -99,7 +100,7 @@ public final class DBSequence {
                 }
             }
 
-            final Timestamp now = DateUtil.currentTimestamp();
+            final Timestamp now = Dates.currentTimestamp();
 
             if (JdbcUtil.prepareQuery(conn, "SELECT 1 FROM " + tableName + " WHERE seq_name = ?").setString(1, seqName).queryForInt().orElse(0) < 1) {
                 try { //NOSONAR

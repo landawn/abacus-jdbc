@@ -60,7 +60,8 @@ import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.util.Array;
-import com.landawn.abacus.util.DateUtil;
+import com.landawn.abacus.util.Dates;
+import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
@@ -920,8 +921,8 @@ public class DaoTest {
         assertEquals("Forrest", userDao.queryForString("firstName", CF.eq("firstName", "Forrest")).orElseNull());
         assertEquals("Forrest", userDao.queryForString("firstName", 100L).orElseNull());
 
-        assertTrue(userDao.queryForTimestamp("createTime", CF.eq("firstName", "Forrest")).orElseNull().before(DateUtil.currentTimestamp()));
-        assertTrue(userDao.queryForTimestamp("createTime", 100L).orElseNull().before(DateUtil.currentTimestamp()));
+        assertTrue(userDao.queryForTimestamp("createTime", CF.eq("firstName", "Forrest")).orElseNull().before(Dates.currentTimestamp()));
+        assertTrue(userDao.queryForTimestamp("createTime", 100L).orElseNull().before(Dates.currentTimestamp()));
 
         userDao.deleteById(100L);
 

@@ -30,7 +30,8 @@ import javax.sql.DataSource;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.util.DateUtil;
+import com.landawn.abacus.util.Dates;
+import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.MoreExecutors;
 import com.landawn.abacus.util.N;
@@ -109,7 +110,7 @@ public final class DBLock {
             final String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
 
             JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(),
-                    DateUtil.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+                    Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
