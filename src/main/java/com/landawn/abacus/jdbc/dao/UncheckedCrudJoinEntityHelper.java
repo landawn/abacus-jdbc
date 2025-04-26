@@ -245,7 +245,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      *
      * @param ids
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities.
+     *      All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
+     *      All properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param joinEntitiesToLoad
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.

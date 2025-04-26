@@ -34,7 +34,7 @@ import com.landawn.abacus.jdbc.OP;
 public @interface Update {
 
     /**
-     * Sql script, or id which is defined in sql mapper or sql table class inside DAO class.
+     * SQL script, or id which is defined in SQL mapper or SQL table class inside DAO class.
      *
      * @return
      * @deprecated using {@code sql="SELECT ... FROM ..."} or {@code id="selectById"} for explicit call.

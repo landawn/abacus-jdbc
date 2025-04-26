@@ -49,7 +49,7 @@ public @interface Cache {
     long evictDelay() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY; // unit milliseconds.
 
     /**
-     * The implementation of {@code DaoCache}. it must have a public constructor with type: {@code (int capacity, long evictDelay)}.
+     * The implementation of {@code DaoCache}. It must have a public constructor with type: {@code (int capacity, long evictDelay)}.
      * 
      * @return
      */

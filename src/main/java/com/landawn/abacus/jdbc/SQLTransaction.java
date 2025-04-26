@@ -268,7 +268,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Rolls back the current transaction and executes the specified action after the rollback.
+     * Rolls back the current transaction and execute the specified action after the rollback.
      *
      * @param actionAfterRollback the action to be executed after the current transaction is rolled back, not successfully or not.
      * @throws UncheckedSQLException if an SQL error occurs during the rollback.

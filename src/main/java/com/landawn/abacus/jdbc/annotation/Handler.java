@@ -48,7 +48,7 @@ public @interface Handler {
     Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class; //NOSONAR
 
     /**
-     * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
+     * Those conditions (by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
      * It's only applied if target of annotation {@code Handler} is {@code Type}, and will be ignored if target is method.
      *
      * @return
@@ -56,7 +56,7 @@ public @interface Handler {
     String[] filter() default { ".*" };
 
     /**
-     * This {@code Handler} will be ignored for the invoke from methods of the {@code Dao} if it's set to {@code true}. By default, it's {@code false}.
+     * This {@code Handler} will be ignored for the invoking from methods of the {@code Dao} if it's set to {@code true}. By default, it's {@code false}.
      *
      * @return
      */

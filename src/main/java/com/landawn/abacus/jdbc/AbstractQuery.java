@@ -92,8 +92,9 @@ import com.landawn.abacus.util.stream.Stream;
  * <br />
  *
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
- * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * after any execution methods (which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed,
+ * for example, get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
+ * Except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
  * <br />
  * Generally, don't cache or reuse the instance of this class,
@@ -2048,7 +2049,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters for the prepared statement using the provided parameters setter.
+     * Sets the parameters for the prepared statement using the provided parameters' setter.
      *
      * @param paramsSetter The parameters setter to set the parameters.
      * @return The current instance of the query.
@@ -2098,7 +2099,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets the parameters for the prepared statement using the provided parameters setter.
+     * Sets the parameters for the prepared statement using the provided parameters' setter.
      *
      * @param <T> The type of the parameters.
      * @param parameters The parameters to set.
@@ -2298,7 +2299,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets the parameters for the prepared statement using the provided parameters setter.
+     * Sets the parameters for the prepared statement using the provided parameters' setter.
      *
      * @param paramsSetter The parameters setter to set the parameters.
      * @return The current instance of the query.
@@ -2325,7 +2326,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the parameters for the prepared statement using the provided parameters setter.
+     * Sets the parameters for the prepared statement using the provided parameters' setter.
      *
      * @param <T> The type of the parameters.
      * @param parameters The parameters to set.
@@ -2915,7 +2916,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters a collection of batch parameters to be added
      * @param parametersSetter a function to set the parameters on the statement
      * @return this instance for method chaining
-     * @throws IllegalArgumentException if the batch parameters or parameters setter is null
+     * @throws IllegalArgumentException if the batch parameters or parameters setter are null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -2934,7 +2935,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters an iterator over the batch parameters to be added
      * @param parametersSetter a function to set the parameters on the statement
      * @return this instance for method chaining
-     * @throws IllegalArgumentException if the batch parameters or parameters setter is null
+     * @throws IllegalArgumentException if the batch parameters or parameters setter are null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3040,7 +3041,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters an iterator over the batch parameters to be added
      * @param parametersSetter a function to set the parameters on the statement
      * @return this instance for method chaining
-     * @throws IllegalArgumentException if the batch parameters or parameters setter is null
+     * @throws IllegalArgumentException if the batch parameters or parameters setter are null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4184,7 +4185,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
      *
      * @return An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise an empty {@code Optional}.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public Optional<Map<String, Object>> findOnlyOne() throws DuplicatedResultException, SQLException {
@@ -4197,7 +4198,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> The type of the result object.
      * @param targetType The class of the result object.
      * @return An {@code Optional} containing the result object if exactly one record is found, otherwise an empty {@code Optional}.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws DuplicatedResultException, SQLException {
@@ -4211,7 +4212,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper The {@code RowMapper} used to map the result set to the result object.
      * @return An {@code Optional} containing the result object if exactly one record is found, otherwise an empty {@code Optional}.
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
@@ -4225,7 +4226,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper The {@code BiRowMapper} used to map the result set to the result object.
      * @return An {@code Optional} containing the result object if exactly one record is found, otherwise an empty {@code Optional}.
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException {
@@ -4236,7 +4237,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes a query and returns a single result as a {@code Map<String, Object>} if exactly one record is found.
      *
      * @return A {@code Map<String, Object>} containing the result if exactly one record is found, otherwise {@code null}.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public Map<String, Object> findOnlyOneOrNull() throws DuplicatedResultException, SQLException {
@@ -4251,7 +4252,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return The result object if exactly one record is found, otherwise {@code null}.
      * @throws IllegalArgumentException If the target type is invalid.
      * @throws IllegalStateException If this query is closed.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public <T> T findOnlyOneOrNull(final Class<? extends T> targetType)
@@ -4284,7 +4285,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return The result object if exactly one record is found, otherwise {@code null}.
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record.
      * @throws IllegalStateException If this query is closed.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper)
@@ -4318,7 +4319,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return The result object if exactly one record is found, otherwise {@code null}.
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record.
      * @throws IllegalStateException If this query is closed.
-     * @throws DuplicatedResultException If more than one record is found by the query.
+     * @throws DuplicatedResultException If the query finds more than one record.
      * @throws SQLException If a database access error occurs.
      */
     public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper)
@@ -4607,7 +4608,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult
      * @return
      * @throws SQLException
-     * @deprecated the result size should be limited in database server side by sql scripts.
+     * @deprecated the result size should be limited in database server side by SQL scripts.
      */
     @Deprecated
     public <T> List<T> list(final Class<? extends T> targetType, final int maxResult) throws SQLException {
@@ -4634,7 +4635,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult
      * @return
      * @throws SQLException
-     * @deprecated the result size should be limited in database server side by sql scripts.
+     * @deprecated the result size should be limited in database server side by SQL scripts.
      */
     @Deprecated
     public <T> List<T> list(final Jdbc.RowMapper<? extends T> rowMapper, final int maxResult) throws SQLException {
@@ -4709,7 +4710,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult
      * @return
      * @throws SQLException
-     * @deprecated the result size should be limited in database server side by sql scripts.
+     * @deprecated the result size should be limited in database server side by SQL scripts.
      */
     @Deprecated
     public <T> List<T> list(final Jdbc.BiRowMapper<? extends T> rowMapper, final int maxResult) throws SQLException {

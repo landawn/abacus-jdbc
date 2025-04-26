@@ -46,7 +46,7 @@ public @interface CacheResult {
     long maxIdleTime() default JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME; // unit milliseconds.
 
     /**
-     * Minimum required size to cache query result if the return type is {@code Collection} or {@code DataSet}.
+     * Minimum required size to cache a query result if the return type is {@code Collection} or {@code DataSet}.
      * This setting will be ignored if the return types are not {@code Collection} or {@code DataSet}.
      *
      * @return
@@ -54,7 +54,7 @@ public @interface CacheResult {
     int minSize() default 0; // for list/DataSet.
 
     /**
-     * If the query result won't be cached if it's size is bigger than {@code maxSize} if the return type is {@code Collection} or {@code DataSet}.
+     * If the query result isn't cached if it's size is bigger than {@code maxSize} if the return type is {@code Collection} or {@code DataSet}.
      * This setting will be ignored if the return types are not {@code Collection} or {@code DataSet}.
      *
      * @return
@@ -78,7 +78,7 @@ public @interface CacheResult {
     //    boolean isStaticData() default false;
 
     /**
-     * Those conditions(by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
+     * Those conditions (by contains ignore case or regular expression match) will be joined by {@code OR}, not {@code AND}.
      * It's only applied if target of annotation {@code CacheResult} is {@code Type}, and will be ignored if target is method.
      *
      * @return

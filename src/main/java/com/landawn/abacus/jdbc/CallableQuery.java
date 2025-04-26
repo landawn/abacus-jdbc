@@ -57,8 +57,9 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 
 /**
  * The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
- * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * after any execution methods (which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed,
+ * for example, get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
+ * Except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
  * <br />
  * Generally, don't cache or reuse the instance of this class,
@@ -1022,7 +1023,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameters a map containing parameter names and their corresponding values
      * @return the current instance of {@code CallableQuery}
-     * @throws IllegalArgumentException if the parameters map is null
+     * @throws IllegalArgumentException if the parameter map is null
      * @throws SQLException if a database access error occurs
      */
     public CallableQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {

@@ -21,7 +21,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Replace the parts defined with format {@code {part}} in the sql annotated to the method.
+ * Replace the parts defined with format {@code {part}} in the SQL annotated to the method.
  * For example:
  * <p>
  * <code>

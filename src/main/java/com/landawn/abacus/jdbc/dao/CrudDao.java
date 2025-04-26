@@ -62,7 +62,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * @param <T>
  * @param <ID> use {@code Void} if there is no id defined/annotated with {@code @Id} in target entity class {@code T}.
- * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <SB> {@code SQLBuilder} used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -533,7 +533,9 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      *
      * @param ids
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities.
+     *      All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
+     *      All properties(columns) will be selected, excluding the properties of joining entities, if the specified {@code selectPropNames} is {@code null}.
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.
      * @throws SQLException
@@ -545,7 +547,9 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      *
      * @param ids
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}. all properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities.
+     *      All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
+     *      All properties(columns) will be selected, excluding the properties of joining entities, if {@code selectPropNames} is {@code null}.
      * @param batchSize
      * @return
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}.

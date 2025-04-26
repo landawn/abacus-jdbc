@@ -38,7 +38,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  *
  * @param <T>
- * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <SB> {@code SQLBuilder} used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD>
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
