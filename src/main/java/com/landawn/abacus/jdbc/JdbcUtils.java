@@ -1900,19 +1900,19 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param sourceDataSource the DataSource to get the database connection from
      * @param querySQL the SQL query to execute to retrieve the data
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final javax.sql.DataSource sourceDataSource, final String querySQL) throws SQLException, IOException {
+    public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySQL, final File out) throws SQLException, IOException {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return exportCSV(out, conn, querySQL);
+            return exportCSV(conn, querySQL, out);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -1924,16 +1924,16 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param conn the Connection to the database
      * @param querySQL the SQL query to execute to retrieve the data
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL) throws SQLException, IOException {
-        return exportCSV(out, conn, querySQL, true, true);
+    public static long exportCSV(final Connection conn, final String querySQL, final File out) throws SQLException, IOException {
+        return exportCSV(conn, querySQL, true, true, out);
     }
 
     /**
@@ -1943,19 +1943,19 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true}.
      * Each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param conn the Connection to the database
      * @param querySQL the SQL query to execute to retrieve the data
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL, final boolean writeTitle, final boolean quoted)
+    public static long exportCSV(final Connection conn, final String querySQL, final boolean writeTitle, final boolean quoted, final File out)
             throws SQLException, IOException {
-        return exportCSV(out, conn, querySQL, null, writeTitle, quoted);
+        return exportCSV(conn, querySQL, null, writeTitle, quoted, out);
     }
 
     /**
@@ -1965,26 +1965,26 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true}.
      * Each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param conn the Connection to the database
      * @param querySQL the SQL query to execute to retrieve the data
      * @param selectColumnNames the collection of column names to be selected
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final Connection conn, final String querySQL, final Collection<String> selectColumnNames,
-            final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
+    public static long exportCSV(final Connection conn, final String querySQL, final Collection<String> selectColumnNames, final boolean writeTitle,
+            final boolean quoted, final File out) throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySQL);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 
             setFetchForBigResult(conn, stmt);
 
-            return exportCSV(out, stmt, selectColumnNames, writeTitle, quoted);
+            return exportCSV(stmt, selectColumnNames, writeTitle, quoted, out);
         }
     }
 
@@ -1994,15 +1994,15 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title, and each value will be quoted.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param stmt the PreparedStatement to execute to retrieve the data
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final PreparedStatement stmt) throws SQLException, IOException {
-        return exportCSV(out, stmt, true, true);
+    public static long exportCSV(final PreparedStatement stmt, final File out) throws SQLException, IOException {
+        return exportCSV(stmt, true, true, out);
     }
 
     /**
@@ -2012,18 +2012,18 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true}.
      * Each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param stmt the PreparedStatement to execute to retrieve the data
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final PreparedStatement stmt, final boolean writeTitle, final boolean quoted)
+    public static long exportCSV(final PreparedStatement stmt, final boolean writeTitle, final boolean quoted, final File out)
             throws SQLException, IOException {
-        return exportCSV(out, stmt, null, writeTitle, quoted);
+        return exportCSV(stmt, null, writeTitle, quoted, out);
     }
 
     /**
@@ -2033,25 +2033,25 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true}.
      * Each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param stmt the PreparedStatement to execute to retrieve the data
      * @param selectColumnNames the collection of column names to be selected
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final PreparedStatement stmt, final Collection<String> selectColumnNames, final boolean writeTitle,
-            final boolean quoted) throws SQLException, IOException {
+    public static long exportCSV(final PreparedStatement stmt, final Collection<String> selectColumnNames, final boolean writeTitle, final boolean quoted,
+            final File out) throws SQLException, IOException {
         ResultSet rs = null;
 
         try {
             rs = JdbcUtil.executeQuery(stmt);
             // rs.setFetchSize(DEFAULT_FETCH_SIZE);
 
-            return exportCSV(out, rs, selectColumnNames, writeTitle, quoted);
+            return exportCSV(rs, selectColumnNames, writeTitle, quoted, out);
         } finally {
             JdbcUtil.closeQuietly(rs);
         }
@@ -2063,15 +2063,15 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title, and each value will be quoted.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param rs the ResultSet containing the data to be exported
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final ResultSet rs) throws SQLException, IOException {
-        return exportCSV(out, rs, true, true);
+    public static long exportCSV(final ResultSet rs, final File out) throws SQLException, IOException {
+        return exportCSV(rs, true, true, out);
     }
 
     /**
@@ -2081,17 +2081,17 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true}.
      * Each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param rs the ResultSet containing the data to be exported
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final ResultSet rs, final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
-        return exportCSV(out, rs, null, writeTitle, quoted);
+    public static long exportCSV(final ResultSet rs, final boolean writeTitle, final boolean quoted, final File out) throws SQLException, IOException {
+        return exportCSV(rs, null, writeTitle, quoted, out);
     }
 
     /**
@@ -2101,24 +2101,24 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true}.
      * Each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the File to write the CSV data to
      * @param rs the ResultSet containing the data to be exported
      * @param selectColumnNames the collection of column names to be selected
      * @param writeTitle whether to write the column names as the first line
      * @param quoted whether to quote each value in the CSV file
+     * @param out the File to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final File out, final ResultSet rs, final Collection<String> selectColumnNames, final boolean writeTitle, final boolean quoted)
+    public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final boolean writeTitle, final boolean quoted, final File out)
             throws SQLException, IOException {
         if (!out.exists()) {
             out.createNewFile(); //NOSONAR
         }
 
         try (Writer writer = IOUtil.newFileWriter(out)) {
-            return exportCSV(writer, rs, selectColumnNames, writeTitle, quoted);
+            return exportCSV(rs, selectColumnNames, writeTitle, quoted, writer);
         }
     }
 
@@ -2128,19 +2128,19 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title, and each value will be quoted.
      * </p>
-     *
-     * @param out the Writer to write the CSV data to
      * @param sourceDataSource the DataSource to get the database connection from
      * @param querySQL the SQL query to execute to retrieve the data
+     * @param out the Writer to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final Writer out, final javax.sql.DataSource sourceDataSource, final String querySQL) throws SQLException, IOException {
+    public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySQL, final Writer out) throws SQLException, IOException {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return exportCSV(out, conn, querySQL);
+            return exportCSV(conn, querySQL, out);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -2152,15 +2152,15 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title, and each value will be quoted.
      * </p>
-     *
-     * @param out the Writer to write the CSV data to
      * @param conn the Connection to the database
      * @param querySQL the SQL query to execute to retrieve the data
+     * @param out the Writer to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final Writer out, final Connection conn, final String querySQL) throws SQLException, IOException {
+    public static long exportCSV(final Connection conn, final String querySQL, final Writer out) throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySQL);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -2168,7 +2168,7 @@ public final class JdbcUtils {
 
             setFetchForBigResult(conn, stmt);
 
-            return exportCSV(out, rs);
+            return exportCSV(rs, out);
         }
     }
 
@@ -2178,15 +2178,15 @@ public final class JdbcUtils {
      * Each line in the output file/Writer is an array of JSON String without root bracket.
      * The first line of the CSV file will contain the column names as the title, and each value will be quoted.
      * </p>
-     *
-     * @param out the Writer to write the CSV data to
      * @param rs the ResultSet containing the data to be exported
+     * @param out the Writer to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final Writer out, final ResultSet rs) throws SQLException, IOException {
-        return exportCSV(out, rs, true, true);
+    public static long exportCSV(final ResultSet rs, final Writer out) throws SQLException, IOException {
+        return exportCSV(rs, true, true, out);
     }
 
     /**
@@ -2196,17 +2196,17 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true},
      * and each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the Writer to write the CSV data to
      * @param rs the ResultSet containing the data to be exported
      * @param writeTitle whether to write the column names as the first line of the CSV file
      * @param quoted whether to quote each value in the CSV file
+     * @param out the Writer to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final Writer out, final ResultSet rs, final boolean writeTitle, final boolean quoted) throws SQLException, IOException {
-        return exportCSV(out, rs, null, writeTitle, quoted);
+    public static long exportCSV(final ResultSet rs, final boolean writeTitle, final boolean quoted, final Writer out) throws SQLException, IOException {
+        return exportCSV(rs, null, writeTitle, quoted, out);
     }
 
     /**
@@ -2216,20 +2216,20 @@ public final class JdbcUtils {
      * The first line of the CSV file will contain the column names as the title if {@code writeTitle} is {@code true},
      * and each value will be quoted if {@code quoted} is {@code true}.
      * </p>
-     *
-     * @param out the Writer to write the CSV data to
      * @param rs the ResultSet containing the data to be exported
      * @param selectColumnNames the collection of column names to be selected for export
      * @param writeTitle whether to write the column names as the first line of the CSV file
      * @param quoted whether to quote each value in the CSV file
+     * @param out the Writer to write the CSV data to
+     *
      * @return the number of rows exported
      * @throws IllegalArgumentException if an argument is invalid
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
     @SuppressWarnings("deprecation")
-    public static long exportCSV(final Writer out, final ResultSet rs, final Collection<String> selectColumnNames, final boolean writeTitle,
-            final boolean quoted) throws IllegalArgumentException, SQLException, IOException {
+    public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final boolean writeTitle, final boolean quoted,
+            final Writer out) throws IllegalArgumentException, SQLException, IOException {
         // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative");
 
         final JSONSerializationConfig config = JSC.create();

@@ -414,7 +414,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(IOUtil.newOutputStreamWriter(System.out), rs);
+            JdbcUtils.exportCSV(rs, IOUtil.newOutputStreamWriter(System.out));
         }
 
         N.println(IOUtil.LINE_SEPARATOR);
@@ -423,7 +423,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(IOUtil.newOutputStreamWriter(System.out), rs, JdbcUtil.getColumnLabelList(rs), true, false);
+            JdbcUtils.exportCSV(rs, JdbcUtil.getColumnLabelList(rs), true, false, IOUtil.newOutputStreamWriter(System.out));
         }
 
         userDao.batchDelete(users);

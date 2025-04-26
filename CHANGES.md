@@ -1,3 +1,8 @@
+### 3.9.5
+
+* Refactor `JdbcUtils.exportCSV(...)`.
+* Improvements and bug fix.
+
 ### 3.9.4
 
 * Improvements and bug fix.
