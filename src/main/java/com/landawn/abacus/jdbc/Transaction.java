@@ -112,7 +112,7 @@ public interface Transaction {
          */
         FAILED_COMMIT,
         /**
-         * Field ROLLBACKED.
+         * Field ROLLED_BACK.
          */
         ROLLED_BACK,
         /**

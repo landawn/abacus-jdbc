@@ -423,7 +423,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("select * from user1");
                 ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(rs, JdbcUtil.getColumnLabelList(rs), true, false, IOUtil.newOutputStreamWriter(System.out));
+            JdbcUtils.exportCSV(rs, JdbcUtil.getColumnLabelList(rs), IOUtil.newOutputStreamWriter(System.out));
         }
 
         userDao.batchDelete(users);

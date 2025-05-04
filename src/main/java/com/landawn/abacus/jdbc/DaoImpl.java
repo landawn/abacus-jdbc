@@ -5994,16 +5994,24 @@ final class DaoImpl {
 
                 final CacheResult cacheResultAnno = StreamEx.of(method.getAnnotations())
                         .select(CacheResult.class)
+                        .filter(it -> !it.disabled())
                         .last()
                         .orElse((daoClassCacheResultAnno != null //
+                                && !daoClassCacheResultAnno.disabled() //
                                 && !Strings.containsAnyIgnoreCase(method.getName(), "page", "paginate") //
-                                && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodNameStartsWith)) ? daoClassCacheResultAnno : null);
+                                && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodNameStartsWith)) //
+                                        ? daoClassCacheResultAnno
+                                        : null);
 
                 final RefreshCache refreshResultAnno = StreamEx.of(method.getAnnotations())
                         .select(RefreshCache.class)
+                        .filter(it -> !it.disabled())
                         .last()
                         .orElse((daoClassRefreshCacheAnno != null // 
-                                && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) ? daoClassRefreshCacheAnno : null);
+                                && !daoClassRefreshCacheAnno.disabled() //
+                                && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) //
+                                        ? daoClassRefreshCacheAnno
+                                        : null);
 
                 final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.liveTime();
                 final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTime();
