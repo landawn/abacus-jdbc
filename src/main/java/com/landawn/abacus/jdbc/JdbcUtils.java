@@ -2037,7 +2037,9 @@ public final class JdbcUtils {
      */
     public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
         if (!output.exists()) {
-            output.createNewFile(); //NOSONAR
+            if (!output.createNewFile()) {
+                throw new IOException("Failed to create file: " + output);
+            }
         }
 
         try (Writer writer = IOUtil.newFileWriter(output)) {

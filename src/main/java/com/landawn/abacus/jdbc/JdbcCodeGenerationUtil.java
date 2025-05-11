@@ -49,6 +49,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
+import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple;
@@ -867,6 +868,72 @@ public final class JdbcCodeGenerationUtil {
                     + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = :" + Strings.toCamelCase(columnLabel)).join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Converts an insert SQL statement to an update SQL statement.
+     *
+     * @param insertSql The insert SQL statement to convert.
+     * @return The converted update SQL statement.
+     */
+    @Beta
+    public static String convertInsertSqlToUpdateSql(final String insertSql) {
+        return convertInsertSqlToUpdateSql(insertSql, null);
+    }
+
+    /**
+     * Converts an insert SQL statement to an update SQL statement with a specified where clause.
+     *
+     * @param insertSql The insert SQL statement to convert.
+     * @param whereClause The where clause to append to the update SQL statement.
+     * @return The converted update SQL statement.
+     */
+    @Beta
+    public static String convertInsertSqlToUpdateSql(final String insertSql, final String whereClause) {
+        final String insertInto = "insert into ";
+        final int insertIntoLen = insertInto.length();
+        final StringBuilder sb = Objectory.createStringBuilder();
+
+        try {
+            int idx = Strings.indexOfIgnoreCase(insertSql, insertInto);
+            int idx2 = insertSql.indexOf('(', idx + insertIntoLen);
+            String tableName = insertSql.substring(idx + insertIntoLen, idx2).trim();
+
+            int idx3 = insertSql.indexOf(')', idx2 + 1);
+            String[] columnNames = N.fromJson(insertSql.substring(idx2 + 1, idx3), String[].class);
+
+            int idx4 = insertSql.indexOf('(', idx3 + 1);
+            int idx5 = insertSql.lastIndexOf(')');
+            List<Object> values = N.fromJson(insertSql.substring(idx4 + 1, idx5), List.class);
+
+            sb.append("UPDATE ").append(tableName).append(" SET ");
+
+            for (int i = 0, len = columnNames.length; i < len; i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+
+                sb.append(checkColumnName(columnNames[i]));
+
+                if (values.get(i) instanceof String) {
+                    sb.append(" = '").append(N.stringOf(values.get(i))).append('\'');
+                } else {
+                    sb.append(" = ").append(N.stringOf(values.get(i)));
+                }
+            }
+
+            sb.append(" WHERE ");
+
+            if (Strings.isNotEmpty(whereClause)) {
+                sb.append(whereClause);
+            }
+
+            return sb.toString();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to convert insert SQL to update SQL: " + insertSql, e);
+        } finally {
+            Objectory.recycle(sb);
         }
     }
 

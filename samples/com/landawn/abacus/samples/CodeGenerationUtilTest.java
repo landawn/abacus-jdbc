@@ -30,6 +30,7 @@ import com.landawn.abacus.util.CodeGenerationUtil.PropNameTableCodeConfig;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
+import com.landawn.abacus.util.SQLBuilder.SCSB;
 import com.landawn.abacus.util.Tuple;
 
 import codes.entity.Account;
@@ -135,6 +136,27 @@ class CodeGenerationUtilTest {
 
         sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(dataSource, "user1");
         N.println(sql);
+    }
+
+    @Test
+    public void test_convertInsertSqlToUpdateSql() {
+        User user = N.fill(User.class);
+        user.setEmail(null);
+
+        String sql = SCSB.insert(user).into(User.class).sql();
+        N.println(sql);
+
+        String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(sql);
+        N.println(updateSql);
+
+        N.println("==================================");
+
+        sql = SCSB.insert(user).into(User.class).sql();
+        N.println(sql);
+
+        updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(sql, "id > 2");
+        N.println(updateSql);
+
     }
 
 }
