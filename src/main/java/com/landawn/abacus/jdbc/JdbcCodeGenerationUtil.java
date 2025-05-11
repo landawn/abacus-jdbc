@@ -929,6 +929,8 @@ public final class JdbcCodeGenerationUtil {
                 sb.append(whereClause);
             }
 
+            sb.append(";");
+
             return sb.toString();
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to convert insert SQL to update SQL: " + insertSql, e);
