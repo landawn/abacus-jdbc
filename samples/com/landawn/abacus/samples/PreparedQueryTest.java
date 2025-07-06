@@ -15,8 +15,8 @@ package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
 import static com.landawn.abacus.samples.JdbcTest.userDao;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

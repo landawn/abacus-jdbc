@@ -117,23 +117,57 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
+ * A comprehensive utility class for JDBC operations providing simplified database access and transaction management.
+ * This class offers various utility methods for executing SQL queries, managing connections, handling transactions,
+ * and working with ResultSets in a more convenient way than standard JDBC.
+ * 
+ * <h3>Key Features:</h3>
+ * <ul>
+ *   <li>Simplified query execution with automatic resource management</li>
+ *   <li>Support for both regular and named SQL queries</li>
+ *   <li>Transaction management with Spring integration support</li>
+ *   <li>Batch operations for improved performance</li>
+ *   <li>Stream-based ResultSet processing</li>
+ *   <li>SQL logging and performance monitoring</li>
+ *   <li>Connection pooling support (HikariCP, C3P0)</li>
+ *   <li>DAO creation and caching</li>
+ * </ul>
  *
- * Performance Tips:
- * <li>Avoid unnecessary/repeated database calls.</li>
- * <li>Only fetch the columns you need or update the columns you want.</li>
- * <li>Index is the key point in a lot of database performance issues.</li>
+ * <h3>Performance Tips:</h3>
+ * <ul>
+ *   <li>Avoid unnecessary/repeated database calls</li>
+ *   <li>Only fetch the columns you need or update the columns you want</li>
+ *   <li>Index is the key point in a lot of database performance issues</li>
+ * </ul>
  *
- * <br />
+ * <h3>Example Usage:</h3>
+ * <pre>{@code
+ * // Simple query execution
+ * DataSet result = JdbcUtil.executeQuery(dataSource, "SELECT * FROM users WHERE age > ?", 18);
+ * 
+ * // Using PreparedQuery
+ * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")) {
+ *     List<User> users = query.setLong(1, userId).list(User.class);
+ * }
+ * 
+ * // Transaction management
+ * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * try {
+ *     // perform database operations
+ *     tran.commit();
+ * } finally {
+ *     tran.rollbackIfNotCommitted();
+ * }
+ * }</pre>
  *
- * @see {@link com.landawn.abacus.condition.ConditionFactory}
- * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
- * @see {@link com.landawn.abacus.annotation.ReadOnly}
- * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
- * @see {@link com.landawn.abacus.annotation.NonUpdatable}
- * @see {@link com.landawn.abacus.annotation.Transient}
- * @see {@link com.landawn.abacus.annotation.Table}
- * @see {@link com.landawn.abacus.annotation.Column}
- *
+ * @see com.landawn.abacus.condition.ConditionFactory
+ * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.annotation.ReadOnly
+ * @see com.landawn.abacus.annotation.ReadOnlyId
+ * @see com.landawn.abacus.annotation.NonUpdatable
+ * @see com.landawn.abacus.annotation.Transient
+ * @see com.landawn.abacus.annotation.Table
+ * @see com.landawn.abacus.annotation.Column
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
@@ -146,32 +180,60 @@ public final class JdbcUtil {
 
     static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
 
+    /**
+     * Default batch size for batch operations. Value: 200
+     */
     public static final int DEFAULT_BATCH_SIZE = 200;
 
+    /**
+     * Default fetch size for retrieving large result sets. Value: 1000
+     */
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
+    /**
+     * Default fetch size for stream-based result processing. Value: 100
+     */
     public static final int DEFAULT_FETCH_SIZE_FOR_STREAM = 100;
 
+    /**
+     * Default capacity for internal caches. Value: 1000
+     */
     public static final int DEFAULT_CACHE_CAPACITY = 1000;
 
     /**
-     * Default cache evict delay in milliseconds
+     * Default cache evict delay in milliseconds. Value: 3000 (3 seconds)
      */
     public static final int DEFAULT_CACHE_EVICT_DELAY = 3 * 1000;
 
     /**
-     * Default cache live time in milliseconds.
+     * Default cache live time in milliseconds. Value: 1800000 (30 minutes)
      */
     public static final int DEFAULT_CACHE_LIVE_TIME = 30 * 60 * 1000;
 
+    /**
+     * Default maximum length for SQL logs. Value: 1024
+     */
     public static final int DEFAULT_MAX_SQL_LOG_LENGTH = 1024;
 
+    /**
+     * Default minimum execution time in milliseconds for SQL performance logging. Value: 1000 (1 second)
+     */
     public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG = 1000L;
 
+    /**
+     * Default minimum execution time in milliseconds for DAO method performance logging. Value: 3000 (3 seconds)
+     */
     public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG = 3000L;
 
+    /**
+     * Default maximum idle time for cache entries in milliseconds. Value: 180000 (3 minutes)
+     */
     public static final int DEFAULT_CACHE_MAX_IDLE_TIME = 3 * 60 * 1000;
 
+    /**
+     * Default SQL extractor function used to extract SQL statements from Statement objects.
+     * This function handles various JDBC driver implementations including HikariCP and C3P0 wrapped statements.
+     */
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
         String clsName = stmtToUse.getClass().getName();
@@ -300,10 +362,13 @@ public final class JdbcUtil {
 
     /**
      * Retrieves the database product information from the given DataSource.
+     * This method establishes a temporary connection to extract metadata about the database.
      *
-     * @param ds The DataSource from which to retrieve the database product information.
-     * @return The database product information.
-     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information.
+     * @param ds The DataSource from which to retrieve the database product information
+     * @return A DBProductInfo object containing the database product name, version, and type
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information
+     * 
+     * @see #getDBProductInfo(Connection)
      */
     public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
         Connection conn = null;
@@ -320,10 +385,19 @@ public final class JdbcUtil {
 
     /**
      * Retrieves the database product information from the given connection.
+     * This method extracts metadata to determine the database type and version.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
+     * if (dbInfo.version() == DBVersion.MYSQL_8) {
+     *     // Use MySQL 8 specific features
+     * }
+     * }</pre>
      *
-     * @param conn The connection to the database.
-     * @return The database product information.
-     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information.
+     * @param conn The connection to the database
+     * @return A DBProductInfo object containing the database product name, version, and type (e.g., MySQL, PostgreSQL, Oracle)
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information
      */
     public static DBProductInfo getDBProductInfo(final Connection conn) throws UncheckedSQLException {
         try {
@@ -397,11 +471,22 @@ public final class JdbcUtil {
 
     /**
      * Creates a HikariCP DataSource with the specified database connection details.
+     * HikariCP is a high-performance JDBC connection pool.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DataSource ds = JdbcUtil.createHikariDataSource(
+     *     "jdbc:mysql://localhost:3306/mydb",
+     *     "username",
+     *     "password"
+     * );
+     * }</pre>
      *
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for the database connection.
-     * @param password The password for the database connection.
-     * @return A DataSource configured with the specified connection details.
+     * @param url The JDBC URL for the database connection
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @return A DataSource configured with HikariCP using the specified connection details
+     * @throws RuntimeException If HikariCP is not available in the classpath or configuration fails
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) {
         try {
@@ -417,14 +502,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a HikariCP DataSource with the specified database connection details.
+     * Creates a HikariCP DataSource with the specified database connection details and pool configuration.
+     * This method allows fine-tuning of the connection pool size.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DataSource ds = JdbcUtil.createHikariDataSource(
+     *     "jdbc:mysql://localhost:3306/mydb",
+     *     "username",
+     *     "password",
+     *     5,   // minIdle
+     *     20   // maxPoolSize
+     * );
+     * }</pre>
      *
-     * @param url
-     * @param user
-     * @param password
-     * @param minIdle
-     * @param maxPoolSize
-     * @return
+     * @param url The JDBC URL for the database connection
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @param minIdle The minimum number of idle connections in the pool
+     * @param maxPoolSize The maximum number of connections in the pool
+     * @return A DataSource configured with HikariCP using the specified connection details and pool settings
+     * @throws RuntimeException If HikariCP is not available in the classpath or configuration fails
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password, final int minIdle,
             final int maxPoolSize) {
@@ -444,11 +542,22 @@ public final class JdbcUtil {
 
     /**
      * Creates a C3P0 DataSource with the specified database connection details.
+     * C3P0 is a mature JDBC connection pooling library.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DataSource ds = JdbcUtil.createC3p0DataSource(
+     *     "jdbc:postgresql://localhost:5432/mydb",
+     *     "username",
+     *     "password"
+     * );
+     * }</pre>
      *
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for the database connection.
-     * @param password The password for the database connection.
-     * @return A DataSource configured with the specified connection details.
+     * @param url The JDBC URL for the database connection
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @return A DataSource configured with C3P0 using the specified connection details
+     * @throws RuntimeException If C3P0 is not available in the classpath or configuration fails
      */
     @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) {
@@ -465,14 +574,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a C3P0 DataSource with the specified database connection details.
+     * Creates a C3P0 DataSource with the specified database connection details and pool configuration.
+     * This method allows configuration of the connection pool size.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DataSource ds = JdbcUtil.createC3p0DataSource(
+     *     "jdbc:oracle:thin:@localhost:1521:xe",
+     *     "username",
+     *     "password",
+     *     3,   // minPoolSize
+     *     15   // maxPoolSize
+     * );
+     * }</pre>
      *
-     * @param url
-     * @param user
-     * @param password
-     * @param minPoolSize
-     * @param maxPoolSize
-     * @return
+     * @param url The JDBC URL for the database connection
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @param minPoolSize The minimum number of connections in the pool
+     * @param maxPoolSize The maximum number of connections in the pool
+     * @return A DataSource configured with C3P0 using the specified connection details and pool settings
+     * @throws RuntimeException If C3P0 is not available in the classpath or configuration fails
      */
     @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password, final int minPoolSize,
@@ -492,12 +614,22 @@ public final class JdbcUtil {
 
     /**
      * Creates a connection to the database using the specified URL, username, and password.
+     * The appropriate JDBC driver is automatically determined from the URL.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = JdbcUtil.createConnection(
+     *     "jdbc:mysql://localhost:3306/mydb",
+     *     "root",
+     *     "password"
+     * );
+     * }</pre>
      *
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for the database connection.
-     * @param password The password for the database connection.
-     * @return A Connection object that represents a connection to the database.
-     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
+     * @param url The JDBC URL for the database connection (e.g., "jdbc:mysql://localhost:3306/mydb")
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @return A Connection object that represents a connection to the database
+     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection or the driver cannot be determined from the URL
      */
     public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException {
         return createConnection(getDriverClassByUrl(url), url, user, password);
@@ -505,13 +637,24 @@ public final class JdbcUtil {
 
     /**
      * Creates a connection to the database using the specified driver class, URL, username, and password.
+     * This method allows explicit specification of the JDBC driver class.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = JdbcUtil.createConnection(
+     *     "com.mysql.cj.jdbc.Driver",
+     *     "jdbc:mysql://localhost:3306/mydb",
+     *     "root",
+     *     "password"
+     * );
+     * }</pre>
      *
-     * @param driverClass The fully qualified name of the JDBC driver class.
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for the database connection.
-     * @param password The password for the database connection.
-     * @return A Connection object that represents a connection to the database.
-     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
+     * @param driverClass The fully qualified name of the JDBC driver class (e.g., "com.mysql.cj.jdbc.Driver")
+     * @param url The JDBC URL for the database connection
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @return A Connection object that represents a connection to the database
+     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection or the driver class is not found
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
@@ -522,13 +665,24 @@ public final class JdbcUtil {
 
     /**
      * Creates a connection to the database using the specified driver class, URL, username, and password.
+     * This method allows type-safe specification of the JDBC driver class.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = JdbcUtil.createConnection(
+     *     com.mysql.cj.jdbc.Driver.class,
+     *     "jdbc:mysql://localhost:3306/mydb",
+     *     "root",
+     *     "password"
+     * );
+     * }</pre>
      *
-     * @param driverClass The fully qualified name of the JDBC driver class.
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for the database connection.
-     * @param password The password for the database connection.
-     * @return A Connection object that represents a connection to the database.
-     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection.
+     * @param driverClass The JDBC driver class
+     * @param url The JDBC URL for the database connection
+     * @param user The username for the database connection
+     * @param password The password for the database connection
+     * @return A Connection object that represents a connection to the database
+     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection
      */
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
@@ -585,9 +739,11 @@ public final class JdbcUtil {
      * it will return the connection associated with the current transaction.
      * Otherwise, it will return a new connection from the DataSource.
      *
-     * @param ds The DataSource from which to retrieve the connection.
-     * @return A Connection object that represents a connection to the database.
-     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the connection.
+     * @param ds The DataSource from which to retrieve the connection
+     * @return A Connection object that represents a connection to the database
+     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the connection
+     * 
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
@@ -617,8 +773,10 @@ public final class JdbcUtil {
      * it will release the connection associated with the current transaction.
      * Otherwise, it will close the connection directly.
      *
-     * @param conn The Connection to be released.
-     * @param ds The DataSource from which the connection was obtained.
+     * @param conn The Connection to be released
+     * @param ds The DataSource from which the connection was obtained
+     * 
+     * @see #getConnection(javax.sql.DataSource)
      */
     public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds) {
         if (conn == null) {
@@ -649,9 +807,10 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified ResultSet.
      *
-     * @param rs
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param rs The ResultSet to close
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the ResultSet
      */
     public static void close(final ResultSet rs) throws UncheckedSQLException {
         if (rs != null) {
@@ -664,22 +823,24 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified ResultSet and optionally its associated Statement.
      *
-     * @param rs
-     * @param closeStatement
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param rs The ResultSet to close
+     * @param closeStatement If true, also closes the Statement that created the ResultSet
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
      */
     public static void close(final ResultSet rs, final boolean closeStatement) throws UncheckedSQLException {
         close(rs, closeStatement, false);
     }
 
     /**
+     * Closes the specified ResultSet and optionally its associated Statement and Connection.
      *
-     * @param rs
-     * @param closeStatement
-     * @param closeConnection
-     * @throws IllegalArgumentException if {@code closeStatement = false} while {@code closeConnection = true}.
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param rs The ResultSet to close
+     * @param closeStatement If true, also closes the Statement that created the ResultSet
+     * @param closeConnection If true, also closes the Connection (requires closeStatement to be true)
+     * @throws IllegalArgumentException If closeStatement is false while closeConnection is true
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
      */
     public static void close(final ResultSet rs, final boolean closeStatement, final boolean closeConnection)
             throws IllegalArgumentException, UncheckedSQLException {
@@ -710,9 +871,10 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified Statement.
      *
-     * @param stmt
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param stmt The Statement to close
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the Statement
      */
     public static void close(final Statement stmt) throws UncheckedSQLException {
         if (stmt != null) {
@@ -725,10 +887,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified Connection.
      *
-     * @param conn
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @deprecated consider using {@link JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)}
+     * @param conn The Connection to close
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the Connection
+     * @deprecated Consider using {@link #releaseConnection(Connection, javax.sql.DataSource)} instead
+     *             to properly handle connection pooling and transaction management
      */
     @Deprecated
     public static void close(final Connection conn) throws UncheckedSQLException {
@@ -742,10 +906,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified ResultSet and Statement.
+     * Resources are closed in the correct order: ResultSet first, then Statement.
      *
-     * @param rs
-     * @param stmt
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param rs The ResultSet to close
+     * @param stmt The Statement to close
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
      */
     public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException {
         try {
@@ -766,10 +932,12 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified Statement and Connection.
+     * Resources are closed in the correct order: Statement first, then Connection.
      *
-     * @param stmt
-     * @param conn
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param stmt The Statement to close
+     * @param conn The Connection to close
+     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
      */
     public static void close(final Statement stmt, final Connection conn) throws UncheckedSQLException {
         try {
@@ -790,11 +958,13 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the specified ResultSet, Statement, and Connection.
+     * Resources are closed in the correct order: ResultSet first, then Statement, then Connection.
      *
-     * @param rs
-     * @param stmt
-     * @param conn
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param rs The ResultSet to close
+     * @param stmt The Statement to close
+     * @param conn The Connection to close
+     * @throws UncheckedSQLException If a SQL exception occurs while closing any of the resources
      */
     public static void close(final ResultSet rs, final Statement stmt, final Connection conn) throws UncheckedSQLException {
         try {
@@ -823,33 +993,36 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally close an {@code ResultSet}.
-     * <p>
+     * Unconditionally closes a ResultSet.
      * Equivalent to {@link ResultSet#close()}, except any exceptions will be ignored.
      * This is typically used in finally blocks.
      *
-     * @param rs
+     * @param rs The ResultSet to close, may be null
      */
     public static void closeQuietly(final ResultSet rs) {
         closeQuietly(rs, null, null);
     }
 
     /**
+     * Unconditionally closes a ResultSet and optionally its associated Statement.
+     * Any exceptions during closing will be logged but not thrown.
      *
-     * @param rs
-     * @param closeStatement
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param rs The ResultSet to close
+     * @param closeStatement If true, also closes the Statement that created the ResultSet
+     * @throws UncheckedSQLException If retrieving the Statement from ResultSet fails
      */
     public static void closeQuietly(final ResultSet rs, final boolean closeStatement) throws UncheckedSQLException {
         closeQuietly(rs, closeStatement, false);
     }
 
     /**
+     * Unconditionally closes a ResultSet and optionally its associated Statement and Connection.
+     * Any exceptions during closing will be logged but not thrown.
      *
-     * @param rs
-     * @param closeStatement
-     * @param closeConnection
-     * @throws IllegalArgumentException if {@code closeStatement = false} while {@code closeConnection = true}.
+     * @param rs The ResultSet to close
+     * @param closeStatement If true, also closes the Statement that created the ResultSet
+     * @param closeConnection If true, also closes the Connection (requires closeStatement to be true)
+     * @throws IllegalArgumentException If closeStatement is false while closeConnection is true
      */
     public static void closeQuietly(final ResultSet rs, final boolean closeStatement, final boolean closeConnection) throws IllegalArgumentException {
         if (closeConnection && !closeStatement) {
@@ -879,25 +1052,23 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally close an {@code Statement}.
-     * <p>
+     * Unconditionally closes a Statement.
      * Equivalent to {@link Statement#close()}, except any exceptions will be ignored.
      * This is typically used in finally blocks.
      *
-     * @param stmt
+     * @param stmt The Statement to close, may be null
      */
     public static void closeQuietly(final Statement stmt) {
         closeQuietly(null, stmt, null);
     }
 
     /**
-     * Unconditionally close an {@code Connection}.
-     * <p>
+     * Unconditionally closes a Connection.
      * Equivalent to {@link Connection#close()}, except any exceptions will be ignored.
      * This is typically used in finally blocks.
      *
-     * @param conn
-     * @deprecated consider using {@link JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)}
+     * @param conn The Connection to close, may be null
+     * @deprecated Consider using {@link #releaseConnection(Connection, javax.sql.DataSource)} instead
      */
     @Deprecated
     public static void closeQuietly(final Connection conn) {
@@ -905,40 +1076,37 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally close the <code>ResultSet, Statement</code>.
-     * <p>
-     * Equivalent to {@link ResultSet#close()}, {@link Statement#close()}, except any exceptions will be ignored.
-     * This is typically used in finally blocks.
+     * Unconditionally closes the ResultSet and Statement.
+     * Equivalent to {@link ResultSet#close()} and {@link Statement#close()}, 
+     * except any exceptions will be ignored. This is typically used in finally blocks.
      *
-     * @param rs
-     * @param stmt
+     * @param rs The ResultSet to close, may be null
+     * @param stmt The Statement to close, may be null
      */
     public static void closeQuietly(final ResultSet rs, final Statement stmt) {
         closeQuietly(rs, stmt, null);
     }
 
     /**
-     * Unconditionally close the <code>Statement, Connection</code>.
-     * <p>
-     * Equivalent to {@link Statement#close()}, {@link Connection#close()}, except any exceptions will be ignored.
-     * This is typically used in finally blocks.
+     * Unconditionally closes the Statement and Connection.
+     * Equivalent to {@link Statement#close()} and {@link Connection#close()}, 
+     * except any exceptions will be ignored. This is typically used in finally blocks.
      *
-     * @param stmt
-     * @param conn
+     * @param stmt The Statement to close, may be null
+     * @param conn The Connection to close, may be null
      */
     public static void closeQuietly(final Statement stmt, final Connection conn) {
         closeQuietly(null, stmt, conn);
     }
 
     /**
-     * Unconditionally close the <code>ResultSet, Statement, Connection</code>.
-     * <p>
-     * Equivalent to {@link ResultSet#close()}, {@link Statement#close()}, {@link Connection#close()}, except any exceptions will be ignored.
-     * This is typically used in finally blocks.
+     * Unconditionally closes the ResultSet, Statement, and Connection.
+     * Equivalent to {@link ResultSet#close()}, {@link Statement#close()}, and {@link Connection#close()}, 
+     * except any exceptions will be ignored. This is typically used in finally blocks.
      *
-     * @param rs
-     * @param stmt
-     * @param conn
+     * @param rs The ResultSet to close, may be null
+     * @param stmt The Statement to close, may be null
+     * @param conn The Connection to close, may be null
      */
     public static void closeQuietly(final ResultSet rs, final Statement stmt, final Connection conn) {
         if (rs != null) {
@@ -969,10 +1137,10 @@ public final class JdbcUtil {
     /**
      * Skips the specified number of rows in the given ResultSet.
      *
-     * @param rs The ResultSet to skip rows in.
-     * @param n The number of rows to skip.
-     * @return The number of rows actually skipped.
-     * @throws SQLException If a SQL exception occurs while skipping rows.
+     * @param rs The ResultSet to skip rows in
+     * @param n The number of rows to skip
+     * @return The number of rows actually skipped (may be less than n if end of ResultSet is reached)
+     * @throws SQLException If a SQL exception occurs while skipping rows
      */
     public static int skip(final ResultSet rs, final int n) throws SQLException {
         return skip(rs, (long) n);
@@ -982,11 +1150,13 @@ public final class JdbcUtil {
 
     /**
      * Skips the specified number of rows in the given ResultSet.
+     * This method attempts to use ResultSet.absolute() for efficiency, but falls back to
+     * iterating through rows if absolute positioning is not supported.
      *
-     * @param rs The ResultSet to skip rows in.
-     * @param n The number of rows to skip.
-     * @return The number of rows actually skipped.
-     * @throws SQLException If a SQL exception occurs while skipping rows.
+     * @param rs The ResultSet to skip rows in
+     * @param n The number of rows to skip
+     * @return The number of rows actually skipped (may be less than n if end of ResultSet is reached)
+     * @throws SQLException If a SQL exception occurs while skipping rows
      * @see ResultSet#absolute(int)
      */
     public static int skip(final ResultSet rs, long n) throws SQLException {
@@ -1019,23 +1189,30 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column count.
+     * Gets the number of columns in the ResultSet.
      *
-     * @param rs
-     * @return
-     * @throws SQLException
+     * @param rs The ResultSet to get column count from
+     * @return The number of columns in the ResultSet
+     * @throws SQLException If a SQL exception occurs while getting the column count
      */
     public static int getColumnCount(final ResultSet rs) throws SQLException {
         return rs.getMetaData().getColumnCount();
     }
 
     /**
-     * Gets the column name list.
+     * Gets the column name list for the specified table.
+     * This method executes a query that returns no rows to retrieve metadata.
      *
-     * @param conn
-     * @param tableName
-     * @return
-     * @throws SQLException
+     * @param conn The database connection
+     * @param tableName The name of the table
+     * @return A list of column names in the order they appear in the table
+     * @throws SQLException If a SQL exception occurs while retrieving column names
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * List<String> columns = JdbcUtil.getColumnNameList(connection, "users");
+     * // Returns: ["id", "username", "email", "created_date", ...]
+     * }</pre>
      */
     public static List<String> getColumnNameList(final Connection conn, final String tableName) throws SQLException {
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
@@ -1061,11 +1238,20 @@ public final class JdbcUtil {
     }
 
     /**
+     * Gets the column label list from the ResultSet metadata.
+     * Column labels are the names used for display, which may differ from actual column names
+     * if aliases are used in the SQL query.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT id AS user_id, name FROM users");
+     * List<String> labels = JdbcUtil.getColumnLabelList(rs);
+     * // Returns: ["user_id", "name"]
+     * }</pre>
      *
-     *
-     * @param rs
-     * @return
-     * @throws SQLException
+     * @param rs The ResultSet to get column labels from
+     * @return A list of column labels in the order they appear in the ResultSet
+     * @throws SQLException If a SQL exception occurs while retrieving column labels
      */
     public static List<String> getColumnLabelList(final ResultSet rs) throws SQLException {
         final ResultSetMetaData metaData = rs.getMetaData();
@@ -1080,12 +1266,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column label.
+     * Gets the column label for the specified column index.
+     * Returns the column label if available, otherwise returns the column name.
      *
-     * @param rsmd
-     * @param columnIndex
-     * @return
-     * @throws SQLException
+     * @param rsmd The ResultSetMetaData to get the label from
+     * @param columnIndex The column index (1-based)
+     * @return The column label or column name if label is empty
+     * @throws SQLException If a SQL exception occurs while retrieving the column label
      */
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         final String result = rsmd.getColumnLabel(columnIndex);
@@ -1094,12 +1281,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the column index starts with from 1, not 0.
+     * Returns the column index for the specified column name.
+     * The search is case-insensitive and checks both column labels and column names.
      *
-     * @param resultSet
-     * @param columnName
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
+     * @param resultSet The ResultSet to search in
+     * @param columnName The name of the column to find
+     * @return The column index (1-based), or -1 if the column is not found
+     * @throws UncheckedSQLException If a SQL exception occurs while searching for the column
      */
     public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws UncheckedSQLException {
         try {
@@ -1110,12 +1298,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the column index starts with from 1, not 0.
+     * Returns the column index for the specified column name.
+     * The search is case-insensitive and checks both column labels and column names.
      *
-     * @param rsmd
-     * @param columnName
-     * @return
-     * @throws SQLException
+     * @param rsmd The ResultSetMetaData to search in
+     * @param columnName The name of the column to find
+     * @return The column index (1-based), or -1 if the column is not found
+     * @throws SQLException If a SQL exception occurs while searching for the column
      */
     public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnName) throws SQLException {
         final int columnCount = rsmd.getColumnCount();
@@ -1186,23 +1375,6 @@ public final class JdbcUtil {
                         return ((oracle.sql.Datum) val).dateValue();
                     }
                 });
-            } else if ((ret instanceof java.sql.Date)) {
-                converterTP = Tuple.of((rs, columnIndex, val) -> {
-                    if ("java.sql.Timestamp".equals(rs.getMetaData().getColumnClassName(columnIndex))) {
-                        return rs.getTimestamp(columnIndex);
-                    } else {
-                        return val;
-                    }
-                }, (rs, columnLabel, val) -> {
-                    final ResultSetMetaData metaData = rs.getMetaData();
-                    final int columnIndex = getColumnIndex(metaData, columnLabel);
-
-                    if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                        return rs.getTimestamp(columnIndex);
-                    } else {
-                        return val;
-                    }
-                });
             } else {
                 converterTP = Tuple.of((rs, columnIndex, val) -> val, (rs, columnLabel, val) -> val);
             }
@@ -1221,11 +1393,21 @@ public final class JdbcUtil {
 
     /**
      * Retrieves the value of the specified column in the current row of the given ResultSet.
+     * This method handles special data types like Blob, Clob, and database-specific date/time types.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT id, name, data FROM users");
+     * while (rs.next()) {
+     *     Object id = JdbcUtil.getColumnValue(rs, 1);
+     *     Object name = JdbcUtil.getColumnValue(rs, 2);
+     * }
+     * }</pre>
      *
-     * @param rs The ResultSet from which to retrieve the column value.
-     * @param columnIndex The index of the column to retrieve, starting from 1.
-     * @return The value of the specified column in the current row of the ResultSet.
-     * @throws SQLException If a SQL exception occurs while retrieving the column value.
+     * @param rs The ResultSet from which to retrieve the column value
+     * @param columnIndex The index of the column to retrieve (1-based)
+     * @return The value of the specified column, with appropriate type conversions applied
+     * @throws SQLException If a SQL exception occurs while retrieving the column value
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
         return getColumnValue(rs, columnIndex, true);
@@ -1235,11 +1417,11 @@ public final class JdbcUtil {
      * Retrieves the value of the specified column in the current row of the given ResultSet.
      * This method also checks the data type of the column value if specified.
      *
-     * @param rs The ResultSet from which to retrieve the column value.
-     * @param columnIndex The index of the column to retrieve, starting from 1.
-     * @param checkDateType Whether to check the data type of the column value.
-     * @return The value of the specified column in the current row of the ResultSet.
-     * @throws SQLException If a SQL exception occurs while retrieving the column value.
+     * @param rs The ResultSet from which to retrieve the column value
+     * @param columnIndex The index of the column to retrieve, starting from 1
+     * @param checkDateType Whether to check the data type of the column value
+     * @return The value of the specified column in the current row of the ResultSet
+     * @throws SQLException If a SQL exception occurs while retrieving the column value
      */
     static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1264,11 +1446,11 @@ public final class JdbcUtil {
     /**
      * Retrieves the value of the specified column in the current row of the given ResultSet.
      *
-     * @param rs The ResultSet from which to retrieve the column value.
-     * @param columnLabel The label of the column to retrieve.
-     * @return The value of the specified column in the current row of the ResultSet.
-     * @throws SQLException If a SQL exception occurs while retrieving the column value.
-     * @deprecated Please consider using {@link #getColumnValue(ResultSet, int)} instead.
+     * @param rs The ResultSet from which to retrieve the column value
+     * @param columnLabel The label of the column to retrieve
+     * @return The value of the specified column in the current row of the ResultSet
+     * @throws SQLException If a SQL exception occurs while retrieving the column value
+     * @deprecated Please consider using {@link #getColumnValue(ResultSet, int)} instead
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
@@ -1307,12 +1489,19 @@ public final class JdbcUtil {
 
     /**
      * Retrieves all values of the specified column in the given ResultSet.
+     * This method reads through the entire ResultSet and collects values from the specified column.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT user_id FROM orders");
+     * List<Long> userIds = JdbcUtil.getAllColumnValues(rs, 1);
+     * }</pre>
      *
-     * @param <T> The type of the column values.
-     * @param rs The ResultSet from which to retrieve the column values.
-     * @param columnIndex The index of the column to retrieve, starting from 1.
-     * @return A list of all values in the specified column.
-     * @throws SQLException If a SQL exception occurs while retrieving the column values.
+     * @param <T> The type of the column values
+     * @param rs The ResultSet from which to retrieve the column values
+     * @param columnIndex The index of the column to retrieve (1-based)
+     * @return A list of all values in the specified column
+     * @throws SQLException If a SQL exception occurs while retrieving the column values
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1395,11 +1584,11 @@ public final class JdbcUtil {
     /**
      * Retrieves all values of the specified column in the given ResultSet.
      *
-     * @param <T> The type of the column values.
-     * @param rs The ResultSet from which to retrieve the column values.
-     * @param columnLabel The label of the column to retrieve.
-     * @return A list of all values in the specified column.
-     * @throws SQLException If a SQL exception occurs while retrieving the column values.
+     * @param <T> The type of the column values
+     * @param rs The ResultSet from which to retrieve the column values
+     * @param columnLabel The label of the column to retrieve
+     * @return A list of all values in the specified column
+     * @throws SQLException If a SQL exception occurs while retrieving the column values or column is not found
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
@@ -1412,72 +1601,56 @@ public final class JdbcUtil {
     }
 
     /**
-     * Retrieves the value of the specified column in the current row of the given ResultSet.
+     * Retrieves the value of the specified column in the current row and converts it to the target type.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT id, amount FROM transactions");
+     * while (rs.next()) {
+     *     Long id = JdbcUtil.getColumnValue(rs, 1, Long.class);
+     *     BigDecimal amount = JdbcUtil.getColumnValue(rs, 2, BigDecimal.class);
+     * }
+     * }</pre>
      *
-     * @param <T> The type of the column value.
-     * @param rs The ResultSet from which to retrieve the column value.
-     * @param columnIndex The index of the column to retrieve, starting from 1.
-     * @param targetClass The class of the column value to retrieve.
-     * @return The value of the specified column in the current row of the ResultSet.
-     * @throws SQLException If a SQL exception occurs while retrieving the column value.
+     * @param <T> The type of the column value
+     * @param rs The ResultSet from which to retrieve the column value
+     * @param columnIndex The index of the column to retrieve (1-based)
+     * @param targetClass The class of the column value to retrieve
+     * @return The value of the specified column converted to the target type
+     * @throws SQLException If a SQL exception occurs while retrieving the column value
      */
     public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnIndex);
     }
 
     /**
-     * Retrieves the value of the specified column in the current row of the given ResultSet.
+     * Retrieves the value of the specified column in the current row and converts it to the target type.
      *
-     * @param <T> The type of the column value.
-     * @param rs The ResultSet from which to retrieve the column value.
-     * @param columnLabel The label of the column to retrieve.
-     * @param targetClass The class of the column value to retrieve.
-     * @return The value of the specified column in the current row of the ResultSet.
-     * @throws SQLException If a SQL exception occurs while retrieving the column value.
-     * @deprecated Please consider using {@link #getColumnValue(ResultSet, int, Class)} instead.
+     * @param <T> The type of the column value
+     * @param rs The ResultSet from which to retrieve the column value
+     * @param columnLabel The label of the column to retrieve
+     * @param targetClass The class of the column value to retrieve
+     * @return The value of the specified column converted to the target type
+     * @throws SQLException If a SQL exception occurs while retrieving the column value
+     * @deprecated Please consider using {@link #getColumnValue(ResultSet, int, Class)} instead
      */
     @Deprecated
     public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass) throws SQLException {
         return N.<T> typeOf(targetClass).get(rs, columnLabel);
     }
 
-    //    /** The Constant column2FieldNameMapPool. */
-    //    private static final Map<Class<?>, ImmutableMap<String, String>> column2FieldNameMapPool = new ConcurrentHashMap<>();
-    //
-    //    /**
-    //     * Gets the column 2 field name map.
-    //     *
-    //     * @param entityClass
-    //     * @return
-    //     */
-    //     static ImmutableMap<String, String> getColumn2FieldNameMap(Class<?> entityClass) {
-    //        ImmutableMap<String, String> result = column2FieldNameMapPool.get(entityClass);
-    //
-    //        if (result == null) {
-    //            final Map<String, String> map = new HashMap<>();
-    //            final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-    //
-    //            for (PropInfo propInfo : entityInfo.propInfoList) {
-    //                if (propInfo.columnName.isPresent()) {
-    //                    map.put(propInfo.columnName.get(), propInfo.name);
-    //                    map.put(propInfo.columnName.get().toLowerCase(), propInfo.name);
-    //                    map.put(propInfo.columnName.get().toUpperCase(), propInfo.name);
-    //                }
-    //            }
-    //
-    //            result = ImmutableMap.copyOf(map);
-    //
-    //            column2FieldNameMapPool.put(entityClass, result);
-    //        }
-    //
-    //        return result;
-    //    }
-
     /**
      * Retrieves a mapping of column names to field names for the specified entity class.
+     * This mapping is used for automatic column-to-property mapping in entity operations.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ImmutableMap<String, String> mapping = JdbcUtil.getColumn2FieldNameMap(User.class);
+     * // Returns: {"user_id" -> "userId", "user_name" -> "userName", ...}
+     * }</pre>
      *
-     * @param entityClass The class of the entity for which to retrieve the column-to-field name mapping.
-     * @return An immutable map where the keys are column names and the values are field names.
+     * @param entityClass The class of the entity for which to retrieve the column-to-field name mapping
+     * @return An immutable map where the keys are column names and the values are field names
      */
     public static ImmutableMap<String, String> getColumn2FieldNameMap(final Class<?> entityClass) {
         return QueryUtil.getColumn2PropNameMap(entityClass);
@@ -1530,20 +1703,26 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query using the provided DataSource and SQL string.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in Spring with the same DataSource 
+     * in the same thread, the Connection from the transaction will be used. Otherwise, a new Connection 
+     * will be obtained from the DataSource.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
+     *         "SELECT * FROM users WHERE age > ?")) {
+     *     List<User> users = query.setInt(1, 18).list(User.class);
+     * }
+     * }</pre>
+     * 
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to prepare
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -1571,22 +1750,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided DataSource and SQL string.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a SQL query with auto-generated keys support using the provided DataSource and SQL string.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
+     *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
+     *     Long generatedId = query.setString(1, "John").setString(2, "john@example.com")
+     *                             .insert().getGeneratedKey(Long.class);
+     * }
+     * }</pre>
+     * 
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @param autoGeneratedKeys whether auto-generated keys should be returned
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to prepare
+     * @param autoGeneratedKeys Whether auto-generated keys should be returned
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -1615,22 +1798,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided DataSource, SQL string, and column indexes for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a SQL query with specific column indexes for auto-generated keys using the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @param returnColumnIndexes the column indexes for which auto-generated keys should be returned
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to prepare
+     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the DataSource, SQL string, or returnColumnIndexes is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -1660,22 +1837,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided DataSource, SQL string, and column names for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a SQL query with specific column names for auto-generated keys using the provided DataSource.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
+     *         "INSERT INTO users (name, email) VALUES (?, ?)", 
+     *         new String[]{"id", "created_date"})) {
+     *     OutParamResult result = query.setString(1, "John").setString(2, "john@example.com").insert();
+     * }
+     * }</pre>
+     * 
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @param returnColumnNames the column names for which auto-generated keys should be returned
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to prepare
+     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the DataSource, SQL string, or returnColumnNames is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -1705,22 +1886,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided DataSource, SQL string, and a custom statement creator.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a SQL query using a custom statement creator with the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @param stmtCreator a function to create a PreparedStatement
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to prepare
+     * @param stmtCreator A function to create a PreparedStatement with custom configuration
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the DataSource, SQL string, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -1751,21 +1926,29 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query using the provided Connection and SQL string.
-     * <p>
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
+     * 
+     * Warning: Never write code like this as it will cause Connection leak:
+     * <pre>{@code
+     * // DON'T DO THIS - Connection leak!
      * JdbcUtil.prepareQuery(dataSource.getConnection(), sql);
-     * </code>
-     * </pre>
-     * </p>
+     * }</pre>
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = dataSource.getConnection();
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")) {
+     *     User user = query.setLong(1, userId).findOnlyOne(User.class);
+     * } finally {
+     *     conn.close();
+     * }
+     * }</pre>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to prepare
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -1775,23 +1958,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided Connection and SQL string.
-     * <p>
+     * Prepares a SQL query with auto-generated keys support using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareQuery(dataSource.getConnection(), sql, autoGeneratedKeys);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @param autoGeneratedKeys whether auto-generated keys should be returned
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to prepare
+     * @param autoGeneratedKeys Whether auto-generated keys should be returned
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -1802,23 +1977,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided Connection, SQL string, and column indexes for auto-generated keys.
-     * <p>
+     * Prepares a SQL query with specific column indexes for auto-generated keys using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareQuery(dataSource.getConnection(), sql, returnColumnIndexes);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @param returnColumnIndexes the column indexes for which auto-generated keys should be returned
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the Connection, SQL string, or returnColumnIndexes is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to prepare
+     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the Connection, SQL string, or returnColumnIndexes is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -1830,23 +1997,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided Connection, SQL string, and column names for auto-generated keys.
-     * <p>
+     * Prepares a SQL query with specific column names for auto-generated keys using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareQuery(dataSource.getConnection(), sql, returnColumnNames);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @param returnColumnNames the column names for which auto-generated keys should be returned
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the Connection, SQL string, or returnColumnNames is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to prepare
+     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the Connection, SQL string, or returnColumnNames is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -1858,23 +2017,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query using the provided Connection and SQL string.
-     * <p>
+     * Prepares a SQL query using a custom statement creator with the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareQuery(dataSource.getConnection(), sql, stmtCreator);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @param stmtCreator a function to create a PreparedStatement
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws IllegalArgumentException if the Connection, SQL string, or stmtCreator is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to prepare
+     * @param stmtCreator A function to create a PreparedStatement with custom configuration
+     * @return A PreparedQuery object representing the prepared SQL query
+     * @throws IllegalArgumentException If the Connection, SQL string, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -1886,15 +2037,23 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query for a large result set using the provided DataSource and SQL string.
-     * <p>
-     * This method sets the fetch direction to {@code FetchDirection.FORWARD} and the fetch size to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * </p>
+     * Prepares a SQL query optimized for large result sets using the provided DataSource.
+     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (PreparedQuery query = JdbcUtil.prepareQueryForBigResult(dataSource, 
+     *         "SELECT * FROM large_table")) {
+     *     query.stream(User.class).forEach(user -> {
+     *         // Process each user
+     *     });
+     * }
+     * }</pre>
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to prepare
+     * @return A PreparedQuery object configured for big result sets
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
     public static PreparedQuery prepareQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
@@ -1902,15 +2061,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a SQL query for a large result set using the provided Connection and SQL string.
-     * <p>
-     * This method sets the fetch direction to {@code FetchDirection.FORWARD} and the fetch size to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * </p>
+     * Prepares a SQL query optimized for large result sets using the provided Connection.
+     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @return a PreparedQuery object representing the prepared SQL query
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to prepare
+     * @return A PreparedQuery object configured for big result sets
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
     public static PreparedQuery prepareQueryForBigResult(final Connection conn, final String sql) throws SQLException {
@@ -1919,20 +2076,26 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query using the provided DataSource and named SQL string.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Named queries use named parameters (e.g., :name) instead of positional parameters (?).
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, 
+     *         "SELECT * FROM users WHERE age > :minAge AND city = :city")) {
+     *     List<User> users = query.setParameter("minAge", 18)
+     *                             .setParameter("city", "New York")
+     *                             .list(User.class);
+     * }
+     * }</pre>
+     * 
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The named SQL string to prepare (e.g., "SELECT * FROM users WHERE id = :id")
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource or named SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -1960,22 +2123,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource and named SQL string.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query with auto-generated keys support using the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys whether auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param autoGeneratedKeys Whether auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource or named SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -2004,22 +2161,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, named SQL string, and column indexes for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes the column indexes for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource, named SQL string, or returnColumnIndexes is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -2049,22 +2200,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, named SQL string, and column names for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames the column names for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnNames is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource, named SQL string, or returnColumnNames is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -2094,22 +2239,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, named SQL string, and a custom statement creator.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query using a custom statement creator with the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator a function to create a PreparedStatement
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or stmtCreator is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param stmtCreator A function to create a PreparedStatement with custom configuration
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource, named SQL string, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2140,21 +2279,26 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query using the provided Connection and named SQL string.
-     * <p>
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql);
-     * </code>
-     * </pre>
-     * </p>
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = dataSource.getConnection();
+     * try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, 
+     *         "UPDATE users SET status = :status WHERE id = :id")) {
+     *     int updated = query.setParameter("status", "ACTIVE")
+     *                        .setParameter("id", userId)
+     *                        .update();
+     * } finally {
+     *     conn.close();
+     * }
+     * }</pre>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection or named SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -2166,23 +2310,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection, named SQL string, and a flag for auto-generated keys.
-     * <p>
+     * Prepares a named SQL query with auto-generated keys support using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, autoGeneratedKeys);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys whether auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param autoGeneratedKeys Whether auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection or named SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -2195,23 +2331,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection, named SQL string, and column indexes for auto-generated keys.
-     * <p>
+     * Prepares a named SQL query with specific column indexes for auto-generated keys using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, returnColumnIndexes);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes the column indexes for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or returnColumnIndexes is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection, named SQL string, or returnColumnIndexes is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -2225,23 +2353,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection, named SQL string, and column names for auto-generated keys.
-     * <p>
+     * Prepares a named SQL query with specific column names for auto-generated keys using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, returnColumnNames);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames the column names for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or returnColumnNames is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection, named SQL string, or returnColumnNames is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -2255,23 +2375,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection and named SQL string.
-     * <p>
+     * Prepares a named SQL query using a custom statement creator with the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, stmtCreator);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator a function to create a PreparedStatement
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or stmtCreator is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @param stmtCreator A function to create a PreparedStatement with custom configuration
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection, named SQL string, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2286,20 +2398,14 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query using the provided DataSource and ParsedSql object.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource or named SQL is null or invalid
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -2328,22 +2434,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, ParsedSql object, and a flag for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query with auto-generated keys support using the provided DataSource and ParsedSql object.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys whether auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param autoGeneratedKeys Whether auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource or named SQL is null or invalid
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -2373,22 +2473,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, ParsedSql object, and column indexes for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource and ParsedSql object.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes the column indexes for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource, named SQL, or returnColumnIndexes is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -2419,22 +2513,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, ParsedSql object, and column names for auto-generated keys.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource and ParsedSql object.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames the column names for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or returnColumnNames is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource, named SQL, or returnColumnNames is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -2465,22 +2553,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided DataSource, ParsedSql object, and a custom statement creator.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a named SQL query using a custom statement creator with the provided DataSource and ParsedSql object.
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator a function to create a PreparedStatement
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the DataSource, named SQL string, or stmtCreator is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param stmtCreator A function to create a PreparedStatement with custom configuration
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the DataSource, named SQL, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2512,21 +2594,13 @@ public final class JdbcUtil {
 
     /**
      * Prepares a named SQL query using the provided Connection and ParsedSql object.
-     * <p>
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection or named SQL is null or invalid
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -2537,23 +2611,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection, ParsedSql object, and a flag for auto-generated keys.
-     * <p>
+     * Prepares a named SQL query with auto-generated keys support using the provided Connection and ParsedSql object.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, autoGeneratedKeys);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param autoGeneratedKeys whether auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection or named SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param autoGeneratedKeys Whether auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection or named SQL is null or invalid
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -2565,23 +2631,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection, ParsedSql object, and column indexes for auto-generated keys.
-     * <p>
+     * Prepares a named SQL query with specific column indexes for auto-generated keys using the provided Connection and ParsedSql object.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, returnColumnIndexes);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnIndexes the column indexes for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or returnColumnIndexes is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection, named SQL, or returnColumnIndexes is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -2594,23 +2652,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection, ParsedSql object, and column names for auto-generated keys.
-     * <p>
+     * Prepares a named SQL query with specific column names for auto-generated keys using the provided Connection and ParsedSql object.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, returnColumnNames);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param returnColumnNames the column names for which auto-generated keys should be returned
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or returnColumnNames is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param returnColumnNames The column names for which auto-generated keys should be returned
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection, named SQL, or returnColumnNames is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -2623,23 +2673,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query using the provided Connection and ParsedSql object.
-     * <p>
+     * Prepares a named SQL query using a custom statement creator with the provided Connection and ParsedSql object.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareNamedQuery(dataSource.getConnection(), namedSql, stmtCreator);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @param stmtCreator a function to create a PreparedStatement
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException if the Connection, named SQL string, or stmtCreator is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @param stmtCreator A function to create a PreparedStatement with custom configuration
+     * @return A NamedQuery object representing the prepared named SQL query
+     * @throws IllegalArgumentException If the Connection, named SQL, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2652,15 +2694,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query for a big result set using the provided DataSource and named SQL string.
-     * <p>
-     * This method configures the fetch direction to {@code FetchDirection.FORWARD} and sets the fetch size to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * </p>
+     * Prepares a named SQL query optimized for large result sets using the provided DataSource.
+     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param ds The DataSource to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @return A NamedQuery object configured for big result sets
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
     public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
@@ -2668,15 +2708,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query for a big result set using the provided DataSource and ParsedSql object.
-     * <p>
-     * This method configures the fetch direction to {@code FetchDirection.FORWARD} and sets the fetch size to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * </p>
+     * Prepares a named SQL query optimized for large result sets using the provided DataSource and ParsedSql object.
+     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
      *
-     * @param ds the DataSource to use for the query
-     * @param namedSql the named SQL string to prepare, for example {@code SELECT first_name, last_name FROM account where id = :id}
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param ds The DataSource to use for the query
+     * @param namedSql The ParsedSql object containing the named SQL
+     * @return A NamedQuery object configured for big result sets
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
     public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
@@ -2684,15 +2722,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a named SQL query for a big result set using the provided Connection and named SQL string.
-     * <p>
-     * This method configures the fetch direction to {@code FetchDirection.FORWARD} and sets the fetch size to {@code DEFAULT_FETCH_SIZE_FOR_BIG_RESULT=1000}.
-     * </p>
+     * Prepares a named SQL query optimized for large result sets using the provided Connection.
+     * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
      *
-     * @param conn the Connection to use for the query
-     * @param namedSql the named SQL string to prepare
-     * @return a NamedQuery object representing the prepared named SQL query
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param namedSql The named SQL string to prepare
+     * @return A NamedQuery object configured for big result sets
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
     public static NamedQuery prepareNamedQueryForBigResult(final Connection conn, final String namedSql) throws SQLException {
@@ -2700,21 +2736,32 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a callable SQL query using the provided DataSource and SQL Stored Procedure.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a callable SQL query (stored procedure) using the provided DataSource.
+     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in Spring with the same DataSource
+     * in the same thread, the Connection from the transaction will be used.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource, 
+     *         "{call get_user_info(?, ?, ?)}")) {
+     *     query.setLong(1, userId);
+     *     query.registerOutParameter(2, Types.VARCHAR);
+     *     query.registerOutParameter(3, Types.DATE);
+     *     query.execute();
+     *     
+     *     String name = query.getString(2);
+     *     Date createdDate = query.getDate(3);
+     * }
+     * }</pre>
+     * 
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @return a CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string for the stored procedure call
+     * @return A CallableQuery object representing the prepared callable SQL query
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -2742,21 +2789,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a callable SQL query using the provided DataSource and SQL Stored Procedure.
-     * <p>
-     * If this method is called where a transaction is started by {@code JdbcUtil.beginTransaction}
-     * or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the Transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Prepares a callable SQL query using a custom statement creator with the provided DataSource.
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to prepare
-     * @return a CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string for the stored procedure call
+     * @param stmtCreator A function to create a CallableStatement with custom configuration
+     * @return A CallableQuery object representing the prepared callable SQL query
+     * @throws IllegalArgumentException If the DataSource, SQL string, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #getConnection(javax.sql.DataSource)
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -2786,22 +2828,14 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a callable SQL query using the provided Connection and SQL Stored Procedure.
-     * <p>
+     * Prepares a callable SQL query (stored procedure) using the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareCallableQuery(dataSource.getConnection(), sql);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @return a CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string for the stored procedure call
+     * @return A CallableQuery object representing the prepared callable SQL query
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -2811,23 +2845,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Prepares a callable SQL query using the provided Connection and SQL Stored Procedure.
-     * <p>
+     * Prepares a callable SQL query using a custom statement creator with the provided Connection.
      * This method does not close the provided Connection after the query is executed.
-     * Never write below code because it will definitely cause {@code Connection} leak:
-     * <pre>
-     * <code>
-     * JdbcUtil.prepareCallableQuery(dataSource.getConnection(), sql, stmtCreator);
-     * </code>
-     * </pre>
-     * </p>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to prepare
-     * @param stmtCreator a function to create a CallableStatement
-     * @return a CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException if the Connection, SQL string, or stmtCreator is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while preparing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string for the stored procedure call
+     * @param stmtCreator A function to create a CallableStatement with custom configuration
+     * @return A CallableQuery object representing the prepared callable SQL query
+     * @throws IllegalArgumentException If the Connection, SQL string, or stmtCreator is null or empty
+     * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -3082,18 +3108,22 @@ public final class JdbcUtil {
 
     /**
      * Executes a SQL query using the provided DataSource and SQL string with optional parameters.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * If a transaction is started in the current thread, the Connection from the transaction will be used.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DataSet result = JdbcUtil.executeQuery(dataSource, 
+     *     "SELECT * FROM users WHERE age > ? AND city = ?", 
+     *     18, "New York");
+     * }</pre>
      *
-     * @param ds the DataSource to use for the query
-     * @param sql the SQL string to execute
-     * @param parameters optional parameters for the SQL query
-     * @return a DataSet object containing the result of the query
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the query
+     * @param ds The DataSource to use for the query
+     * @param sql The SQL string to execute
+     * @param parameters Optional parameters for the SQL query
+     * @return A DataSet object containing the result of the query
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the query
+     * @see PreparedStatement#executeQuery()
      */
     @SafeVarargs
     public static DataSet executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
@@ -3118,16 +3148,27 @@ public final class JdbcUtil {
 
     /**
      * Executes a SQL query using the provided Connection and SQL string with optional parameters.
-     * <p>
      * This method does not close the provided Connection after the query is executed.
-     * </p>
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = dataSource.getConnection();
+     * try {
+     *     DataSet result = JdbcUtil.executeQuery(conn, 
+     *         "SELECT * FROM products WHERE price BETWEEN ? AND ?", 
+     *         10.0, 100.0);
+     * } finally {
+     *     conn.close();
+     * }
+     * }</pre>
      *
-     * @param conn the Connection to use for the query
-     * @param sql the SQL string to execute
-     * @param parameters optional parameters for the SQL query
-     * @return a DataSet object containing the result of the query
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the query
+     * @param conn The Connection to use for the query
+     * @param sql The SQL string to execute
+     * @param parameters Optional parameters for the SQL query
+     * @return A DataSet object containing the result of the query
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the query
+     * @see PreparedStatement#executeQuery()
      */
     @SafeVarargs
     public static DataSet executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -3150,38 +3191,24 @@ public final class JdbcUtil {
         }
     }
 
-    //    /**
-    //     *
-    //     * @param stmt
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    public static DataSet executeQuery(final PreparedStatement stmt) throws SQLException {
-    //        ResultSet rs = null;
-    //
-    //        try {
-    //            rs = executeQuery(stmt);
-    //
-    //            return extractData(rs);
-    //        } finally {
-    //            closeQuietly(rs);
-    //        }
-    //    }
-
     /**
      * Executes a SQL update using the provided DataSource and SQL string with optional parameters.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * This includes INSERT, UPDATE, DELETE, and DDL statements.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * int rowsUpdated = JdbcUtil.executeUpdate(dataSource, 
+     *     "UPDATE users SET status = ? WHERE last_login < ?", 
+     *     "INACTIVE", thirtyDaysAgo);
+     * }</pre>
      *
-     * @param ds the DataSource to use for the update
-     * @param sql the SQL string to execute
-     * @param parameters optional parameters for the SQL update
-     * @return the number of rows affected by the update
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the update
+     * @param ds The DataSource to use for the update
+     * @param sql The SQL string to execute
+     * @param parameters Optional parameters for the SQL update
+     * @return The number of rows affected by the update
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the update
+     * @see PreparedStatement#executeUpdate()
      */
     @SafeVarargs
     public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -3205,16 +3232,27 @@ public final class JdbcUtil {
 
     /**
      * Executes a SQL update using the provided Connection and SQL string with optional parameters.
-     * <p>
      * This method does not close the provided Connection after the update is executed.
-     * </p>
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Connection conn = dataSource.getConnection();
+     * try {
+     *     int rowsDeleted = JdbcUtil.executeUpdate(conn, 
+     *         "DELETE FROM orders WHERE order_date < ? AND status = ?", 
+     *         cutoffDate, "CANCELLED");
+     * } finally {
+     *     conn.close();
+     * }
+     * }</pre>
      *
-     * @param conn the Connection to use for the update
-     * @param sql the SQL string to execute
-     * @param parameters optional parameters for the SQL update
-     * @return the number of rows affected by the update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the update
+     * @param conn The Connection to use for the update
+     * @param sql The SQL string to execute
+     * @param parameters Optional parameters for the SQL update
+     * @return The number of rows affected by the update
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the update
+     * @see PreparedStatement#executeUpdate()
      */
     @SafeVarargs
     public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -3233,19 +3271,28 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a batch SQL update using the provided DataSource, SQL string, and list of parameters.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Executes a batch SQL update using the provided DataSource with default batch size.
+     * The default batch size is {@link #DEFAULT_BATCH_SIZE}.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * List<Object[]> batchParams = Arrays.asList(
+     *     new Object[]{"John", 25},
+     *     new Object[]{"Jane", 30},
+     *     new Object[]{"Bob", 35}
+     * );
+     * int totalRows = JdbcUtil.executeBatchUpdate(dataSource, 
+     *     "INSERT INTO users (name, age) VALUES (?, ?)", 
+     *     batchParams);
+     * }</pre>
      *
-     * @param ds the DataSource to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param ds The DataSource to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @return The number of rows affected by the batch update
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters)
             throws IllegalArgumentException, SQLException {
@@ -3253,20 +3300,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a batch SQL update using the provided DataSource, SQL string, list of parameters, and batch size.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Executes a batch SQL update using the provided DataSource with specified batch size.
+     * Large lists will be automatically split into smaller batches for optimal performance.
      *
-     * @param ds the DataSource to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @param batchSize the size of each batch
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param ds The DataSource to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @param batchSize The size of each batch
+     * @return The number of rows affected by the batch update
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
@@ -3302,17 +3346,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a batch SQL update using the provided Connection, SQL string, and list of parameters.
-     * <p>
+     * Executes a batch SQL update using the provided Connection with default batch size.
      * This method does not close the provided Connection after the batch update is executed.
-     * </p>
      *
-     * @param conn the Connection to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param conn The Connection to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @return The number of rows affected by the batch update
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters)
             throws IllegalArgumentException, SQLException {
@@ -3320,18 +3363,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a batch SQL update using the provided Connection, SQL string, list of parameters, and batch size.
-     * <p>
+     * Executes a batch SQL update using the provided Connection with specified batch size.
      * This method does not close the provided Connection after the batch update is executed.
-     * </p>
      *
-     * @param conn the Connection to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @param batchSize the size of each batch
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param conn The Connection to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @param batchSize The size of each batch
+     * @return The number of rows affected by the batch update
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
@@ -3399,19 +3441,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a large batch SQL update using the provided DataSource, SQL string, and list of parameters.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Executes a large batch SQL update using the provided DataSource with default batch size.
+     * This method returns a long value to support updates affecting more than Integer.MAX_VALUE rows.
      *
-     * @param ds the DataSource to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param ds The DataSource to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @return The number of rows affected by the batch update as a long value
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters)
             throws IllegalArgumentException, SQLException {
@@ -3419,20 +3458,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a large batch SQL update using the provided DataSource, SQL string, list of parameters, and batch size.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Executes a large batch SQL update using the provided DataSource with specified batch size.
+     * This method returns a long value to support updates affecting more than Integer.MAX_VALUE rows.
      *
-     * @param ds the DataSource to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @param batchSize the size of each batch
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param ds The DataSource to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @param batchSize The size of each batch
+     * @return The number of rows affected by the batch update as a long value
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
@@ -3468,17 +3504,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a large batch SQL update using the provided Connection, SQL string, and list of parameters.
-     * <p>
+     * Executes a large batch SQL update using the provided Connection with default batch size.
      * This method does not close the provided Connection after the batch update is executed.
-     * </p>
      *
-     * @param conn the Connection to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param conn The Connection to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @return The number of rows affected by the batch update as a long value
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters)
             throws IllegalArgumentException, SQLException {
@@ -3486,18 +3521,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a large batch SQL update using the provided Connection, SQL string, list of parameters, and batch size.
-     * <p>
+     * Executes a large batch SQL update using the provided Connection with specified batch size.
      * This method does not close the provided Connection after the batch update is executed.
-     * </p>
      *
-     * @param conn the Connection to use for the batch update
-     * @param sql the SQL string to execute
-     * @param listOfParameters a list of parameter sets for the batch update
-     * @param batchSize the size of each batch
-     * @return the number of rows affected by the batch update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * @param conn The Connection to use for the batch update
+     * @param sql The SQL string to execute
+     * @param listOfParameters A list of parameter sets for the batch update
+     * @param batchSize The size of each batch
+     * @return The number of rows affected by the batch update as a long value
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the batch update
+     * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
@@ -3565,19 +3599,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL statement using the provided DataSource, SQL string, and optional parameters.
-     * <p>
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in {@code Spring} with the same {@code DataSource} in the same thread,
-     * the {@code Connection} started the transaction will be used here.
-     * Otherwise, a {@code Connection} directly from the specified {@code DataSource} (Connection pool) will be borrowed and used.
-     * </p>
+     * Executes a SQL statement using the provided DataSource with optional parameters.
+     * This method can execute any SQL statement and returns a boolean indicating the type of result.
      *
-     * @param ds the DataSource to use for the SQL execution
-     * @param sql the SQL string to execute
-     * @param parameters optional parameters for the SQL statement
+     * @param ds The DataSource to use for the SQL execution
+     * @param sql The SQL string to execute
+     * @param parameters Optional parameters for the SQL statement
      * @return {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the statement
+     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the statement
+     * @see PreparedStatement#execute()
      */
     @SafeVarargs
     public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -3600,17 +3631,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL statement using the provided Connection, SQL string, and optional parameters.
-     * <p>
+     * Executes a SQL statement using the provided Connection with optional parameters.
      * This method does not close the provided Connection after the statement is executed.
-     * </p>
      *
-     * @param conn the Connection to use for the SQL execution
-     * @param sql the SQL string to execute
-     * @param parameters optional parameters for the SQL statement
+     * @param conn The Connection to use for the SQL execution
+     * @param sql The SQL string to execute
+     * @param parameters Optional parameters for the SQL statement
      * @return {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the statement
+     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws SQLException If a SQL exception occurs while executing the statement
+     * @see PreparedStatement#execute()
      */
     @SafeVarargs
     public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -3920,10 +3950,17 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet and returns it as a DataSet.
+     * This method reads all rows from the current position of the ResultSet.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     * DataSet dataSet = JdbcUtil.extractData(rs);
+     * }</pre>
      *
-     * @param rs the ResultSet to extract data from
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs) throws SQLException {
         return extractData(rs, false);
@@ -3931,12 +3968,18 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     * DataSet dataSet = JdbcUtil.extractData(rs, 10, 50); // Skip 10 rows, get next 50
+     * }</pre>
      *
-     * @param rs the ResultSet to extract data from
-     * @param offset the starting position in the ResultSet
-     * @param count the number of rows to extract
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param offset The starting position in the ResultSet (0-based)
+     * @param count The maximum number of rows to extract
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count) throws SQLException {
         return extractData(rs, offset, count, false);
@@ -3944,11 +3987,12 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet using the specified RowFilter.
+     * Only rows that pass the filter will be included in the result.
      *
-     * @param rs the ResultSet to extract data from
-     * @param filter the RowFilter to apply while extracting data
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param filter The RowFilter to apply while extracting data
+     * @return A DataSet containing the filtered data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
@@ -3956,24 +4000,25 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet using the specified RowExtractor.
+     * The RowExtractor can transform or manipulate each row during extraction.
      *
-     * @param rs the ResultSet to extract data from
-     * @param rowExtractor the RowExtractor to apply while extracting data
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param rowExtractor The RowExtractor to apply while extracting data
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
     }
 
     /**
-     * Extracts data from the provided ResultSet using the specified RowFilter and RowExtractor.
+     * Extracts data from the provided ResultSet using both RowFilter and RowExtractor.
      *
-     * @param rs the ResultSet to extract data from
-     * @param filter the RowFilter to apply while extracting data
-     * @param rowExtractor the RowExtractor to apply while extracting data
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param filter The RowFilter to apply while extracting data
+     * @param rowExtractor The RowExtractor to apply while extracting data
+     * @return A DataSet containing the filtered and extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, rowExtractor, false);
@@ -3981,49 +4026,43 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet and returns it as a DataSet.
-     * <p>
      * This method allows specifying whether to close the ResultSet after extraction.
-     * </p>
      *
-     * @param rs the ResultSet to extract data from
-     * @param closeResultSet whether to close the ResultSet after extraction
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param closeResultSet Whether to close the ResultSet after extraction
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, closeResultSet);
     }
 
     /**
-     * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
-     * <p>
+     * Extracts data from the provided ResultSet with specified offset and count.
      * This method allows specifying whether to close the ResultSet after extraction.
-     * </p>
      *
-     * @param rs the ResultSet to extract data from
-     * @param offset the starting position in the ResultSet
-     * @param count the number of rows to extract
-     * @param closeResultSet whether to close the ResultSet after extraction
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param offset The starting position in the ResultSet
+     * @param count The number of rows to extract
+     * @param closeResultSet Whether to close the ResultSet after extraction
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet) throws SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
     /**
-     * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
-     * <p>
-     * This method allows specifying a RowFilter to apply while extracting data and whether to close the ResultSet after extraction.
-     * </p>
+     * Extracts data from the provided ResultSet with offset, count, and filter.
+     * This method allows specifying whether to close the ResultSet after extraction.
      *
-     * @param rs the ResultSet to extract data from
-     * @param offset the starting position in the ResultSet
-     * @param count the number of rows to extract
-     * @param filter the RowFilter to apply while extracting data
-     * @param closeResultSet whether to close the ResultSet after extraction
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param offset The starting position in the ResultSet
+     * @param count The number of rows to extract
+     * @param filter The RowFilter to apply while extracting data
+     * @param closeResultSet Whether to close the ResultSet after extraction
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
             throws SQLException {
@@ -4031,18 +4070,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
-     * <p>
-     * This method allows specifying a RowExtractor to apply while extracting data and whether to close the ResultSet after extraction.
-     * </p>
+     * Extracts data from the provided ResultSet with offset, count, and extractor.
+     * This method allows specifying whether to close the ResultSet after extraction.
      *
-     * @param rs the ResultSet to extract data from
-     * @param offset the starting position in the ResultSet
-     * @param count the number of rows to extract
-     * @param rowExtractor the RowExtractor to apply while extracting data
-     * @param closeResultSet whether to close the ResultSet after extraction
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @param rs The ResultSet to extract data from
+     * @param offset The starting position in the ResultSet
+     * @param count The number of rows to extract
+     * @param rowExtractor The RowExtractor to apply while extracting data
+     * @param closeResultSet Whether to close the ResultSet after extraction
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws SQLException {
@@ -4050,20 +4087,18 @@ public final class JdbcUtil {
     }
 
     /**
-     * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
-     * <p>
-     * This method allows specifying a RowFilter and a RowExtractor to apply while extracting data and whether to close the ResultSet after extraction.
-     * </p>
+     * Extracts data from the provided ResultSet with all extraction options.
+     * This is the most comprehensive extraction method providing full control over the process.
      *
-     * @param rs the ResultSet to extract data from
-     * @param offset the starting position in the ResultSet
-     * @param count the number of rows to extract
-     * @param filter the RowFilter to apply while extracting data
-     * @param rowExtractor the RowExtractor to apply while extracting data
-     * @param closeResultSet whether to close the ResultSet after extraction
-     * @return a DataSet containing the extracted data
-     * @throws SQLException if a SQL exception occurs while extracting data
-     * @throws IllegalArgumentException if the provided arguments are invalid
+     * @param rs The ResultSet to extract data from
+     * @param offset The starting position in the ResultSet
+     * @param count The number of rows to extract
+     * @param filter The RowFilter to apply while extracting data
+     * @param rowExtractor The RowExtractor to apply while extracting data
+     * @param closeResultSet Whether to close the ResultSet after extraction
+     * @return A DataSet containing the extracted data
+     * @throws SQLException If a SQL exception occurs while extracting data
+     * @throws IllegalArgumentException If the provided arguments are invalid
      */
     public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
@@ -4169,33 +4204,52 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * Each element in the stream is an Object array containing values from all columns of a row.
+     * It's the user's responsibility to close the ResultSet after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     * try {
+     *     JdbcUtil.stream(rs)
+     *         .forEach(row -> {
+     *             System.out.println(Arrays.toString(row));
+     *         });
+     * } finally {
+     *     rs.close();
+     * }
+     * 
+     * // Or with auto-close:
+     * JdbcUtil.stream(resultSet).onClose(Fn.closeQuietly(resultSet))
+     *     .forEach(row -> processRow(row));
+     * }</pre>
      *
-     * @param resultSet the ResultSet to create a stream from
-     * @return a Stream of Object arrays containing the data from the ResultSet
-     * @throws IllegalArgumentException if the provided ResultSet is null
+     * @param resultSet The ResultSet to create a stream from
+     * @return A Stream of Object arrays containing the data from the ResultSet
+     * @throws IllegalArgumentException If the provided ResultSet is null
      */
     public static Stream<Object[]> stream(final ResultSet resultSet) {
         return stream(resultSet, Object[].class);
     }
 
     /**
-     * Creates a stream from the provided ResultSet.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * Creates a stream from the provided ResultSet, mapping each row to the specified target class.
+     * It's the user's responsibility to close the ResultSet after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+     * JdbcUtil.stream(rs, User.class)
+     *     .onClose(Fn.closeQuietly(rs))
+     *     .filter(user -> user.getAge() > 18)
+     *     .forEach(user -> processUser(user));
+     * }</pre>
      *
-     * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
-     * @param targetClass the class of the result type
-     * @return a Stream of the extracted results
-     * @throws IllegalArgumentException if the provided arguments are invalid
+     * @param <T> The type of the result extracted from the ResultSet
+     * @param resultSet The ResultSet to create a stream from
+     * @param targetClass The class of the result type. Column names from the ResultSet will be mapped to properties of this class
+     * @return A Stream of the extracted results
+     * @throws IllegalArgumentException If the provided arguments are invalid
      */
     public static <T> Stream<T> stream(final ResultSet resultSet, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(targetClass, cs.targetClass);
@@ -4206,15 +4260,20 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified RowMapper.
-     * <p>
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
      * {@code JdbcUtil.stream(resultSet, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * RowMapper<String> nameMapper = rs -> rs.getString("name");
+     * JdbcUtil.stream(resultSet, nameMapper)
+     *     .onClose(Fn.closeQuietly(resultSet))
+     *     .forEach(name -> System.out.println(name));
+     * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
-     * @param rowMapper the RowMapper to apply while extracting data
+     * @param rowMapper the RowMapper to apply while extracting data. This mapper is called for each row in the ResultSet
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
@@ -4307,16 +4366,22 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified RowFilter and RowMapper.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet, rowFilter, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * Only rows that pass the filter will be included in the stream.
+     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * RowFilter ageFilter = rs -> rs.getInt("age") > 18;
+     * RowMapper<User> userMapper = rs -> new User(rs.getString("name"), rs.getInt("age"));
+     * JdbcUtil.stream(resultSet, ageFilter, userMapper)
+     *     .onClose(Fn.closeQuietly(resultSet))
+     *     .forEach(user -> processAdultUser(user));
+     * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
-     * @param rowFilter the RowFilter to apply while filtering rows
-     * @param rowMapper the RowMapper to apply while extracting data
+     * @param rowFilter the RowFilter to apply while filtering rows. Only rows for which this filter returns true will be included
+     * @param rowMapper the RowMapper to apply while extracting data from filtered rows
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
@@ -4389,15 +4454,26 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified BiRowMapper.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * BiRowMapper receives both the ResultSet and column labels, allowing for more flexible mapping.
+     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * BiRowMapper<Map<String, Object>> mapMapper = (rs, columnLabels) -> {
+     *     Map<String, Object> row = new HashMap<>();
+     *     for (String label : columnLabels) {
+     *         row.put(label, rs.getObject(label));
+     *     }
+     *     return row;
+     * };
+     * JdbcUtil.stream(resultSet, mapMapper)
+     *     .onClose(Fn.closeQuietly(resultSet))
+     *     .forEach(row -> System.out.println(row));
+     * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
-     * @param rowMapper the BiRowMapper to apply while extracting data
+     * @param rowMapper the BiRowMapper to apply while extracting data. This mapper receives both the ResultSet and column labels
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
@@ -4499,16 +4575,31 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified BiRowFilter and BiRowMapper.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet, rowFilter, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * Both the filter and mapper receive the ResultSet and column labels for maximum flexibility.
+     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * BiRowFilter hasNonNullValues = (rs, columnLabels) -> {
+     *     for (String label : columnLabels) {
+     *         if (rs.getObject(label) != null) return true;
+     *     }
+     *     return false;
+     * };
+     * BiRowMapper<String> csvMapper = (rs, columnLabels) -> 
+     *     columnLabels.stream()
+     *         .map(label -> rs.getString(label))
+     *         .collect(Collectors.joining(","));
+     * 
+     * JdbcUtil.stream(resultSet, hasNonNullValues, csvMapper)
+     *     .onClose(Fn.closeQuietly(resultSet))
+     *     .forEach(csvRow -> System.out.println(csvRow));
+     * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
-     * @param rowFilter the BiRowFilter to apply while filtering rows
-     * @param rowMapper the BiRowMapper to apply while extracting data
+     * @param rowFilter the BiRowFilter to apply while filtering rows. Both ResultSet and column labels are provided
+     * @param rowMapper the BiRowMapper to apply while extracting data from filtered rows
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
@@ -4571,11 +4662,16 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified column index.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet, columnIndex).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * This is useful when you only need values from a single column.
+     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Stream all names from the first column
+     * JdbcUtil.stream(resultSet, 1)
+     *     .onClose(Fn.closeQuietly(resultSet))
+     *     .forEach(name -> System.out.println(name));
+     * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
@@ -4595,11 +4691,17 @@ public final class JdbcUtil {
 
     /**
      * Creates a stream from the provided ResultSet using the specified column name.
-     * <p>
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.stream(resultSet, columnName).onClose(Fn.closeQuietly(resultSet))...}
-     * </p>
+     * This is useful when you only need values from a single column identified by name.
+     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Stream all email addresses
+     * JdbcUtil.stream(resultSet, "email")
+     *     .onClose(Fn.closeQuietly(resultSet))
+     *     .filter(email -> email != null && email.contains("@"))
+     *     .forEach(email -> sendNewsletter(email));
+     * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
@@ -4629,167 +4731,21 @@ public final class JdbcUtil {
         return stream(resultSet, rowMapper);
     }
 
-    //    /**
-    //     * Creates a stream of all result sets from the provided Statement.
-    //     * <p>
-    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-    //     * <br />
-    //     * {@code JdbcUtil.streamAllResultSets(stmt, targetClass).onClose(Fn.closeQuietly(stmt))...}
-    //     * </p>
-    //     *
-    //     * @param <T> the type of the result extracted from each ResultSet
-    //     * @param stmt the Statement to create streams from
-    //     * @param targetClass the class of the result type
-    //     * @return a Stream of Streams of the extracted results
-    //     * @throws IllegalArgumentException if the provided arguments are invalid
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final Class<? extends T> targetClass) throws IllegalArgumentException {
-    //        N.checkArgNotNull(stmt, s.stmt);
-    //        N.checkArgNotNull(targetClass, s.targetClass);
-    //
-    //        JdbcUtil.checkDateType(stmt);
-    //
-    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-    //
-    //        return Stream.just(supplier) //
-    //                .onClose(() -> supplier.get().close())
-    //                .flatMap(it -> Stream.of(it.get()))
-    //                .map(rs -> {
-    //                    final BiRowMapper<T> rowMapper = BiRowMapper.to(targetClass);
-    //
-    //                    return JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs));
-    //                });
-    //    }
-    //
-    //    /**
-    //     * Creates a stream of all result sets from the provided Statement.
-    //     * <p>
-    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-    //     * <br />
-    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-    //     * </p>
-    //     *
-    //     * @param <T> the type of the result extracted from each ResultSet
-    //     * @param stmt the Statement to create streams from
-    //     * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
-    //     * @return a Stream of Streams of the extracted results
-    //     * @throws IllegalArgumentException if the provided arguments are invalid
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-    //        N.checkArgNotNull(stmt, s.stmt);
-    //        N.checkArgNotNull(rowMapper, s.rowMapper);
-    //
-    //        JdbcUtil.checkDateType(stmt);
-    //
-    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-    //
-    //        return Stream.just(supplier)
-    //                .onClose(() -> supplier.get().close())
-    //                .flatMap(it -> Stream.of(it.get()))
-    //                .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
-    //    }
-    //
-    //    /**
-    //     * Creates a stream of all result sets from the provided Statement.
-    //     * <p>
-    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-    //     * <br />
-    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-    //     * </p>
-    //     *
-    //     * @param <T> the type of the result extracted from each ResultSet
-    //     * @param stmt the Statement to create streams from
-    //     * @param rowFilter the RowFilter to filter rows of the ResultSet
-    //     * @param rowMapper the RowMapper to map each row of the ResultSet to the desired type
-    //     * @return a Stream of Streams of the extracted results
-    //     * @throws IllegalArgumentException if the provided arguments are invalid
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
-    //            throws IllegalArgumentException {
-    //        N.checkArgNotNull(stmt, s.stmt);
-    //        N.checkArgNotNull(rowFilter, s.rowFilter);
-    //        N.checkArgNotNull(rowMapper, s.rowMapper);
-    //
-    //        JdbcUtil.checkDateType(stmt);
-    //
-    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-    //
-    //        return Stream.just(supplier)
-    //                .onClose(() -> supplier.get().close())
-    //                .flatMap(it -> Stream.of(it.get()))
-    //                .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
-    //    }
-    //
-    //    /**
-    //     * Creates a stream of all result sets from the provided Statement.
-    //     * <p>
-    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-    //     * <br />
-    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-    //     * </p>
-    //     *
-    //     * @param <T> the type of the result extracted from each ResultSet
-    //     * @param stmt the Statement to create streams from
-    //     * @return a Stream of Streams of the extracted results
-    //     * @throws IllegalArgumentException if the provided arguments are invalid
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-    //        N.checkArgNotNull(stmt, s.stmt);
-    //        N.checkArgNotNull(rowMapper, s.rowMapper);
-    //
-    //        JdbcUtil.checkDateType(stmt);
-    //
-    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-    //
-    //        return Stream.just(supplier)
-    //                .onClose(() -> supplier.get().close())
-    //                .flatMap(it -> Stream.of(it.get()))
-    //                .map(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
-    //    }
-    //
-    //    /**
-    //     * Creates a stream of all result sets from the provided Statement.
-    //     * <p>
-    //     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-    //     * <br />
-    //     * {@code JdbcUtil.streamAllResultSets(stmt, rowFilter, rowMapper).onClose(Fn.closeQuietly(stmt))...}
-    //     * </p>
-    //     *
-    //     * @param <T> the type of the result extracted from each ResultSet
-    //     * @param stmt the Statement to create streams from
-    //     * @param rowFilter the BiRowFilter to filter rows of the ResultSet
-    //     * @param rowMapper the BiRowMapper to map each row of the ResultSet to the desired type
-    //     * @return a Stream of Streams of the extracted results
-    //     * @throws IllegalArgumentException if the provided arguments are invalid
-    //     */
-    //    @SuppressWarnings("resource")
-    //    public static <T> Stream<Stream<T>> streamAllResultSets(final Statement stmt, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
-    //            throws IllegalArgumentException {
-    //        N.checkArgNotNull(stmt, s.stmt);
-    //        N.checkArgNotNull(rowFilter, s.rowFilter);
-    //        N.checkArgNotNull(rowMapper, s.rowMapper);
-    //
-    //        JdbcUtil.checkDateType(stmt);
-    //
-    //        final Supplier<ObjIteratorEx<ResultSet>> supplier = Fn.memoize(() -> iterateAllResultSets(stmt, true));
-    //
-    //        return Stream.just(supplier)
-    //                .onClose(() -> supplier.get().close())
-    //                .flatMap(it -> Stream.of(it.get()))
-    //                .map(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)));
-    //    }
-
     /**
      * Extracts all ResultSets from the provided Statement and returns them as a Stream of DataSet.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.extractAllResultSets(stmt).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
+     * This is useful when executing stored procedures that return multiple result sets.
+     * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}");
+     * JdbcUtil.streamAllResultSets(stmt)
+     *     .onClose(Fn.closeQuietly(stmt))
+     *     .forEach(dataSet -> {
+     *         System.out.println("Result set with " + dataSet.size() + " rows");
+     *         dataSet.println();
+     *     });
+     * }</pre>
      *
      * @param stmt the Statement to extract ResultSets from
      * @return a Stream of DataSet containing the extracted ResultSets
@@ -4800,15 +4756,27 @@ public final class JdbcUtil {
 
     /**
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
+     * Each ResultSet is processed by the provided ResultExtractor.
+     * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ResultExtractor<List<String>> namesExtractor = rs -> {
+     *     List<String> names = new ArrayList<>();
+     *     while (rs.next()) {
+     *         names.add(rs.getString("name"));
+     *     }
+     *     return names;
+     * };
+     * 
+     * JdbcUtil.streamAllResultSets(stmt, namesExtractor)
+     *     .onClose(Fn.closeQuietly(stmt))
+     *     .forEach(namesList -> System.out.println("Found " + namesList.size() + " names"));
+     * }</pre>
      *
      * @param <R> the type of the result extracted from the ResultSet
      * @param stmt the Statement to extract ResultSets from
-     * @param resultExtractor the ResultExtractor to apply while extracting data
+     * @param resultExtractor the ResultExtractor to apply while extracting data from each ResultSet
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
@@ -4827,11 +4795,31 @@ public final class JdbcUtil {
 
     /**
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
-     * <p>
-     * It's the user's responsibility to close the input {@code stmt} after the stream is finished, or call:
-     * <br />
-     * {@code JdbcUtil.extractAllResultSets(stmt, resultExtractor).onClose(Fn.closeQuietly(stmt))...}
-     * </p>
+     * Each ResultSet is processed by the provided BiResultExtractor which also receives column labels.
+     * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * BiResultExtractor<Map<String, List<Object>>> columnarExtractor = (rs, columnLabels) -> {
+     *     Map<String, List<Object>> columns = new HashMap<>();
+     *     for (String label : columnLabels) {
+     *         columns.put(label, new ArrayList<>());
+     *     }
+     *     while (rs.next()) {
+     *         for (String label : columnLabels) {
+     *             columns.get(label).add(rs.getObject(label));
+     *         }
+     *     }
+     *     return columns;
+     * };
+     * 
+     * JdbcUtil.streamAllResultSets(stmt, columnarExtractor)
+     *     .onClose(Fn.closeQuietly(stmt))
+     *     .forEach(columnsMap -> {
+     *         columnsMap.forEach((col, values) -> 
+     *             System.out.println(col + ": " + values.size() + " values"));
+     *     });
+     * }</pre>
      *
      * @param <R> the type of the result extracted from the ResultSet
      * @param stmt the Statement to extract ResultSets from
@@ -4911,14 +4899,29 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
-     * <p>
-     * The query must be ordered by at least one key/id and have a result size limitation, for example, {@code LIMIT pageSize} or {@code ROWS FETCH NEXT pageSize ROWS ONLY}.
-     * </p>
+     * The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
+     * This method is useful for processing large result sets in manageable chunks.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 1000";
+     * JdbcUtil.queryByPage(dataSource, query, 1000, (preparedQuery, previousPage) -> {
+     *     if (previousPage == null) {
+     *         preparedQuery.setLong(1, 0);
+     *     } else {
+     *         long lastId = previousPage.getLong(previousPage.size() - 1, "id");
+     *         preparedQuery.setLong(1, lastId);
+     *     }
+     * }).forEach(page -> {
+     *     System.out.println("Processing " + page.size() + " records");
+     *     // Process the page
+     * });
+     * }</pre>
      *
      * @param ds the DataSource to get the connection from
-     * @param query the SQL query to run for each page
+     * @param query the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page (null for first page)
      * @return a Stream of DataSet, each representing a page of results
      * @throws SQLException if a database access error occurs
      */
@@ -4930,15 +4933,36 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
-     * <p>
-     * The query must be ordered by at least one key/id and have a result size limitation, for example, {@code LIMIT pageSize} or {@code ROWS FETCH NEXT pageSize ROWS ONLY}.
-     * </p>
+     * The query must be ordered by at least one key/id and have a result size limitation.
+     * Each page is processed by the provided ResultExtractor.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String query = "SELECT * FROM orders WHERE order_date > ? ORDER BY order_id LIMIT 500";
+     * ResultExtractor<List<Order>> ordersExtractor = rs -> {
+     *     List<Order> orders = new ArrayList<>();
+     *     while (rs.next()) {
+     *         orders.add(new Order(rs.getLong("order_id"), rs.getDate("order_date")));
+     *     }
+     *     return orders;
+     * };
+     * 
+     * JdbcUtil.queryByPage(dataSource, query, 500, (preparedQuery, previousOrders) -> {
+     *     if (previousOrders == null) {
+     *         preparedQuery.setDate(1, startDate);
+     *     } else {
+     *         Order lastOrder = previousOrders.get(previousOrders.size() - 1);
+     *         preparedQuery.setDate(1, lastOrder.getOrderDate());
+     *     }
+     * }, ordersExtractor)
+     * .forEach(orders -> processOrderBatch(orders));
+     * }</pre>
      *
      * @param <R> the type of the result extracted from each page
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
+     * @param paramSetter the BiParametersSetter to set parameters for the query
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      * @throws SQLException if a database access error occurs
@@ -4971,16 +4995,15 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
-     * <p>
-     * The query must be ordered by at least one key/id and have a result size limitation, for example, {@code LIMIT pageSize} or {@code ROWS FETCH NEXT pageSize ROWS ONLY}.
-     * </p>
+     * The query must be ordered by at least one key/id and have a result size limitation.
+     * Each page is processed by the provided BiResultExtractor.
      *
      * @param <R> the type of the result extracted from each page
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
-     * @param resultExtractor the ResultExtractor to extract results from the ResultSet
+     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      * @throws SQLException if a database access error occurs
      */
@@ -5012,14 +5035,13 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
-     * <p>
-     * The query must be ordered by at least one key/id and have a result size limitation, for example, {@code LIMIT pageSize} or {@code ROWS FETCH NEXT pageSize ROWS ONLY}.
-     * </p>
+     * Similar to the DataSource version but uses an existing Connection.
+     * The query must be ordered by at least one key/id and have a result size limitation.
      *
-     * @param conn the Connection to get the connection from
+     * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
+     * @param paramSetter the BiParametersSetter to set parameters for the query
      * @return a Stream of DataSet, each representing a page of results
      * @throws SQLException if a database access error occurs
      */
@@ -5031,15 +5053,14 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
-     * <p>
-     * The query must be ordered by at least one key/id and have a result size limitation, for example, {@code LIMIT pageSize} or {@code ROWS FETCH NEXT pageSize ROWS ONLY}.
-     * </p>
+     * Similar to the DataSource version but uses an existing Connection.
+     * Each page is processed by the provided ResultExtractor.
      *
      * @param <R> the type of the result extracted from each page
-     * @param conn the Connection to get the connection from
+     * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
+     * @param paramSetter the BiParametersSetter to set parameters for the query
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      * @throws SQLException if a database access error occurs
@@ -5072,16 +5093,15 @@ public final class JdbcUtil {
 
     /**
      * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
-     * <p>
-     * The query must be ordered by at least one key/id and have a result size limitation, for example, {@code LIMIT pageSize} or {@code ROWS FETCH NEXT pageSize ROWS ONLY}.
-     * </p>
+     * Similar to the DataSource version but uses an existing Connection.
+     * Each page is processed by the provided BiResultExtractor.
      *
      * @param <R> the type of the result extracted from each page
-     * @param conn the Connection to get the connection from
+     * @param conn the Connection to use for queries
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page, and it's {@code null} for the first page
-     * @param resultExtractor the ResultExtractor to extract results from the ResultSet
+     * @param paramSetter the BiParametersSetter to set parameters for the query
+     * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
      * @throws SQLException if a database access error occurs
      */
@@ -5462,10 +5482,21 @@ public final class JdbcUtil {
 
     /**
      * Checks if a table exists in the database.
+     * This method attempts to execute a simple SELECT query on the table to determine its existence.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * if (JdbcUtil.doesTableExist(connection, "users")) {
+     *     System.out.println("Users table exists");
+     * } else {
+     *     System.out.println("Users table does not exist");
+     * }
+     * }</pre>
      *
-     * @param conn The database connection.
-     * @param tableName The name of the table to check.
-     * @return {@code true} if the table exists, {@code false} otherwise.
+     * @param conn The database connection to use for checking table existence
+     * @param tableName The name of the table to check
+     * @return {@code true} if the table exists, {@code false} otherwise
+     * @throws UncheckedSQLException if a database error occurs (other than table not existing)
      */
     public static boolean doesTableExist(final Connection conn, final String tableName) {
         try {
@@ -5483,12 +5514,23 @@ public final class JdbcUtil {
 
     /**
      * Creates a table if it does not already exist in the database.
+     * This method first checks if the table exists, and if not, executes the provided schema to create it.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String schema = "CREATE TABLE users (" +
+     *                 "id BIGINT PRIMARY KEY, " +
+     *                 "name VARCHAR(100), " +
+     *                 "email VARCHAR(255))";
+     * boolean created = JdbcUtil.createTableIfNotExists(connection, "users", schema);
+     * System.out.println(created ? "Table created" : "Table already exists");
+     * }</pre>
      *
-     * @param conn The database connection.
-     * @param tableName The name of the table to create.
-     * @param schema The schema definition of the table.
-     * @return {@code true} if the table was created, {@code false} if the table already exists.
-     * @throws UncheckedSQLException If a database access error occurs.
+     * @param conn The database connection to use for creating the table
+     * @param tableName The name of the table to create
+     * @param schema The SQL schema definition (CREATE TABLE statement) for the table
+     * @return {@code true} if the table was created, {@code false} if the table already exists
+     * @throws UncheckedSQLException if a database access error occurs during table creation
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (doesTableExist(conn, tableName)) {
@@ -5506,10 +5548,18 @@ public final class JdbcUtil {
 
     /**
      * Drops the specified table if it exists in the database.
+     * This method first checks if the table exists before attempting to drop it,
+     * preventing errors from trying to drop a non-existent table.
      *
-     * @param conn The database connection.
-     * @param tableName The name of the table to drop.
-     * @return {@code true} if the table was dropped, {@code false} otherwise.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * boolean dropped = JdbcUtil.dropTableIfExists(connection, "temp_users");
+     * System.out.println(dropped ? "Table dropped" : "Table did not exist");
+     * }</pre>
+     *
+     * @param conn The database connection to use for dropping the table
+     * @param tableName The name of the table to drop
+     * @return {@code true} if the table was dropped, {@code false} if the table did not exist or could not be dropped
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         try {
@@ -5526,26 +5576,42 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns a new instance of {@code DBSequence} for the specified table and sequence.
+     * Returns a new instance of {@code DBSequence} for managing database sequences.
+     * The sequence provides thread-safe generation of sequential IDs with default starting value of 0 
+     * and a buffer size of 1000.
      *
-     * @param ds The data source.
-     * @param tableName The name of the table.
-     * @param seqName The name of the sequence.
-     * @return The DBSequence object.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "user_sequence", "user_id");
+     * long nextId = sequence.next();
+     * }</pre>
+     *
+     * @param ds The data source to use for database connections
+     * @param tableName The name of the table containing the sequence
+     * @param seqName The name of the sequence column
+     * @return A new DBSequence instance for generating sequential IDs
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName) {
         return new DBSequence(ds, tableName, seqName, 0, 1000);
     }
 
     /**
-     * Returns a new instance of {@code DBSequence} for the specified table, sequence, start value and buffer size.
+     * Returns a new instance of {@code DBSequence} with custom starting value and buffer size.
+     * The sequence provides thread-safe generation of sequential IDs with the specified configuration.
      *
-     * @param ds The data source.
-     * @param tableName The name of the table.
-     * @param seqName The name of the sequence.
-     * @param startVal The starting value of the sequence.
-     * @param seqBufferSize The numbers to allocate/reserve from the database table when cached numbers are used up.
-     * @return A new instance of {@code DBSequence} for the specified table and sequence.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Start from 1000 with a buffer of 500 IDs
+     * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "order_sequence", "order_id", 1000, 500);
+     * long nextId = sequence.next();
+     * }</pre>
+     *
+     * @param ds The data source to use for database connections
+     * @param tableName The name of the table containing the sequence
+     * @param seqName The name of the sequence column
+     * @param startVal The starting value of the sequence
+     * @param seqBufferSize The number of IDs to allocate/reserve from the database table when cached numbers are used up
+     * @return A new instance of {@code DBSequence} with the specified configuration
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName, final long startVal,
             final int seqBufferSize) {
@@ -5553,11 +5619,24 @@ public final class JdbcUtil {
     }
 
     /**
-     * Supports global lock by db table.
+     * Returns a new instance of {@code DBLock} for implementing global locks using a database table.
+     * This provides a distributed locking mechanism that works across multiple application instances.
      *
-     * @param ds The data source.
-     * @param tableName The name of the table.
-     * @return A new instance of {@code DBLock} for the specified table.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * DBLock lock = JdbcUtil.getDBLock(dataSource, "distributed_locks");
+     * if (lock.acquire("job_processor")) {
+     *     try {
+     *         // Perform exclusive operation
+     *     } finally {
+     *         lock.release("job_processor");
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param ds The data source to use for database connections
+     * @param tableName The name of the table used for storing lock information
+     * @return A new instance of {@code DBLock} for distributed locking
      */
     public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName) {
         return new DBLock(ds, tableName);
@@ -5804,12 +5883,22 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action in a separate thread.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the specified SQL action is {@code null}.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(() -> {
+     *     // Perform database operations
+     *     JdbcUtil.update(dataSource, "UPDATE users SET status = ? WHERE id = ?", "active", userId);
+     * });
+     * 
+     * future.thenRun(() -> System.out.println("Update completed"));
+     * }</pre>
+     *
+     * @param sqlAction The SQL action to be executed asynchronously
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the specified SQL action is {@code null}
      */
     @Beta
     public static ContinuableFuture<Void> asyncRun(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
@@ -5819,14 +5908,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously runs the specified SQL actions in separate threads.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously runs two SQL actions in separate threads.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction1 The first SQL action to be executed.
-     * @param sqlAction2 The second SQL action to be executed.
-     * @return A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException If any of the SQL actions are invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.asyncRun(
+     *     () -> JdbcUtil.update(dataSource, "UPDATE users SET status = ?", "active"),
+     *     () -> JdbcUtil.update(dataSource, "UPDATE orders SET processed = ?", true)
+     * );
+     * 
+     * ContinuableFuture.allOf(futures._1, futures._2).thenRun(() -> 
+     *     System.out.println("Both updates completed")
+     * );
+     * }</pre>
+     *
+     * @param sqlAction1 The first SQL action to be executed asynchronously
+     * @param sqlAction2 The second SQL action to be executed asynchronously
+     * @return A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations
+     * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
     public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
@@ -5838,15 +5939,29 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously runs the specified SQL actions in separate threads.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously runs three SQL actions in separate threads.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param sqlAction1 The first SQL action to be executed.
-     * @param sqlAction2 The second SQL action to be executed.
-     * @param sqlAction3 The third SQL action to be executed.
-     * @return A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException If any of the SQL actions are invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures = 
+     *     JdbcUtil.asyncRun(
+     *         () -> JdbcUtil.update(dataSource, "UPDATE users SET status = ?", "active"),
+     *         () -> JdbcUtil.update(dataSource, "UPDATE orders SET processed = ?", true),
+     *         () -> JdbcUtil.update(dataSource, "UPDATE inventory SET updated = ?", new Date())
+     *     );
+     * 
+     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() -> 
+     *     System.out.println("All updates completed")
+     * );
+     * }</pre>
+     *
+     * @param sqlAction1 The first SQL action to be executed asynchronously
+     * @param sqlAction2 The second SQL action to be executed asynchronously
+     * @param sqlAction3 The third SQL action to be executed asynchronously
+     * @return A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations
+     * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
     public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> asyncRun(final Throwables.Runnable<Exception> sqlAction1,
@@ -5860,14 +5975,24 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action with the given parameter.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T> The type of the parameter.
-     * @param t The parameter to be passed to the SQL action.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the SQL action is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * User user = new User(123, "John", "john@example.com");
+     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(user, u -> {
+     *     JdbcUtil.insert(dataSource, u);
+     * });
+     * 
+     * future.thenRun(() -> System.out.println("User inserted"));
+     * }</pre>
+     *
+     * @param <T> The type of the parameter
+     * @param t The parameter to be passed to the SQL action
+     * @param sqlAction The SQL action to be executed with the parameter
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
@@ -5878,16 +6003,25 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action with two parameters.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T> The type of the first parameter.
-     * @param <U> The type of the second parameter.
-     * @param t The first parameter to be passed to the SQL action.
-     * @param u The second parameter to be passed to the SQL action.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the SQL action is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, status, 
+     *     (id, st) -> JdbcUtil.update(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
+     * );
+     * 
+     * future.thenRun(() -> System.out.println("Status updated"));
+     * }</pre>
+     *
+     * @param <T> The type of the first parameter
+     * @param <U> The type of the second parameter
+     * @param t The first parameter to be passed to the SQL action
+     * @param u The second parameter to be passed to the SQL action
+     * @param sqlAction The SQL action to be executed with the parameters
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
@@ -5899,18 +6033,30 @@ public final class JdbcUtil {
 
     /**
      * Asynchronously runs the specified SQL action with three parameters.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <A> The type of the first parameter.
-     * @param <B> The type of the second parameter.
-     * @param <C> The type of the third parameter.
-     * @param a The first parameter to be passed to the SQL action.
-     * @param b The second parameter to be passed to the SQL action.
-     * @param c The third parameter to be passed to the SQL action.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the SQL action is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, orderId, status,
+     *     (uid, oid, st) -> {
+     *         JdbcUtil.update(dataSource, "UPDATE orders SET status = ? WHERE user_id = ? AND order_id = ?", 
+     *                         st, uid, oid);
+     *     }
+     * );
+     * 
+     * future.thenRun(() -> System.out.println("Order status updated"));
+     * }</pre>
+     *
+     * @param <A> The type of the first parameter
+     * @param <B> The type of the second parameter
+     * @param <C> The type of the third parameter
+     * @param a The first parameter to be passed to the SQL action
+     * @param b The second parameter to be passed to the SQL action
+     * @param c The third parameter to be passed to the SQL action
+     * @param sqlAction The SQL action to be executed with the parameters
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c,
@@ -5921,14 +6067,24 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously calls the specified SQL action.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously calls the specified SQL action and returns a result.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R> The type of the result of the SQL action.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the SQL action is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<List<User>> future = JdbcUtil.asyncCall(() -> {
+     *     return JdbcUtil.query(dataSource, "SELECT * FROM users WHERE active = ?", true)
+     *                    .list(User.class);
+     * });
+     * 
+     * future.thenAccept(users -> System.out.println("Found " + users.size() + " active users"));
+     * }</pre>
+     *
+     * @param <R> The type of the result
+     * @param sqlAction The SQL action that produces a result
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
     public static <R> ContinuableFuture<R> asyncCall(final Callable<R> sqlAction) throws IllegalArgumentException {
@@ -5938,16 +6094,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously calls the specified SQL actions with two parameters.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously calls two SQL actions and returns their results.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R1> The type of the result of the first SQL action.
-     * @param <R2> The type of the result of the second SQL action.
-     * @param sqlAction1 The first SQL action to be executed.
-     * @param sqlAction2 The second SQL action to be executed.
-     * @return A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException If any of the SQL actions are invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Tuple2<ContinuableFuture<Long>, ContinuableFuture<List<Order>>> futures = JdbcUtil.asyncCall(
+     *     () -> JdbcUtil.queryForSingleResult(Long.class, dataSource, "SELECT COUNT(*) FROM users"),
+     *     () -> JdbcUtil.query(dataSource, "SELECT * FROM orders WHERE date = ?", today).list(Order.class)
+     * );
+     * 
+     * futures._1.thenAccept(count -> System.out.println("Total users: " + count));
+     * futures._2.thenAccept(orders -> System.out.println("Today's orders: " + orders.size()));
+     * }</pre>
+     *
+     * @param <R1> The type of the result from the first action
+     * @param <R2> The type of the result from the second action
+     * @param sqlAction1 The first SQL action that produces a result
+     * @param sqlAction2 The second SQL action that produces a result
+     * @return A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations
+     * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
     public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> asyncCall(final Callable<R1> sqlAction1, final Callable<R2> sqlAction2)
@@ -5959,18 +6126,32 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously calls the specified SQL actions with three parameters.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously calls three SQL actions and returns their results.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <R1> The type of the result of the first SQL action.
-     * @param <R2> The type of the result of the second SQL action.
-     * @param <R3> The type of the result of the third SQL action.
-     * @param sqlAction1 The first SQL action to be executed.
-     * @param sqlAction2 The second SQL action to be executed.
-     * @param sqlAction3 The third SQL action to be executed.
-     * @return A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations.
-     * @throws IllegalArgumentException If any of the SQL actions are invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures = 
+     *     JdbcUtil.asyncCall(
+     *         () -> JdbcUtil.queryForSingleResult(Long.class, dataSource, "SELECT COUNT(*) FROM orders"),
+     *         () -> JdbcUtil.queryForSingleResult(BigDecimal.class, dataSource, "SELECT SUM(total) FROM orders"),
+     *         () -> JdbcUtil.query(dataSource, "SELECT * FROM products WHERE stock < ?", 10).list(Product.class)
+     *     );
+     * 
+     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() -> {
+     *     System.out.println("All queries completed");
+     * });
+     * }</pre>
+     *
+     * @param <R1> The type of the result from the first action
+     * @param <R2> The type of the result from the second action
+     * @param <R3> The type of the result from the third action
+     * @param sqlAction1 The first SQL action that produces a result
+     * @param sqlAction2 The second SQL action that produces a result
+     * @param sqlAction3 The third SQL action that produces a result
+     * @return A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations
+     * @throws IllegalArgumentException if any of the SQL actions are {@code null}
      */
     @Beta
     public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> asyncCall(final Callable<R1> sqlAction1,
@@ -5983,16 +6164,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously calls the specified SQL action with one parameter.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously calls the specified SQL action with one parameter and returns a result.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T> The type of the parameter.
-     * @param <R> The type of the result.
-     * @param t The parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the sqlAction is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<User> future = JdbcUtil.asyncCall(123L, 
+     *     userId -> JdbcUtil.queryForSingleResult(User.class, dataSource, 
+     *                                              "SELECT * FROM users WHERE id = ?", userId)
+     * );
+     * 
+     * future.thenAccept(user -> System.out.println("Found user: " + user.getName()));
+     * }</pre>
+     *
+     * @param <T> The type of the parameter
+     * @param <R> The type of the result
+     * @param t The parameter to pass to the SQL action
+     * @param sqlAction The SQL action that takes a parameter and produces a result
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the sqlAction is {@code null}
      */
     @Beta
     public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
@@ -6003,18 +6194,29 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously calls the specified SQL action with two parameters.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously calls the specified SQL action with two parameters and returns a result.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <T> The type of the first parameter.
-     * @param <U> The type of the second parameter.
-     * @param <R> The type of the result.
-     * @param t The first parameter.
-     * @param u The second parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the sqlAction is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<List<Order>> future = JdbcUtil.asyncCall(userId, status,
+     *     (uid, st) -> JdbcUtil.query(dataSource, 
+     *                                 "SELECT * FROM orders WHERE user_id = ? AND status = ?", uid, st)
+     *                          .list(Order.class)
+     * );
+     * 
+     * future.thenAccept(orders -> System.out.println("Found " + orders.size() + " orders"));
+     * }</pre>
+     *
+     * @param <T> The type of the first parameter
+     * @param <U> The type of the second parameter
+     * @param <R> The type of the result
+     * @param t The first parameter to pass to the SQL action
+     * @param u The second parameter to pass to the SQL action
+     * @param sqlAction The SQL action that takes two parameters and produces a result
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the sqlAction is {@code null}
      */
     @Beta
     public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u,
@@ -6025,20 +6227,31 @@ public final class JdbcUtil {
     }
 
     /**
-     * Asynchronously calls the specified SQL action with three parameters.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Asynchronously calls the specified SQL action with three parameters and returns a result.
+     * Note: Any transaction started in current thread won't be automatically applied to the specified 
+     * {@code sqlAction} which will be executed in another thread.
      *
-     * @param <A> The type of the first parameter.
-     * @param <B> The type of the second parameter.
-     * @param <C> The type of the third parameter.
-     * @param <R> The type of the result.
-     * @param a The first parameter.
-     * @param b The second parameter.
-     * @param c The third parameter.
-     * @param sqlAction The SQL action to be executed.
-     * @return A ContinuableFuture representing the result of the asynchronous computation.
-     * @throws IllegalArgumentException If the sqlAction is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ContinuableFuture<BigDecimal> future = JdbcUtil.asyncCall(startDate, endDate, category,
+     *     (start, end, cat) -> JdbcUtil.queryForSingleResult(BigDecimal.class, dataSource,
+     *         "SELECT SUM(amount) FROM sales WHERE date BETWEEN ? AND ? AND category = ?", 
+     *         start, end, cat)
+     * );
+     * 
+     * future.thenAccept(total -> System.out.println("Total sales: " + total));
+     * }</pre>
+     *
+     * @param <A> The type of the first parameter
+     * @param <B> The type of the second parameter
+     * @param <C> The type of the third parameter
+     * @param <R> The type of the result
+     * @param a The first parameter to pass to the SQL action
+     * @param b The second parameter to pass to the SQL action
+     * @param c The third parameter to pass to the SQL action
+     * @param sqlAction The SQL action that takes three parameters and produces a result
+     * @return A ContinuableFuture representing the result of the asynchronous computation
+     * @throws IllegalArgumentException if the sqlAction is {@code null}
      */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c,
@@ -6234,12 +6447,33 @@ public final class JdbcUtil {
 
     /**
      * Retrieves the output parameters from the given CallableStatement.
+     * This method extracts the values of output parameters after executing a stored procedure.
      *
-     * @param stmt The CallableStatement from which to retrieve the output parameters.
-     * @param outParams The list of OutParam objects representing the output parameters.
-     * @return An OutParamResult containing the retrieved output parameters.
-     * @throws IllegalArgumentException If the provided arguments are invalid.
-     * @throws SQLException If a SQL exception occurs while retrieving the output parameters.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String sql = "{call get_user_info(?, ?, ?)}";
+     * try (CallableStatement stmt = connection.prepareCall(sql)) {
+     *     stmt.setLong(1, userId);
+     *     stmt.registerOutParameter(2, Types.VARCHAR);
+     *     stmt.registerOutParameter(3, Types.INTEGER);
+     *     stmt.execute();
+     *     
+     *     List<OutParam> outParams = Arrays.asList(
+     *         OutParam.of(2, Types.VARCHAR),
+     *         OutParam.of(3, Types.INTEGER)
+     *     );
+     *     
+     *     OutParamResult result = JdbcUtil.getOutParameters(stmt, outParams);
+     *     String name = (String) result.getOutParamValue(2);
+     *     Integer age = (Integer) result.getOutParamValue(3);
+     * }
+     * }</pre>
+     *
+     * @param stmt The CallableStatement from which to retrieve the output parameters
+     * @param outParams The list of OutParam objects representing the output parameters to retrieve
+     * @return An OutParamResult containing the retrieved output parameter values
+     * @throws IllegalArgumentException if the provided arguments are invalid
+     * @throws SQLException if a SQL exception occurs while retrieving the output parameters
      */
     public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(stmt, cs.stmt);
@@ -6284,9 +6518,17 @@ public final class JdbcUtil {
 
     /**
      * Extracts the named parameters from the given SQL string.
+     * Named parameters are placeholders in SQL that start with ':' followed by the parameter name.
      *
-     * @param sql the SQL string containing named parameters.
-     * @return a list of named parameters found in the SQL string.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String sql = "SELECT * FROM users WHERE name = :name AND age > :age AND city = :city";
+     * List<String> params = JdbcUtil.getNamedParameters(sql);
+     * // Returns: ["name", "age", "city"]
+     * }</pre>
+     *
+     * @param sql the SQL string containing named parameters (e.g., :paramName)
+     * @return a list of named parameter names found in the SQL string (without the ':' prefix)
      */
     public static List<String> getNamedParameters(final String sql) {
         return ParsedSql.parse(sql).getNamedParameters();
@@ -6294,9 +6536,18 @@ public final class JdbcUtil {
 
     /**
      * Parses the given SQL string and returns a ParsedSql object.
+     * This method analyzes SQL statements to extract information about parameters and structure.
      *
-     * @param sql the SQL string to be parsed.
-     * @return a ParsedSql object representing the parsed SQL string.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String sql = "SELECT * FROM users WHERE name = :name AND age > ?";
+     * ParsedSql parsedSql = JdbcUtil.parseSql(sql);
+     * List<String> namedParams = parsedSql.getNamedParameters(); // ["name"]
+     * String convertedSql = parsedSql.getParameterizedSql(); // SQL with named params converted to ?
+     * }</pre>
+     *
+     * @param sql the SQL string to be parsed
+     * @return a ParsedSql object containing parsed information about the SQL string
      * @see ParsedSql#parse(String)
      */
     public static ParsedSql parseSql(final String sql) {
@@ -6304,75 +6555,133 @@ public final class JdbcUtil {
     }
 
     /**
+     * Gets the property names suitable for INSERT operations for the given entity.
+     * This method returns all property names that should be included in an INSERT statement,
+     * excluding properties marked with annotations like @ReadOnly, @Id (for auto-generated IDs), etc.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * User user = new User();
+     * Collection<String> propNames = JdbcUtil.getInsertPropNames(user);
+     * // Returns property names that should be included in INSERT statement
+     * }</pre>
      *
-     * @param entity
-     * @return
+     * @param entity the entity object to analyze
+     * @return a collection of property names suitable for INSERT operations
      */
     public static Collection<String> getInsertPropNames(final Object entity) {
         return getInsertPropNames(entity, null);
     }
 
     /**
+     * Gets the property names suitable for INSERT operations for the given entity,
+     * excluding the specified property names.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * User user = new User();
+     * Set<String> excludedProps = N.asSet("createdTime", "modifiedTime");
+     * Collection<String> propNames = JdbcUtil.getInsertPropNames(user, excludedProps);
+     * // Returns property names for INSERT, excluding specified properties
+     * }</pre>
      *
-     * @param entity
-     * @param excludedPropNames
-     * @return
+     * @param entity the entity object to analyze
+     * @param excludedPropNames property names to exclude from the result
+     * @return a collection of property names suitable for INSERT operations
      */
     public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entity, excludedPropNames);
     }
 
     /**
+     * Gets the property names suitable for INSERT operations for the given entity class.
+     * This method analyzes the class structure to determine which properties should be
+     * included in INSERT statements.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Collection<String> propNames = JdbcUtil.getInsertPropNames(User.class);
+     * // Returns property names that should be included in INSERT statement for User entities
+     * }</pre>
      *
-     * @param entityClass
-     * @return
+     * @param entityClass the entity class to analyze
+     * @return a collection of property names suitable for INSERT operations
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
         return getInsertPropNames(entityClass, null);
     }
 
     /**
+     * Gets the property names suitable for INSERT operations for the given entity class,
+     * excluding the specified property names.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Set<String> excludedProps = N.asSet("id", "version");
+     * Collection<String> propNames = JdbcUtil.getInsertPropNames(User.class, excludedProps);
+     * // Returns property names for INSERT, excluding specified properties
+     * }</pre>
      *
-     * @param entityClass
-     * @param excludedPropNames
-     * @return
+     * @param entityClass the entity class to analyze
+     * @param excludedPropNames property names to exclude from the result
+     * @return a collection of property names suitable for INSERT operations
      */
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
     }
 
     /**
+     * Gets the property names suitable for SELECT operations for the given entity class.
+     * This method returns all property names that should be included in a SELECT statement,
+     * excluding properties marked with @Transient or other exclusion annotations.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class);
+     * // Returns property names that should be included in SELECT statement
+     * }</pre>
      *
-     * @param entityClass
-     * @return
+     * @param entityClass the entity class to analyze
+     * @return a collection of property names suitable for SELECT operations
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
         return getSelectPropNames(entityClass, null);
     }
 
     /**
+     * Gets the property names suitable for SELECT operations for the given entity class,
+     * excluding the specified property names.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Set<String> excludedProps = N.asSet("password", "secretKey");
+     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, excludedProps);
+     * // Returns property names for SELECT, excluding sensitive properties
+     * }</pre>
      *
-     * @param entityClass
-     * @param excludedPropNames
-     * @return
+     * @param entityClass the entity class to analyze
+     * @param excludedPropNames property names to exclude from the result
+     * @return a collection of property names suitable for SELECT operations
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return getSelectPropNames(entityClass, false, excludedPropNames);
     }
 
     /**
+     * Gets the property names suitable for SELECT operations for the given entity class,
+     * with an option to include sub-entity properties and exclude specified property names.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Include properties of related entities (e.g., user.address.street)
+     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, true, null);
+     * // Returns property names including sub-entity properties
+     * }</pre>
      *
-     * @param entityClass
-     * @param includeSubEntityProperties
-     * @param excludedPropNames
-     * @return
+     * @param entityClass the entity class to analyze
+     * @param includeSubEntityProperties whether to include properties of sub-entities
+     * @param excludedPropNames property names to exclude from the result
+     * @return a collection of property names suitable for SELECT operations
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
@@ -6380,32 +6689,56 @@ public final class JdbcUtil {
     }
 
     /**
+     * Gets the property names suitable for UPDATE operations for the given entity class.
+     * This method returns all property names that should be included in an UPDATE statement,
+     * excluding properties marked with @ReadOnly, @NonUpdatable, @Id, etc.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Collection<String> propNames = JdbcUtil.getUpdatePropNames(User.class);
+     * // Returns property names that can be updated
+     * }</pre>
      *
-     * @param entityClass
-     * @return
+     * @param entityClass the entity class to analyze
+     * @return a collection of property names suitable for UPDATE operations
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
         return getUpdatePropNames(entityClass, null);
     }
 
     /**
+     * Gets the property names suitable for UPDATE operations for the given entity class,
+     * excluding the specified property names.
      *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Set<String> excludedProps = N.asSet("createdTime", "createdBy");
+     * Collection<String> propNames = JdbcUtil.getUpdatePropNames(User.class, excludedProps);
+     * // Returns property names for UPDATE, excluding specified properties
+     * }</pre>
      *
-     * @param entityClass
-     * @param excludedPropNames
-     * @return
+     * @param entityClass the entity class to analyze
+     * @param excludedPropNames property names to exclude from the result
+     * @return a collection of property names suitable for UPDATE operations
      */
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
     }
 
     /**
-     * Converts the given Blob to a String and close the Blob in finally block.
+     * Converts a Blob to a String using UTF-8 encoding and frees the Blob resources.
+     * This method reads all bytes from the Blob and converts them to a String.
      *
-     * @param blob The Blob object to be converted to a String.
-     * @return The String representation of the Blob.
-     * @throws SQLException If a SQL exception occurs while accessing the Blob.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Blob blob = resultSet.getBlob("data");
+     * String content = JdbcUtil.blob2String(blob);
+     * // The blob is automatically freed after conversion
+     * }</pre>
+     *
+     * @param blob the Blob object to be converted to a String
+     * @return the String representation of the Blob content
+     * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
     public static String blob2String(final Blob blob) throws SQLException {
         try {
@@ -6418,12 +6751,20 @@ public final class JdbcUtil {
     }
 
     /**
-     * Converts the given Blob to a String using the specified Charset and closes the Blob in the finally block.
+     * Converts a Blob to a String using the specified character encoding and frees the Blob resources.
+     * This method reads all bytes from the Blob and converts them to a String using the given charset.
      *
-     * @param blob The Blob object to be converted to a String.
-     * @param charset The Charset to be used for decoding the Blob data.
-     * @return The String representation of the Blob.
-     * @throws SQLException If a SQL exception occurs while accessing the Blob.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Blob blob = resultSet.getBlob("data");
+     * String content = JdbcUtil.blob2String(blob, Charsets.ISO_8859_1);
+     * // The blob is automatically freed after conversion
+     * }</pre>
+     *
+     * @param blob the Blob object to be converted to a String
+     * @param charset the character encoding to use for the conversion
+     * @return the String representation of the Blob content
+     * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
         try {
@@ -6436,13 +6777,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Writes the content of the given Blob to the specified file and closes the Blob in the finally block.
+     * Writes the content of a Blob to a file and frees the Blob resources.
+     * This method streams the Blob content directly to the specified file.
      *
-     * @param blob The Blob object containing the data to be written to the file.
-     * @param output The File object representing the file to which the Blob data will be written.
-     * @return The number of bytes written to the file.
-     * @throws SQLException If a SQL exception occurs while accessing the Blob.
-     * @throws IOException If an I/O error occurs while writing to the file.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Blob blob = resultSet.getBlob("document");
+     * File outputFile = new File("document.pdf");
+     * long bytesWritten = JdbcUtil.writeBlobToFile(blob, outputFile);
+     * // The blob is automatically freed after writing
+     * }</pre>
+     *
+     * @param blob the Blob object containing the data to be written
+     * @param output the File object representing the output file
+     * @return the number of bytes written to the file
+     * @throws SQLException if a SQL exception occurs while accessing the Blob
+     * @throws IOException if an I/O error occurs while writing to the file
      */
     public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
         try {
@@ -6455,11 +6805,19 @@ public final class JdbcUtil {
     }
 
     /**
-     * Converts the given Clob to a String and closes the Clob in the finally block.
+     * Converts a Clob to a String and frees the Clob resources.
+     * This method reads all characters from the Clob and returns them as a String.
      *
-     * @param clob The Clob object to be converted to a String.
-     * @return The String representation of the Clob.
-     * @throws SQLException If a SQL exception occurs while accessing the Clob.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Clob clob = resultSet.getClob("description");
+     * String content = JdbcUtil.clob2String(clob);
+     * // The clob is automatically freed after conversion
+     * }</pre>
+     *
+     * @param clob the Clob object to be converted to a String
+     * @return the String representation of the Clob content
+     * @throws SQLException if a SQL exception occurs while accessing the Clob
      */
     public static String clob2String(final Clob clob) throws SQLException {
         try {
@@ -6472,13 +6830,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Writes the content of the given Clob to the specified file and closes the Clob in the finally block.
+     * Writes the content of a Clob to a file and frees the Clob resources.
+     * This method streams the Clob content directly to the specified file.
      *
-     * @param clob The Clob object containing the data to be written to the file.
-     * @param output The File object representing the file to which the Clob data will be written.
-     * @return The number of characters written to the file.
-     * @throws SQLException If a SQL exception occurs while accessing the Clob.
-     * @throws IOException If an I/O exception occurs while writing to the file.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Clob clob = resultSet.getClob("article");
+     * File outputFile = new File("article.txt");
+     * long charsWritten = JdbcUtil.writeClobToFile(clob, outputFile);
+     * // The clob is automatically freed after writing
+     * }</pre>
+     *
+     * @param clob the Clob object containing the data to be written
+     * @param output the File object representing the output file
+     * @return the number of characters written to the file
+     * @throws SQLException if a SQL exception occurs while accessing the Clob
+     * @throws IOException if an I/O exception occurs while writing to the file
      */
     public static long writeClobToFile(final Clob clob, final File output) throws SQLException, IOException {
         try {
@@ -6491,14 +6858,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if the given value is {@code null} or the default value for its type.
+     * Checks if the given value is null or equals the default value for its type.
+     * Default values are: 0 for numeric types, false for boolean, empty for collections/maps,
+     * and null for reference types.
      *
-     * @param value The value to be checked.
-     * @return {@code true} if the value is {@code null} or the default value for its type, {@code false} otherwise.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.isNullOrDefault(null);        // true
+     * JdbcUtil.isNullOrDefault(0);           // true
+     * JdbcUtil.isNullOrDefault(false);       // true
+     * JdbcUtil.isNullOrDefault("");          // false (empty string is not default)
+     * JdbcUtil.isNullOrDefault(1);           // false
+     * }</pre>
+     *
+     * @param value the value to check
+     * @return {@code true} if the value is null or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
     }
+
 
     static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {
         final V oldValue = map.get(key);
@@ -6563,28 +6942,50 @@ public final class JdbcUtil {
     // <<==============================================Jdbc Context=======================================================
 
     /**
-     * Turns off SQL logging globally.
-     * This method sets the flag to disable SQL logging across the entire application.
+     * Globally disables SQL logging across all threads in the application.
+     * Once called, SQL statements will not be logged regardless of thread-local settings.
+     * This setting cannot be reversed during the application lifecycle.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Disable SQL logging for production environment
+     * JdbcUtil.turnOffSqlLogGlobally();
+     * }</pre>
      */
     public static void turnOffSqlLogGlobally() {
         isSqlLogAllowed = false;
     }
 
     /**
-     * Turns off SQL performance logging globally.
-     * This method sets the flag to disable SQL performance logging across the entire application.
+     * Globally disables SQL performance logging across all threads in the application.
+     * Once called, SQL execution times will not be logged regardless of thread-local settings.
+     * This setting cannot be reversed during the application lifecycle.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Disable SQL performance logging for production
+     * JdbcUtil.turnOffSqlPerfLogGlobally();
+     * }</pre>
      */
     public static void turnOffSqlPerfLogGlobally() {
         isSqlPerfLogAllowed = false;
     }
 
     /**
-     * Turns off DAO method performance logging globally.
-     * This method sets the flag to disable DAO method performance logging across the entire application.
+     * Globally disables DAO method performance logging across all threads in the application.
+     * Once called, DAO method execution times will not be logged regardless of thread-local settings.
+     * This setting cannot be reversed during the application lifecycle.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Disable DAO performance logging
+     * JdbcUtil.turnOffDaoMethodPerfLogGlobally();
+     * }</pre>
      */
     public static void turnOffDaoMethodPerfLogGlobally() {
         isDaoMethodPerfLogAllowed = false;
     }
+
 
     /**
      * Enables/Disables SQL logging in the current thread.
@@ -6621,38 +7022,74 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables SQL logging in the current thread.
-     * This method enables SQL logging with the default maximum SQL log length.
+     * Enables SQL logging for the current thread with the default maximum log length.
+     * When enabled, all SQL statements executed in the current thread will be logged.
+     * The default maximum SQL log length is 1024 characters.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.enableSqlLog();
+     * // Execute SQL operations - they will be logged
+     * // ...
+     * JdbcUtil.disableSqlLog();
+     * }</pre>
      */
     public static void enableSqlLog() {
         enableSqlLog(DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
-     * Enables SQL logging in the current thread with a specified maximum SQL log length.
+     * Enables SQL logging for the current thread with a specified maximum log length.
+     * SQL statements longer than the specified length will be truncated in the logs.
      *
-     * @param maxSqlLogLength The maximum length of the SQL log. Default value is 1024.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.enableSqlLog(2048); // Allow longer SQL statements in logs
+     * // Execute SQL operations
+     * // ...
+     * JdbcUtil.disableSqlLog();
+     * }</pre>
+     *
+     * @param maxSqlLogLength the maximum length of SQL statements in logs
      */
     public static void enableSqlLog(final int maxSqlLogLength) {
         enableSqlLog(true, maxSqlLogLength);
     }
 
     /**
-     * Disables SQL logging in the current thread.
-     * This method disables SQL logging while retaining the current maximum SQL log length.
+     * Disables SQL logging for the current thread.
+     * After calling this method, SQL statements executed in the current thread will not be logged.
+     * The maximum SQL log length setting is preserved for when logging is re-enabled.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.enableSqlLog();
+     * // SQL operations here will be logged
+     * 
+     * JdbcUtil.disableSqlLog();
+     * // SQL operations here will NOT be logged
+     * }</pre>
      */
     public static void disableSqlLog() {
         enableSqlLog(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
     }
 
     /**
-     * Checks if SQL logging is enabled in the current thread.
+     * Checks if SQL logging is enabled for the current thread.
      *
-     * @return {@code true} if SQL logging is enabled, otherwise {@code false}.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * if (JdbcUtil.isSqlLogEnabled()) {
+     *     System.out.println("SQL logging is active");
+     * }
+     * }</pre>
+     *
+     * @return {@code true} if SQL logging is enabled in the current thread, {@code false} otherwise
      */
     public static boolean isSqlLogEnabled() {
         return isSQLLogEnabled_TL.get().isEnabled;
     }
+
 
     static void logSql(final String sql) {
         if (!isSqlLogAllowed || !sqlLogger.isDebugEnabled()) {
@@ -6701,65 +7138,117 @@ public final class JdbcUtil {
     static boolean isToHandleSqlLog(final SqlLogConfig sqlLogConfig) {
         return _sqlLogHandler != null || (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled());
     }
-
+    
     /**
-     * Retrieves the current SQL extractor function.
-     * This function is used to extract SQL statements from a given Statement object.
+     * Retrieves the current SQL extractor function used to extract SQL statements from Statement objects.
+     * The SQL extractor is used internally for logging and monitoring purposes.
      *
-     * @return The current SQL extractor function.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Throwables.Function<Statement, String, SQLException> extractor = JdbcUtil.getSqlExtractor();
+     * // Use the extractor to get SQL from a statement
+     * String sql = extractor.apply(statement);
+     * }</pre>
+     *
+     * @return the current SQL extractor function
      */
     public static Throwables.Function<Statement, String, SQLException> getSqlExtractor() {
         return JdbcUtil._sqlExtractor;
     }
 
     /**
-     * Sets the SQL extractor function.
-     * This function is used to extract SQL statements from a given Statement object.
+     * Sets a custom SQL extractor function to extract SQL statements from Statement objects.
+     * This is useful when using custom Statement implementations or when the default
+     * extraction method doesn't work for your JDBC driver.
      *
-     * @param sqlExtractor The SQL extractor function to set.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.setSqlExtractor(statement -> {
+     *     if (statement instanceof MyCustomStatement) {
+     *         return ((MyCustomStatement) statement).getOriginalSql();
+     *     }
+     *     return statement.toString();
+     * });
+     * }</pre>
+     *
+     * @param sqlExtractor the SQL extractor function to set
      */
     public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
         JdbcUtil._sqlExtractor = sqlExtractor;
     }
 
     /**
-     * Retrieves the SQL log handler.
-     * The SQL log handler is a TriConsumer that handles SQL log messages along with their execution times.
+     * Retrieves the current SQL log handler that processes SQL statements and their execution times.
+     * The handler receives the SQL statement, start time, and end time of execution.
      *
-     * @return The current SQL log handler.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * TriConsumer<String, Long, Long> handler = JdbcUtil.getSqlLogHandler();
+     * if (handler != null) {
+     *     // Handler is configured
+     * }
+     * }</pre>
+     *
+     * @return the current SQL log handler, or null if none is set
      */
     public static TriConsumer<String, Long, Long> getSqlLogHandler() {
         return _sqlLogHandler;
     }
 
     /**
-     * Sets the SQL log handler.
-     * The SQL log handler is a TriConsumer that handles SQL log messages along with their execution times.
+     * Sets a custom SQL log handler to process SQL statements and their execution times.
+     * This allows for custom logging, monitoring, or alerting based on SQL execution.
      *
-     * @param sqlLogHandler 1st parameter is the SQL statement,
-     *                      2nd parameter is the start time of SQL execution,
-     *                      3rd parameter is the end time of SQL execution.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.setSqlLogHandler((sql, startTime, endTime) -> {
+     *     long duration = endTime - startTime;
+     *     if (duration > 1000) { // Log slow queries
+     *         logger.warn("Slow query ({}ms): {}", duration, sql);
+     *     }
+     *     // Send metrics to monitoring system
+     *     metricsCollector.recordSqlExecution(sql, duration);
+     * });
+     * }</pre>
+     *
+     * @param sqlLogHandler the handler that receives: SQL statement, start time (ms), end time (ms)
      */
     public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) {
         _sqlLogHandler = sqlLogHandler;
     }
 
     /**
-     * Sets the minimum execution time to log SQL performance in the current thread.
+     * Sets the minimum execution time threshold for SQL performance logging in the current thread.
+     * Only SQL statements that take longer than this threshold will be logged for performance monitoring.
+     * Uses the default maximum SQL log length of 1024 characters.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Log SQL statements that take more than 500ms
+     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(500);
+     * }</pre>
      *
      * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds
-     *                                      for logging SQL performance.
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog) {
         setMinExecutionTimeForSqlPerfLog(minExecutionTimeForSqlPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
     }
 
     /**
-     * Sets the minimum execution time to log SQL performance in the current thread.
+     * Sets the minimum execution time threshold for SQL performance logging in the current thread
+     * with a specified maximum SQL log length.
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds
-     *                                      for logging SQL performance. Default value is 1000 (milliseconds).
-     * @param maxSqlLogLength the maximum length of the SQL log. Default value is 1024.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Log SQL statements that take more than 1 second, with longer log length
+     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(1000, 2048);
+     * 
+     * // Disable performance logging
+     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
+     * }</pre>
+     *
+     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use -1 to disable)
+     * @param maxSqlLogLength the maximum length of SQL statements in performance logs
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
         final SqlLogConfig config = minExecutionTimeForSqlPerfLog_TL.get();
@@ -6777,45 +7266,38 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the minimum execution time in milliseconds to log SQL performance in the current thread.
-     * The default value is 1000 milliseconds.
+     * Gets the current minimum execution time threshold for SQL performance logging in the current thread.
+     * SQL statements that execute faster than this threshold will not be logged for performance.
      *
-     * @return the minimum execution time for logging SQL performance in milliseconds.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * long threshold = JdbcUtil.getMinExecutionTimeForSqlPerfLog();
+     * System.out.println("Performance logging threshold: " + threshold + "ms");
+     * }</pre>
+     *
+     * @return the minimum execution time in milliseconds (default is 1000ms)
      */
     public static long getMinExecutionTimeForSqlPerfLog() {
         return minExecutionTimeForSqlPerfLog_TL.get().minExecutionTimeForSqlPerfLog;
     }
 
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
     /**
-     * Since enable/disable sql log flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * Executes the specified action with SQL logging temporarily disabled.
+     * This is useful for executing sensitive queries or reducing log verbosity for specific operations.
+     * Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
      *
-     * @param <E>
-     * @param sqlAction
-     * @throws E
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.runWithSqlLogDisabled(() -> {
+     *     // Execute sensitive SQL operations without logging
+     *     preparedQuery.setString(1, password);
+     *     preparedQuery.executeUpdate();
+     * });
+     * }</pre>
+     *
+     * @param <E> the type of exception that the action may throw
+     * @param sqlAction the action to execute without SQL logging
+     * @throws E if the action throws an exception
      */
     public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E {
         if (isSqlLogEnabled()) {
@@ -6832,13 +7314,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Since enable/disable sql log flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * Executes the specified callable with SQL logging temporarily disabled and returns its result.
+     * This is useful for executing sensitive queries that return values without logging.
+     * Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
      *
-     * @param <R>
-     * @param <E>
-     * @param sqlAction
-     * @return
-     * @throws E
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String result = JdbcUtil.callWithSqlLogDisabled(() -> {
+     *     // Execute sensitive query without logging
+     *     return preparedQuery.setString(1, userId)
+     *                        .queryForString()
+     *                        .orElse(null);
+     * });
+     * }</pre>
+     *
+     * @param <R> the type of result returned by the callable
+     * @param <E> the type of exception that the callable may throw
+     * @param sqlAction the callable to execute without SQL logging
+     * @return the result of the callable
+     * @throws E if the callable throws an exception
      */
     public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<R, E> sqlAction) throws E {
         if (isSqlLogEnabled()) {
@@ -6855,10 +7349,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if there is an active transaction for the given DataSource in current thread.
+     * Checks if there is an active transaction for the given DataSource in the current thread.
+     * This includes both JdbcUtil-managed transactions and Spring-managed transactions.
      *
-     * @param ds The DataSource to check for an active transaction.
-     * @return {@code true} if there is an active transaction, {@code false} otherwise.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * if (JdbcUtil.isInTransaction(dataSource)) {
+     *     // Execute operations within the existing transaction
+     * } else {
+     *     // Start a new transaction
+     *     SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     *     // ...
+     * }
+     * }</pre>
+     *
+     * @param ds the DataSource to check for an active transaction
+     * @return {@code true} if there is an active transaction, {@code false} otherwise
      */
     public static boolean isInTransaction(final javax.sql.DataSource ds) {
         if (SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
@@ -6883,11 +7389,24 @@ public final class JdbcUtil {
     }
 
     /**
-     * Begins a new transaction for the given DataSource.
+     * Begins a new transaction with default isolation level for the given DataSource.
+     * The transaction must be explicitly committed or rolled back.
      *
-     * @param dataSource The DataSource for which to begin the transaction.
-     * @return A SQLTransaction object representing the new transaction.
-     * @throws UncheckedSQLException If a SQL exception occurs while beginning the transaction.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     // Perform database operations
+     *     preparedQuery.executeUpdate();
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     * }</pre>
+     *
+     * @param dataSource the DataSource for which to begin the transaction
+     * @return a SQLTransaction object representing the new transaction
+     * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException {
@@ -6895,12 +7414,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Begins a new transaction for the given DataSource with the specified isolation level.
+     * Begins a new transaction with the specified isolation level for the given DataSource.
+     * The transaction must be explicitly committed or rolled back.
      *
-     * @param dataSource The DataSource for which to begin the transaction.
-     * @param isolationLevel The isolation level for the transaction.
-     * @return A SQLTransaction object representing the new transaction.
-     * @throws UncheckedSQLException If a SQL exception occurs while beginning the transaction.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+     * try {
+     *     // Perform database operations with READ_COMMITTED isolation
+     *     preparedQuery.executeUpdate();
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     * }</pre>
+     *
+     * @param dataSource the DataSource for which to begin the transaction
+     * @param isolationLevel the isolation level for the transaction
+     * @return a SQLTransaction object representing the new transaction
+     * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException {
@@ -6908,94 +7440,45 @@ public final class JdbcUtil {
     }
 
     /**
-     * Starts a global transaction which will be shared by all in-line database query with the same {@code DataSource} in the same thread,
-     * including methods: {@code JdbcUtil.beginTransaction/prepareQuery/prepareNamedQuery/prepareCallableQuery, SQLExecutor(Mapper).beginTransaction/get/insert/batchInsert/update/batchUpdate/query/list/findFirst/...}
+     * Starts a global transaction which will be shared by all in-line database queries with the same DataSource
+     * in the same thread. This includes methods like prepareQuery, prepareNamedQuery, prepareCallableQuery,
+     * and SQLExecutor operations.
      *
-     * <br />
-     * Spring Transaction is supported and Integrated.
-     * If this method is called at where a Spring transaction is started with the specified {@code DataSource},
-     * the {@code Connection} started the Spring Transaction will be used here.
-     * That's to say the Spring transaction will have the final control on commit/roll back over the {@code Connection}.
+     * <p>Spring Transaction is supported and integrated. If a Spring transaction is already active
+     * with the specified DataSource, the Connection from the Spring transaction will be used.</p>
      *
-     * <br />
-     * <br />
-     *
-     * Here is the general code pattern to work with {@code SQLTransaction}.
-     *
-     * <pre>
-     * <code>
+     * <h3>Example of transaction sharing:</h3>
+     * <pre>{@code
      * public void doSomethingA() {
-     *     ...
-     *     final SQLTransaction tranA = JdbcUtil.beginTransaction(dataSource1, isolation);
-     *
+     *     final SQLTransaction tranA = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
      *     try {
-     *         ...
-     *         doSomethingB(); // Share the same transaction 'tranA' because they're in the same thread and start transaction with same DataSource 'dataSource1'.
-     *         ...
-     *         doSomethingC(); // won't share the same transaction 'tranA' although they're in the same thread but start transaction with different DataSource 'dataSource2'.
-     *         ...
+     *         // Operations here share tranA
+     *         doSomethingB(); // Shares tranA (same thread, same dataSource1)
+     *         doSomethingC(); // Uses different transaction (different dataSource2)
      *         tranA.commit();
      *     } finally {
      *         tranA.rollbackIfNotCommitted();
      *     }
      * }
-     *
+     * 
      * public void doSomethingB() {
-     *     ...
-     *     final SQLTransaction tranB = JdbcUtil.beginTransaction(dataSource1, isolation);
+     *     final SQLTransaction tranB = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
      *     try {
-     *         // do your work with the conn...
-     *         ...
+     *         // This reuses tranA from doSomethingA()
      *         tranB.commit();
      *     } finally {
      *         tranB.rollbackIfNotCommitted();
      *     }
      * }
+     * }</pre>
      *
-     * public void doSomethingC() {
-     *     ...
-     *     final SQLTransaction tranC = JdbcUtil.beginTransaction(dataSource2, isolation);
-     *     try {
-     *         // do your work with the conn...
-     *         ...
-     *         tranC.commit();
-     *     } finally {
-     *         tranC.rollbackIfNotCommitted();
-     *     }
-     * }
-     * </pre>
-     * </code>
-     *
-     * It's incorrect to use flag to identity the transaction should be committed or rolled back.
-     * Don't write below code:
-     * <pre>
-     * <code>
-     * public void doSomethingA() {
-     *     ...
-     *     final SQLTransaction tranA = JdbcUtil.beginTransaction(dataSource1, isolation);
-     *     boolean flagToCommit = false;
-     *     try {
-     *         // do your work with the conn...
-     *         ...
-     *         flagToCommit = true;
-     *     } finally {
-     *         if (flagToCommit) {
-     *             tranA.commit();
-     *         } else {
-     *             tranA.rollbackIfNotCommitted();
-     *         }
-     *     }
-     * }
-     * </code>
-     * </pre>
-     *
-     * @param dataSource
-     * @param isolationLevel
-     * @param isForUpdateOnly
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @see {@link JdbcUtil#getConnection(javax.sql.DataSource)}
-     * @see {@link JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)}
+     * @param dataSource the DataSource for which to begin the transaction
+     * @param isolationLevel the isolation level for the transaction
+     * @param isForUpdateOnly whether this transaction is only for update operations
+     * @return a SQLTransaction object representing the transaction
+     * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
+     * @see JdbcUtil#getConnection(javax.sql.DataSource)
+     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
             throws UncheckedSQLException {
@@ -7032,42 +7515,27 @@ public final class JdbcUtil {
         return tran;
     }
 
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
     /**
-     * Executes the given command within a transaction for the specified DataSource.
-     * If the command completes successfully, the transaction is committed.
+     * Executes the given callable within a transaction and returns its result.
+     * If the callable completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * @param <T> The type of the result returned by the command.
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to begin the transaction.
-     * @param cmd The command to execute within the transaction.
-     * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String result = JdbcUtil.callInTransaction(dataSource, () -> {
+     *     // Perform database operations
+     *     preparedQuery.executeUpdate();
+     *     return "Success";
+     * });
+     * }</pre>
+     *
+     * @param <T> the type of the result returned by the callable
+     * @param <E> the type of exception that the callable may throw
+     * @param dataSource the DataSource for the transaction
+     * @param cmd the callable to execute within the transaction
+     * @return the result of the callable execution
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the callable throws an exception
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
@@ -7089,17 +7557,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command within a transaction for the specified DataSource.
-     * If the command completes successfully, the transaction is committed.
+     * Executes the given function within a transaction, providing the transaction's connection.
+     * If the function completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * @param <T> The type of the result returned by the command.
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to begin the transaction.
-     * @param cmd The command to execute within the transaction.
-     * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * List<User> users = JdbcUtil.callInTransaction(dataSource, conn -> {
+     *     try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM users")) {
+     *         ResultSet rs = ps.executeQuery();
+     *         // Process results
+     *         return users;
+     *     }
+     * });
+     * }</pre>
+     *
+     * @param <T> the type of the result returned by the function
+     * @param <E> the type of exception that the function may throw
+     * @param dataSource the DataSource for the transaction
+     * @param cmd the function to execute with the transaction's connection
+     * @return the result of the function execution
+     * @throws E if the function throws an exception
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd)
@@ -7121,15 +7599,24 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command within a transaction for the specified DataSource.
-     * If the command completes successfully, the transaction is committed.
+     * Executes the given runnable within a transaction.
+     * If the runnable completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to begin the transaction.
-     * @param cmd The command to execute within the transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.runInTransaction(dataSource, () -> {
+     *     // Perform multiple database operations
+     *     userDao.insert(user);
+     *     auditDao.logUserCreation(user);
+     * });
+     * }</pre>
+     *
+     * @param <E> the type of exception that the runnable may throw
+     * @param dataSource the DataSource for the transaction
+     * @param cmd the runnable to execute within the transaction
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the runnable throws an exception
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
@@ -7148,15 +7635,26 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command within a transaction for the specified DataSource.
-     * If the command completes successfully, the transaction is committed.
+     * Executes the given consumer within a transaction, providing the transaction's connection.
+     * If the consumer completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to begin the transaction.
-     * @param cmd The command to execute within the transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.runInTransaction(dataSource, conn -> {
+     *     try (PreparedStatement ps = conn.prepareStatement("UPDATE users SET active = ? WHERE id = ?")) {
+     *         ps.setBoolean(1, false);
+     *         ps.setLong(2, userId);
+     *         ps.executeUpdate();
+     *     }
+     * });
+     * }</pre>
+     *
+     * @param <E> the type of exception that the consumer may throw
+     * @param dataSource the DataSource for the transaction
+     * @param cmd the consumer to execute with the transaction's connection
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the consumer throws an exception
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd)
@@ -7175,16 +7673,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside any started transaction for the specified DataSource.
-     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
+     * Executes the given callable outside any active transaction for the specified DataSource.
+     * If a transaction is active in the current thread, a new connection (not part of the transaction)
+     * will be used to execute the callable.
      *
-     * @param <T> The type of the result returned by the command.
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside any started transaction.
-     * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Inside a transaction, but need to log something immediately
+     * JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+     *     // This runs with a separate connection
+     *     auditDao.logImmediately("Operation started");
+     *     return "Logged";
+     * });
+     * }</pre>
+     *
+     * @param <T> the type of the result returned by the callable
+     * @param <E> the type of exception that the callable may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the callable to execute outside any transaction
+     * @return the result of the callable execution
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the callable throws an exception
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
@@ -7218,16 +7727,28 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside any started transaction for the specified DataSource.
-     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
+     * Executes the given function outside any active transaction for the specified DataSource.
+     * The function receives the DataSource as a parameter and can use it to create connections
+     * that are not part of any active transaction.
      *
-     * @param <T> The type of the result returned by the command.
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside any started transaction.
-     * @return The result of the command execution.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String result = JdbcUtil.callNotInStartedTransaction(dataSource, ds -> {
+     *     // Use the DataSource to perform operations outside transaction
+     *     try (Connection conn = ds.getConnection()) {
+     *         // Perform non-transactional operations
+     *         return "Done";
+     *     }
+     * });
+     * }</pre>
+     *
+     * @param <T> the type of the result returned by the function
+     * @param <E> the type of exception that the function may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the function to execute outside any transaction
+     * @return the result of the function execution
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the function throws an exception
      */
     @Beta
     public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource,
@@ -7261,14 +7782,24 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside any started transaction for the specified DataSource.
-     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
+     * Executes the given runnable outside any active transaction for the specified DataSource.
+     * If a transaction is active in the current thread, a new connection (not part of the transaction)
+     * will be used to execute the runnable.
      *
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside any started transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Inside a transaction, but need to perform non-transactional operation
+     * JdbcUtil.runNotInStartedTransaction(dataSource, () -> {
+     *     // This runs with a separate connection
+     *     cacheDao.refreshCache();
+     * });
+     * }</pre>
+     *
+     * @param <E> the type of exception that the runnable may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the runnable to execute outside any transaction
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the runnable throws an exception
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
@@ -7302,14 +7833,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given command outside any started transaction for the specified DataSource.
-     * If a transaction is already started in current thread, a new connection which is not used to started transaction will be used to execute the command.
+     * Executes the given consumer outside any active transaction for the specified DataSource.
+     * The consumer receives the DataSource as a parameter and can use it to create connections
+     * that are not part of any active transaction.
      *
-     * @param <E> The type of exception that the command may throw.
-     * @param dataSource The DataSource for which to execute the command.
-     * @param cmd The command to execute outside any started transaction.
-     * @throws IllegalArgumentException If the dataSource or cmd is {@code null}.
-     * @throws E If the command throws an exception.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.runNotInStartedTransaction(dataSource, ds -> {
+     *     // Use the DataSource for non-transactional operations
+     *     try (Connection conn = ds.getConnection()) {
+     *         // Perform operations that should not be part of current transaction
+     *     }
+     * });
+     * }</pre>
+     *
+     * @param <E> the type of exception that the consumer may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the consumer to execute outside any transaction
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the consumer throws an exception
      */
     @Beta
     public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
@@ -7343,11 +7885,21 @@ public final class JdbcUtil {
     }
 
     /**
-     * Since using or not using Spring transaction flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * Executes the given runnable without using Spring transaction management.
+     * This temporarily disables Spring transaction integration for the current thread.
+     * Note: The action should not be executed in another thread as the flag is thread-local.
      *
-     * @param <E>
-     * @param sqlAction
-     * @throws E
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.runWithoutUsingSpringTransaction(() -> {
+     *     // Operations here will not participate in Spring transactions
+     *     jdbcDao.performNonTransactionalOperation();
+     * });
+     * }</pre>
+     *
+     * @param <E> the type of exception that the runnable may throw
+     * @param sqlAction the runnable to execute without Spring transaction
+     * @throws E if the runnable throws an exception
      */
     public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
         if (isSpringTransactionalNotUsed()) {
@@ -7364,13 +7916,23 @@ public final class JdbcUtil {
     }
 
     /**
-     * Since using or not using Spring transaction flag is attached with current thread, so don't execute the specified {@code sqlAction} in another thread.
+     * Executes the given callable without using Spring transaction management and returns its result.
+     * This temporarily disables Spring transaction integration for the current thread.
+     * Note: The action should not be executed in another thread as the flag is thread-local.
      *
-     * @param <R>
-     * @param <E>
-     * @param sqlAction
-     * @return
-     * @throws E
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * String result = JdbcUtil.callWithoutUsingSpringTransaction(() -> {
+     *     // Operations here will not participate in Spring transactions
+     *     return jdbcDao.queryWithoutTransaction();
+     * });
+     * }</pre>
+     *
+     * @param <R> the type of result returned by the callable
+     * @param <E> the type of exception that the callable may throw
+     * @param sqlAction the callable to execute without Spring transaction
+     * @return the result of the callable
+     * @throws E if the callable throws an exception
      */
     public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<R, E> sqlAction) throws E {
         if (isSpringTransactionalNotUsed()) {
@@ -7385,44 +7947,6 @@ public final class JdbcUtil {
             }
         }
     }
-
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
-    //    /**
-    //     * Check if {@code Spring Transactional} is shared or not in the current thread.
-    //     *
-    //     * @return {@code true} if it's not shared, otherwise {@code false} is returned.
-    //     * @deprecated replaced by {@link #isSpringTransactionalNotUsed()}
-    //     */
-    //    @Deprecated
-    //    public static boolean isSpringTransactionalDisabled() {
-    //        return !isInSpring || isSpringTransactionalDisabled_TL.get();
-    //    }
-
-    //    /**
-    //     * Don't share {@code Spring Transactional} in current thread.
-    //     *
-    //     * {@code Spring Transactional} won't be used in fetching Connection if it's disabled.
-    //     *
-    //     * @param b {@code true} to not share, {@code false} to share it again.
-    //     * @deprecated replaced by {@link #doNotUseSpringTransactional(boolean)}
-    //     */
-    //    @Deprecated
-    //    public static void disableSpringTransactional(final boolean b) {
-    //        doNotUseSpringTransactional(b);
-    //    }
-
     /**
      * Don't share {@code Spring Transactional} in the current thread.
      *
@@ -7697,14 +8221,24 @@ public final class JdbcUtil {
 
     /**
      * Sets the ID extractor for the specified DAO interface.
+     * This allows customization of how IDs are extracted from ResultSets for a specific DAO.
+     * The extractor is used when retrieving generated keys after insert operations.
      *
-     * @param <T> The type of the entity.
-     * @param <ID> The type of the ID.
-     * @param <SB> The type of the SQLBuilder.
-     * @param <TD> The type of the CrudDao.
-     * @param daoInterface The DAO interface class.
-     * @param idExtractor The RowMapper used to extract the ID.
-     * @throws IllegalArgumentException If the daoInterface or idExtractor is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Custom ID extraction for composite keys
+     * JdbcUtil.setIdExtractorForDao(UserDao.class, rs -> {
+     *     return new UserId(rs.getLong("tenant_id"), rs.getLong("user_id"));
+     * });
+     * }</pre>
+     *
+     * @param <T> the type of the entity
+     * @param <ID> the type of the ID
+     * @param <SB> the type of the SQLBuilder
+     * @param <TD> the type of the CrudDao
+     * @param daoInterface the DAO interface class
+     * @param idExtractor the RowMapper used to extract the ID from ResultSet
+     * @throws IllegalArgumentException if daoInterface or idExtractor is null
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
@@ -7715,15 +8249,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Sets the ID extractor for the specified DAO interface.
+     * Sets the ID extractor for the specified DAO interface using a BiRowMapper.
+     * This allows customization of how IDs are extracted from ResultSets with access to column labels.
      *
-     * @param <T> The type of the entity.
-     * @param <ID> The type of the ID.
-     * @param <SB> The type of the SQLBuilder.
-     * @param <TD> The type of the CrudDao.
-     * @param daoInterface The DAO interface class.
-     * @param idExtractor The RowMapper used to extract the ID.
-     * @throws IllegalArgumentException If the daoInterface or idExtractor is invalid.
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Custom ID extraction with column label awareness
+     * JdbcUtil.setIdExtractorForDao(UserDao.class, (rs, columnLabels) -> {
+     *     if (columnLabels.contains("composite_id")) {
+     *         return UserIdParser.parse(rs.getString("composite_id"));
+     *     }
+     *     return rs.getLong("id");
+     * });
+     * }</pre>
+     *
+     * @param <T> the type of the entity
+     * @param <ID> the type of the ID
+     * @param <SB> the type of the SQLBuilder
+     * @param <TD> the type of the CrudDao
+     * @param daoInterface the DAO interface class
+     * @param idExtractor the BiRowMapper used to extract the ID with column information
+     * @throws IllegalArgumentException if daoInterface or idExtractor is null
      */
     public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
@@ -7734,11 +8280,19 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance for the specified interface and DataSource.
+     * Uses the default async executor for asynchronous operations.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+     * List<User> users = userDao.findAll();
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param ds the DataSource to use for database operations
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
@@ -7746,12 +8300,20 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance with a custom SQL mapper for query externalization.
+     * The SQL mapper allows SQL queries to be defined in external files or resources.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @param sqlMapper
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * SQLMapper sqlMapper = SQLMapper.fromFile("sql/user-queries.xml");
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper) {
@@ -7759,14 +8321,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance with a custom SQL mapper and DAO cache.
+     * The cache can improve performance by caching query results.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @param sqlMapper
-     * @param daoCache It's better to not share cache between Dao instances.
-     * @return
-     * @deprecated
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @param daoCache the cache for DAO operations (should not be shared between DAOs)
+     * @return a DAO instance implementing the specified interface
+     * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
@@ -7776,12 +8340,21 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance with a custom executor for asynchronous operations.
+     * This allows control over the thread pool used for async DAO methods.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @param executor
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ExecutorService executor = Executors.newFixedThreadPool(10);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, executor);
+     * CompletableFuture<List<User>> future = userDao.findAllAsync();
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param ds the DataSource to use for database operations
+     * @param executor the executor for asynchronous operations
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Executor executor) {
@@ -7789,13 +8362,22 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance with a custom SQL mapper and executor.
+     * Combines external SQL management with custom thread pool control.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @param sqlMapper
-     * @param executor
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * SQLMapper sqlMapper = SQLMapper.fromFile("sql/queries.xml");
+     * ExecutorService executor = Executors.newCachedThreadPool();
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, executor);
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @param executor the executor for asynchronous operations
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
@@ -7804,43 +8386,40 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance with all customization options.
+     * Provides full control over SQL mapping, caching, and async execution.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param ds
-     * @param sqlMapper
-     * @param daoCache It's better to not share cache between Dao instances.
-     * @param executor
-     * @return
-     * @deprecated
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @param daoCache the cache for DAO operations (should not be shared between DAOs)
+     * @param executor the executor for asynchronous operations
+     * @return a DAO instance implementing the specified interface
+     * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
             final Jdbc.DaoCache daoCache, final Executor executor) {
-
-        //    synchronized (dsEntityDaoPool) {
-        //        @SuppressWarnings("rawtypes")
-        //        Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
-        //
-        //        if (entityDaoPool == null) {
-        //            entityDaoPool = new HashMap<>();
-        //            dsEntityDaoPool.put(ds, entityDaoPool);
-        //        }
-        //
-        //        entityDaoPool.put(getTargetEntityClass(daoInterface), dao);
-        //    }
-
         return DaoImpl.createDao(daoInterface, null, ds, sqlMapper, daoCache, executor);
     }
 
     /**
+     * Creates a DAO instance for a specific table name.
+     * This is useful when the table name differs from the entity class name.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Entity class is "User" but table is "app_users"
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource);
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param targetTableName the specific table name to use
+     * @param ds the DataSource to use for database operations
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds) {
@@ -7848,13 +8427,21 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance for a specific table with a custom SQL mapper.
+     * Combines custom table naming with external SQL management.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @param sqlMapper
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * SQLMapper sqlMapper = SQLMapper.fromFile("sql/legacy-queries.xml");
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param targetTableName the specific table name to use
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
@@ -7863,15 +8450,16 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance for a specific table with SQL mapper and cache.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @param sqlMapper
-     * @param daoCache It's better to not share cache between Dao instances.
-     * @return
-     * @deprecated
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param targetTableName the specific table name to use
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @param daoCache the cache for DAO operations
+     * @return a DAO instance implementing the specified interface
+     * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
@@ -7881,13 +8469,21 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance for a specific table with a custom executor.
+     * Allows custom table naming with control over async operations.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @param executor
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ForkJoinPool customPool = new ForkJoinPool(20);
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, customPool);
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param targetTableName the specific table name to use
+     * @param ds the DataSource to use for database operations
+     * @param executor the executor for asynchronous operations
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
@@ -7896,14 +8492,23 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance for a specific table with SQL mapper and executor.
+     * Combines all customization options except caching.
      *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @param sqlMapper
-     * @param executor
-     * @return
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * SQLMapper sqlMapper = SQLMapper.fromResource("/sql/custom-queries.xml");
+     * ExecutorService executor = Executors.newWorkStealingPool();
+     * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, sqlMapper, executor);
+     * }</pre>
+     *
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param targetTableName the specific table name to use
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @param executor the executor for asynchronous operations
+     * @return a DAO instance implementing the specified interface
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
@@ -7912,36 +8517,24 @@ public final class JdbcUtil {
     }
 
     /**
+     * Creates a DAO instance with all customization options including table name.
+     * Provides maximum flexibility for DAO configuration.
      *
-     *
-     * @param <TD>
-     * @param daoInterface
-     * @param targetTableName
-     * @param ds
-     * @param sqlMapper
-     * @param cache It's better to not share cache between Dao instances.
-     * @param executor
-     * @return
-     * @throws IllegalArgumentException
-     * @deprecated
+     * @param <TD> the type of the DAO
+     * @param daoInterface the DAO interface class to implement
+     * @param targetTableName the specific table name to use
+     * @param ds the DataSource to use for database operations
+     * @param sqlMapper the SQL mapper for externalizing queries
+     * @param cache the cache for DAO operations (should not be shared between DAOs)
+     * @param executor the executor for asynchronous operations
+     * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if required parameters are invalid
+     * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
             final SQLMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
-
-        //    synchronized (dsEntityDaoPool) {
-        //        @SuppressWarnings("rawtypes")
-        //        Map<Class<?>, Dao> entityDaoPool = dsEntityDaoPool.get(ds);
-        //
-        //        if (entityDaoPool == null) {
-        //            entityDaoPool = new HashMap<>();
-        //            dsEntityDaoPool.put(ds, entityDaoPool);
-        //        }
-        //
-        //        entityDaoPool.put(getTargetEntityClass(daoInterface), dao);
-        //    }
-
         return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlMapper, cache, executor);
     }
 
@@ -7983,23 +8576,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables the cache for Dao queries in the current thread.
+     * Enables DAO query result caching for the current thread.
+     * Creates a new thread-local cache that will be used by all DAOs in the current thread.
+     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
      *
-     * <pre>
-     * <code>
-     * JdbcUtil.startDaoCacheOnCurrentThread();
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * Jdbc.DaoCache cache = JdbcUtil.startDaoCacheOnCurrentThread();
      * try {
-     *    // your code here
+     *     // DAO operations here will use the cache
+     *     userDao.findById(1L); // First call hits database
+     *     userDao.findById(1L); // Second call uses cache
      * } finally {
-     *   JdbcUtil.closeDaoCacheOnCurrentThread();
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();
      * }
+     * }</pre>
      *
-     * </code>
-     * </pre>
-     * 
-     * @return the created {@code DaoCache} for current thread.
+     * @return the created DaoCache for the current thread
      * @see Jdbc.DaoCache#createByMap()
-     * @see Jdbc.DaoCache#createByMap(Map)
+     * @see #closeDaoCacheOnCurrentThread()
      */
     public static Jdbc.DaoCache startDaoCacheOnCurrentThread() {
         final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
@@ -8008,23 +8603,30 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables the cache for Dao queries in the current thread.
+     * Enables the specified DAO cache for the current thread.
+     * The provided cache will be used by all DAOs in the current thread.
+     * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
      *
-     * <pre>
-     * <code>
-     * JdbcUtil.startDaoCacheOnCurrentThread(localThreadCache);
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * // Use a custom cache implementation
+     * Map<String, Object> cacheMap = new LRUMap<>(1000);
+     * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
+     * 
+     * JdbcUtil.startDaoCacheOnCurrentThread(cache);
      * try {
-     *    // your code here
+     *     // DAO operations use the custom cache
+     *     productDao.findPopular();
      * } finally {
-     *   JdbcUtil.closeDaoCacheOnCurrentThread();
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();
      * }
+     * }</pre>
      *
-     * </code>
-     * </pre>
-     * @param localThreadCache
+     * @param localThreadCache the cache to use for the current thread
      * @return the specified localThreadCache
      * @see Jdbc.DaoCache#createByMap()
      * @see Jdbc.DaoCache#createByMap(Map)
+     * @see #closeDaoCacheOnCurrentThread()
      */
     public static Jdbc.DaoCache startDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
         localThreadCache_TL.set(localThreadCache);
@@ -8033,7 +8635,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Closes the cache for Dao queries in the current thread.
+     * Closes and removes the DAO cache for the current thread.
+     * This method should always be called in a finally block after starting a thread-local cache
+     * to prevent memory leaks.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * JdbcUtil.startDaoCacheOnCurrentThread();
+     * try {
+     *     // Use cached DAO operations
+     * } finally {
+     *     JdbcUtil.closeDaoCacheOnCurrentThread(); // Always clean up
+     * }
+     * }</pre>
+     *
+     * @see #startDaoCacheOnCurrentThread()
+     * @see #startDaoCacheOnCurrentThread(Jdbc.DaoCache)
      */
     public static void closeDaoCacheOnCurrentThread() {
         localThreadCache_TL.remove();
