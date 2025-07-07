@@ -4935,7 +4935,7 @@ final class DaoImpl {
                                                 .setParameters(bp, tp._2)
                                                 .list(pairBiRowMapper);
 
-                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(it -> it.left, it -> it.right));
+                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(it -> it.left(), it -> it.right()));
                                     } else {
                                         final List<?> joinPropEntities = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)
