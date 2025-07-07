@@ -50,20 +50,31 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.ParsedSql;
 
 /**
- * The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
+ * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's NamedParameterJdbcTemplate.
+ * This class wraps a {@link PreparedStatement} and allows you to use named parameters (e.g., :name, :age) instead of 
+ * positional parameters (?) in your SQL queries.
+ * 
+ * <p>The backed {@code PreparedStatement/CallableStatement} will be closed by default
+ * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, 
+ * for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
- * <br />
- * Generally, don't cache or reuse the instance of this class,
+ * <p>Generally, don't cache or reuse the instance of this class,
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
- * <br />
- * The {@code ResultSet} returned by query will always be closed after execution, even {@code 'closeAfterExecution'} flag is set to {@code false}.
+ * <p>The {@code ResultSet} returned by query will always be closed after execution, even {@code 'closeAfterExecution'} flag is set to {@code false}.
  *
- * <br />
- * Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
- *
+ * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
+ * 
+ * <p><b>Example usage:</b>
+ * <pre>{@code
+ * String sql = "SELECT * FROM users WHERE name = :name AND age > :age";
+ * try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, sql)) {
+ *     query.setString("name", "John")
+ *          .setInt("age", 25)
+ *          .query(ResultExtractor.toList(User.class));
+ * }
+ * }</pre>
  *
  * @see {@link com.landawn.abacus.annotation.ReadOnly}
  * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
@@ -71,7 +82,6 @@ import com.landawn.abacus.util.ParsedSql;
  * @see {@link com.landawn.abacus.annotation.Transient}
  * @see {@link com.landawn.abacus.annotation.Table}
  * @see {@link com.landawn.abacus.annotation.Column}
- *
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
@@ -113,13 +123,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to SQL NULL.
+     * Sets the specified named parameter to SQL NULL.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to NULL.
+     * If the parameter appears multiple times in the query, all occurrences will be set to NULL.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setNull("userId", Types.INTEGER);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set to NULL
+     * @param parameterName the name of the parameter to be set to NULL (without the ':' prefix)
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
-     * @return the current instance of {@code NamedQuery}
-     * @throw IllegalArgumentException if the parameter name is not found.
-     * @throws SQLException if a database access error occurs.
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public NamedQuery setNull(final String parameterName, final int sqlType) throws SQLException {
@@ -169,14 +187,22 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to SQL NULL with a specified SQL type and type name.
+     * Sets the specified named parameter to SQL NULL with a specified SQL type and type name.
+     * 
+     * <p>This method is particularly useful for database-specific SQL types. It sets all occurrences 
+     * of the named parameter in the SQL query to NULL with the specified type information.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setNull("location", Types.STRUCT, "POINT");
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set to NULL
+     * @param parameterName the name of the parameter to be set to NULL (without the ':' prefix)
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
-     * @param typeName the SQL type name
-     * @return the current instance of {@code NamedQuery}
-     * @throw IllegalArgumentException if the parameter name is not found.
-     * @throws SQLException if a database access error occurs.
+     * @param typeName the SQL type name (for SQL user-defined or REF types)
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public NamedQuery setNull(final String parameterName, final int sqlType, final String typeName) throws IllegalArgumentException, SQLException {
@@ -226,13 +252,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to a boolean value.
+     * Sets the specified named parameter to a boolean value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified boolean value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setBoolean("isActive", true);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set
-     * @param x the boolean value to set the parameter to
-     * @return the current instance of {@code NamedQuery}
-     * @throw IllegalArgumentException if the parameter name is not found.
-     * @throws SQLException if a database access error occurs.
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the boolean value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBoolean(final String parameterName, final boolean x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -281,12 +314,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to a boolean value.
+     * Sets the specified named parameter to a Boolean value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the boolean value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Boolean isVerified = getUserVerificationStatus(); // might return null
+     * query.setBoolean("isVerified", isVerified);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set
-     * @param x the boolean value to set the parameter to, or {@code null} to set the parameter to SQL NULL
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Boolean value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBoolean(final String parameterName, final Boolean x) throws IllegalArgumentException, SQLException {
@@ -300,12 +342,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to a byte value.
+     * Sets the specified named parameter to a byte value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified byte value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setByte("status", (byte) 1);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set
-     * @param x the byte value to set the parameter to
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the byte value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setByte(final String parameterName, final byte x) throws IllegalArgumentException, SQLException {
@@ -355,12 +404,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to a byte value.
+     * Sets the specified named parameter to a Byte value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the byte value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Byte priorityLevel = getPriorityLevel(); // might return null
+     * query.setByte("priority", priorityLevel);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set
-     * @param x the byte value to set the parameter to, or {@code null} to set the parameter to SQL NULL
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Byte value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setByte(final String parameterName, final Byte x) throws IllegalArgumentException, SQLException {
@@ -374,12 +432,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to a short value.
+     * Sets the specified named parameter to a short value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified short value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setShort("quantity", (short) 100);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set
-     * @param x the short value to set the parameter to
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the short value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setShort(final String parameterName, final short x) throws IllegalArgumentException, SQLException {
@@ -429,12 +494,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified parameter to a short value.
+     * Sets the specified named parameter to a Short value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the short value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Short categoryId = getCategoryId(); // might return null
+     * query.setShort("categoryId", categoryId);
+     * }</pre>
      *
-     * @param parameterName the name of the parameter to be set
-     * @param x the short value to set the parameter to, or {@code null} to set the parameter to SQL NULL
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Short value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setShort(final String parameterName, final Short x) throws IllegalArgumentException, SQLException {
@@ -448,12 +522,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the int.
+     * Sets the specified named parameter to an int value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified int value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setInt("userId", 12345);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the int value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setInt(final String parameterName, final int x) throws IllegalArgumentException, SQLException {
@@ -503,12 +584,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the int.
+     * Sets the specified named parameter to an Integer value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the int value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Integer age = getAge(); // might return null
+     * query.setInt("age", age);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Integer value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setInt(final String parameterName, final Integer x) throws IllegalArgumentException, SQLException {
@@ -522,14 +612,22 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a char value by converting it to an int.
+     * 
+     * <p>This method converts the char to its numeric value (Unicode code point) and stores it as an integer.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setInt("grade", 'A'); // stores 65 (ASCII value of 'A')
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the char value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws SQLException if a database access error occurs
      * @see #setString(String, char)
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @deprecated generally {@code char} should be saved as {@code String} in db. Use {@link #setString(String, char)} instead.
      */
     @Deprecated
     public NamedQuery setInt(final String parameterName, final char x) throws IllegalArgumentException, SQLException {
@@ -537,14 +635,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a Character value by converting it to an int.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it converts the char to its numeric value and stores it as an integer.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Character grade = getGrade(); // might return null
+     * query.setInt("grade", grade);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws SQLException
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Character value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws SQLException if a database access error occurs
      * @see #setString(String, Character)
-     * @deprecated generally {@code char} should be saved as {@code String} in db.
+     * @deprecated generally {@code char} should be saved as {@code String} in db. Use {@link #setString(String, Character)} instead.
      */
     @Deprecated
     public NamedQuery setInt(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
@@ -558,12 +666,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the long.
+     * Sets the specified named parameter to a long value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified long value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setLong("timestamp", System.currentTimeMillis());
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the long value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setLong(final String parameterName, final long x) throws IllegalArgumentException, SQLException {
@@ -613,12 +728,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the long.
+     * Sets the specified named parameter to a Long value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the long value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Long accountId = getAccountId(); // might return null
+     * query.setLong("accountId", accountId);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Long value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setLong(final String parameterName, final Long x) throws IllegalArgumentException, SQLException {
@@ -632,12 +756,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the long.
+     * Sets the specified named parameter to a BigInteger value by converting it to a long.
+     * 
+     * <p>This method converts the BigInteger to a long using {@link BigInteger#longValueExact()}.
+     * If the BigInteger value is too large to fit in a long, an ArithmeticException will be thrown.
+     * Consider using {@link #setBigDecimal(String, BigInteger)} or {@link #setBigIntegerAsString(String, BigInteger)} 
+     * for values that might exceed long range.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * BigInteger largeNumber = new BigInteger("9223372036854775807");
+     * query.setLong("largeNumber", largeNumber);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws ArithmeticException if the BigInteger value is too large to fit in a long
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setLong(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
@@ -651,12 +787,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the float.
+     * Sets the specified named parameter to a float value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified float value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setFloat("price", 19.99f);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the float value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setFloat(final String parameterName, final float x) throws IllegalArgumentException, SQLException {
@@ -706,12 +849,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the float.
+     * Sets the specified named parameter to a Float value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the float value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Float discount = getDiscount(); // might return null
+     * query.setFloat("discount", discount);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Float value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setFloat(final String parameterName, final Float x) throws IllegalArgumentException, SQLException {
@@ -725,12 +877,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the double.
+     * Sets the specified named parameter to a double value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified double value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setDouble("latitude", 37.7749);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the double value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setDouble(final String parameterName, final double x) throws IllegalArgumentException, SQLException {
@@ -780,12 +939,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the double.
+     * Sets the specified named parameter to a Double value.
+     * 
+     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
+     * Otherwise, it sets the parameter to the double value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Double balance = getAccountBalance(); // might return null
+     * query.setDouble("balance", balance);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Double value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setDouble(final String parameterName, final Double x) throws IllegalArgumentException, SQLException {
@@ -799,12 +967,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the big decimal.
+     * Sets the specified named parameter to a BigDecimal value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified BigDecimal value.
+     * BigDecimal is the preferred type for precise decimal values in databases.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setBigDecimal("amount", new BigDecimal("123.45"));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the BigDecimal value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBigDecimal(final String parameterName, final BigDecimal x) throws IllegalArgumentException, SQLException {
@@ -854,12 +1030,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a BigInteger value by converting it to BigDecimal.
+     * 
+     * <p>This method converts the BigInteger to a BigDecimal and stores it as a DECIMAL type.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * BigInteger bigInt = new BigInteger("123456789012345678901234567890");
+     * query.setBigDecimal("largeValue", bigInt);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBigDecimal(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
@@ -871,16 +1055,25 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the BigInteger.
+     * Sets the specified named parameter to a BigInteger value by converting it to String.
+     * 
+     * <p>This method stores very large integer values as strings in the database. This is useful
+     * when the numeric value exceeds the range of standard numeric types.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * BigInteger veryLargeNumber = new BigInteger("99999999999999999999999999999999");
+     * query.setBigIntegerAsString("bigNumber", veryLargeNumber);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
-     * @see {@link #setString(String, BigInteger)}
-     * @see {@link #setBigDecimal(String, BigInteger)}
-     * @see {@link #setLong(String, BigInteger)}
+     * @see #setString(String, BigInteger)
+     * @see #setBigDecimal(String, BigInteger)
+     * @see #setLong(String, BigInteger)
      */
     @Beta
     public NamedQuery setBigIntegerAsString(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
@@ -888,12 +1081,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the string.
+     * Sets the specified named parameter to a String value.
+     * 
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified String value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setString("username", "john_doe");
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the String value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final String x) throws SQLException {
@@ -943,12 +1143,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a CharSequence value.
+     * 
+     * <p>This method converts the CharSequence (StringBuilder, StringBuffer, etc.) to a String
+     * and sets the parameter. Null values are handled appropriately.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * StringBuilder sb = new StringBuilder("Hello World");
+     * query.setString("message", sb);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the CharSequence value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
@@ -956,12 +1165,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a single character value.
+     * 
+     * <p>This method converts the char to a String and sets the parameter.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setString("grade", 'A');
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the char value to set
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final char x) throws IllegalArgumentException, SQLException {
@@ -969,12 +1185,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a Character value.
+     * 
+     * <p>This method converts the Character to a String and sets the parameter.
+     * Null values are handled appropriately.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Character initial = getMiddleInitial(); // might return null
+     * query.setString("middleInitial", initial);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Character value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
@@ -982,12 +1207,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets the specified named parameter to a BigInteger value as a String.
+     * 
+     * <p>This method converts the BigInteger to its decimal string representation.
+     * This is useful for storing very large integers that exceed database numeric limits.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * BigInteger bigInt = new BigInteger("123456789012345678901234567890");
+     * query.setString("largeNumber", bigInt);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the BigInteger value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
@@ -999,12 +1233,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the string.
+     * Sets the specified named parameter to a national character string value.
+     * 
+     * <p>This method is used for databases that distinguish between regular strings and national character strings
+     * (NCHAR, NVARCHAR). It sets all occurrences of the named parameter to the specified value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setNString("description", "Description with unicode: 你好");
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the String value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNString(final String parameterName, final String x) throws IllegalArgumentException, SQLException {
@@ -1054,12 +1296,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the string.
+     * Sets the specified named parameter to a national character string value from a CharSequence.
+     * 
+     * <p>This method converts the CharSequence to a String and sets it as a national character string.
+     * Useful for databases that support NCHAR/NVARCHAR types.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * StringBuilder unicodeText = new StringBuilder("Unicode text: 世界");
+     * query.setNString("unicodeField", unicodeText);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the CharSequence value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
@@ -1109,12 +1360,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the date.
+     * Sets the specified named parameter to a java.sql.Date value.
+     * 
+     * <p>This method sets a date value without time information. For date with time,
+     * use {@link #setTimestamp(String, java.sql.Timestamp)}.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setDate("birthDate", java.sql.Date.valueOf("1990-01-15"));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.sql.Date value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setDate(final String parameterName, final java.sql.Date x) throws IllegalArgumentException, SQLException {
@@ -1164,12 +1423,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the date.
+     * Sets the specified named parameter to a java.util.Date value.
+     * 
+     * <p>This method converts java.util.Date to java.sql.Date, truncating time information.
+     * For preserving time information, use {@link #setTimestamp(String, java.util.Date)}.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Date utilDate = new Date();
+     * query.setDate("createdDate", utilDate);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.util.Date value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setDate(final String parameterName, final java.util.Date x) throws IllegalArgumentException, SQLException {
@@ -1179,12 +1447,20 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the date.
+     * Sets the specified named parameter to a LocalDate value.
+     * 
+     * <p>This method converts the Java 8 LocalDate to java.sql.Date for database storage.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * LocalDate today = LocalDate.now();
+     * query.setDate("eventDate", today);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the LocalDate value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setDate(final String parameterName, final LocalDate x) throws IllegalArgumentException, SQLException {
@@ -1194,12 +1470,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the time.
+     * Sets the specified named parameter to a java.sql.Time value.
+     * 
+     * <p>This method sets a time value without date information.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setTime("startTime", java.sql.Time.valueOf("09:30:00"));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.sql.Time value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTime(final String parameterName, final java.sql.Time x) throws IllegalArgumentException, SQLException {
@@ -1249,12 +1532,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the time.
+     * Sets the specified named parameter to a time value using a java.util.Date.
+     * 
+     * <p>This method converts a java.util.Date to java.sql.Time, preserving only the time
+     * portion (hours, minutes, seconds) and discarding the date portion. If the provided
+     * Date is already a java.sql.Time instance, it is used directly without conversion.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * java.util.Date date = new Date(); // Current date and time
+     * query.setTime("startTime", date); // Only time portion is used
+     * 
+     * // Using Calendar
+     * Calendar cal = Calendar.getInstance();
+     * cal.set(Calendar.HOUR_OF_DAY, 14);
+     * cal.set(Calendar.MINUTE, 30);
+     * query.setTime("startTime", cal.getTime());
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.util.Date value containing the time to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTime(final String parameterName, final java.util.Date x) throws IllegalArgumentException, SQLException {
@@ -1264,12 +1563,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the time.
+     * Sets the specified named parameter to a time value using a LocalTime.
+     * 
+     * <p>This method converts a java.time.LocalTime to java.sql.Time for database operations.
+     * LocalTime represents a time without a time-zone in the ISO-8601 calendar system,
+     * such as 10:15:30.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * LocalTime lunchTime = LocalTime.of(12, 30, 0);
+     * query.setTime("lunchTime", lunchTime);
+     * 
+     * // Using current time
+     * query.setTime("currentTime", LocalTime.now());
+     * 
+     * // Parsing from string
+     * query.setTime("endTime", LocalTime.parse("17:30:00"));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the LocalTime value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTime(final String parameterName, final LocalTime x) throws IllegalArgumentException, SQLException {
@@ -1279,12 +1594,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the specified named parameter to a java.sql.Timestamp value.
+     * 
+     * <p>This method sets a timestamp value that includes both date and time information
+     * with nanosecond precision. Timestamps are typically used for recording when events
+     * occur in the database.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Using current timestamp
+     * query.setTimestamp("createdAt", new Timestamp(System.currentTimeMillis()));
+     * 
+     * // Creating specific timestamp
+     * query.setTimestamp("eventTime", Timestamp.valueOf("2023-12-25 10:30:00"));
+     * 
+     * // Setting null
+     * query.setTimestamp("updatedAt", null);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.sql.Timestamp value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final java.sql.Timestamp x) throws IllegalArgumentException, SQLException {
@@ -1334,12 +1665,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the specified named parameter to a timestamp value using a java.util.Date.
+     * 
+     * <p>This method converts a java.util.Date to java.sql.Timestamp, preserving both
+     * date and time information. If the provided Date is already a java.sql.Timestamp
+     * instance, it is used directly without conversion.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Date now = new Date();
+     * query.setTimestamp("lastLogin", now);
+     * 
+     * // Using Calendar
+     * Calendar cal = Calendar.getInstance();
+     * cal.add(Calendar.DAY_OF_MONTH, -7); // 7 days ago
+     * query.setTimestamp("weekAgo", cal.getTime());
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.util.Date value to convert and set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final java.util.Date x) throws IllegalArgumentException, SQLException {
@@ -1349,12 +1695,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the specified named parameter to a timestamp value using a LocalDateTime.
+     * 
+     * <p>This method converts a java.time.LocalDateTime to java.sql.Timestamp. LocalDateTime
+     * represents a date-time without a time-zone in the ISO-8601 calendar system,
+     * such as 2023-12-25T10:15:30.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * LocalDateTime dateTime = LocalDateTime.of(2023, 12, 25, 10, 30, 0);
+     * query.setTimestamp("eventDate", dateTime);
+     * 
+     * // Using current date-time
+     * query.setTimestamp("createdAt", LocalDateTime.now());
+     * 
+     * // Parsing from string
+     * query.setTimestamp("deadline", LocalDateTime.parse("2023-12-31T23:59:59"));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the LocalDateTime value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final LocalDateTime x) throws IllegalArgumentException, SQLException {
@@ -1364,12 +1726,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the specified named parameter to a timestamp value using a ZonedDateTime.
+     * 
+     * <p>This method converts a java.time.ZonedDateTime to java.sql.Timestamp by extracting
+     * the instant. The time zone information is used for the conversion but is not stored
+     * in the resulting Timestamp.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * ZonedDateTime zonedDateTime = ZonedDateTime.now(ZoneId.of("America/New_York"));
+     * query.setTimestamp("meetingTime", zonedDateTime);
+     * 
+     * // Creating specific zoned date-time
+     * ZonedDateTime utcTime = ZonedDateTime.parse("2023-12-25T10:30:00Z[UTC]");
+     * query.setTimestamp("utcEvent", utcTime);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the ZonedDateTime value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws IllegalArgumentException, SQLException {
@@ -1379,12 +1755,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the specified named parameter to a timestamp value using an OffsetDateTime.
+     * 
+     * <p>This method converts a java.time.OffsetDateTime to java.sql.Timestamp by extracting
+     * the instant. The offset information is used for the conversion but is not stored
+     * in the resulting Timestamp.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * OffsetDateTime offsetDateTime = OffsetDateTime.now();
+     * query.setTimestamp("recordedAt", offsetDateTime);
+     * 
+     * // With specific offset
+     * OffsetDateTime utcPlus8 = OffsetDateTime.parse("2023-12-25T10:30:00+08:00");
+     * query.setTimestamp("asiaTime", utcPlus8);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the OffsetDateTime value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws IllegalArgumentException, SQLException {
@@ -1394,12 +1784,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the timestamp.
+     * Sets the specified named parameter to a timestamp value using an Instant.
+     * 
+     * <p>This method converts a java.time.Instant to java.sql.Timestamp. An Instant
+     * represents a point on the time-line in UTC.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Current instant
+     * query.setTimestamp("timestamp", Instant.now());
+     * 
+     * // Specific instant
+     * Instant epochPlus1Hour = Instant.ofEpochSecond(3600);
+     * query.setTimestamp("startTime", epochPlus1Hour);
+     * 
+     * // From milliseconds
+     * query.setTimestamp("eventTime", Instant.ofEpochMilli(System.currentTimeMillis()));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Instant value to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final Instant x) throws IllegalArgumentException, SQLException {
@@ -1409,12 +1815,31 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the bytes.
+     * Sets the specified named parameter to a byte array value.
+     * 
+     * <p>This method is typically used for storing binary data such as images, files,
+     * or serialized objects in BLOB columns. The entire byte array is sent to the database.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Storing file content
+     * byte[] fileContent = Files.readAllBytes(Paths.get("document.pdf"));
+     * query.setBytes("fileData", fileContent);
+     * 
+     * // Storing serialized object
+     * ByteArrayOutputStream baos = new ByteArrayOutputStream();
+     * ObjectOutputStream oos = new ObjectOutputStream(baos);
+     * oos.writeObject(myObject);
+     * query.setBytes("serializedData", baos.toByteArray());
+     * 
+     * // Setting null
+     * query.setBytes("binaryData", null);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the byte array to set, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBytes(final String parameterName, final byte[] x) throws IllegalArgumentException, SQLException {
@@ -1464,12 +1889,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the ascii stream.
+     * Sets the specified named parameter to an ASCII stream value.
+     * 
+     * <p>This method is used to set very large ASCII values. The JDBC driver will read
+     * the data from the stream as needed. The stream should contain only ASCII characters.
+     * Note that the stream will be read when the query is executed, not when this method is called.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // From file
+     * FileInputStream fis = new FileInputStream("large_text.txt");
+     * query.setAsciiStream("textData", fis);
+     * 
+     * // From string
+     * String text = "Large ASCII text content...";
+     * InputStream stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.US_ASCII));
+     * query.setAsciiStream("content", stream);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the InputStream containing ASCII data, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
@@ -1519,13 +1960,29 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the ascii stream.
+     * Sets the specified named parameter to an ASCII stream value with a specified length.
+     * 
+     * <p>This method is used to set very large ASCII values when the length is known.
+     * The JDBC driver will read exactly 'length' bytes from the stream. This can be
+     * more efficient than the length-unspecified version.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * File file = new File("data.txt");
+     * FileInputStream fis = new FileInputStream(file);
+     * query.setAsciiStream("fileContent", fis, file.length());
+     * 
+     * // With ByteArrayInputStream
+     * byte[] data = "ASCII content".getBytes(StandardCharsets.US_ASCII);
+     * ByteArrayInputStream bais = new ByteArrayInputStream(data);
+     * query.setAsciiStream("content", bais, data.length);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the InputStream containing ASCII data, or {@code null} to set the parameter to SQL NULL
+     * @param length the number of bytes in the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
@@ -1575,12 +2032,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the binary stream.
+     * Sets the specified named parameter to a binary stream value.
+     * 
+     * <p>This method is used to set very large binary values such as images, documents,
+     * or other binary data. The JDBC driver will read the data from the stream as needed.
+     * The stream will be read when the query is executed, not when this method is called.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Uploading image
+     * FileInputStream imageStream = new FileInputStream("photo.jpg");
+     * query.setBinaryStream("photo", imageStream);
+     * 
+     * // From byte array
+     * byte[] documentData = getDocumentBytes();
+     * ByteArrayInputStream bais = new ByteArrayInputStream(documentData);
+     * query.setBinaryStream("document", bais);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the InputStream containing binary data, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
@@ -1630,13 +2103,30 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the binary stream.
+     * Sets the specified named parameter to a binary stream value with a specified length.
+     * 
+     * <p>This method is used to set very large binary values when the length is known.
+     * The JDBC driver will read exactly 'length' bytes from the stream. This can be
+     * more efficient than the length-unspecified version and is required by some drivers.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Uploading file with known size
+     * File file = new File("document.pdf");
+     * FileInputStream fis = new FileInputStream(file);
+     * query.setBinaryStream("pdfData", fis, file.length());
+     * 
+     * // From byte array with specific length
+     * byte[] data = getLargeData();
+     * ByteArrayInputStream bais = new ByteArrayInputStream(data);
+     * query.setBinaryStream("binaryData", bais, data.length);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the InputStream containing binary data, or {@code null} to set the parameter to SQL NULL
+     * @param length the number of bytes in the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
@@ -1686,12 +2176,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the character stream.
+     * Sets the specified named parameter to a character stream value.
+     * 
+     * <p>This method is used to set very large character values such as CLOB data.
+     * The JDBC driver will read the data from the Reader as needed. The Reader should
+     * contain Unicode character data.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // From file
+     * FileReader reader = new FileReader("large_text.txt", StandardCharsets.UTF_8);
+     * query.setCharacterStream("content", reader);
+     * 
+     * // From string
+     * String largeText = getLargeTextContent();
+     * StringReader stringReader = new StringReader(largeText);
+     * query.setCharacterStream("description", stringReader);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Reader containing character data, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
@@ -1741,13 +2247,30 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the character stream.
+     * Sets the specified named parameter to a character stream value with a specified length.
+     * 
+     * <p>This method is used to set very large character values when the length is known.
+     * The JDBC driver will read exactly 'length' characters from the Reader. This can be
+     * more efficient than the length-unspecified version.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // From file with known character count
+     * String content = readFileContent();
+     * StringReader reader = new StringReader(content);
+     * query.setCharacterStream("largeText", reader, content.length());
+     * 
+     * // Limited portion of text
+     * String fullText = getFullText();
+     * StringReader reader = new StringReader(fullText);
+     * query.setCharacterStream("summary", reader, 1000); // First 1000 characters
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Reader containing character data, or {@code null} to set the parameter to SQL NULL
+     * @param length the number of characters in the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
@@ -1797,12 +2320,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the N character stream.
+     * Sets the specified named parameter to a national character stream value.
+     * 
+     * <p>This method is used to set very large NCHAR, NVARCHAR, or NCLOB values.
+     * The data will be read from the stream as needed. This is used for databases
+     * that distinguish between character and national character data types.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Unicode text with special characters
+     * String unicodeText = "Hello 世界 🌍";
+     * StringReader reader = new StringReader(unicodeText);
+     * query.setNCharacterStream("unicodeContent", reader);
+     * 
+     * // From file containing unicode data
+     * FileReader fileReader = new FileReader("unicode_text.txt", StandardCharsets.UTF_8);
+     * query.setNCharacterStream("content", fileReader);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Reader containing national character data, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
@@ -1852,13 +2391,29 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the N character stream.
+     * Sets the specified named parameter to a national character stream value with a specified length.
+     * 
+     * <p>This method is used to set very large NCHAR, NVARCHAR, or NCLOB values when
+     * the length is known. The JDBC driver will read exactly 'length' characters from
+     * the Reader.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Unicode content with known length
+     * String unicodeContent = getUnicodeContent();
+     * StringReader reader = new StringReader(unicodeContent);
+     * query.setNCharacterStream("description", reader, unicodeContent.length());
+     * 
+     * // Partial content
+     * String fullText = "Large unicode text with emojis 😀😃😄...";
+     * query.setNCharacterStream("preview", new StringReader(fullText), 100);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the Reader containing national character data, or {@code null} to set the parameter to SQL NULL
+     * @param length the number of characters in the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
@@ -1908,12 +2463,31 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the blob.
+     * Sets the specified named parameter to a java.sql.Blob value.
+     * 
+     * <p>This method is used to set a BLOB (Binary Large Object) parameter. BLOBs are
+     * typically used for storing large binary data such as images, audio, or video files
+     * in the database.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Creating a Blob from connection
+     * Blob blob = connection.createBlob();
+     * blob.setBytes(1, imageBytes);
+     * query.setBlob("image", blob);
+     * 
+     * // Setting existing Blob
+     * Blob existingBlob = resultSet.getBlob("data");
+     * query.setBlob("binaryData", existingBlob);
+     * 
+     * // Setting null
+     * query.setBlob("attachment", null);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.sql.Blob object, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBlob(final String parameterName, final java.sql.Blob x) throws IllegalArgumentException, SQLException {
@@ -1963,12 +2537,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the blob.
+     * Sets the specified named parameter to a BLOB value using an InputStream.
+     * 
+     * <p>This method creates a BLOB from the provided InputStream. The JDBC driver
+     * will read all available data from the stream. This is convenient when you have
+     * binary data in a stream format.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // From file
+     * FileInputStream fis = new FileInputStream("image.jpg");
+     * query.setBlob("photo", fis);
+     * 
+     * // From byte array
+     * byte[] pdfData = generatePDF();
+     * ByteArrayInputStream bais = new ByteArrayInputStream(pdfData);
+     * query.setBlob("document", bais);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the InputStream containing the BLOB data, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBlob(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
@@ -2018,13 +2608,30 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the blob.
+     * Sets the specified named parameter to a BLOB value using an InputStream with a specified length.
+     * 
+     * <p>This method creates a BLOB from the provided InputStream, reading exactly
+     * 'length' bytes. This is more efficient when the size is known and ensures
+     * exactly the specified amount of data is read.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // From file with known size
+     * File imageFile = new File("large_image.jpg");
+     * FileInputStream fis = new FileInputStream(imageFile);
+     * query.setBlob("image", fis, imageFile.length());
+     * 
+     * // Partial data from stream
+     * byte[] fullData = getFullData();
+     * ByteArrayInputStream bais = new ByteArrayInputStream(fullData);
+     * query.setBlob("preview", bais, 1024); // First 1KB only
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the InputStream containing the BLOB data, or {@code null} to set the parameter to SQL NULL
+     * @param length the number of bytes to read from the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setBlob(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
@@ -2074,12 +2681,31 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the clob.
+     * Sets the specified named parameter to a java.sql.Clob value.
+     * 
+     * <p>This method is used to set a CLOB (Character Large Object) parameter. CLOBs are
+     * typically used for storing large text data such as documents, XML, or JSON data
+     * in the database.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Creating a Clob from connection
+     * Clob clob = connection.createClob();
+     * clob.setString(1, largeTextContent);
+     * query.setClob("content", clob);
+     * 
+     * // Setting existing Clob
+     * Clob existingClob = resultSet.getClob("description");
+     * query.setClob("textData", existingClob);
+     * 
+     * // Setting null
+     * query.setClob("notes", null);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
+     * @param parameterName the name of the parameter to be set (without the ':' prefix)
+     * @param x the java.sql.Clob object, or {@code null} to set the parameter to SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setClob(final String parameterName, final java.sql.Clob x) throws IllegalArgumentException, SQLException {
@@ -2127,15 +2753,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         return this;
     }
-
+    
     /**
-     * Sets the clob.
+     * Sets a CLOB (Character Large Object) parameter using a Reader for the specified parameter name.
+     * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
+     * 
+     * <p>This method is useful for setting large text data without loading it entirely into memory.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setClob("content", new FileReader("large_text.txt"));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the Reader object containing the CLOB data, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2184,14 +2819,25 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the clob.
+     * Sets a CLOB (Character Large Object) parameter using a Reader with a specified length for the parameter name.
+     * The JDBC driver will read exactly 'length' characters from the Reader.
+     * 
+     * <p>This method provides more control over the amount of data read from the Reader compared to 
+     * {@link #setClob(String, Reader)}. If the parameter name appears multiple times in the query, 
+     * all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setClob("description", new StringReader(longText), longText.length());
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the Reader object containing the CLOB data
+     * @param length the number of characters in the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the length is less than zero
      */
     public NamedQuery setClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2240,13 +2886,23 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the NClob.
+     * Sets an NCLOB (National Character Large Object) parameter for the specified parameter name.
+     * NCLOBs are used to store large amounts of national character set data.
+     * 
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * NClob nclob = connection.createNClob();
+     * nclob.setString(1, unicodeText);
+     * query.setNClob("unicode_content", nclob);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the NClob object, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setNClob(final String parameterName, final java.sql.NClob x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2295,13 +2951,22 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the NClob.
+     * Sets an NCLOB (National Character Large Object) parameter using a Reader for the specified parameter name.
+     * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
+     * 
+     * <p>This method is useful for setting large Unicode text data without loading it entirely into memory.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setNClob("unicode_text", new FileReader("unicode_data.txt", StandardCharsets.UTF_8));
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the Reader object containing the NCLOB data, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setNClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2350,14 +3015,25 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the NClob.
+     * Sets an NCLOB (National Character Large Object) parameter using a Reader with a specified length.
+     * The JDBC driver will read exactly 'length' characters from the Reader.
+     * 
+     * <p>This method provides more control over the amount of Unicode data read from the Reader.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * String unicodeText = "Unicode content...";
+     * query.setNClob("description", new StringReader(unicodeText), unicodeText.length());
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param length
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the Reader object containing the NCLOB data
+     * @param length the number of characters in the stream
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the length is less than zero
      */
     public NamedQuery setNClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2406,13 +3082,21 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets a URL parameter for the specified parameter name.
+     * 
+     * <p>The URL is stored as a DATALINK value in the database. If the parameter name appears 
+     * multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setURL("website", new URL("https://www.example.com"));
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the URL object, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setURL(final String parameterName, final URL x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2461,13 +3145,23 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets an SQL XML parameter for the specified parameter name.
+     * 
+     * <p>The SQLXML interface is used for mapping SQL XML data type. If the parameter name appears 
+     * multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * SQLXML xmlData = connection.createSQLXML();
+     * xmlData.setString("<root><item>value</item></root>");
+     * query.setSQLXML("xml_data", xmlData);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the SQLXML object, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2516,13 +3210,22 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets a RowId parameter for the specified parameter name.
+     * 
+     * <p>RowId is a SQL data type that represents the address of a row in a database table.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * RowId rowId = resultSet.getRowId("ROWID");
+     * query.setRowId("row_identifier", rowId);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the RowId object, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setRowId(final String parameterName, final java.sql.RowId x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2571,13 +3274,22 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets a Ref (SQL REF) parameter for the specified parameter name.
+     * 
+     * <p>A Ref is a reference to an SQL structured type value in the database.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Ref ref = resultSet.getRef("employee_ref");
+     * query.setRef("manager_ref", ref);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the Ref object, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setRef(final String parameterName, final java.sql.Ref x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2626,13 +3338,23 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
+     * Sets an Array parameter for the specified parameter name.
+     * 
+     * <p>The Array interface is the mapping for the SQL ARRAY type. If the parameter name appears 
+     * multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Integer[] numbers = {1, 2, 3, 4, 5};
+     * Array sqlArray = connection.createArrayOf("INTEGER", numbers);
+     * query.setArray("number_list", sqlArray);
+     * }</pre>
      *
-     *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the Array object, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public NamedQuery setArray(final String parameterName, final java.sql.Array x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2681,13 +3403,34 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the object.
+     * Sets an Object parameter for the specified parameter name, using the default SQL type mapping.
+     * 
+     * <p>This is a generic method that can handle any Java object. The JDBC driver will attempt to 
+     * convert the Java object to the appropriate SQL type. Common mappings include:
+     * <ul>
+     * <li>String → VARCHAR/CHAR</li>
+     * <li>Integer/Long → INTEGER/BIGINT</li>
+     * <li>BigDecimal → NUMERIC/DECIMAL</li>
+     * <li>Date/Timestamp → DATE/TIMESTAMP</li>
+     * <li>Boolean → BOOLEAN/BIT</li>
+     * <li>byte[] → BINARY/VARBINARY</li>
+     * </ul>
+     * 
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * query.setObject("user_id", 12345)
+     *      .setObject("created_date", new Timestamp(System.currentTimeMillis()))
+     *      .setObject("is_active", true);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the object containing the parameter value, or null to set SQL NULL
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the given object cannot be converted to a SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2736,14 +3479,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the object.
+     * Sets an Object parameter with a specified SQL type for the parameter name.
+     * 
+     * <p>This method allows explicit control over the SQL type used when setting the parameter value.
+     * Use this when the default type mapping is not sufficient or when you need to ensure a specific SQL type.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Set a string as CHAR type instead of VARCHAR
+     * query.setObject("code", "ABC", Types.CHAR);
+     * // Set a number as DECIMAL with specific type
+     * query.setObject("price", new BigDecimal("99.99"), Types.DECIMAL);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param sqlType
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the object containing the parameter value, or null to set SQL NULL
+     * @param sqlType the SQL type (from java.sql.Types) to be used
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the object cannot be converted to the specified SQL type
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object x, final int sqlType) throws IllegalArgumentException, SQLException {
@@ -2793,15 +3549,35 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the object.
+     * Sets an Object parameter with a specified SQL type and scale/length for the parameter name.
+     * 
+     * <p>This method provides the most control over parameter setting, allowing specification of both 
+     * SQL type and additional type-specific information:
+     * <ul>
+     * <li>For numeric types (DECIMAL, NUMERIC): scaleOrLength represents the number of digits after the decimal point</li>
+     * <li>For character types (CHAR, VARCHAR): scaleOrLength represents the length of the string</li>
+     * <li>For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes</li>
+     * </ul>
+     * 
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Set a decimal with 2 decimal places
+     * query.setObject("amount", new BigDecimal("123.45"), Types.DECIMAL, 2);
+     * // Set a fixed-length character string
+     * query.setObject("country_code", "US", Types.CHAR, 2);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param sqlType
-     * @param scaleOrLength
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the object containing the parameter value
+     * @param sqlType the SQL type (from java.sql.Types) to be used
+     * @param scaleOrLength for numeric types, the number of digits after the decimal point;
+     *        for character/binary types, the length
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the object cannot be converted to the specified SQL type
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength)
@@ -2852,14 +3628,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the object.
+     * Sets an Object parameter with a specified SQLType for the parameter name.
+     * 
+     * <p>This method uses the JDBC 4.2 SQLType interface for type specification, providing better 
+     * type safety and vendor-specific type support compared to using int constants from java.sql.Types.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * import java.sql.JDBCType;
+     * 
+     * query.setObject("user_id", 12345, JDBCType.INTEGER)
+     *      .setObject("email", "user@example.com", JDBCType.VARCHAR)
+     *      .setObject("balance", new BigDecimal("1000.00"), JDBCType.DECIMAL);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param sqlType
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the object containing the parameter value, or null to set SQL NULL
+     * @param sqlType the SQLType to be used
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the object cannot be converted to the specified SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2908,15 +3698,33 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the object.
+     * Sets an Object parameter with a specified SQLType and scale/length for the parameter name.
+     * 
+     * <p>This method provides the most control when using JDBC 4.2 SQLType, allowing specification 
+     * of both SQL type and additional type-specific information. The meaning of scaleOrLength depends 
+     * on the SQL type being used.
+     * 
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * import java.sql.JDBCType;
+     * 
+     * // Set a decimal with specific scale
+     * query.setObject("price", new BigDecimal("99.999"), JDBCType.DECIMAL, 2);
+     * // Set a varchar with maximum length
+     * query.setObject("description", "Product description", JDBCType.VARCHAR, 255);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param sqlType
-     * @param scaleOrLength
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the object containing the parameter value
+     * @param sqlType the SQLType to be used
+     * @param scaleOrLength for numeric types, the number of digits after the decimal point;
+     *        for character/binary types, the length
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
+     *         or the object cannot be converted to the specified SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType, final int scaleOrLength)
             throws IllegalArgumentException, SQLException {
@@ -2966,14 +3774,32 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the object.
+     * Sets an Object parameter using a custom Type handler for the parameter name.
+     * 
+     * <p>This method allows the use of custom type handlers from the Abacus framework, providing 
+     * complete control over how Java objects are converted to SQL values. This is particularly 
+     * useful for complex type mappings or when working with custom data types.
+     * 
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Using a custom JSON type handler
+     * Type<UserPreferences> jsonType = TypeFactory.getType(UserPreferences.class);
+     * query.setObject("preferences", userPrefs, jsonType);
+     * 
+     * // Using an enum type handler
+     * Type<Status> enumType = TypeFactory.getType(Status.class);
+     * query.setObject("status", Status.ACTIVE, enumType);
+     * }</pre>
      *
-     * @param parameterName
-     * @param x
-     * @param type
-     * @return
-     * @throws IllegalArgumentException if the parameter name is not found
-     * @throws SQLException if a database access error occurs
+     * @param <T> the type of the parameter value
+     * @param parameterName the name of the parameter (without the ':' prefix)
+     * @param x the object containing the parameter value
+     * @param type the Type handler to use for setting the parameter
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameter name is not found in the query
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      */
     public <T> NamedQuery setObject(final String parameterName, final T x, final Type<T> type) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3022,10 +3848,25 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters for the named query.
+     * Sets multiple parameters from a Map containing parameter names and their values.
+     * 
+     * <p>This method provides a convenient way to set multiple parameters at once. Only parameters 
+     * that exist in both the map and the query will be set. Parameters in the query that are not 
+     * present in the map will remain unset.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * Map<String, Object> params = new HashMap<>();
+     * params.put("name", "John Doe");
+     * params.put("age", 30);
+     * params.put("email", "john@example.com");
+     * 
+     * query.setParameters(params);
+     * }</pre>
      *
-     * @param parameters a map containing the parameter names and their corresponding values
-     * @return the current instance of {@code NamedQuery}
+     * @param parameters a map containing parameter names (without ':' prefix) as keys and their values
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if the parameters map is null
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
@@ -3040,6 +3881,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
+    /**
+     * Sets parameters for the named query using the provided EntityId.
+     * This method is used internally and is not typically called directly by users.
+     *
+     * @param entityId the EntityId containing parameter values
+     * @throws SQLException if a database access error occurs
+     */
     void setParameters(final EntityId entityId) throws SQLException {
         for (final String paramName : parameterNames) {
             if (entityId.containsKey(paramName)) {
@@ -3049,11 +3897,37 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters for the named query.
+     * Sets parameters from various types of objects including beans, maps, collections, arrays, or single values.
+     * 
+     * <p>This flexible method accepts different parameter sources:
+     * <ul>
+     * <li><b>Bean/Entity objects</b>: Properties matching parameter names will be used</li>
+     * <li><b>Map</b>: Entries with keys matching parameter names will be used</li>
+     * <li><b>Collection/Array</b>: Elements will be assigned to parameters in positional order</li>
+     * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
+     * <li><b>Single value</b>: Used only if the query has exactly one parameter</li>
+     * </ul>
+     * 
+     * <p><b>Examples:</b>
+     * <pre>{@code
+     * // Using a bean
+     * User user = new User("John", 30, "john@example.com");
+     * query.setParameters(user);
+     * 
+     * // Using a Map
+     * Map<String, Object> params = Map.of("name", "John", "age", 30);
+     * query.setParameters(params);
+     * 
+     * // Using an array (parameters set by position)
+     * query.setParameters(new Object[]{"John", 30, "john@example.com"});
+     * 
+     * // Using a single value (for queries with one parameter)
+     * query.setParameters("John");
+     * }</pre>
      *
-     * @param parameters an object containing the parameters. It could be a bean, a map, a collection, an array or a single value.
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameters object is {@code null}.
+     * @param parameters an object containing the parameters (bean, map, collection, array, or single value)
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if parameters is null or of an unsupported type
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getNamedParameters(String)
      */
@@ -3093,12 +3967,29 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters for the named query.
+     * Sets specific parameters from an entity object using only the specified parameter names.
+     * 
+     * <p>This method provides fine-grained control over which properties from an entity are used 
+     * to set query parameters. Only properties with names matching those in the parameterNames 
+     * collection will be used.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * User user = new User();
+     * user.setId(1);
+     * user.setName("John");
+     * user.setEmail("john@example.com");
+     * user.setAge(30);
+     * 
+     * // Only set name and email parameters, ignore id and age
+     * query.setParameters(user, Arrays.asList("name", "email"));
+     * }</pre>
      *
-     * @param entity the entity object containing the parameters
-     * @param parameterNames a collection of parameter names to be set
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the entity or parameter names are null
+     * @param entity the entity object containing the parameter values
+     * @param parameterNames a collection of parameter names to be set from the entity
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if entity or parameterNames is null, if entity is not a bean class,
+     *         if a property is not found in the entity, or if a parameter name is not found in the query
      * @throws SQLException if a database access error occurs
      * @see ClassUtil#getPropNameList(Class)
      * @see ClassUtil#getPropNames(Class, Collection)
@@ -3163,14 +4054,34 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the parameters for the named query using a custom parameters setter.
+     * Sets parameters using a custom parameter setter function.
+     * 
+     * <p>This method provides maximum flexibility by allowing you to define custom logic for 
+     * setting parameters. The setter function receives the parsed SQL, this NamedQuery instance, 
+     * and your parameters object.
+     * 
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * UserSearchCriteria criteria = new UserSearchCriteria();
+     * criteria.setMinAge(25);
+     * criteria.setMaxAge(35);
+     * criteria.setActive(true);
+     * 
+     * query.setParameters(criteria, (sql, q, c) -> {
+     *     q.setInt("min_age", c.getMinAge());
+     *     q.setInt("max_age", c.getMaxAge());
+     *     if (c.isActive() != null) {
+     *         q.setBoolean("is_active", c.isActive());
+     *     }
+     * });
+     * }</pre>
      *
      * @param <T> the type of the parameters object
-     * @param parameters the parameters object
-     * @param paramsSetter a custom parameters setter
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the parameters setter is null
-     * @throws SQLException if a database access error occurs
+     * @param parameters the parameters object to pass to the setter
+     * @param paramsSetter a function that sets parameters on the query
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if paramsSetter is null
+     * @throws SQLException if a database access error occurs 
      */
     public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
             throws IllegalArgumentException, SQLException {
@@ -3191,13 +4102,50 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
+
     /**
-     * Adds a batch of parameters to the named query.
+     * Adds a collection of parameter sets for batch execution.
      *
-     * @param batchParameters a collection of batch parameters to be added
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the batch parameters are null
-     * @throws SQLException if a database access error occurs
+     * <p>This method adds multiple sets of parameters to be executed as a batch operation.
+     * Each element in the collection should be a parameter object compatible with 
+     * {@link #setParameters(Object)}, such as:
+     * <ul>
+     * <li>Bean objects with properties matching parameter names</li>
+     * <li>Maps with keys matching parameter names</li>
+     * <li>Arrays or Collections for positional parameters</li>
+     * </ul>
+     *
+     * <p>After adding batch parameters, call {@code executeBatch()} to execute the batch.
+     *
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * List<User> users = Arrays.asList(
+     *     new User("John", 30, "john@example.com"),
+     *     new User("Jane", 28, "jane@example.com"),
+     *     new User("Bob", 35, "bob@example.com")
+     * );
+     *
+     * String sql = "INSERT INTO users (name, age, email) VALUES (:name, :age, :email)";
+     * try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, sql)) {
+     *     query.addBatchParameters(users)
+     *          .executeBatch();
+     * }
+     *
+     * // Using maps
+     * List<Map<String, Object>> paramMaps = new ArrayList<>();
+     * paramMaps.add(Map.of("id", 1, "status", "ACTIVE"));
+     * paramMaps.add(Map.of("id", 2, "status", "INACTIVE"));
+     * 
+     * query.addBatchParameters(paramMaps)
+     *      .executeBatch();
+     * }</pre>
+     *
+     * @param batchParameters a collection of parameter objects for batch processing
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if batchParameters is null or contains invalid parameter objects
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @see #setParameters(Object)
+     * @see #executeBatch()
      */
     @Override
     public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
@@ -3211,12 +4159,49 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Adds a batch of parameters to the named query.
+     * Adds a batch of parameters from an iterator for batch execution.
      *
-     * @param batchParameters an iterator of batch parameters to be added
-     * @return the current instance of {@code NamedQuery}
-     * @throws IllegalArgumentException if the batch parameters are null
-     * @throws SQLException if a database access error occurs
+     * <p>This method allows streaming of parameter sets for batch operations without loading
+     * all data into memory at once. Each element provided by the iterator should be a parameter
+     * object compatible with {@link #setParameters(Object)}, such as:
+     * <ul>
+     * <li>Bean objects with properties matching parameter names</li>
+     * <li>Maps with keys matching parameter names</li>
+     * <li>Arrays or Collections for positional parameters</li>
+     * </ul>
+     *
+     * <p>After adding batch parameters, call {@code executeBatch()} to execute the batch.
+     *
+     * <p><b>Example:</b>
+     * <pre>{@code
+     * // Using an iterator from a database result
+     * Iterator<User> userIterator = getUsersFromSource();
+     * query.addBatchParameters(userIterator)
+     *      .executeBatch();
+     *
+     * // Using a stream for large data sets
+     * query.addBatchParameters(
+     *     userRepository.findAllActive()
+     *                  .stream()
+     *                  .filter(u -> u.getLastLogin().isAfter(oneMonthAgo))
+     *                  .iterator()
+     * ).executeBatch();
+     *
+     * // Processing data in chunks to avoid memory issues
+     * try (ResultSet rs = largeDataQuery.executeQuery()) {
+     *     DataIterator dataIterator = new DataIterator(rs);
+     *     insertQuery.addBatchParameters(dataIterator)
+     *               .executeBatch();
+     * }
+     * }</pre>
+     *
+     * @param batchParameters an iterator providing parameter objects for batch processing
+     * @return this NamedQuery instance for method chaining
+     * @throws IllegalArgumentException if batchParameters is null or contains invalid parameter objects
+     * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
+     * @see #setParameters(Object)
+     * @see #addBatchParameters(Collection)
+     * @see #executeBatch()
      */
     @Beta
     @Override

@@ -16,70 +16,148 @@ package com.landawn.abacus.jdbc;
 
 import java.sql.Connection;
 
-// TODO: Auto-generated Javadoc
 /**
- * The Enum IsolationLevel.
+ * Represents the transaction isolation levels supported by JDBC.
+ * 
+ * <p>Transaction isolation levels define how transactions interact with each other
+ * when accessing the same data. Higher isolation levels provide better data consistency
+ * but may impact performance due to increased locking.</p>
+ * 
+ * <p>The isolation levels from least to most restrictive are:
+ * <ul>
+ *   <li>{@link #READ_UNCOMMITTED} - Allows dirty reads, non-repeatable reads, and phantom reads</li>
+ *   <li>{@link #READ_COMMITTED} - Prevents dirty reads but allows non-repeatable reads and phantom reads</li>
+ *   <li>{@link #REPEATABLE_READ} - Prevents dirty reads and non-repeatable reads but allows phantom reads</li>
+ *   <li>{@link #SERIALIZABLE} - Prevents all phenomena, providing the highest isolation</li>
+ * </ul>
+ * 
+ * <p>Usage example:
+ * <pre>{@code
+ * Connection conn = dataSource.getConnection();
+ * conn.setTransactionIsolation(IsolationLevel.READ_COMMITTED.intValue());
+ * 
+ * // Or use with a transaction manager
+ * IsolationLevel level = IsolationLevel.valueOf(conn.getTransactionIsolation());
+ * }</pre>
  *
- * @see <a href="http://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html">http://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html</a>
+ * @see Connection#setTransactionIsolation(int)
+ * @see <a href="http://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html">JDBC Transactions Tutorial</a>
+ * @since 1.0
  */
 public enum IsolationLevel {
     /**
-     * Field DEFAULT. No {@code Connection.setTransactionIsolation(...)} will be called to set transaction isolation
-     * level.
+     * Special value indicating that the default transaction isolation level should be used.
+     * When this level is specified, no {@code Connection.setTransactionIsolation(...)} call
+     * will be made, allowing the database's default isolation level to be used.
+     * 
+     * <p>This is useful when you want to rely on the database's configured default
+     * rather than explicitly setting an isolation level.</p>
      */
     DEFAULT(-1),
 
     /**
-     * Field NONE.
-     * @deprecated
+     * A constant indicating that transactions are not supported.
+     * 
+     * @deprecated This isolation level is rarely used and may not be supported by all databases.
+     *             Consider using {@link #READ_UNCOMMITTED} as the lowest isolation level instead.
      */
+    @Deprecated
     NONE(Connection.TRANSACTION_NONE),
 
     /**
-     * Field READ_UNCOMMITTED.
+     * Dirty reads, non-repeatable reads, and phantom reads can occur.
+     * 
+     * <p>This isolation level allows a transaction to read data that has been modified
+     * by other transactions but not yet committed. This is the lowest isolation level
+     * and provides the best performance but the least data consistency.</p>
+     * 
+     * <p>Use cases: When performance is critical and temporary inconsistencies are acceptable,
+     * such as in reporting systems reading from replicated data.</p>
      */
     READ_UNCOMMITTED(Connection.TRANSACTION_READ_UNCOMMITTED),
 
     /**
-     * Field READ_COMMITTED.
+     * Dirty reads are prevented; non-repeatable reads and phantom reads can occur.
+     * 
+     * <p>This is the default isolation level for many databases. It ensures that a transaction
+     * can only read data that has been committed by other transactions, preventing dirty reads.
+     * However, if the same row is read twice in a transaction, it may return different values
+     * if another transaction modifies and commits the data between the reads.</p>
+     * 
+     * <p>Use cases: Most typical database applications where preventing dirty reads is
+     * sufficient and some inconsistency is acceptable.</p>
      */
     READ_COMMITTED(Connection.TRANSACTION_READ_COMMITTED),
 
     /**
-     * Field REPEATABLE_READ.
+     * Dirty reads and non-repeatable reads are prevented; phantom reads can occur.
+     * 
+     * <p>This isolation level ensures that if a transaction reads a row, subsequent reads
+     * of the same row within the transaction will return the same data, even if other
+     * transactions attempt to modify it. However, other transactions may insert new rows
+     * that match the query criteria (phantom reads).</p>
+     * 
+     * <p>Use cases: Applications that need consistent reads within a transaction,
+     * such as financial calculations where values must not change during processing.</p>
      */
     REPEATABLE_READ(Connection.TRANSACTION_REPEATABLE_READ),
 
     /**
-     * Field SERIALIZABLE.
+     * Dirty reads, non-repeatable reads, and phantom reads are prevented.
+     * 
+     * <p>This is the highest isolation level, effectively serializing access to data.
+     * Transactions execute as if they were running sequentially rather than concurrently.
+     * This provides the strongest consistency guarantees but may significantly impact
+     * performance due to extensive locking.</p>
+     * 
+     * <p>Use cases: Critical operations requiring absolute consistency, such as
+     * financial transfers or inventory management where no anomalies can be tolerated.</p>
      */
     SERIALIZABLE(Connection.TRANSACTION_SERIALIZABLE);
 
     /**
-     * Field intValue.
+     * The integer value representing this isolation level, as defined in {@link Connection}.
      */
     private final int intValue;
 
     /**
+     * Constructs an IsolationLevel with the specified integer value.
      *
-     * @param intValue
+     * @param intValue The JDBC constant value for this isolation level
      */
     IsolationLevel(final int intValue) {
         this.intValue = intValue;
     }
 
     /**
+     * Returns the integer value of this isolation level as defined in {@link Connection}.
+     * 
+     * <p>Example:
+     * <pre>{@code
+     * Connection conn = dataSource.getConnection();
+     * conn.setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+     * }</pre>
      *
-     * @return int
+     * @return The JDBC constant value for this isolation level
      */
     public int intValue() {
         return intValue;
     }
 
     /**
+     * Returns the IsolationLevel enum constant corresponding to the specified integer value.
+     * 
+     * <p>Example:
+     * <pre>{@code
+     * Connection conn = dataSource.getConnection();
+     * int currentLevel = conn.getTransactionIsolation();
+     * IsolationLevel level = IsolationLevel.valueOf(currentLevel);
+     * System.out.println("Current isolation: " + level);
+     * }</pre>
      *
-     * @param intValue
-     * @return IsolationLevel
+     * @param intValue The JDBC constant value for the isolation level
+     * @return The corresponding IsolationLevel enum constant
+     * @throws IllegalArgumentException if the specified value does not correspond to any isolation level
      */
     public static IsolationLevel valueOf(final int intValue) {
         switch (intValue) {

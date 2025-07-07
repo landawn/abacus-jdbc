@@ -15,6 +15,26 @@
  */
 package com.landawn.abacus.jdbc;
 
+/**
+ * A record that encapsulates database product information including the product name,
+ * version string, and parsed version enum.
+ * 
+ * <p>This record is typically used to store metadata about the underlying database system
+ * retrieved from JDBC connection metadata.</p>
+ * 
+ * <p>Usage example:
+ * <pre>{@code
+ * DBProductInfo dbInfo = new DBProductInfo("MySQL", "8.0.33", DBVersion.MYSQL_8);
+ * String name = dbInfo.productName(); // "MySQL"
+ * }</pre>
+ * 
+ * @param productName The name of the database product (e.g., "MySQL", "PostgreSQL", "Oracle")
+ * @param productVersion The version string of the database product (e.g., "8.0.33", "15.3")
+ * @param version The parsed {@link DBVersion} enum representing the database type and major version
+ * 
+ * @see DBVersion
+ * @since 1.0
+ */
 public record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR
 
 }
