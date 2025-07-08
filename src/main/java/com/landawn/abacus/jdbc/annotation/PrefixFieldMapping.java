@@ -20,15 +20,92 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Maps database column prefixes to object field paths for result set mapping.
+ * This annotation is used when joining multiple tables and needing to map columns
+ * with prefixes to nested objects or specific fields in the result object.
+ * 
+ * <p>When performing SQL joins, it's common to alias columns with prefixes to avoid
+ * naming conflicts. This annotation helps map those prefixed columns to the appropriate
+ * fields in your domain objects, including nested objects.</p>
+ * 
+ * <p><strong>Note:</strong> This annotation is deprecated. Consider using more modern
+ * mapping approaches or explicit column mappings.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * public interface UserDao extends CrudDao<User, Long> {
+ *     
+ *     @Select("SELECT u.id, u.name, u.email, " +
+ *             "d.id as d_id, d.model as d_model, d.os as d_os, " +
+ *             "c.id as c_id, c.phone as c_phone, c.address as c_address " +
+ *             "FROM users u " +
+ *             "LEFT JOIN devices d ON u.id = d.user_id " +
+ *             "LEFT JOIN contacts c ON u.id = c.user_id " +
+ *             "WHERE u.id = :id")
+ *     @PrefixFieldMapping("d=device, c=contact")
+ *     User findUserWithDetails(@Bind("id") long id);
+ *     
+ *     // Result mapping:
+ *     // d_id -> user.device.id
+ *     // d_model -> user.device.model
+ *     // d_os -> user.device.os
+ *     // c_id -> user.contact.id
+ *     // c_phone -> user.contact.phone
+ *     // c_address -> user.contact.address
+ * }
+ * 
+ * // Domain objects
+ * public class User {
+ *     private Long id;
+ *     private String name;
+ *     private String email;
+ *     private Device device;  // Nested object
+ *     private Contact contact; // Nested object
+ *     // getters/setters
+ * }
+ * }</pre>
+ * 
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface PrefixFieldMapping {
 
     /**
-     * <code> @PrefixFieldMapping("d=device, c=contact") </code>.
-     *
-     * @return
-     * @deprecated
+     * Specifies the mapping between column prefixes and object field paths.
+     * The format is a comma-separated list of prefix=fieldPath pairs.
+     * 
+     * <p>Format: {@code "prefix1=fieldPath1, prefix2=fieldPath2, ..."}</p>
+     * 
+     * <p>Rules:</p>
+     * <ul>
+     *   <li>Prefixes should match the column aliases used in the SQL query</li>
+     *   <li>Field paths can be simple field names or nested paths (e.g., "address.city")</li>
+     *   <li>The prefix is removed from the column name before mapping to the field</li>
+     *   <li>Columns without matching prefixes are mapped normally</li>
+     * </ul>
+     * 
+     * <p>Example mappings:</p>
+     * <pre>{@code
+     * // Simple prefix mapping
+     * @PrefixFieldMapping("addr=address")
+     * // addr_street -> address.street
+     * // addr_city -> address.city
+     * 
+     * // Multiple prefix mappings
+     * @PrefixFieldMapping("u=user, o=order, p=payment")
+     * // u_name -> user.name
+     * // o_id -> order.id
+     * // p_amount -> payment.amount
+     * 
+     * // Nested field mapping
+     * @PrefixFieldMapping("bill=billing.address, ship=shipping.address")
+     * // bill_street -> billing.address.street
+     * // ship_street -> shipping.address.street
+     * }</pre>
+     * 
+     * @return the prefix-to-field mapping string
+     * @deprecated Use explicit column mapping or modern ORM features instead
      */
     @Deprecated
     String value() default "";

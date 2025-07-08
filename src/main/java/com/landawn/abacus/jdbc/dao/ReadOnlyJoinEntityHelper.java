@@ -21,18 +21,42 @@ import java.util.concurrent.Executor;
 
 import com.landawn.abacus.util.SQLBuilder;
 
+/**
+ * A read-only interface for handling join entity operations in a Data Access Object (DAO) pattern.
+ * This interface extends {@link JoinEntityHelper} but overrides all mutation methods to throw
+ * {@link UnsupportedOperationException}, enforcing read-only behavior for join entity operations.
+ * 
+ * <p>This interface is useful when you want to provide read-only access to join entity operations,
+ * preventing any modifications to the relationships between entities while still allowing
+ * read operations inherited from the parent interface.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * public class UserReadOnlyDao implements ReadOnlyJoinEntityHelper<User, SQLBuilder, UserDao> {
+ *     // All delete operations will throw UnsupportedOperationException
+ *     // Only read operations from JoinEntityHelper are available
+ * }
+ * }</pre>
+ * 
+ * @param <T> the type of the entity
+ * @param <SB> the type of SQLBuilder used for query construction
+ * @param <TD> the type of the DAO implementation
+ * @see JoinEntityHelper
+ * @see Dao
+ */
 @SuppressWarnings("RedundantThrows")
 public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param joinEntityClass
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose join entities should be deleted
+     * @param joinEntityClass the class of the join entity to delete
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -41,14 +65,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param joinEntityClass
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose join entities should be deleted
+     * @param joinEntityClass the class of the join entity to delete
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -57,14 +82,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param joinEntityPropName
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose join entities should be deleted
+     * @param joinEntityPropName the property name of the join entity to delete
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -73,14 +99,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param joinEntityPropName
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose join entities should be deleted
+     * @param joinEntityPropName the property name of the join entity to delete
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -89,14 +116,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param joinEntityPropNames
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose join entities should be deleted
+     * @param joinEntityPropNames the collection of property names of join entities to delete
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -105,15 +133,16 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param joinEntityPropNames
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose join entities should be deleted
+     * @param joinEntityPropNames the collection of property names of join entities to delete
+     * @param inParallel whether to execute the deletions in parallel
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -123,15 +152,16 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param joinEntityPropNames
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose join entities should be deleted
+     * @param joinEntityPropNames the collection of property names of join entities to delete
+     * @param executor the executor to use for parallel execution
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -141,14 +171,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param joinEntityPropNames
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose join entities should be deleted
+     * @param joinEntityPropNames the collection of property names of join entities to delete
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -158,15 +189,16 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param joinEntityPropNames
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose join entities should be deleted
+     * @param joinEntityPropNames the collection of property names of join entities to delete
+     * @param inParallel whether to execute the deletions in parallel
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -176,15 +208,16 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param joinEntityPropNames
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose join entities should be deleted
+     * @param joinEntityPropNames the collection of property names of join entities to delete
+     * @param executor the executor to use for parallel execution
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -194,13 +227,14 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose all join entities should be deleted
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -209,14 +243,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose all join entities should be deleted
+     * @param inParallel whether to execute the deletions in parallel
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -225,14 +260,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose all join entities should be deleted
+     * @param executor the executor to use for parallel execution
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -241,13 +277,14 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose all join entities should be deleted
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -256,14 +293,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose all join entities should be deleted
+     * @param inParallel whether to execute the deletions in parallel
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
@@ -272,14 +310,15 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
     }
 
     /**
+     * This operation is not supported in read-only mode.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     *
-     * @param entities
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose all join entities should be deleted
+     * @param executor the executor to use for parallel execution
+     * @return never returns normally
+     * @throws SQLException never thrown due to UnsupportedOperationException
+     * @throws UnsupportedOperationException always thrown as this is a read-only interface
+     * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override

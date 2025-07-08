@@ -18,6 +18,34 @@ package com.landawn.abacus.jdbc.dao;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.util.SQLBuilder;
 
+/**
+ * A read-only CRUD (Create, Read, Update, Delete) Data Access Object interface specifically
+ * designed for entities with {@code Long} type primary keys. This interface combines
+ * {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDaoL} to provide a complete read-only
+ * DAO implementation for entities using Long identifiers.
+ * 
+ * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
+ * incompatible changes, or even removal, in a future release.</p>
+ * 
+ * <p>All mutation operations (insert, update, delete) inherited from the parent interfaces
+ * will throw {@link UnsupportedOperationException}, while read operations remain functional.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * public interface UserDao extends ReadOnlyCrudDaoL<User, SQLBuilder, UserDao> {
+ *     // Inherits read-only operations with Long ID type
+ *     // findById(Long id), exists(Long id), etc. are available
+ *     // insert(), update(), delete() operations throw UnsupportedOperationException
+ * }
+ * }</pre>
+ * 
+ * @param <T> the type of the entity
+ * @param <SB> the type of SQLBuilder used for query construction
+ * @param <TD> the type of the DAO implementation (self-referencing type parameter)
+ * @see ReadOnlyCrudDao
+ * @see NoUpdateCrudDaoL
+ * @see CrudDaoL
+ */
 @Beta
 public interface ReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>
         extends ReadOnlyCrudDao<T, Long, SB, TD>, NoUpdateCrudDaoL<T, SB, TD> {

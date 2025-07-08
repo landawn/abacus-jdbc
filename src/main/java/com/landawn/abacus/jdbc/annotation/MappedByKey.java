@@ -23,46 +23,133 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The result will be merged by {@code keyName} and mapped to {@code map}.
+ * Transforms query results into a Map structure where each result row is keyed by a specified field.
+ * This annotation is useful when you need to quickly lookup entities by a unique identifier
+ * or when you want to group results by a specific field value.
+ * 
+ * <p>The annotation extracts the value of the specified key field from each result row
+ * and uses it as the map key. If multiple rows have the same key value, the last row
+ * will overwrite previous ones (unless using a multi-value map implementation).</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * public interface UserDao extends CrudDao<User, Long> {
+ *     // Map users by their ID
+ *     @Select("SELECT * FROM users WHERE status = :status")
+ *     @MappedByKey("id")
+ *     Map<Long, User> findUsersByStatus(@Bind("status") String status);
+ *     
+ *     // Map users by email (assuming email is unique)
+ *     @Select("SELECT * FROM users WHERE created_date > :date")
+ *     @MappedByKey(keyName = "email")
+ *     Map<String, User> findRecentUsersByEmail(@Bind("date") Date date);
+ *     
+ *     // Using custom map implementation
+ *     @Select("SELECT * FROM users WHERE department = :dept")
+ *     @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
+ *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept);
+ *     
+ *     // Map with composite objects
+ *     @Select("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
+ *     @MappedByKey("id")
+ *     Map<Long, Map<String, Object>> getUserLoginStats();
+ * }
+ * 
+ * // Usage example
+ * Map<Long, User> usersById = userDao.findUsersByStatus("ACTIVE");
+ * User user = usersById.get(123L);  // Quick lookup by ID
+ * }</pre>
+ * 
+ * <p>Important considerations:</p>
+ * <ul>
+ *   <li>The key field must exist in the query results</li>
+ *   <li>Null key values will be included in the map (if the Map implementation supports null keys)</li>
+ *   <li>Duplicate keys will result in later values overwriting earlier ones</li>
+ *   <li>The return type must be a Map or a subtype of Map</li>
+ * </ul>
  *
- * For example:
- * <p>
- * <code>
- *
- *  @Select("SELECT id, first_name, last_name FROM user WHERE id in ({ids}")
- *  <br />
- *  @MappedByKey("id")
- *  <br />
- *  Map&lt;Long, User&gt; listUser(@BindList("ids") List<Integer> ids) throws SQLException;
- *
- * </code>
- * </p>
- *
+ * @see MergedById
+ * @see GroupBy
+ * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface MappedByKey {
 
     /**
-     * Use {@code keyName} to specify attribute explicitly
-     *
-     * @return
-     * @deprecated using keyName="id" for explicit call.
+     * Legacy attribute for specifying the key field name.
+     * 
+     * @return the field name to use as map key
+     * @deprecated Use {@code keyName="fieldName"} for explicit declaration
      */
     @Deprecated
     String value() default "";
 
     /**
+     * Specifies the name of the field to use as the map key.
+     * This field must exist in the query result set.
+     * 
+     * <p>The field value is extracted from each result row and used as the key
+     * in the resulting map. The field can be:</p>
+     * <ul>
+     *   <li>A database column name</li>
+     *   <li>An entity property name (if using entity mapping)</li>
+     *   <li>An alias defined in the SQL query</li>
+     * </ul>
+     * 
+     * <p>Examples:</p>
+     * <pre>{@code
+     * // Using database column name
+     * @Select("SELECT user_id, user_name, email FROM users")
+     * @MappedByKey(keyName = "user_id")
+     * Map<Long, Map<String, Object>> getUsers();
+     * 
+     * // Using entity property name
+     * @Select("SELECT * FROM products WHERE category = :category")
+     * @MappedByKey(keyName = "productCode")  // Maps to product_code column
+     * Map<String, Product> getProductsByCategory(@Bind("category") String category);
+     * 
+     * // Using SQL alias
+     * @Select("SELECT id, name, price * 0.9 as discounted_price FROM products")
+     * @MappedByKey(keyName = "discounted_price")
+     * Map<BigDecimal, Product> getProductsByDiscountPrice();
+     * }</pre>
      *
-     *
-     * @return
+     * @return the field name to use as map key
      */
     String keyName() default "";
 
     /**
+     * Specifies the Map implementation class to use for the result.
+     * The class must have a no-argument constructor.
+     * 
+     * <p>Common implementations:</p>
+     * <ul>
+     *   <li>{@link HashMap} (default) - No ordering, best performance</li>
+     *   <li>{@link java.util.LinkedHashMap} - Maintains insertion order</li>
+     *   <li>{@link java.util.TreeMap} - Sorted by key</li>
+     *   <li>{@link java.util.concurrent.ConcurrentHashMap} - Thread-safe</li>
+     * </ul>
+     * 
+     * <p>Examples:</p>
+     * <pre>{@code
+     * // Maintain insertion order
+     * @Select("SELECT * FROM users ORDER BY created_date")
+     * @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
+     * LinkedHashMap<Long, User> getUsersInCreationOrder();
+     * 
+     * // Sorted by key
+     * @Select("SELECT * FROM products")
+     * @MappedByKey(keyName = "productCode", mapClass = TreeMap.class)
+     * TreeMap<String, Product> getProductsSortedByCode();
+     * 
+     * // Thread-safe map
+     * @Select("SELECT * FROM config")
+     * @MappedByKey(keyName = "key", mapClass = ConcurrentHashMap.class)
+     * ConcurrentHashMap<String, Config> getConfigMap();
+     * }</pre>
      *
-     *
-     * @return
+     * @return the Map implementation class, defaults to HashMap
      */
     @SuppressWarnings("rawtypes")
     Class<? extends Map> mapClass() default HashMap.class;

@@ -35,11 +35,31 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 
 /**
+ * A specialized CrudDao interface that uses {@code Long} as the ID type.
+ * This interface provides convenience methods that accept primitive {@code long} values
+ * in addition to the {@code Long} object methods inherited from CrudDao.
+ * 
+ * <p>This interface is particularly useful for entities that use numeric long IDs,
+ * which is a common pattern in many database schemas. All methods delegate to their
+ * corresponding CrudDao methods after boxing the primitive long to Long.</p>
+ * 
+ * <p>Usage example:</p>
+ * <pre>{@code
+ * public interface UserDao extends CrudDaoL<User, SQLBuilder.PSC, UserDao> {
+ *     // Inherits all CrudDao methods with Long ID type
+ *     // Plus convenience methods that accept primitive long
+ * }
+ * 
+ * // Usage with primitive long
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ * Optional<User> user = userDao.get(123L);  // Can use primitive long
+ * userDao.deleteById(456L);  // More convenient than Long.valueOf(456)
+ * }</pre>
  *
- *
- * @param <T>
- * @param <SB> {@code SQLBuilder} used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
- * @param <TD>
+ * @param <T> The entity type this DAO manages
+ * @param <SB> The SQLBuilder type used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <TD> The self-type of the DAO for fluent interface support
+ * 
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
  */
@@ -47,170 +67,246 @@ import com.landawn.abacus.util.u.OptionalShort;
 public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {
 
     /**
+     * Queries for a boolean value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalBoolean isActive = userDao.queryForBoolean("isActive", 123L);
+     * if (isActive.isPresent() && isActive.getAsBoolean()) {
+     *     System.out.println("User is active");
+     * }
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalBoolean containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalBoolean queryForBoolean(final String singleSelectPropName, final long id) throws SQLException {
         return queryForBoolean(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a char value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalChar grade = studentDao.queryForChar("grade", 123L);
+     * grade.ifPresent(g -> System.out.println("Student grade: " + g));
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalChar containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalChar queryForChar(final String singleSelectPropName, final long id) throws SQLException {
         return queryForChar(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a byte value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalByte containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalByte queryForByte(final String singleSelectPropName, final long id) throws SQLException {
         return queryForByte(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a short value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalShort containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalShort queryForShort(final String singleSelectPropName, final long id) throws SQLException {
         return queryForShort(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for an integer value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalInt age = userDao.queryForInt("age", 123L);
+     * int userAge = age.orElse(0);
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalInt containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalInt queryForInt(final String singleSelectPropName, final long id) throws SQLException {
         return queryForInt(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a long value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalLong lastLoginTime = userDao.queryForLong("lastLoginTimestamp", 123L);
+     * lastLoginTime.ifPresent(time -> System.out.println("Last login: " + new Date(time)));
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalLong containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalLong queryForLong(final String singleSelectPropName, final long id) throws SQLException {
         return queryForLong(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a float value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalFloat containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalFloat queryForFloat(final String singleSelectPropName, final long id) throws SQLException {
         return queryForFloat(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a double value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalDouble balance = accountDao.queryForDouble("balance", 123L);
+     * double amount = balance.orElse(0.0);
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return an OptionalDouble containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default OptionalDouble queryForDouble(final String singleSelectPropName, final long id) throws SQLException {
         return queryForDouble(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a String value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Nullable<String> email = userDao.queryForString("email", 123L);
+     * String userEmail = email.orElse("no-email@example.com");
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the String value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws SQLException {
         return queryForString(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a Date value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", 123L);
+     * birthDate.ifPresent(date -> System.out.println("Birth date: " + date));
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the Date value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws SQLException {
         return queryForDate(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a Time value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the Time value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final long id) throws SQLException {
         return queryForTime(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a Timestamp value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Nullable<Timestamp> lastModified = userDao.queryForTimestamp("lastModified", 123L);
+     * lastModified.ifPresent(ts -> System.out.println("Last modified: " + ts));
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the Timestamp value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws SQLException {
         return queryForTimestamp(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a byte array value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", 123L);
+     * avatar.ifPresent(bytes -> saveImageToFile(bytes));
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the byte array value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Nullable<byte[]> queryForBytes(final String singleSelectPropName, final long id) throws SQLException {
         return queryForBytes(singleSelectPropName, Long.valueOf(id));
     }
 
     /**
+     * Queries for a single value of the specified type from a property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Nullable<BigDecimal> salary = userDao.queryForSingleResult("salary", 123L, BigDecimal.class);
+     * Nullable<UserStatus> status = userDao.queryForSingleResult("status", 123L, UserStatus.class);
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @param targetValueType
-     * @param <V>
-     * @return
-     * @throws SQLException
+     * @param <V> the type of the value to retrieve
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return a Nullable containing the value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws SQLException {
@@ -218,14 +314,21 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
+     * Queries for a single non-null value of the specified type from a property of the entity.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Optional<String> username = userDao.queryForSingleNonNull("username", 123L, String.class);
+     * username.ifPresent(name -> System.out.println("Username: " + name));
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @param targetValueType
-     * @param <V>
-     * @return
-     * @throws SQLException
+     * @param <V> the type of the value to retrieve
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return an Optional containing the non-null value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws SQLException {
@@ -233,14 +336,21 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
+     * Queries for a single non-null value using a custom row mapper.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Optional<String> fullName = userDao.queryForSingleNonNull("firstName", 123L, 
+     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     * }</pre>
      *
-     *
-     * @param <V>
-     * @param singleSelectPropName
-     * @param id
-     * @param rowMapper
-     * @return
-     * @throws SQLException
+     * @param <V> the type of the value to retrieve
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @param rowMapper the custom mapper to transform the result
+     * @return an Optional containing the mapped non-null value if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -249,15 +359,23 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
+     * Queries for a unique single result of the specified type.
+     * This is a convenience method that accepts a primitive long ID.
+     * Throws DuplicatedResultException if more than one record is found.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class);
+     * // Throws DuplicatedResultException if multiple records found
+     * }</pre>
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @param targetValueType
-     * @param <V>
-     * @return
-     * @throws DuplicatedResultException
-     * @throws SQLException
+     * @param <V> the type of the value to retrieve
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return a Nullable containing the unique value if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException {
@@ -265,15 +383,17 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
+     * Queries for a unique non-null result of the specified type.
+     * This is a convenience method that accepts a primitive long ID.
+     * Throws DuplicatedResultException if more than one record is found.
      *
-     *
-     * @param singleSelectPropName
-     * @param id
-     * @param targetValueType
-     * @param <V>
-     * @return
-     * @throws DuplicatedResultException
-     * @throws SQLException
+     * @param <V> the type of the value to retrieve
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return an Optional containing the unique non-null value if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException {
@@ -281,14 +401,17 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
+     * Queries for a unique non-null result using a custom row mapper.
+     * This is a convenience method that accepts a primitive long ID.
+     * Throws DuplicatedResultException if more than one record is found.
      *
-     * @param <V>
-     * @param singleSelectPropName
-     * @param id
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException
-     * @throws SQLException
+     * @param <V> the type of the value to retrieve
+     * @param singleSelectPropName the property name to select
+     * @param id the primitive long ID of the entity
+     * @param rowMapper the custom mapper to transform the result
+     * @return an Optional containing the mapped unique non-null value if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -297,72 +420,110 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Returns the record found by the specified {@code id} or an empty {@code Optional} if no record is found.
+     * Retrieves an entity by its ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Optional<User> user = userDao.get(123L);
+     * user.ifPresent(u -> System.out.println("Found user: " + u.getName()));
+     * }</pre>
      *
-     *
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID of the entity to retrieve
+     * @return an Optional containing the entity if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id) throws SQLException {
         return get(Long.valueOf(id));
     }
 
     /**
-     * Returns the record found by the specified {@code id} or an empty {@code Optional} if no record is found.
+     * Retrieves an entity by its ID with only selected properties populated.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * // Only load id, name, and email fields
+     * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name", "email"));
+     * }</pre>
      *
-     *
-     * @param id
-     * @param selectPropNames
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID of the entity to retrieve
+     * @param selectPropNames the properties to select, excluding properties of joining entities. 
+     *                        All properties will be selected if null
+     * @return an Optional containing the entity if found, otherwise empty
+     * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
         return get(Long.valueOf(id), selectPropNames);
     }
 
     /**
-     * Returns the record found by the specified {@code id} or {@code null} if no record is found.
+     * Retrieves an entity by its ID, returning null if not found.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * User user = userDao.gett(123L);
+     * if (user != null) {
+     *     System.out.println("Found user: " + user.getName());
+     * }
+     * }</pre>
      *
-     *
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID of the entity to retrieve
+     * @return the entity if found, otherwise null
+     * @throws SQLException if a database access error occurs
      */
     default T gett(final long id) throws SQLException {
         return gett(Long.valueOf(id));
     }
 
     /**
-     * Returns the record found by the specified {@code id} or {@code null} if no record is found.
+     * Retrieves an entity by its ID with only selected properties populated, returning null if not found.
+     * This is a convenience method that accepts a primitive long ID.
      *
-     *
-     * @param id
-     * @param selectPropNames
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID of the entity to retrieve
+     * @param selectPropNames the properties to select, excluding properties of joining entities. 
+     *                        All properties will be selected if null
+     * @return the entity if found, otherwise null
+     * @throws SQLException if a database access error occurs
      */
     default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {
         return gett(Long.valueOf(id), selectPropNames);
     }
 
     /**
+     * Checks if an entity with the specified ID exists in the database.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * if (userDao.exists(123L)) {
+     *     System.out.println("User exists");
+     * }
+     * }</pre>
      *
-     *
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID to check for existence
+     * @return {@code true} if an entity with the given ID exists, {@code false} otherwise
+     * @throws SQLException if a database access error occurs
      */
     default boolean exists(final long id) throws SQLException {
         return exists(Long.valueOf(id));
     }
 
     /**
+     * Checks if an entity with the specified ID does not exist in the database.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * if (userDao.notExists(123L)) {
+     *     // Create new user with this ID
+     * }
+     * }</pre>
      *
-     *
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID to check for non-existence
+     * @return {@code true} if no entity with the given ID exists, {@code false} otherwise
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default boolean notExists(final long id) throws SQLException {
@@ -370,36 +531,61 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
+     * Updates a single property of an entity identified by ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * userDao.update("lastLoginTime", new Date(), 123L);
+     * userDao.update("failedLoginAttempts", 0, 123L);
+     * }</pre>
      *
-     *
-     * @param propName
-     * @param propValue
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param propName the property name to update
+     * @param propValue the new value for the property
+     * @param id the primitive long ID of the entity to update
+     * @return the number of rows updated
+     * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final long id) throws SQLException {
         return update(propName, propValue, Long.valueOf(id));
     }
 
     /**
+     * Updates multiple properties of an entity identified by ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * Map<String, Object> updates = new HashMap<>();
+     * updates.put("status", "ACTIVE");
+     * updates.put("lastModified", new Date());
+     * userDao.update(updates, 123L);
+     * }</pre>
      *
-     *
-     * @param updateProps
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param updateProps a map of property names to their new values
+     * @param id the primitive long ID of the entity to update
+     * @return the number of rows updated
+     * @throws SQLException if a database access error occurs
      */
     default int update(final Map<String, Object> updateProps, final long id) throws SQLException {
         return update(updateProps, Long.valueOf(id));
     }
 
     /**
+     * Deletes an entity by its ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * int deletedRows = userDao.deleteById(123L);
+     * if (deletedRows == 0) {
+     *     System.out.println("User not found");
+     * }
+     * }</pre>
      *
-     *
-     * @param id
-     * @return
-     * @throws SQLException
+     * @param id the primitive long ID of the entity to delete
+     * @return the number of rows deleted (typically 1 if successful, 0 if not found)
+     * @throws SQLException if a database access error occurs
      */
     default int deleteById(final long id) throws SQLException {
         return deleteById(Long.valueOf(id));

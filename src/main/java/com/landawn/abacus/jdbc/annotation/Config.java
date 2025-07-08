@@ -20,43 +20,180 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.landawn.abacus.jdbc.dao.CrudDao;
+
+/**
+ * Provides DAO-level configuration options that affect query generation and execution behavior.
+ * This annotation allows fine-tuning of various framework behaviors at the DAO interface level,
+ * overriding global defaults for specific use cases.
+ * 
+ * <p>Configuration options include:</p>
+ * <ul>
+ *   <li>Automatic LIMIT clause addition for single-result queries</li>
+ *   <li>ID generation behavior for insert operations</li>
+ *   <li>Join condition handling with null values</li>
+ *   <li>Column fetching strategies for DataSet queries</li>
+ * </ul>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * @Config(
+ *     addLimitForSingleQuery = true,
+ *     callGenerateIdForInsertIfIdNotSet = true
+ * )
+ * public interface UserDao extends CrudDao<User, Long> {
+ *     // Single query methods will automatically add LIMIT 1
+ *     @Select("SELECT * FROM users WHERE email = :email")
+ *     User findByEmail(@Bind("email") String email);  // LIMIT 1 added automatically
+ *     
+ *     // ID generation will be called if user.id is null or 0
+ *     default User createUser(String name, String email) {
+ *         User user = new User(name, email);
+ *         insert(user);  // generateId() called automatically if needed
+ *         return user;
+ *     }
+ * }
+ * 
+ * @Config(allowJoiningByNullOrDefaultValue = true)
+ * public interface OrderDao extends CrudDao<Order, Long> {
+ *     // Allows joins even when foreign key might be null
+ *     @Select("SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.id")
+ *     List<Order> findAllOrdersWithCustomers();
+ * }
+ * }</pre>
+ *
+ * @see CrudDao
+ * @since 0.8
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
 public @interface Config {
+
     /**
-     * Single query method includes: queryForSingleXxx/queryForUniqueResult/findFirst/findOnlyOne/exists/count...
+     * Controls whether to automatically add LIMIT clause to single-result query methods.
+     * When {@code true}, methods that return a single result will have {@code LIMIT 1}
+     * (or equivalent) added to their SQL queries for better performance.
+     * 
+     * <p>Single query methods include:</p>
+     * <ul>
+     *   <li>{@code queryForSingleXxx()} methods</li>
+     *   <li>{@code queryForUniqueResult()}</li>
+     *   <li>{@code findFirst()}</li>
+     *   <li>{@code findOnlyOne()}</li>
+     *   <li>{@code exists()}</li>
+     *   <li>{@code count()} (when not using COUNT in SQL)</li>
+     * </ul>
+     * 
+     * <p>Example:</p>
+     * <pre>{@code
+     * @Config(addLimitForSingleQuery = true)
+     * public interface ProductDao extends CrudDao<Product, Long> {
+     *     @Select("SELECT * FROM products WHERE code = :code")
+     *     Product findByCode(@Bind("code") String code);
+     *     // Executed as: SELECT * FROM products WHERE code = ? LIMIT 1
+     * }
+     * }</pre>
      *
-     * @return
+     * @return {@code true} to auto-add LIMIT clause, {@code false} otherwise
      */
     boolean addLimitForSingleQuery() default false;
 
     /**
-     * flag to call {@code generateId} for {@code CrudDao.insert(T entity), CrudDao.batchInsert(Collection<T> entities)} if the ids are not set or set with default value.
+     * Controls whether to automatically call {@code generateId()} for entity inserts
+     * when the ID field is not set or has a default value.
+     * 
+     * <p>This applies to {@code CrudDao.insert(T entity)} and {@code CrudDao.batchInsert(Collection<T> entities)}
+     * methods. The ID is considered "not set" when it's null or has the default value for its type
+     * (0 for numeric types, null for objects).</p>
+     * 
+     * <p>Example:</p>
+     * <pre>{@code
+     * @Config(callGenerateIdForInsertIfIdNotSet = true)
+     * public interface UserDao extends CrudDao<User, Long> {
+     *     @Override
+     *     default Long generateId() {
+     *         // Custom ID generation logic
+     *         return System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(1000);
+     *     }
+     * }
+     * 
+     * // Usage
+     * User user = new User("John", "john@example.com");
+     * userDao.insert(user);  // generateId() called automatically
+     * }</pre>
      *
-     * @return
+     * @return {@code true} to auto-generate IDs for insert operations
      */
     boolean callGenerateIdForInsertIfIdNotSet() default false;
 
     /**
-     * flag to call {@code generateId} for {@code CrudDao.insert(String sql, T entity), CrudDao.batchInsert(String sql, Collection<T> entities)} if the ids are not set or set with default value.
+     * Controls whether to automatically call {@code generateId()} for SQL-based entity inserts
+     * when the ID field is not set or has a default value.
+     * 
+     * <p>This applies to {@code CrudDao.insert(String sql, T entity)} and 
+     * {@code CrudDao.batchInsert(String sql, Collection<T> entities)} methods.
+     * Similar to {@link #callGenerateIdForInsertIfIdNotSet()} but for custom SQL inserts.</p>
+     * 
+     * <p>Example:</p>
+     * <pre>{@code
+     * @Config(callGenerateIdForInsertWithSqlIfIdNotSet = true)
+     * public interface OrderDao extends CrudDao<Order, Long> {
+     *     default void insertWithAudit(Order order) {
+     *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
+     *                     "VALUES (:id, :customerId, :total, CURRENT_USER())";
+     *         insert(sql, order);  // generateId() called if order.id not set
+     *     }
+     * }
+     * }</pre>
      *
-     *
-     * @return
+     * @return {@code true} to auto-generate IDs for SQL-based insert operations
      */
     boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
 
     /**
+     * Controls whether joins can be performed using null or default values in join conditions.
+     * When {@code false} (default), joins with null values are skipped for safety.
+     * When {@code true}, allows joins even when the joining column contains null.
+     * 
+     * <p>This is useful for outer joins where null values are expected and valid.</p>
+     * 
+     * <p>Example:</p>
+     * <pre>{@code
+     * @Config(allowJoiningByNullOrDefaultValue = true)
+     * public interface CustomerDao extends CrudDao<Customer, Long> {
+     *     // Allows join even if preferred_contact_id is null
+     *     @Select("SELECT c.*, p.* FROM customers c " +
+     *             "LEFT JOIN contacts p ON c.preferred_contact_id = p.id")
+     *     @MergedById
+     *     List<Customer> findAllWithPreferredContacts();
+     * }
+     * }</pre>
      *
-     * @return
+     * @return {@code true} to allow joins with null/default values
      */
     boolean allowJoiningByNullOrDefaultValue() default false;
 
-    //    // why do we need this?
-    //    boolean excludePrepareQueryMethodsFromNonDBOperation() default false;
-
     /**
+     * Controls whether DataSet queries should fetch only columns that match entity class properties.
+     * When {@code true} (default), DataSet queries will only include columns that correspond
+     * to properties in the target entity class, similar to {@link FetchColumnByEntityClass}.
+     * 
+     * <p>This provides consistency between entity queries and DataSet queries,
+     * and can improve performance by reducing unnecessary data transfer.</p>
+     * 
+     * <p>Example:</p>
+     * <pre>{@code
+     * @Config(fetchColumnByEntityClassForDataSetQuery = false)
+     * public interface ReportDao extends CrudDao<Report, Long> {
+     *     // Will fetch all columns including calculated ones
+     *     @Select("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
+     *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
+     *             "GROUP BY r.id")
+     *     DataSet getReportSummaries();
+     * }
+     * }</pre>
      *
-     * @return
+     * @return {@code true} to fetch only entity columns in DataSet queries
      */
     boolean fetchColumnByEntityClassForDataSetQuery() default true;
 }

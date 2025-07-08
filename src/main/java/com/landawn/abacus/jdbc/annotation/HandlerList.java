@@ -20,14 +20,75 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Container annotation for multiple {@link Handler} annotations.
+ * This annotation is used internally by the Java compiler to support the
+ * {@code @Repeatable} feature of the {@link Handler} annotation.
+ * 
+ * <p>You typically don't use this annotation directly. Instead, you can apply
+ * multiple {@code @Handler} annotations to the same element, and the compiler
+ * will automatically wrap them in a {@code @HandlerList}.</p>
+ * 
+ * <p>Example of multiple handlers (automatically wrapped in HandlerList):</p>
+ * <pre>{@code
+ * @Handler(type = LoggingHandler.class)
+ * @Handler(type = SecurityHandler.class)
+ * @Handler(type = CacheHandler.class, filter = {"find.*", "get.*"})
+ * public interface UserDao extends CrudDao<User, Long> {
+ *     // All three handlers will be applied according to their configurations
+ * }
+ * }</pre>
+ * 
+ * <p>The handlers are executed in the order they are declared:</p>
+ * <ol>
+ *   <li>beforeInvoke() is called in declaration order</li>
+ *   <li>afterInvoke() is called in reverse declaration order</li>
+ *   <li>This creates a nested interception pattern</li>
+ * </ol>
+ * 
+ * <p>Execution flow example with three handlers A, B, C:</p>
+ * <pre>
+ * A.beforeInvoke()
+ *   B.beforeInvoke()
+ *     C.beforeInvoke()
+ *       [Actual method execution]
+ *     C.afterInvoke()
+ *   B.afterInvoke()
+ * A.afterInvoke()
+ * </pre>
+ *
+ * @see Handler
+ * @since 0.8
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD, ElementType.TYPE })
 public @interface HandlerList {
 
     /**
+     * Returns the array of {@link Handler} annotations contained in this list.
+     * The handlers will be processed in the order they appear in this array.
+     * 
+     * <p>When multiple handlers are applied to a DAO or method, they form
+     * a chain of interceptors, with each handler having the opportunity to:</p>
+     * <ul>
+     *   <li>Modify input parameters before invocation</li>
+     *   <li>Prevent the actual method execution</li>
+     *   <li>Transform or filter the results</li>
+     *   <li>Handle exceptions in custom ways</li>
+     * </ul>
+     * 
+     * <p>Example of accessing HandlerList programmatically:</p>
+     * <pre>{@code
+     * HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class);
+     * if (handlers != null) {
+     *     for (Handler handler : handlers.value()) {
+     *         System.out.println("Handler type: " + handler.type());
+     *         System.out.println("Filter: " + Arrays.toString(handler.filter()));
+     *     }
+     * }
+     * }</pre>
      *
-     *
-     * @return
+     * @return array of Handler annotations
      */
     Handler[] value();
 }

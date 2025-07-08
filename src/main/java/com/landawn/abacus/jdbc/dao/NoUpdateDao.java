@@ -35,23 +35,65 @@ import com.landawn.abacus.util.SQLBuilder;
 import com.landawn.abacus.util.Throwables;
 
 /**
- * Interface for a Data Access Object (DAO) that does not support update operations.
+ * This interface extends the base Dao interface but explicitly disables UPDATE, DELETE, and stored procedure operations
+ * to ensure data integrity in scenarios where modifications to existing records should be prevented.
+ * 
+ * <p>This interface is particularly useful for:
+ * <ul>
+ *   <li>Read-only database connections or users with limited permissions</li>
+ *   <li>Audit trail systems where historical data must remain immutable</li>
+ *   <li>Data warehousing scenarios where only new data insertion is allowed</li>
+ *   <li>Implementing the Command Query Responsibility Segregation (CQRS) pattern</li>
+ * </ul>
+ * 
+ * <p>All methods that would typically perform UPDATE, DELETE, or CALL operations will throw
+ * {@link UnsupportedOperationException} when invoked. Only SELECT queries for reading data
+ * and INSERT queries for adding new records are permitted.
+ * 
+ * <p>Example usage:
+ * <pre>{@code
+ * public interface UserReadOnlyDao extends NoUpdateDao<User, SQLBuilder, UserReadOnlyDao> {
+ *     // Custom read-only methods
+ *     @Select("SELECT * FROM users WHERE status = ?")
+ *     List<User> findActiveUsers(String status);
+ *     
+ *     // Insert is still allowed
+ *     @Insert("INSERT INTO users (name, email) VALUES (?, ?)")
+ *     void addUser(String name, String email);
+ * }
+ * }</pre>
  *
- * @param <T> the type of the entity
- * @param <SB> the type of the SQL builder
- * @param <TD> the type of the DAO
+ * @param <T> the type of the entity managed by this DAO
+ * @param <SB> the type of the SQL builder used for query construction
+ * @param <TD> the self-referential type of the DAO for fluent API support
  * @see com.landawn.abacus.condition.ConditionFactory
  * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see Dao
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
 public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
     /**
+     * Prepares a SQL query for execution. Only SELECT and INSERT queries are supported.
+     * This method creates a {@link PreparedQuery} object that can be used to execute
+     * the query multiple times with different parameters efficiently.
+     * 
+     * <p>The query string should be a valid SQL SELECT or INSERT statement. Any attempt
+     * to prepare UPDATE, DELETE, or other modification queries will result in an
+     * {@link UnsupportedOperationException}.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * try (PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?")) {
+     *     query.setInt(1, 18);
+     *     List<User> adults = query.list(User.class);
+     * }
+     * }</pre>
      *
-     * @param query
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param query the SQL query string to prepare (must be SELECT or INSERT)
+     * @return a PreparedQuery object for executing the query
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -65,12 +107,29 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a SQL query with support for auto-generated keys retrieval.
+     * This method is primarily useful for INSERT statements where you need to retrieve
+     * the auto-generated primary key or other generated column values after insertion.
+     * 
+     * <p>When {@code generateKeys} is true, the prepared statement will be configured
+     * to return auto-generated keys which can be retrieved after executing an INSERT.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * try (PreparedQuery query = dao.prepareQuery(
+     *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
+     *     query.setString(1, "John Doe");
+     *     query.setString(2, "john@example.com");
+     *     query.execute();
+     *     Long generatedId = query.getGeneratedKey(Long.class);
+     * }
+     * }</pre>
      *
-     * @param query
-     * @param generateKeys
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param query the SQL query string to prepare (must be SELECT or INSERT)
+     * @param generateKeys true to enable retrieval of auto-generated keys
+     * @return a PreparedQuery object configured for key generation if applicable
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -84,12 +143,32 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a SQL query with specific column indexes for auto-generated key retrieval.
+     * This method allows precise control over which auto-generated columns should be
+     * returned after an INSERT operation by specifying their column indexes.
+     * 
+     * <p>The column indexes are 1-based, following JDBC conventions. This is useful
+     * when your table has multiple auto-generated columns and you only need specific ones.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * // Retrieve only the first and third auto-generated columns
+     * try (PreparedQuery query = dao.prepareQuery(
+     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)", 
+     *         new int[]{1, 3})) {
+     *     query.setLong(1, customerId);
+     *     query.setBigDecimal(2, orderTotal);
+     *     query.execute();
+     *     // Retrieve the specified generated columns
+     * }
+     * }</pre>
      *
-     * @param query
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param query the SQL query string to prepare (must be SELECT or INSERT)
+     * @param returnColumnIndexes an array of column indexes indicating the columns
+     *                           that should be returned from the inserted row
+     * @return a PreparedQuery object configured for specific column retrieval
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -103,13 +182,32 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a SQL query with specific column names for auto-generated key retrieval.
+     * This method provides the most readable way to specify which auto-generated columns
+     * should be returned after an INSERT operation by using column names instead of indexes.
+     * 
+     * <p>This approach is preferred over column indexes as it's more maintainable and
+     * resistant to schema changes that might alter column positions.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * try (PreparedQuery query = dao.prepareQuery(
+     *         "INSERT INTO users (name, email) VALUES (?, ?)", 
+     *         new String[]{"id", "created_timestamp"})) {
+     *     query.setString(1, "Jane Doe");
+     *     query.setString(2, "jane@example.com");
+     *     query.execute();
+     *     Long id = query.getGeneratedKey("id", Long.class);
+     *     Timestamp created = query.getGeneratedKey("created_timestamp", Timestamp.class);
+     * }
+     * }</pre>
      *
-     *
-     * @param query
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param query the SQL query string to prepare (must be SELECT or INSERT)
+     * @param returnColumnNames an array of column names indicating the columns
+     *                         that should be returned from the inserted row
+     * @return a PreparedQuery object configured for named column retrieval
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -123,13 +221,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     *
-     * @param query
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * This method is not supported in NoUpdateDao as it allows custom statement creation
+     * which could potentially bypass the read-only restrictions.
+     * 
+     * @param query the SQL query string
+     * @param stmtCreator custom statement creator function
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown to prevent usage
+     * @deprecated This operation is not supported in NoUpdateDao
      */
     @Deprecated
     @NonDBOperation
@@ -140,11 +240,27 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a named parameter SQL query for execution. Only SELECT and INSERT queries are supported.
+     * Named queries use parameter placeholders like :paramName instead of ? placeholders,
+     * making complex queries more readable and maintainable.
+     * 
+     * <p>Named parameters can appear multiple times in the query and will all be set
+     * to the same value when the parameter is bound.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * String namedQuery = "SELECT * FROM users WHERE age > :minAge AND status = :status";
+     * try (NamedQuery query = dao.prepareNamedQuery(namedQuery)) {
+     *     query.setInt("minAge", 21);
+     *     query.setString("status", "ACTIVE");
+     *     List<User> users = query.list(User.class);
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the SQL query string with named parameters (must be SELECT or INSERT)
+     * @return a NamedQuery object for executing the query with named parameters
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @NonDBOperation
     @Override
@@ -157,12 +273,27 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a named parameter SQL query with support for auto-generated keys retrieval.
+     * Combines the benefits of named parameters with the ability to retrieve
+     * auto-generated keys after INSERT operations.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * String namedQuery = "INSERT INTO users (name, email, age) VALUES (:name, :email, :age)";
+     * try (NamedQuery query = dao.prepareNamedQuery(namedQuery, true)) {
+     *     query.setString("name", "Bob Smith");
+     *     query.setString("email", "bob@example.com");
+     *     query.setInt("age", 30);
+     *     query.execute();
+     *     Long generatedId = query.getGeneratedKey(Long.class);
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @param generateKeys
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the SQL query string with named parameters (must be SELECT or INSERT)
+     * @param generateKeys true to enable retrieval of auto-generated keys
+     * @return a NamedQuery object configured for key generation if applicable
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -176,12 +307,26 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a named parameter SQL query with specific column indexes for auto-generated key retrieval.
+     * This method combines named parameters with precise control over which auto-generated
+     * columns should be returned by their index positions.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * String namedQuery = "INSERT INTO orders (customer_id, total) VALUES (:customerId, :total)";
+     * try (NamedQuery query = dao.prepareNamedQuery(namedQuery, new int[]{1})) {
+     *     query.setLong("customerId", customerId);
+     *     query.setBigDecimal("total", orderTotal);
+     *     query.execute();
+     *     // Retrieve only the first auto-generated column
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the SQL query string with named parameters (must be SELECT or INSERT)
+     * @param returnColumnIndexes an array of column indexes for generated key retrieval
+     * @return a NamedQuery object configured for specific column retrieval
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -195,12 +340,28 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a named parameter SQL query with specific column names for auto-generated key retrieval.
+     * This method provides the most maintainable approach by combining named parameters
+     * with column name-based generated key retrieval.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * String namedQuery = "INSERT INTO users (name, email) VALUES (:name, :email)";
+     * try (NamedQuery query = dao.prepareNamedQuery(
+     *         namedQuery, new String[]{"id", "created_at"})) {
+     *     query.setString("name", "Alice Johnson");
+     *     query.setString("email", "alice@example.com");
+     *     query.execute();
+     *     Long id = query.getGeneratedKey("id", Long.class);
+     *     Timestamp created = query.getGeneratedKey("created_at", Timestamp.class);
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the SQL query string with named parameters (must be SELECT or INSERT)
+     * @param returnColumnNames an array of column names for generated key retrieval
+     * @return a NamedQuery object configured for named column retrieval
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -214,13 +375,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     *
-     * @param namedQuery
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * This method is not supported in NoUpdateDao as it allows custom statement creation
+     * which could potentially bypass the read-only restrictions.
+     * 
+     * @param namedQuery the SQL query string with named parameters
+     * @param stmtCreator custom statement creator function
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown to prevent usage
+     * @deprecated This operation is not supported in NoUpdateDao
      */
     @Deprecated
     @NonDBOperation
@@ -231,11 +394,26 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a named query using a pre-parsed SQL object. Only SELECT and INSERT queries are supported.
+     * This method is useful when you have already parsed a named query and want to avoid
+     * the overhead of parsing it again.
+     * 
+     * <p>The ParsedSql object contains the original SQL with named parameters and
+     * metadata about parameter positions and names.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * ParsedSql parsedSql = NamedQuery.parse("SELECT * FROM users WHERE id = :id");
+     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql)) {
+     *     query.setLong("id", userId);
+     *     User user = query.findFirst(User.class).orElse(null);
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the pre-parsed SQL query object (must represent SELECT or INSERT)
+     * @return a NamedQuery object for executing the parsed query
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -249,12 +427,27 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a parsed named query with support for auto-generated keys retrieval.
+     * Combines the efficiency of pre-parsed SQL with the ability to retrieve
+     * auto-generated keys after INSERT operations.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * ParsedSql parsedSql = NamedQuery.parse(
+     *     "INSERT INTO users (name, email) VALUES (:name, :email)");
+     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, true)) {
+     *     query.setString("name", "Carol White");
+     *     query.setString("email", "carol@example.com");
+     *     query.execute();
+     *     Long generatedId = query.getGeneratedKey(Long.class);
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @param generateKeys
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the pre-parsed SQL query object (must represent SELECT or INSERT)
+     * @param generateKeys true to enable retrieval of auto-generated keys
+     * @return a NamedQuery object configured for key generation if applicable
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -268,12 +461,27 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a parsed named query with specific column indexes for auto-generated key retrieval.
+     * This method combines pre-parsed SQL efficiency with precise control over
+     * which auto-generated columns should be returned.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * ParsedSql parsedSql = NamedQuery.parse(
+     *     "INSERT INTO products (name, price) VALUES (:name, :price)");
+     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, new int[]{1})) {
+     *     query.setString("name", "Widget");
+     *     query.setBigDecimal("price", new BigDecimal("19.99"));
+     *     query.execute();
+     *     // Retrieve only the first auto-generated column
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the pre-parsed SQL query object (must represent SELECT or INSERT)
+     * @param returnColumnIndexes an array of column indexes for generated key retrieval
+     * @return a NamedQuery object configured for specific column retrieval
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -287,12 +495,29 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a parsed named query with specific column names for auto-generated key retrieval.
+     * This method provides the most efficient and maintainable approach by combining
+     * pre-parsed SQL with column name-based generated key retrieval.
+     * 
+     * <p>Example usage:
+     * <pre>{@code
+     * ParsedSql parsedSql = NamedQuery.parse(
+     *     "INSERT INTO customers (name, email) VALUES (:name, :email)");
+     * try (NamedQuery query = dao.prepareNamedQuery(
+     *         parsedSql, new String[]{"customer_id", "registration_date"})) {
+     *     query.setString("name", "David Brown");
+     *     query.setString("email", "david@example.com");
+     *     query.execute();
+     *     Long id = query.getGeneratedKey("customer_id", Long.class);
+     *     Date regDate = query.getGeneratedKey("registration_date", Date.class);
+     * }
+     * }</pre>
      *
-     * @param namedQuery
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException if the specified {@code query} is not a {@code select/insert} sql statement.
+     * @param namedQuery the pre-parsed SQL query object (must represent SELECT or INSERT)
+     * @param returnColumnNames an array of column names for generated key retrieval
+     * @return a NamedQuery object configured for named column retrieval
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the query is not a SELECT or INSERT statement
      */
     @Beta
     @NonDBOperation
@@ -306,13 +531,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     *
-     * @param namedQuery
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * This method is not supported in NoUpdateDao as it allows custom statement creation
+     * which could potentially bypass the read-only restrictions.
+     * 
+     * @param namedQuery the pre-parsed SQL query object
+     * @param stmtCreator custom statement creator function
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown to prevent usage
+     * @deprecated This operation is not supported in NoUpdateDao
      */
     @Deprecated
     @NonDBOperation
@@ -323,12 +550,14 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     *
-     * @param query
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * Callable queries (stored procedures) are not supported in NoUpdateDao as they
+     * could potentially perform update or delete operations within the database.
+     * 
+     * @param query the stored procedure call string
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown to prevent usage
+     * @deprecated Stored procedures are not supported in NoUpdateDao
      */
     @Deprecated
     @NonDBOperation
@@ -338,13 +567,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     *
-     * @param query
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * Callable queries (stored procedures) with custom statement creators are not supported
+     * in NoUpdateDao as they could potentially perform update or delete operations.
+     * 
+     * @param query the stored procedure call string
+     * @param stmtCreator custom statement creator function
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown to prevent usage
+     * @deprecated Stored procedures are not supported in NoUpdateDao
      */
     @Deprecated
     @NonDBOperation
@@ -355,15 +586,18 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Update operations are not supported in NoUpdateDao. This method will always
+     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
+     * 
+     * <p>If you need to perform updates, use a regular DAO implementation instead.
      *
-     *
-     * @param propName
-     * @param propValue
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param propName the name of the property to update
+     * @param propValue the new value for the property
+     * @param cond the condition to identify records to update
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as updates are not allowed
+     * @deprecated Update operations are not supported in NoUpdateDao
      */
     @Override
     @Deprecated
@@ -372,13 +606,17 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Update operations are not supported in NoUpdateDao. This method will always
+     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
+     * 
+     * <p>If you need to perform updates, use a regular DAO implementation instead.
      *
-     * @param updateProps
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param updateProps a map of property names to their new values
+     * @param cond the condition to identify records to update
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as updates are not allowed
+     * @deprecated Update operations are not supported in NoUpdateDao
      */
     @Deprecated
     @Override
@@ -387,13 +625,17 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Update operations are not supported in NoUpdateDao. This method will always
+     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
+     * 
+     * <p>If you need to perform updates, use a regular DAO implementation instead.
      *
-     * @param entity
-     * @param cond to verify if the record exists or not.
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity containing values to update
+     * @param cond the condition to identify records to update
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as updates are not allowed
+     * @deprecated Update operations are not supported in NoUpdateDao
      */
     @Deprecated
     @Override
@@ -402,15 +644,18 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
+     * Update operations are not supported in NoUpdateDao. This method will always
+     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
+     * 
+     * <p>If you need to perform updates, use a regular DAO implementation instead.
      *
-     * @param entity
-     * @param propNamesToUpdate
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity containing values to update
+     * @param propNamesToUpdate collection of property names to update from the entity
+     * @param cond the condition to identify records to update
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as updates are not allowed
+     * @deprecated Update operations are not supported in NoUpdateDao
      */
     @Deprecated
     @Override
@@ -419,14 +664,19 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Inserts the specified entity if it does not exist, otherwise updates the existing entity.
+     * Upsert (INSERT or UPDATE) operations are not supported in NoUpdateDao. This method
+     * will always throw an UnsupportedOperationException because it involves UPDATE operations
+     * which are prohibited in this read-only DAO.
+     * 
+     * <p>If you need to perform upserts, use a regular DAO implementation instead.
+     * For insert-only operations, use the standard insert methods.
      *
      * @param entity the entity to be upserted
-     * @param uniquePropNamesForQuery the list of property names to be used for querying the uniqueness of the entity
-     * @return the upserted entity
-     * @throws SQLException if a database access error occurs
-     * @throws UnsupportedOperationException if the operation is not supported
-     * @deprecated unsupported Operation
+     * @param uniquePropNamesForQuery the list of property names to determine uniqueness
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as upserts involve updates
+     * @deprecated Upsert operations are not supported in NoUpdateDao
      */
     @Deprecated
     @Override
@@ -435,14 +685,19 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Execute {@code add} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Upsert (INSERT or UPDATE) operations are not supported in NoUpdateDao. This method
+     * will always throw an UnsupportedOperationException because it involves UPDATE operations
+     * which are prohibited in this read-only DAO.
+     * 
+     * <p>If you need to perform upserts, use a regular DAO implementation instead.
+     * For insert-only operations, use the standard insert methods.
      *
-     * @param entity
-     * @param cond to verify if the record exists or not.
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity to be upserted
+     * @param cond the condition to check if the record exists
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as upserts involve updates
+     * @deprecated Upsert operations are not supported in NoUpdateDao
      */
     @Deprecated
     @Override
@@ -451,12 +706,18 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Delete operations are not supported in NoUpdateDao. This method will always
+     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
+     * 
+     * <p>NoUpdateDao is designed for scenarios where data integrity must be preserved
+     * and existing records should never be deleted. If you need to perform deletions,
+     * use a regular DAO implementation instead.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param cond the condition to identify records to delete
+     * @return never returns, always throws exception
+     * @throws SQLException never thrown, included for interface compatibility
+     * @throws UnsupportedOperationException always thrown as deletions are not allowed
+     * @deprecated Delete operations are not supported in NoUpdateDao
      */
     @Deprecated
     @Override

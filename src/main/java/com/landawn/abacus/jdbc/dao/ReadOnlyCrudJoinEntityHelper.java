@@ -17,6 +17,38 @@ package com.landawn.abacus.jdbc.dao;
 
 import com.landawn.abacus.util.SQLBuilder;
 
+/**
+ * A read-only interface for handling join entity operations with CRUD DAOs.
+ * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link CrudJoinEntityHelper}
+ * to provide read-only access to join entity operations for CRUD-based DAOs.
+ * 
+ * <p>This interface is designed for scenarios where you need to read join entity
+ * relationships (such as many-to-many relationships) but should not be able to
+ * modify them. All delete operations for join entities are disabled and will
+ * throw {@link UnsupportedOperationException}.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * // For a User-Role many-to-many relationship
+ * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder, UserDao> {
+ *     // Can load user's roles
+ *     List<Role> loadUserRoles(User user) {
+ *         return loadJoinEntities(user, Role.class);
+ *     }
+ *     
+ *     // Cannot delete user-role associations
+ *     // deleteJoinEntities(user, Role.class) throws UnsupportedOperationException
+ * }
+ * }</pre>
+ * 
+ * @param <T> the type of the entity
+ * @param <ID> the type of the entity's identifier
+ * @param <SB> the type of SQLBuilder used for query construction
+ * @param <TD> the type of the CRUD DAO implementation
+ * @see ReadOnlyJoinEntityHelper
+ * @see CrudJoinEntityHelper
+ * @see CrudDao
+ */
 public interface ReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>>
         extends ReadOnlyJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
 

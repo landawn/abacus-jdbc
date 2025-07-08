@@ -308,7 +308,7 @@ public class JavaDocHelper {
                                 if (lines.get(j).contains("*/")) {
                                     if ((i != j) && Stream.of(lines.subList(i, j + 1))
                                             .map(Fn.strip())
-                                            .flattMap(it -> Strings.split(it, " ", true))
+                                            .flattmap(it -> Strings.split(it, " ", true))
                                             .map(Fn.strip())
                                             .allMatch(it -> it.startsWith("/**") || it.startsWith("*/") || it.startsWith("*") || it.startsWith("@"))) {
 

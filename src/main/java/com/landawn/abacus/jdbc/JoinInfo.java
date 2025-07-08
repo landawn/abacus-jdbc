@@ -52,6 +52,31 @@ import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
+/**
+ * Manages join relationships between entities in JDBC operations.
+ * This class handles both one-to-many and many-to-many join configurations,
+ * generating appropriate SQL statements and managing parameter bindings for join operations.
+ * 
+ * <p>The class supports joining entities through {@code @JoinedBy} annotations and provides
+ * methods to retrieve joined entities and update join relationships.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * // Entity with join annotation
+ * @Table("employees")
+ * public class Employee {
+ *     @JoinedBy("employeeId")
+ *     private List<Project> projects;
+ * }
+ * 
+ * // Get join info for an entity
+ * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class, 
+ *                                               "employees", "projects");
+ * }</pre>
+ * 
+ * @author Haiyang Li
+ * @since 3.0
+ */
 @Internal
 @SuppressWarnings({ "java:S1192", "resource" })
 public final class JoinInfo {
@@ -128,7 +153,7 @@ public final class JoinInfo {
         final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
 
         isManyToManyJoin = StreamEx.of(joinColumnPairs)
-                .flattMap(it -> Strings.split(it, '=', true))
+                .flattmap(it -> Strings.split(it, '=', true))
                 .filter(it -> it.indexOf('.') > 0) //NOSONAR
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
                 .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedBeanInfo.simpleClassName)));
@@ -550,10 +575,16 @@ public final class JoinInfo {
     }
 
     /**
+     * Retrieves the SQL builder and parameter setter for single entity select operations.
+     * This method is used for building SQL SELECT statements with join conditions for a single entity.
      *
-     *
-     * @param sbc
-     * @return
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
+     * @return a tuple containing a function to build SQL and a parameter setter for prepared statements
+     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * 
+     * @see SQLBuilder.PSC
+     * @see SQLBuilder.PAC
+     * @see SQLBuilder.PLC
      */
     public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSQLBuilderAndParamSetter(
             final Class<? extends SQLBuilder> sbc) {
@@ -567,10 +598,16 @@ public final class JoinInfo {
     }
 
     /**
+     * Retrieves the SQL builder and parameter setter for batch select operations.
+     * This method is used for building SQL SELECT statements with join conditions for multiple entities.
      *
-     *
-     * @param sbc
-     * @return
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
+     * @return a tuple containing a function to build SQL and a parameter setter for batch operations
+     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * 
+     * @see SQLBuilder.PSC
+     * @see SQLBuilder.PAC
+     * @see SQLBuilder.PLC
      */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
@@ -595,10 +632,16 @@ public final class JoinInfo {
     //    }
 
     /**
+     * Retrieves the SQL and parameter setter for delete operations.
+     * This method returns SQL statements for deleting joined entities and optionally the join table entries.
      *
-     *
-     * @param sbc
-     * @return
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
+     * @return a tuple containing the delete SQL, optional middle table delete SQL, and parameter setter
+     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * 
+     * @see SQLBuilder.PSC
+     * @see SQLBuilder.PAC
+     * @see SQLBuilder.PLC
      */
     public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
@@ -611,10 +654,16 @@ public final class JoinInfo {
     }
 
     /**
+     * Retrieves the SQL builder and parameter setter for batch delete operations.
+     * This method is used for building SQL DELETE statements for multiple joined entities.
      *
-     *
-     * @param sbc
-     * @return
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
+     * @return a tuple containing SQL builders for delete operations and a parameter setter
+     * @throws IllegalArgumentException if the SQL builder class is not supported
+     * 
+     * @see SQLBuilder.PSC
+     * @see SQLBuilder.PAC
+     * @see SQLBuilder.PLC
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
@@ -629,10 +678,17 @@ public final class JoinInfo {
     }
 
     /**
-     * For one-to-one or one-to-many join.
+     * Sets join property entities for a collection of source entities.
+     * This method populates the join properties of the source entities with the provided joined entities
+     * based on the join key relationships.
+     * 
+     * <p>For one-to-one or one-to-many joins, the method groups the joined entities by their keys
+     * and assigns them to the corresponding source entities.</p>
      *
-     * @param entities
-     * @param joinPropEntities
+     * @param entities the source entities to populate with joined entities
+     * @param joinPropEntities the joined entities to be set on the source entities
+     * 
+     * @see #setJoinPropEntities(Collection, Map)
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities) {
         final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities).groupTo(referencedEntityKeyExtractor);
@@ -640,10 +696,14 @@ public final class JoinInfo {
     }
 
     /**
+     * Sets join property entities for a collection of source entities using pre-grouped entities.
+     * This method populates the join properties of the source entities with the provided grouped entities.
+     * 
+     * <p>The method handles both collection properties (List, Set, etc.) and single entity properties,
+     * automatically adapting the assignment based on the property type.</p>
      *
-     *
-     * @param entities
-     * @param groupedPropEntities
+     * @param entities the source entities to populate with joined entities
+     * @param groupedPropEntities a map of grouped entities keyed by their join keys
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
@@ -672,9 +732,10 @@ public final class JoinInfo {
     }
 
     /**
+     * Checks if this join relationship is a many-to-many join.
+     * A many-to-many join involves an intermediate join table connecting two entities.
      *
-     *
-     * @return
+     * @return {@code true} if this is a many-to-many join, {@code false} otherwise
      */
     public boolean isManyToManyJoin() {
         return isManyToManyJoin;
@@ -694,12 +755,17 @@ public final class JoinInfo {
     private static final Map<Class<?>, Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
 
     /**
+     * Retrieves all join information for the specified entity class.
+     * This method returns a map of property names to their corresponding JoinInfo objects
+     * for all properties annotated with {@code @JoinedBy} in the entity class.
      *
-     *
-     * @param daoClass
-     * @param entityClass
-     * @param tableName
-     * @return
+     * @param daoClass the DAO class associated with the entity
+     * @param entityClass the entity class to inspect for join properties
+     * @param tableName the database table name for the entity
+     * @return a map of property names to JoinInfo objects
+     * 
+     * @see JoinedBy
+     * @see Config
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
         Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.computeIfAbsent(daoClass,
@@ -731,13 +797,17 @@ public final class JoinInfo {
     }
 
     /**
+     * Retrieves join information for a specific property in an entity.
+     * This method returns the JoinInfo for a single property annotated with {@code @JoinedBy}.
      *
-     *
-     * @param daoClass
-     * @param entityClass
-     * @param tableName
-     * @param joinEntityPropName
-     * @return
+     * @param daoClass the DAO class associated with the entity
+     * @param entityClass the entity class containing the join property
+     * @param tableName the database table name for the entity
+     * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation
+     * @return the JoinInfo for the specified property
+     * @throws IllegalArgumentException if no join property is found with the given name
+     * 
+     * @see JoinedBy
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
         final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass, tableName).get(joinEntityPropName);
@@ -753,13 +823,17 @@ public final class JoinInfo {
     private static final Map<Tuple2<Class<?>, String>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
 
     /**
+     * Retrieves all property names in an entity that join to a specific entity type.
+     * This method finds all properties annotated with {@code @JoinedBy} that reference
+     * the specified entity class.
      *
-     *
-     * @param daoClass
-     * @param entityClass
-     * @param tableName
-     * @param joinPropEntityClass
-     * @return
+     * @param daoClass the DAO class associated with the entity
+     * @param entityClass the entity class to search for join properties
+     * @param tableName the database table name for the entity
+     * @param joinPropEntityClass the class of the joined entity to search for
+     * @return a list of property names that join to the specified entity class, or empty list if none found
+     * 
+     * @see JoinedBy
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {

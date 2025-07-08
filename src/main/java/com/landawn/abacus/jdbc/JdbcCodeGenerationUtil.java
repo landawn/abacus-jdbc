@@ -67,26 +67,60 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
+ * Utility class for generating JDBC-related code including entity classes and SQL statements.
+ * This class provides methods to automatically generate entity classes from database tables,
+ * as well as generate common SQL statements (SELECT, INSERT, UPDATE) for database operations.
+ * 
+ * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
+ * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * // Generate entity class from a table
+ * DataSource ds = getDataSource();
+ * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "user_table");
+ * 
+ * // Generate SQL statements
+ * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "user_table");
+ * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "user_table");
+ * }</pre>
+ * 
  * @see CodeGenerationUtil
+ * @see EntityCodeConfig
  */
 @SuppressWarnings("resource")
 public final class JdbcCodeGenerationUtil {
 
     /**
      * Default name of class for field/prop names.
+     * This constant is typically used when generating static field name constants.
      */
     public static final String S = "s";
 
     /**
      * Default name of class for function field/prop names.
+     * This constant is typically used when generating functional field name constants.
      */
     public static final String SF = "sf";
 
     /**
      * Default name of inner class for field names inside an entity class.
+     * This inner class is used to hold string constants representing field names,
+     * providing type-safe field references.
      */
     public static final String X = "x";
 
+    /**
+     * Pre-defined function for generating MIN SQL aggregate function.
+     * This function takes entity class, property class, and property name as parameters
+     * and returns a MIN SQL expression if the property class implements Comparable.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String minExpr = MIN_FUNC.apply(User.class, Integer.class, "age");
+     * // Returns: "min(age)"
+     * }</pre>
+     */
     public static final TriFunction<Class<?>, Class<?>, String, String> MIN_FUNC = (entityClass, propClass, propName) -> {
         if (Comparable.class.isAssignableFrom(propClass)) {
             return "min(" + propName + ")";
@@ -95,6 +129,17 @@ public final class JdbcCodeGenerationUtil {
         return null;
     };
 
+    /**
+     * Pre-defined function for generating MAX SQL aggregate function.
+     * This function takes entity class, property class, and property name as parameters
+     * and returns a MAX SQL expression if the property class implements Comparable.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String maxExpr = MAX_FUNC.apply(User.class, BigDecimal.class, "salary");
+     * // Returns: "max(salary)"
+     * }</pre>
+     */
     public static final TriFunction<Class<?>, Class<?>, String, String> MAX_FUNC = (entityClass, propClass, propName) -> {
         if (Comparable.class.isAssignableFrom(propClass)) {
             return "max(" + propName + ")";
@@ -148,48 +193,89 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Generates the entity class for the specified table in the given data source.
+     * Generates an entity class for the specified table using default configuration.
+     * The generated class includes Lombok annotations, field mappings, and JPA/Abacus annotations.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "user_table");
+     * System.out.println(entityCode);
+     * }</pre>
      *
-     * @param ds The data source to connect to the database.
-     * @param tableName The name of the table for which the entity class is to be generated.
-     * @return The generated entity class as a string.
+     * @param ds The data source to connect to the database
+     * @param tableName The name of the table for which to generate the entity class
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) {
         return generateEntityClass(ds, tableName, (EntityCodeConfig) null);
     }
 
     /**
-     * Generates the entity class for the specified table in the given data source with the provided configuration.
+     * Generates an entity class for the specified table with custom configuration.
+     * The configuration allows customization of field naming, type conversion, annotations, and more.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * EntityCodeConfig config = EntityCodeConfig.builder()
+     *     .className("User")
+     *     .packageName("com.example.entity")
+     *     .useBoxedType(true)
+     *     .build();
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "user_table", config);
+     * }</pre>
      *
-     * @param ds The data source to connect to the database.
-     * @param tableName The name of the table for which the entity class is to be generated.
-     * @param config The configuration for generating the entity class.
-     * @return The generated entity class as a string.
+     * @param ds The data source to connect to the database
+     * @param tableName The name of the table for which to generate the entity class
+     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         return generateEntityClass(ds, tableName, createQueryByTableName(tableName), config);
     }
 
     /**
-     * Generates the entity class for the specified table in the given data source using the provided query.
+     * Generates an entity class using a custom SQL query to determine the entity structure.
+     * This method allows using complex queries (e.g., joins, views) to define the entity.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String query = "SELECT u.id, u.name, p.profile_data FROM users u JOIN profiles p ON u.id = p.user_id";
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "UserProfile", query);
+     * }</pre>
      *
-     * @param ds The data source to connect to the database.
-     * @param entityName The name of the entity for which the class is to be generated.
-     * @param query The SQL query to execute for retrieving the table metadata.
-     * @return The generated entity class as a string.
+     * @param ds The data source to connect to the database
+     * @param entityName The name of the entity class to generate
+     * @param query The SQL query to execute for retrieving the table metadata. The query should return an empty result set
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final DataSource ds, final String entityName, final String query) {
         return generateEntityClass(ds, entityName, query, null);
     }
 
     /**
-     * Generates the entity class for the specified table in the given data source using the provided query and configuration.
+     * Generates an entity class using a custom SQL query and configuration.
+     * This method provides maximum flexibility by allowing both custom queries and configuration.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String query = "SELECT * FROM user_view WHERE 1=0";
+     * EntityCodeConfig config = EntityCodeConfig.builder()
+     *     .idFields(Arrays.asList("userId"))
+     *     .readOnlyFields(Arrays.asList("createdDate"))
+     *     .build();
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "UserView", query, config);
+     * }</pre>
      *
-     * @param ds The data source to connect to the database.
-     * @param entityName The name of the entity for which the class is to be generated.
-     * @param query The SQL query to execute for retrieving the table metadata.
-     * @param config The configuration for generating the entity class.
-     * @return The generated entity class as a string.
+     * @param ds The data source to connect to the database
+     * @param entityName The name of the entity class to generate
+     * @param query The SQL query to execute for retrieving the table metadata. The query should return an empty result set
+     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
@@ -201,48 +287,88 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Generates the entity class for the specified table in the given connection.
+     * Generates an entity class for the specified table using an existing database connection.
+     * This method is useful when you already have an open connection and want to avoid creating a new one.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "product_table");
+     *     System.out.println(entityCode);
+     * }
+     * }</pre>
      *
-     * @param conn The connection to the database.
-     * @param tableName The name of the table for which the entity class is to be generated.
-     * @return The generated entity class as a string.
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the entity class
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String tableName) {
         return generateEntityClass(conn, tableName, (EntityCodeConfig) null);
     }
 
     /**
-     * Generates the entity class for the specified table in the given connection with the provided configuration.
+     * Generates an entity class for the specified table using an existing connection and custom configuration.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * EntityCodeConfig config = EntityCodeConfig.builder()
+     *     .generateBuilder(true)
+     *     .generateCopyMethod(true)
+     *     .build();
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "order_table", config);
+     * }</pre>
      *
-     * @param conn The connection to the database.
-     * @param tableName The name of the table for which the entity class is to be generated.
-     * @param config The configuration for generating the entity class.
-     * @return The generated entity class as a string.
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the entity class
+     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
     }
 
     /**
-     * Generates the entity class for the specified table in the given connection using the provided query.
+     * Generates an entity class using an existing connection and a custom SQL query.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String query = "SELECT id, name, email FROM users WHERE 1=0";
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "SimpleUser", query);
+     * }</pre>
      *
-     * @param conn The connection to the database.
-     * @param entityName The name of the entity for which the class is to be generated.
-     * @param query The SQL query to execute for retrieving the table metadata.
-     * @return The generated entity class as a string.
+     * @param conn The database connection to use
+     * @param entityName The name of the entity class to generate
+     * @param query The SQL query to execute for retrieving the table metadata. The query should return an empty result set
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String entityName, final String query) {
         return generateEntityClass(conn, entityName, query, null);
     }
 
     /**
-     * Generates the entity class for the specified table in the given connection using the provided query and configuration.
+     * Generates an entity class using an existing connection, custom SQL query, and configuration.
+     * This is the most flexible method, allowing full control over all aspects of entity generation.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String query = "SELECT * FROM complex_view WHERE 1=0";
+     * EntityCodeConfig config = EntityCodeConfig.builder()
+     *     .srcDir("./src/main/java")
+     *     .packageName("com.example.entity")
+     *     .fieldNameConverter((table, column) -> StringUtil.toCamelCase(column.toLowerCase()))
+     *     .build();
+     * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "ComplexEntity", query, config);
+     * }</pre>
      *
-     * @param conn The connection to the database.
-     * @param entityName The name of the entity for which the class is to be generated.
-     * @param query The SQL query to execute for retrieving the table metadata.
-     * @param config The configuration for generating the entity class.
-     * @return The generated entity class as a string.
+     * @param conn The database connection to use
+     * @param entityName The name of the entity class to generate
+     * @param query The SQL query to execute for retrieving the table metadata. The query should return an empty result set
+     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @return The generated entity class as a string containing the complete Java source code
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
@@ -683,12 +809,20 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates a SELECT SQL statement for the specified table.
+     * The generated SQL includes all columns from the table.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "employee");
+     * // Returns: "select id, name, department, salary from employee"
+     * }</pre>
      *
-     *
-     * @param dataSource
-     * @param tableName
-     * @return
-     * @throws UncheckedSQLException
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the SELECT statement
+     * @return A SELECT SQL statement string with all columns from the table
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -699,11 +833,21 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates a SELECT SQL statement for the specified table using an existing connection.
+     * Column names are properly escaped with backticks if they contain special characters.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
+     *     // Returns: "select user_id, first_name, last_name, `created-date` from user_profile"
+     * }
+     * }</pre>
      *
-     *
-     * @param conn
-     * @param tableName
-     * @return
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the SELECT statement
+     * @return A SELECT SQL statement string with all columns from the table
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateSelectSql(final Connection conn, final String tableName) {
         final String query = "select * from " + tableName + " where 1 > 2";
@@ -720,12 +864,20 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates an INSERT SQL statement for the specified table.
+     * The generated SQL uses positional parameters (?) for all column values.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "product");
+     * // Returns: "insert into product(id, name, price, category) values (?, ?, ?, ?)"
+     * }</pre>
      *
-     *
-     * @param dataSource
-     * @param tableName
-     * @return
-     * @throws UncheckedSQLException
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the INSERT statement
+     * @return An INSERT SQL statement string with positional parameters for all columns
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -736,11 +888,21 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates an INSERT SQL statement for the specified table using an existing connection.
+     * Column names are properly escaped with backticks if they contain special characters.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order_items");
+     *     // Returns: "insert into order_items(order_id, item_id, quantity, price) values (?, ?, ?, ?)"
+     * }
+     * }</pre>
      *
-     *
-     * @param conn
-     * @param tableName
-     * @return
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the INSERT statement
+     * @return An INSERT SQL statement string with positional parameters for all columns
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateInsertSql(final Connection conn, final String tableName) {
         final String query = "select * from " + tableName + " where 1 > 2";
@@ -758,12 +920,20 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates a named INSERT SQL statement for the specified table.
+     * The generated SQL uses named parameters (:paramName) based on camelCase column names.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "customer");
+     * // Returns: "insert into customer(customer_id, first_name, last_name) values (:customerId, :firstName, :lastName)"
+     * }</pre>
      *
-     *
-     * @param dataSource
-     * @param tableName
-     * @return
-     * @throws UncheckedSQLException
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the named INSERT statement
+     * @return An INSERT SQL statement string with named parameters based on camelCase column names
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -774,11 +944,22 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates a named INSERT SQL statement for the specified table using an existing connection.
+     * Column names with underscores are converted to camelCase for parameter names.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "user_settings");
+     *     // Returns: "insert into user_settings(user_id, theme_preference, notification_enabled) 
+     *     //           values (:userId, :themePreference, :notificationEnabled)"
+     * }
+     * }</pre>
      *
-     *
-     * @param conn
-     * @param tableName
-     * @return
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the named INSERT statement
+     * @return An INSERT SQL statement string with named parameters based on camelCase column names
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
         final String query = "select * from " + tableName + " where 1 > 2";
@@ -796,12 +977,20 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates an UPDATE SQL statement for the specified table.
+     * The generated SQL uses positional parameters (?) for all column values and does not include a WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
+     * // Returns: "update employee set name = ?, department = ?, salary = ?, updated_date = ?"
+     * }</pre>
      *
-     *
-     * @param dataSource
-     * @param tableName
-     * @return
-     * @throws UncheckedSQLException
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @return An UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -812,11 +1001,23 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates an UPDATE SQL statement for the specified table using an existing connection.
+     * The generated SQL includes all columns in the SET clause with positional parameters.
+     * Note: Users should append an appropriate WHERE clause before executing.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
+     *     // Returns: "update product set name = ?, description = ?, price = ?, stock_quantity = ?"
+     *     // Usage: updateSql += " WHERE id = ?";
+     * }
+     * }</pre>
      *
-     *
-     * @param conn
-     * @param tableName
-     * @return
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @return An UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
         final String query = "select * from " + tableName + " where 1 > 2";
@@ -834,12 +1035,21 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates a named UPDATE SQL statement for the specified table.
+     * The generated SQL uses named parameters (:paramName) based on camelCase column names.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
+     * // Returns: "update user_profile set first_name = :firstName, last_name = :lastName, 
+     * //           email = :email, phone_number = :phoneNumber"
+     * }</pre>
      *
-     *
-     * @param dataSource
-     * @param tableName
-     * @return
-     * @throws UncheckedSQLException
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the named UPDATE statement
+     * @return An UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
         try (Connection conn = dataSource.getConnection()) {
@@ -850,11 +1060,24 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Generates a named UPDATE SQL statement for the specified table using an existing connection.
+     * Column names with underscores are converted to camelCase for parameter names.
+     * Note: Users should append an appropriate WHERE clause before executing.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
+     *     // Returns: "update order_status set status = :status, updated_by = :updatedBy, 
+     *     //           updated_date = :updatedDate"
+     *     // Usage: updateSql += " WHERE order_id = :orderId";
+     * }
+     * }</pre>
      *
-     *
-     * @param conn
-     * @param tableName
-     * @return
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the named UPDATE statement
+     * @return An UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
+     * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
         final String query = "select * from " + tableName + " where 1 > 2";
@@ -872,10 +1095,20 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Converts an insert SQL statement to an update SQL statement.
+     * Converts an INSERT SQL statement to an UPDATE SQL statement.
+     * This method is marked as @Beta and may change in future versions.
+     * The generated UPDATE statement will have a WHERE clause placeholder that needs to be completed.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String insertSql = "insert into users(name, email) values ('John', 'john@example.com')";
+     * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(insertSql);
+     * // Returns: "UPDATE users SET name = 'John', email = 'john@example.com' WHERE ;"
+     * }</pre>
      *
-     * @param insertSql The insert SQL statement to convert.
-     * @return The converted update SQL statement.
+     * @param insertSql The INSERT SQL statement to convert
+     * @return An UPDATE SQL statement derived from the INSERT statement with an incomplete WHERE clause
+     * @throws IllegalArgumentException if the INSERT SQL cannot be parsed or converted
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final String insertSql) {
@@ -883,11 +1116,21 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Converts an insert SQL statement to an update SQL statement with a specified where clause.
+     * Converts an INSERT SQL statement to an UPDATE SQL statement with a specified WHERE clause.
+     * This method is marked as @Beta and may change in future versions.
+     * The method parses the INSERT statement and reconstructs it as an UPDATE statement.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * String insertSql = "insert into products(name, price, stock) values ('Widget', 19.99, 100)";
+     * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(insertSql, "id = 123");
+     * // Returns: "UPDATE products SET name = 'Widget', price = 19.99, stock = 100 WHERE id = 123;"
+     * }</pre>
      *
-     * @param insertSql The insert SQL statement to convert.
-     * @param whereClause The where clause to append to the update SQL statement.
-     * @return The converted update SQL statement.
+     * @param insertSql The INSERT SQL statement to convert
+     * @param whereClause The WHERE clause to append to the UPDATE statement (without the WHERE keyword)
+     * @return An UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
+     * @throws IllegalArgumentException if the INSERT SQL cannot be parsed or converted
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final String insertSql, final String whereClause) {
@@ -954,26 +1197,32 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * A sample, just a sample, not a general configuration required.
-     * <pre>
+     * Configuration class for customizing entity code generation.
+     * This class provides extensive options for controlling how entity classes are generated from database tables.
+     * 
+     * <p>A sample configuration example:</p>
+     * <pre>{@code
      * EntityCodeConfig ecc = EntityCodeConfig.builder()
      *        .className("User")
      *        .packageName("codes.entity")
      *        .srcDir("./samples")
      *        .fieldNameConverter((entityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
-     *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) -> columnClassName // columnClassName <- resultSetMetaData.getColumnClassName(columnIndex);
+     *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) -> columnClassName
      *                .replace("java.lang.", ""))
      *        .useBoxedType(false)
      *        .readOnlyFields(N.asSet("id"))
      *        .nonUpdatableFields(N.asSet("create_time"))
-     *        // .idAnnotationClass(javax.persistence.Id.class)
-     *        // .columnAnnotationClass(javax.persistence.Column.class)
-     *        // .tableAnnotationClass(javax.persistence.Table.class)
+     *        .idAnnotationClass(javax.persistence.Id.class)
+     *        .columnAnnotationClass(javax.persistence.Column.class)
+     *        .tableAnnotationClass(javax.persistence.Table.class)
      *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
      *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
+     *        .generateBuilder(true)
+     *        .generateCopyMethod(true)
      *        .build();
-     * </pre>
+     * }</pre>
      *
+     * @see JdbcCodeGenerationUtil#generateEntityClass(DataSource, String, EntityCodeConfig)
      */
     @Builder
     @Data
@@ -981,31 +1230,58 @@ public final class JdbcCodeGenerationUtil {
     @AllArgsConstructor
     @Accessors(chain = true)
     public static final class EntityCodeConfig {
+        /**
+         * The source directory where the generated entity class file will be saved.
+         * If specified, the generated class will be written to this directory following the package structure.
+         * Example: "./src/main/java"
+         */
         private String srcDir;
+
+        /**
+         * The package name for the generated entity class.
+         * Example: "com.example.entity"
+         */
         private String packageName;
+
+        /**
+         * The class name for the generated entity.
+         * If not specified, it will be derived from the table name using camelCase conversion.
+         */
         private String className;
 
         /**
-         * First parameter in the function is entity/table name, 2nd is column name.
+         * Function to convert database column names to Java field names.
+         * First parameter is entity/table name, second is column name.
+         * Default implementation converts column names to camelCase.
+         * Example: (tableName, columnName) -> Strings.toCamelCase(columnName)
          */
         private BiFunction<String, String, String> fieldNameConverter;
+
         /**
-         * First parameter in the function is entity/table name, 2nd is field name, 3rd is column name, 4th is column class name
+         * Function to convert database column types to Java field types.
+         * Parameters: entity/table name, field name, column name, column class name (from ResultSetMetaData).
+         * Example: (entity, field, column, className) -> className.replace("java.lang.", "")
          */
         private QuadFunction<String, String, String, String, String> fieldTypeConverter;
 
         /**
-         *
-         * First parameter in the Tuple is column name, 2nd is field name, 3rd is column class.
-         *
+         * List of customized field mappings.
+         * Each tuple contains: (column name, field name, field class).
+         * Allows overriding default field names and types for specific columns.
          */
         private List<Tuple3<String, String, Class<?>>> customizedFields;
 
         /**
-         * First parameter in the Tuple is field name, 2nd is db type.
-         *
+         * List of customized database type annotations.
+         * Each tuple contains: (field name, database type).
+         * Used to generate @Type annotations for special database types.
          */
         private List<Tuple2<String, String>> customizedFieldDbTypes;
+
+        /**
+         * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.).
+         * Default is false (uses primitives where possible).
+         */
 
         private boolean useBoxedType;
         private boolean mapBigIntegerToLong;

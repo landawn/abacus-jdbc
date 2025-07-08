@@ -23,8 +23,53 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.OnDeleteAction;
 
 /**
+ * Specifies cascading delete behavior for entity relationships.
+ * 
+ * <p><strong>DEPRECATED:</strong> This annotation is deprecated and will not be implemented.
+ * Cascading delete behavior should be defined and enforced at the database level using
+ * foreign key constraints with ON DELETE actions. This provides better data integrity,
+ * performance, and consistency across all applications accessing the database.</p>
+ * 
+ * <p>Instead of using this annotation, define foreign key constraints in your database schema:</p>
+ * <pre>{@code
+ * -- SQL example for cascading delete
+ * CREATE TABLE orders (
+ *     id BIGINT PRIMARY KEY,
+ *     user_id BIGINT NOT NULL,
+ *     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+ * );
+ * 
+ * -- SQL example for restrict delete
+ * CREATE TABLE payments (
+ *     id BIGINT PRIMARY KEY,
+ *     order_id BIGINT NOT NULL,
+ *     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT
+ * );
+ * }</pre>
+ * 
+ * <p>Database-level constraints provide several advantages:</p>
+ * <ul>
+ *   <li>Enforced consistently regardless of application layer</li>
+ *   <li>Better performance through database optimization</li>
+ *   <li>Works with direct SQL queries and other applications</li>
+ *   <li>Prevents orphaned records and maintains referential integrity</li>
+ * </ul>
+ * 
+ * <p>If you need application-level cascade behavior, implement it explicitly in your DAO methods:</p>
+ * <pre>{@code
+ * public interface UserDao extends CrudDao<User, Long> {
+ *     default void deleteUserWithRelatedData(Long userId) {
+ *         // Explicitly delete related data
+ *         deleteUserOrders(userId);
+ *         deleteUserProfiles(userId);
+ *         deleteById(userId);
+ *     }
+ * }
+ * }</pre>
  *
- * @deprecated won't be implemented. It should be defined and done in DB server side.
+ * @deprecated This annotation won't be implemented. Define ON DELETE behavior in database schema instead.
+ * @see OnDeleteAction
+ * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
@@ -32,9 +77,22 @@ import com.landawn.abacus.jdbc.OnDeleteAction;
 public @interface OnDelete {
 
     /**
+     * Specifies the action to take when a referenced entity is deleted.
+     * 
+     * <p><strong>Note:</strong> This functionality should be implemented at the database level
+     * using foreign key constraints rather than in the application layer.</p>
+     * 
+     * <p>Available actions correspond to standard SQL ON DELETE behaviors:</p>
+     * <ul>
+     *   <li>{@link OnDeleteAction#NO_ACTION} - Default, no automatic action</li>
+     *   <li>{@link OnDeleteAction#CASCADE} - Delete dependent records</li>
+     *   <li>{@link OnDeleteAction#SET_NULL} - Set foreign key to NULL</li>
+     *   <li>{@link OnDeleteAction#SET_DEFAULT} - Set foreign key to default value</li>
+     *   <li>{@link OnDeleteAction#RESTRICT} - Prevent deletion if dependencies exist</li>
+     * </ul>
      *
-     *
-     * @return
+     * @return the delete action, defaults to {@link OnDeleteAction#NO_ACTION}
+     * @deprecated Define ON DELETE actions in database foreign key constraints
      */
     OnDeleteAction action() default OnDeleteAction.NO_ACTION;
 }

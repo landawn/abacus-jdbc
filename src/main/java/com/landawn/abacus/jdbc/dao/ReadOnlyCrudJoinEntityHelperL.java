@@ -18,11 +18,35 @@ package com.landawn.abacus.jdbc.dao;
 import com.landawn.abacus.util.SQLBuilder;
 
 /**
- * Interface for read-only operations with join entity support.
- *
+ * A read-only interface for handling join entity operations with CRUD DAOs that use
+ * {@code Long} type primary keys. This interface combines {@link ReadOnlyCrudJoinEntityHelper}
+ * and {@link CrudJoinEntityHelperL} to provide read-only access to join entity operations
+ * specifically for entities with Long identifiers.
+ * 
+ * <p>This interface enforces read-only behavior by inheriting from {@link ReadOnlyCrudJoinEntityHelper},
+ * which overrides all mutation operations to throw {@link UnsupportedOperationException}.
+ * Only read operations for join entities are available through this interface.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * // Define a read-only DAO with join entity support
+ * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, SQLBuilder, UserDao> {
+ *     // Can read join entities (e.g., user roles, permissions)
+ *     // Cannot delete join entities
+ * }
+ * 
+ * // Usage:
+ * User user = dao.findById(1L);
+ * List<Role> roles = dao.loadJoinEntities(user, Role.class); // Works
+ * dao.deleteJoinEntities(user, Role.class); // Throws UnsupportedOperationException
+ * }</pre>
+ * 
  * @param <T> the type of the entity
- * @param <SB> the type of the SQL builder
- * @param <TD> the type of the CRUD DAO
+ * @param <SB> the type of SQLBuilder used for query construction
+ * @param <TD> the type of the CRUD DAO with Long ID type
+ * @see ReadOnlyCrudJoinEntityHelper
+ * @see CrudJoinEntityHelperL
+ * @see CrudDaoL
  */
 public interface ReadOnlyCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>>
         extends ReadOnlyCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {

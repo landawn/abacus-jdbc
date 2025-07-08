@@ -40,11 +40,37 @@ import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 
 /**
- * Interface for handling join entities for specified entities
+ * Interface for handling join entities in database operations. This helper provides methods to load and delete
+ * related entities that are joined to a primary entity through foreign key relationships.
+ * 
+ * <p>The interface supports both eager and lazy loading of join entities, allowing for efficient data retrieval
+ * strategies. It also provides parallel execution capabilities for performance optimization when dealing with
+ * multiple join operations.</p>
+ * 
+ * <p>Join entities are typically defined using the {@code @JoinedBy} annotation on entity properties.</p>
+ * 
+ * <p><b>Example usage:</b></p>
+ * <pre>{@code
+ * // Define entities with join relationships
+ * public class User {
+ *     private Long id;
+ *     private String name;
+ *     
+ *     @JoinedBy("userId")
+ *     private List<Order> orders;
+ * }
+ * 
+ * // Load user with orders
+ * Optional<User> user = userDao.findFirst(null, Order.class, CF.eq("id", 1L));
+ * 
+ * // Load orders for multiple users
+ * List<User> users = userDao.list(null, CF.gt("id", 0));
+ * userDao.loadJoinEntities(users, "orders");
+ * }</pre>
  *
- * @param <T>
- * @param <SB>
- * @param <TD>
+ * @param <T> the type of the primary entity
+ * @param <SB> the type of SQLBuilder used by the DAO
+ * @param <TD> the type of the target DAO interface
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.condition.ConditionFactory
@@ -53,10 +79,10 @@ import com.landawn.abacus.util.stream.Stream;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
-     * Retrieves the class type of the target DAO interface.
+     * Retrieves the class type of the target DAO interface. This method is for internal use only.
      *
      * @return the class type of the target DAO interface
-     * @deprecated internal only
+     * @deprecated internal only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -64,10 +90,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Class<TD> targetDaoInterface();
 
     /**
-     * Retrieves the class type of the target entity.
+     * Retrieves the class type of the target entity. This method is for internal use only.
      *
      * @return the class type of the target entity
-     * @deprecated internal only
+     * @deprecated internal only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -75,10 +101,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Class<T> targetEntityClass();
 
     /**
-     * Retrieves the name of the target table.
+     * Retrieves the name of the target table. This method is for internal use only.
      *
      * @return the name of the target table
-     * @deprecated internal only
+     * @deprecated internal only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -86,10 +112,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     String targetTableName();
 
     /**
-     * Retrieves the executor for executing tasks in parallel.
+     * Retrieves the executor for executing tasks in parallel. This method is for internal use only.
      *
-     * @return the executor for executing tasks
-     * @deprecated internal only
+     * @return the executor for executing parallel tasks
+     * @deprecated internal only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -97,12 +123,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Executor executor();
 
     /**
-     * Finds the first entity that matches the specified condition.
+     * Finds the first entity that matches the specified condition and loads the specified join entity.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Find first user with their orders loaded
+     * Optional<User> user = userDao.findFirst(Arrays.asList("id", "name"), Order.class, CF.eq("email", "john@example.com"));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the class of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the class of the join entity to be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the first entity that matches the condition, or an empty {@code Optional} if no entity matches
+     * @return an {@code Optional} containing the first matching entity with join entities loaded, or empty if no match
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException {
@@ -116,12 +149,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Finds the first entity that matches the specified condition.
+     * Finds the first entity that matches the specified condition and loads multiple types of join entities.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Find first user with both orders and addresses loaded
+     * Optional<User> user = userDao.findFirst(null, Arrays.asList(Order.class, Address.class), CF.eq("id", 1L));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the classes of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the first entity that matches the condition, or an empty {@code Optional} if no entity matches
+     * @return an {@code Optional} containing the first matching entity with join entities loaded, or empty if no match
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
@@ -138,12 +178,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Finds the first entity that matches the specified condition.
+     * Finds the first entity that matches the specified condition, optionally loading all join entities.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Find first user with all join entities loaded
+     * Optional<User> user = userDao.findFirst(null, true, CF.eq("status", "active"));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities whether to include all join entities in the result
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the first entity that matches the condition, or an empty {@code Optional} if no entity matches
+     * @return an {@code Optional} containing the first matching entity with join entities loaded, or empty if no match
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws SQLException {
@@ -157,13 +204,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Finds the only entity that matches the specified condition.
+     * Finds the only entity that matches the specified condition and loads the specified join entity.
+     * Throws an exception if more than one entity matches the condition.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Find the only user with specific email and load their orders
+     * Optional<User> user = userDao.findOnlyOne(null, Order.class, CF.eq("email", "unique@example.com"));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the class of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the class of the join entity to be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the only entity that matches the condition, or an empty {@code Optional} if no entity matches
-     * @throws DuplicatedResultException if more than one record found by the specified {@code condition}.
+     * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
+     * @throws DuplicatedResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
@@ -178,13 +233,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Finds the only entity that matches the specified condition.
+     * Finds the only entity that matches the specified condition and loads multiple types of join entities.
+     * Throws an exception if more than one entity matches the condition.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Find the only user with specific ID and load multiple join entities
+     * Optional<User> user = userDao.findOnlyOne(null, Arrays.asList(Order.class, Address.class), CF.eq("id", 1L));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the classes of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the only entity that matches the condition, or an empty {@code Optional} if no entity matches
-     * @throws DuplicatedResultException if more than one record found by the specified {@code condition}.
+     * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
+     * @throws DuplicatedResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
@@ -201,13 +264,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Finds the only entity that matches the specified condition.
+     * Finds the only entity that matches the specified condition, optionally loading all join entities.
+     * Throws an exception if more than one entity matches the condition.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Find the only active user and load all their join entities
+     * Optional<User> user = userDao.findOnlyOne(Arrays.asList("id", "name", "email"), true, CF.eq("status", "active"));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities whether to include all join entities in the result
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the only entity that matches the condition, or an empty {@code Optional} if no entity matches
-     * @throws DuplicatedResultException if more than one record found by the specified {@code condition}.
+     * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
+     * @throws DuplicatedResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
@@ -222,12 +293,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Retrieves a list of entities that match the specified condition.
+     * Retrieves a list of entities that match the specified condition and loads the specified join entity for each.
+     * For large result sets (>1000 entities), loading is performed in batches for better performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Get all active users with their orders loaded
+     * List<User> users = userDao.list(null, Order.class, CF.eq("status", "active"));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the class of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the class of the join entity to be loaded
      * @param cond the condition to match
-     * @return a list of entities that match the specified condition
+     * @return a list of entities matching the condition with join entities loaded
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -246,12 +325,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Retrieves a list of entities that match the specified condition.
+     * Retrieves a list of entities that match the specified condition and loads multiple types of join entities for each.
+     * For large result sets (>1000 entities), loading is performed in batches for better performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Get all users with both orders and addresses loaded
+     * List<User> users = userDao.list(null, Arrays.asList(Order.class, Address.class), CF.gt("createdDate", lastWeek));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the classes of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
      * @param cond the condition to match
-     * @return a list of entities that match the specified condition
+     * @return a list of entities matching the condition with join entities loaded
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -276,12 +363,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Retrieves a list of entities that match the specified condition.
+     * Retrieves a list of entities that match the specified condition, optionally loading all join entities.
+     * For large result sets (>1000 entities), loading is performed in batches for better performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Get all premium users with all their related data loaded
+     * List<User> users = userDao.list(Arrays.asList("id", "name", "email"), true, CF.eq("membershipType", "premium"));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities whether to include all join entities in the result
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
      * @param cond the condition to match
-     * @return a list of entities that match the specified condition
+     * @return a list of entities matching the condition with join entities loaded
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -300,12 +395,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Streams entities that match the specified condition.
+     * Streams entities that match the specified condition and loads the specified join entity for each.
+     * The stream processes entities in batches for efficient memory usage and performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Stream all users and load their orders, processing in batches
+     * userDao.stream(null, Order.class, CF.alwaysTrue())
+     *     .filter(user -> user.getOrders().size() > 5)
+     *     .forEach(user -> processUserWithManyOrders(user));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the class of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the class of the join entity to be loaded
      * @param cond the condition to match
-     * @return a {@code CheckedStream} of entities that match the specified condition
+     * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
@@ -319,12 +424,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Streams entities that match the specified condition.
+     * Streams entities that match the specified condition and loads multiple types of join entities for each.
+     * The stream processes entities in batches for efficient memory usage and performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Stream users with multiple join entities loaded
+     * userDao.stream(null, Arrays.asList(Order.class, Address.class, PaymentMethod.class), CF.eq("country", "US"))
+     *     .map(user -> analyzeUserProfile(user))
+     *     .collect(Collectors.toList());
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param joinEntitiesToLoad the classes of the entities to be joined and loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
      * @param cond the condition to match
-     * @return a {@code CheckedStream} of entities that match the specified condition
+     * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) {
@@ -344,12 +459,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Streams entities that match the specified condition.
+     * Streams entities that match the specified condition, optionally loading all join entities.
+     * The stream processes entities in batches for efficient memory usage and performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Stream all entities with complete data
+     * userDao.stream(null, true, CF.alwaysTrue())
+     *     .limit(100)
+     *     .forEach(user -> exportUserData(user));
+     * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param includeAllJoinEntities whether to include all join entities in the result
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
+     *                       All properties will be selected if {@code null}
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
      * @param cond the condition to match
-     * @return a {@code CheckedStream} of entities that match the specified condition
+     * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
@@ -372,7 +497,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entity.
+     * Loads join entities of the specified type for a single entity.
+     * If multiple properties in the entity are of the specified type, all will be loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * userDao.loadJoinEntities(user, Order.class);
+     * // Now user.getOrders() contains the loaded orders
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -383,11 +516,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entity.
+     * Loads join entities of the specified type for a single entity with specific property selection.
+     * If multiple properties in the entity are of the specified type, all will be loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Load only specific fields from orders
+     * userDao.loadJoinEntities(user, Order.class, Arrays.asList("id", "totalAmount", "orderDate"));
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -402,7 +544,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entities.
+     * Loads join entities of the specified type for a collection of entities.
+     * If multiple properties in the entities are of the specified type, all will be loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.in("id", Arrays.asList(1L, 2L, 3L)));
+     * userDao.loadJoinEntities(users, Order.class);
+     * // All users now have their orders loaded
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -413,11 +563,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entities.
+     * Loads join entities of the specified type for a collection of entities with specific property selection.
+     * If multiple properties in the entities are of the specified type, all will be loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("status", "active"));
+     * // Load only essential order information
+     * userDao.loadJoinEntities(users, Order.class, Arrays.asList("id", "totalAmount"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -436,7 +595,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity.
+     * Loads join entities for a single entity by property name.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * userDao.loadJoinEntities(user, "orders");
+     * // The 'orders' property is now populated
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -447,17 +614,34 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity.
+     * Loads join entities for a single entity by property name with specific property selection.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Load only specific fields from the 'addresses' join entity
+     * userDao.loadJoinEntities(user, "addresses", Arrays.asList("street", "city", "zipCode"));
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities.
+     * Loads join entities for a collection of entities by property name.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("country", "US"));
+     * userDao.loadJoinEntities(users, "paymentMethods");
+     * // All users now have their payment methods loaded
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -468,17 +652,34 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities.
+     * Loads join entities for a collection of entities by property name with specific property selection.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.between("createdDate", startDate, endDate));
+     * // Load only essential fields from addresses
+     * userDao.loadJoinEntities(users, "addresses", Arrays.asList("city", "country"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity.
+     * Loads multiple join entities for a single entity by property names.
+     * Each property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses", "paymentMethods"));
+     * // Multiple join entities are now loaded
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -495,11 +696,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity.
+     * Loads multiple join entities for a single entity with optional parallel execution.
+     * When parallel execution is enabled, join entities are loaded concurrently for better performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Load multiple join entities in parallel
+     * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses", "reviews"), true);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -512,11 +721,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity by multiple threads in parallel using the provided executor.
+     * Loads multiple join entities for a single entity using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
+     * User user = userDao.findById(1L).orElseThrow();
+     * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"), customExecutor);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -533,7 +750,14 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities.
+     * Loads multiple join entities for a collection of entities by property names.
+     * Each property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("accountType", "premium"));
+     * userDao.loadJoinEntities(users, Arrays.asList("orders", "subscriptions"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -550,11 +774,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities.
+     * Loads multiple join entities for a collection of entities with optional parallel execution.
+     * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.in("id", userIds));
+     * // Load multiple join entity types in parallel for better performance
+     * userDao.loadJoinEntities(users, Arrays.asList("orders", "addresses", "reviews"), true);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -567,11 +799,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities by multiple threads in parallel using the provided executor.
+     * Loads multiple join entities for a collection of entities using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior when loading multiple join entity types.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService customExecutor = Executors.newCachedThreadPool();
+     * List<User> users = userDao.list(CF.alwaysTrue());
+     * userDao.loadJoinEntities(users, Arrays.asList("orders", "addresses", "reviews"), customExecutor);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -588,7 +828,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads all join entities for the specified entity.
+     * Loads all join entities for a single entity.
+     * This method loads all properties annotated with {@code @JoinedBy} in the entity class.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * userDao.loadAllJoinEntities(user);
+     * // All join entities (orders, addresses, etc.) are now loaded
+     * }</pre>
      *
      * @param entity the entity for which to load all join entities
      * @throws SQLException if a database access error occurs
@@ -598,10 +846,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads all join entities for the specified entity.
+     * Loads all join entities for a single entity with optional parallel execution.
+     * When parallel execution is enabled, all join entities are loaded concurrently for better performance.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Load all join entities in parallel
+     * userDao.loadAllJoinEntities(user, true);
+     * }</pre>
      *
      * @param entity the entity for which to load all join entities
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -614,10 +870,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads all join entities for the specified entity by multiple threads in parallel using the provided executor.
+     * Loads all join entities for a single entity using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior when loading all join entities.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ForkJoinPool customPool = new ForkJoinPool(8);
+     * User user = userDao.findById(1L).orElseThrow();
+     * userDao.loadAllJoinEntities(user, customPool);
+     * }</pre>
      *
      * @param entity the entity for which to load all join entities
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -626,7 +890,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads all join entities for the specified collection of entities.
+     * Loads all join entities for a collection of entities.
+     * This method loads all properties annotated with {@code @JoinedBy} in the entity class for each entity.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("status", "active"));
+     * userDao.loadAllJoinEntities(users);
+     * // All join entities are loaded for all users
+     * }</pre>
      *
      * @param entities the collection of entities for which to load all join entities
      * @throws SQLException if a database access error occurs
@@ -640,10 +912,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads all join entities for the specified collection of entities.
+     * Loads all join entities for a collection of entities with optional parallel execution.
+     * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.in("id", largeUserIdList));
+     * // Load all join entities in parallel for better performance
+     * userDao.loadAllJoinEntities(users, true);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load all join entities
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -656,10 +936,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads all join entities for the specified collection of entities by multiple threads in parallel using the provided executor.
+     * Loads all join entities for a collection of entities using a custom executor for parallel execution.
+     * This method provides fine-grained control over the threading behavior when loading all join entities.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService batchExecutor = Executors.newWorkStealingPool();
+     * List<User> users = userDao.list(CF.alwaysTrue());
+     * userDao.loadAllJoinEntities(users, batchExecutor);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load all join entities
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -672,7 +960,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entity if they(the join entities) are {@code null}.
+     * Loads join entities of the specified type for a single entity only if they are currently {@code null}.
+     * This method is useful for lazy loading scenarios.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Load orders only if not already loaded
+     * userDao.loadJoinEntitiesIfNull(user, Order.class);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -683,11 +979,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entity if they(the join entities) are {@code null}.
+     * Loads join entities of the specified type for a single entity only if they are currently {@code null},
+     * with specific property selection.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Load addresses with specific fields only if not already loaded
+     * userDao.loadJoinEntitiesIfNull(user, Address.class, Arrays.asList("street", "city"));
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -702,7 +1007,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entities if they(the join entities) are {@code null}.
+     * Loads join entities of the specified type for a collection of entities only if they are currently {@code null}.
+     * Only entities with null join properties will have their join entities loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load orders only for users who don't have them loaded yet
+     * userDao.loadJoinEntitiesIfNull(users, Order.class);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
@@ -713,11 +1026,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityClass} for the specified entities if they(the join entities) are {@code null}.
+     * Loads join entities of the specified type for a collection of entities only if they are currently {@code null},
+     * with specific property selection.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load payment methods with limited fields for users who don't have them loaded
+     * userDao.loadJoinEntitiesIfNull(users, PaymentMethod.class, Arrays.asList("type", "lastFourDigits"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -741,7 +1063,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity if they(the join entities) are {@code null}.
+     * Loads join entities for a single entity by property name only if the property is currently {@code null}.
+     * This method is useful for lazy loading specific join properties.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Load orders only if not already loaded
+     * userDao.loadJoinEntitiesIfNull(user, "orders");
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -752,11 +1082,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entity if they(the join entities) are {@code null}.
+     * Loads join entities for a single entity by property name only if the property is currently {@code null},
+     * with specific property selection.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getCachedUser();
+     * // Load addresses with specific fields only if not already loaded
+     * userDao.loadJoinEntitiesIfNull(user, "addresses", Arrays.asList("city", "country"));
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
@@ -769,7 +1108,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities if they(the join entities) are {@code null}.
+     * Loads join entities for a collection of entities by property name only if the property is currently {@code null}.
+     * Only entities with null values for the specified property will have their join entities loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load reviews only for users who don't have them loaded yet
+     * userDao.loadJoinEntitiesIfNull(users, "reviews");
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
@@ -780,11 +1127,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropName} for the specified entities if they(the join entities) are {@code null}.
+     * Loads join entities for a collection of entities by property name only if the property is currently {@code null},
+     * with specific property selection.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load subscriptions with limited fields for users who don't have them loaded
+     * userDao.loadJoinEntitiesIfNull(users, "subscriptions", Arrays.asList("planType", "expiryDate"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. All properties(columns) will be selected from the joining entities if the specified {@code selectPropNames} is {@code null}.
+     * @param selectPropNames the properties (columns) to be selected from joining entities. 
+     *                       All properties will be selected if {@code null}
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -803,7 +1159,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they(the join entities) are {@code null}.
+     * Loads multiple join entities for a single entity by property names only if they are currently {@code null}.
+     * Only properties with null values will have their join entities loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getPartiallyLoadedUser();
+     * // Load only the join entities that haven't been loaded yet
+     * userDao.loadJoinEntitiesIfNull(user, Arrays.asList("orders", "addresses", "reviews"));
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -820,11 +1184,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they(the join entities) are {@code null}.
+     * Loads multiple join entities for a single entity only if they are currently {@code null},
+     * with optional parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getPartiallyLoadedUser();
+     * // Load missing join entities in parallel
+     * userDao.loadJoinEntitiesIfNull(user, Arrays.asList("orders", "addresses", "reviews"), true);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -837,12 +1209,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entity if they(the join entities) are {@code null}, using the provided executor to run the loading tasks in parallel.
-     * using the provided executor to run the loading tasks in parallel.
+     * Loads multiple join entities for a single entity only if they are currently {@code null},
+     * using a custom executor for parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService lazyLoadExecutor = Executors.newFixedThreadPool(3);
+     * User user = getPartiallyLoadedUser();
+     * userDao.loadJoinEntitiesIfNull(user, Arrays.asList("orders", "addresses"), lazyLoadExecutor);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -860,7 +1239,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they(the join entities) are {@code null}.
+     * Loads multiple join entities for a collection of entities by property names only if they are currently {@code null}.
+     * Only properties with null values will have their join entities loaded.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load only missing join entities for all users
+     * userDao.loadJoinEntitiesIfNull(users, Arrays.asList("orders", "addresses"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
@@ -877,11 +1264,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they(the join entities) are {@code null}.
+     * Loads multiple join entities for a collection of entities only if they are currently {@code null},
+     * with optional parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load missing join entities in parallel for better performance
+     * userDao.loadJoinEntitiesIfNull(users, Arrays.asList("orders", "addresses", "reviews"), true);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -895,11 +1290,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities specified by {@code joinEntityPropNames} for the specified entities if they(the join entities) are {@code null}, using the provided executor to run the loading tasks in parallel.
+     * Loads multiple join entities for a collection of entities only if they are currently {@code null},
+     * using a custom executor for parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService batchLazyLoader = Executors.newWorkStealingPool();
+     * List<User> users = getPartiallyLoadedUsers();
+     * userDao.loadJoinEntitiesIfNull(users, Arrays.asList("orders", "addresses"), batchLazyLoader);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to be loaded
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -917,7 +1320,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified entity if they(the join entities) are {@code null}.
+     * Loads all join entities for a single entity only if they are currently {@code null}.
+     * This method checks all properties annotated with {@code @JoinedBy} and loads only those that are null.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getPartiallyLoadedUser();
+     * // Load all missing join entities
+     * userDao.loadJoinEntitiesIfNull(user);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
      * @throws SQLException if a database access error occurs
@@ -927,10 +1338,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified entity if they(the join entities) are {@code null}.
+     * Loads all join entities for a single entity only if they are currently {@code null},
+     * with optional parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = getPartiallyLoadedUser();
+     * // Load all missing join entities in parallel
+     * userDao.loadJoinEntitiesIfNull(user, true);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -943,10 +1362,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified entity if they(the join entities) are {@code null}, using the provided executor to run the loading tasks in parallel.
+     * Loads all join entities for a single entity only if they are currently {@code null},
+     * using a custom executor for parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService customExecutor = Executors.newCachedThreadPool();
+     * User user = getPartiallyLoadedUser();
+     * userDao.loadJoinEntitiesIfNull(user, customExecutor);
+     * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -955,7 +1382,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified collection of entities if they(the join entities) are {@code null}.
+     * Loads all join entities for a collection of entities only if they are currently {@code null}.
+     * This method checks all properties annotated with {@code @JoinedBy} and loads only those that are null.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load all missing join entities for all users
+     * userDao.loadJoinEntitiesIfNull(users);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
      * @throws SQLException if a database access error occurs
@@ -969,10 +1404,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified collection of entities if they(the join entities) are {@code null}.
+     * Loads all join entities for a collection of entities only if they are currently {@code null},
+     * with optional parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getPartiallyLoadedUsers();
+     * // Load all missing join entities in parallel for better performance
+     * userDao.loadJoinEntitiesIfNull(users, true);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param inParallel whether to load the join entities by multiple threads in parallel
+     * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -985,10 +1428,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Loads the join entities for the specified collection of entities if they(the join entities) are {@code null}, using the provided executor to run the loading tasks in parallel.
+     * Loads all join entities for a collection of entities only if they are currently {@code null},
+     * using a custom executor for parallel execution.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService batchExecutor = Executors.newWorkStealingPool();
+     * List<User> users = getPartiallyLoadedUsers();
+     * userDao.loadJoinEntitiesIfNull(users, batchExecutor);
+     * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param executor the executor to use for loading the join entities by multiple threads in parallel
+     * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -1010,11 +1461,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     //    int batchSaveWithJoinEntities(final Collection<? extends T> entity, int batchSize) throws SQLException;
 
     /**
-     * Deletes the join entities specified by {@code joinEntityClass} for the specified entity.
+     * Deletes all join entities of the specified type for a single entity.
+     * This operation is performed within a transaction if multiple join properties exist for the specified type.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Delete all orders associated with the user
+     * int deletedCount = userDao.deleteJoinEntities(user, Order.class);
+     * }</pre>
      *
      * @param entity the entity for which to delete join entities
      * @param joinEntityClass the class of the join entities to be deleted
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
@@ -1045,11 +1504,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityClass} for the specified collection of entities.
+     * Deletes all join entities of the specified type for a collection of entities.
+     * This operation is performed within a transaction if multiple join properties exist for the specified type.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("status", "inactive"));
+     * // Delete all orders for inactive users
+     * int deletedCount = userDao.deleteJoinEntities(users, Order.class);
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
      * @param joinEntityClass the class of the join entities to be deleted
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
@@ -1084,31 +1551,55 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropName} for the specified entity.
+     * Deletes join entities for a single entity by property name.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Delete all addresses associated with the user
+     * int deletedCount = userDao.deleteJoinEntities(user, "addresses");
+     * }</pre>
      *
      * @param entity the entity for which to delete join entities
      * @param joinEntityPropName the property name of the join entities to be deleted
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException;
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropName} for the specified collection of entities.
+     * Deletes join entities for a collection of entities by property name.
+     * The property name must correspond to a field annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.in("id", userIdsToClean));
+     * // Delete all reviews for these users
+     * int deletedCount = userDao.deleteJoinEntities(users, "reviews");
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
      * @param joinEntityPropName the property name of the join entities to be deleted
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException;
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropNames} for the specified entity.
+     * Deletes multiple join entities for a single entity by property names.
+     * This operation is performed within a transaction when multiple properties are specified.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Delete orders and addresses in a single transaction
+     * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"));
+     * }</pre>
      *
      * @param entity the entity for which to delete join entities
      * @param joinEntityPropNames the property names of the join entities to be deleted
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -1138,14 +1629,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropNames} for the specified entity.
+     * Deletes multiple join entities for a single entity with optional parallel execution.
+     * Note: Parallel execution may not complete within a single transaction.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Delete multiple join entity types in parallel (not transactional)
+     * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses", "reviews"), true);
+     * }</pre>
      *
      * @param entity the entity for which to delete join entities
      * @param joinEntityPropNames the property names of the join entities to be deleted
-     * @param inParallel whether to delete the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param inParallel if {@code true}, join entities will be deleted in parallel
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
+     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1158,14 +1657,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropNames} for the specified entity by multiple threads in parallel using the provided executor.
+     * Deletes multiple join entities for a single entity using a custom executor for parallel execution.
+     * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService deleteExecutor = Executors.newFixedThreadPool(3);
+     * User user = userDao.findById(1L).orElseThrow();
+     * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), deleteExecutor);
+     * }</pre>
      *
      * @param entity the entity for which to delete join entities
      * @param joinEntityPropNames the property names of the join entities to be deleted
-     * @param executor the executor to use for deleting the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param executor the executor to use for parallel deletion
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
+     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
      */
     @Deprecated
     @Beta
@@ -1182,11 +1689,19 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropNames} for the specified collection of entities.
+     * Deletes multiple join entities for a collection of entities by property names.
+     * This operation is performed within a transaction when multiple properties are specified.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("accountStatus", "terminated"));
+     * // Delete all related data for terminated accounts
+     * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses", "paymentMethods"));
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
      * @param joinEntityPropNames the property names of the join entities to be deleted
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -1216,14 +1731,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropNames} for the specified collection of entities.
+     * Deletes multiple join entities for a collection of entities with optional parallel execution.
+     * Note: Parallel execution may not complete within a single transaction.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getBulkUsersForDeletion();
+     * // Delete join entities in parallel for performance (not transactional)
+     * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), true);
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
      * @param joinEntityPropNames the property names of the join entities to be deleted
-     * @param inParallel whether to delete the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param inParallel if {@code true}, join entities will be deleted in parallel
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
+     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1236,14 +1759,22 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes the join entities specified by {@code joinEntityPropNames} for the specified collection of entities by multiple threads in parallel using the provided executor.
+     * Deletes multiple join entities for a collection of entities using a custom executor for parallel execution.
+     * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService bulkDeleteExecutor = Executors.newWorkStealingPool();
+     * List<User> users = getBulkUsersForDeletion();
+     * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), bulkDeleteExecutor);
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
      * @param joinEntityPropNames the property names of the join entities to be deleted
-     * @param executor the executor to use for deleting the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param executor the executor to use for parallel deletion
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
+     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
      */
     @Deprecated
     @Beta
@@ -1260,10 +1791,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes all join entities for the specified entity.
+     * Deletes all join entities for a single entity.
+     * This deletes all entities referenced by properties annotated with {@code @JoinedBy}.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Delete all related data (orders, addresses, reviews, etc.)
+     * int deletedCount = userDao.deleteAllJoinEntities(user);
+     * }</pre>
      *
      * @param entity the entity for which to delete all join entities
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     default int deleteAllJoinEntities(final T entity) throws SQLException {
@@ -1271,13 +1810,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes all join entities for the specified entity.
+     * Deletes all join entities for a single entity with optional parallel execution.
+     * Note: Parallel execution may not complete within a single transaction.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * User user = userDao.findById(1L).orElseThrow();
+     * // Delete all join entities in parallel (not transactional)
+     * int deletedCount = userDao.deleteAllJoinEntities(user, true);
+     * }</pre>
      *
      * @param entity the entity for which to delete all join entities
-     * @param inParallel whether to delete the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param inParallel if {@code true}, join entities will be deleted in parallel
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
+     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1290,13 +1837,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes all join entities for the specified entity by multiple threads in parallel using the provided executor.
+     * Deletes all join entities for a single entity using a custom executor for parallel execution.
+     * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService cleanupExecutor = Executors.newCachedThreadPool();
+     * User user = userDao.findById(1L).orElseThrow();
+     * int deletedCount = userDao.deleteAllJoinEntities(user, cleanupExecutor);
+     * }</pre>
      *
      * @param entity the entity for which to delete all join entities
-     * @param executor the executor to use for deleting the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param executor the executor to use for parallel deletion
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
+     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
      */
     @Deprecated
     @Beta
@@ -1305,10 +1860,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes all join entities for the specified collection of entities.
+     * Deletes all join entities for a collection of entities.
+     * This deletes all entities referenced by properties annotated with {@code @JoinedBy} for each entity.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = userDao.list(CF.eq("markedForDeletion", true));
+     * // Delete all related data for users marked for deletion
+     * int deletedCount = userDao.deleteAllJoinEntities(users);
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete all join entities
-     * @return the total count of updated/deleted records
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
     default int deleteAllJoinEntities(final Collection<T> entities) throws SQLException {
@@ -1320,13 +1883,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes all join entities for the specified collection of entities.
+     * Deletes all join entities for a collection of entities with optional parallel execution.
+     * Note: Parallel execution may not complete within a single transaction.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * List<User> users = getInactiveUsers();
+     * // Delete all join entities in parallel for performance (not transactional)
+     * int deletedCount = userDao.deleteAllJoinEntities(users, true);
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete all join entities
-     * @param inParallel whether to delete the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param inParallel if {@code true}, join entities will be deleted in parallel
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation maybe can't be finished in one transaction if {@code isParallel} is {@code true}.
+     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1339,13 +1910,21 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     }
 
     /**
-     * Deletes all join entities for the specified collection of entities by multiple threads in parallel using the provided executor.
+     * Deletes all join entities for a collection of entities using a custom executor for parallel execution.
+     * Note: This operation cannot be completed within a single transaction when executed in multiple threads.
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * ExecutorService massCleanupExecutor = Executors.newWorkStealingPool(8);
+     * List<User> users = getAllUsersForPurge();
+     * int deletedCount = userDao.deleteAllJoinEntities(users, massCleanupExecutor);
+     * }</pre>
      *
      * @param entities the collection of entities for which to delete all join entities
-     * @param executor the executor to use for deleting the join entities by multiple threads in parallel
-     * @return the total count of updated/deleted records
+     * @param executor the executor to use for parallel deletion
+     * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation can't be finished in one transaction when it's executed in multiple threads.
+     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
      */
     @Deprecated
     @Beta

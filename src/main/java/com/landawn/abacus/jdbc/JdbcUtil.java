@@ -295,7 +295,7 @@ public final class JdbcUtil {
 
     static final Set<Method> BUILT_IN_DAO_QUERY_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
             .filter(Dao.class::isAssignableFrom)
-            .flattMap(Class::getDeclaredMethods)
+            .flattmap(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
             .filter(it -> N.anyMatch(QUERY_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
@@ -303,7 +303,7 @@ public final class JdbcUtil {
 
     static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
             .filter(Dao.class::isAssignableFrom)
-            .flattMap(Class::getDeclaredMethods)
+            .flattmap(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
             .filter(it -> N.anyMatch(UPDATE_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
@@ -6589,6 +6589,7 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for INSERT operations
      */
+    @SuppressWarnings("deprecation")
     public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entity, excludedPropNames);
     }
@@ -6626,6 +6627,7 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for INSERT operations
      */
+    @SuppressWarnings("deprecation")
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
     }
@@ -6683,6 +6685,7 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for SELECT operations
      */
+    @SuppressWarnings("deprecation")
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
         return QueryUtil.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
@@ -6721,6 +6724,7 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for UPDATE operations
      */
+    @SuppressWarnings("deprecation")
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
     }

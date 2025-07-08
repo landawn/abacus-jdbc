@@ -33,7 +33,6 @@ import com.landawn.abacus.condition.Condition;
 import com.landawn.abacus.condition.ConditionFactory;
 import com.landawn.abacus.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
-import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
@@ -69,192 +68,106 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream;
 
 /**
- * Performance Tips:
- * <li>Avoid unnecessary/repeated database calls.</li>
- * <li>Only fetch the columns you need or update the columns you want.</li>
- * <li>Index is the key point in a lot of database performance issues.</li>
- *
- * <br />
- *
- * This interface is designed to share/manager SQL queries by Java APIs/methods with static parameter types and return type, while hiding the SQL scripts.
- * It's a gift from nature and created by thoughts.
- *
- * <br />
- * Note: Setting parameters by 'ParametersSetter' or Retrieving result/record by 'ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper' is not enabled at present.
- *
- * <br />
- *
- * <li>The SQL operations/methods should be annotated with SQL scripts by {@code @Select/@Insert/@Update/@Delete/@NamedSelect/@NamedInsert/@NamedUpdate/@NamedDelete}.</li>
- *
- * <li>The Order of the parameters in the method should be consistent with parameter order in SQL scripts for parameterized SQL.
- * For named parameterized SQL, the parameters must be binded with names through {@code @Bind}, or {@code Map/Entity} with getter/setter methods.</li>
- *
- * <li>SQL parameters can be set through input method parameters (by multiple parameters or a {@code Collection}, or a {@code Map/Entity} for named SQL), or by {@code JdbcUtil.ParametersSetter<PreparedQuery/PreparedCallabeQuery...>}.</li>
- *
- * <li>{@code ResultExtractor/BiResultExtractor/RowMapper/BiRowMapper} can be specified by the last parameter of the method.</li>
- *
- * <li>The return type of the method must be same as the return type of {@code ResultExtractor/BiResultExtractor} if it's specified by the last parameter of the method.</li>
- *
- * <li>The return type of update/delete operations only can int/Integer/long/Long/boolean/Boolean/void. If it's long/Long, {@code PreparedQuery#largeUpdate()} will be called,
- * otherwise, {@code PreparedQuery#update()} will be called.</li>
- *
- * <li>Remember declaring {@code throws SQLException} in the method.</li>
- * <br />
- * <li>Which underline {@code PreparedQuery/CallableQuery} method to call for SQL methods/operations annotated with {@code @Select/@NamedSelect}:
+ * The {@code Dao} interface provides a comprehensive data access abstraction layer for database operations.
+ * It serves as a base interface for creating type-safe, SQL-based data access objects with support for
+ * both traditional JDBC operations and modern functional programming patterns.
+ * 
+ * <h2>Key Features:</h2>
  * <ul>
- *   <li>If {@code ResultExtractor/BiResultExtractor} is specified by the last parameter of the method, {@code PreparedQuery#query(ResultExtractor/BiResultExtractor)} will be called.</li>
- *   <li>Or else if {@code RowMapper/BiRowMapper} is specified by the last parameter of the method:</li>
- *      <ul>
- *          <li>If the return type of the method is {@code List} and one of the below conditions is matched, {@code PreparedQuery#list(RowMapper/BiRowMapper)} will be called:</li>
- *          <ul>
- *              <li>The return type of the method is raw {@code List} without parameterized type, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}.</li>
- *          </ul>
- *          <ul>
- *              <li>The last parameter type is raw {@code RowMapper/BiRowMapper} without parameterized type, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}.</li>
- *          </ul>
- *          <ul>
- *              <li>The return type of the method is generic {@code List} with parameterized type and The last parameter type is generic {@code RowMapper/BiRowMapper} with parameterized types, but They're not same.</li>
- *          </ul>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code Stream/Stream}, {@code PreparedQuery#stream(RowMapper/BiRowMapper)} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code Optional}, {@code PreparedQuery#findFirst(RowMapper/BiRowMapper)} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else, {@code PreparedQuery#findFirst(RowMapper/BiRowMapper).orElse(N.defaultValueOf(returnType))} will be called.</li>
- *      </ul>
- *   <li>Or else:</li>
- *      <ul>
- *          <li>If the return type of the method is {@code DataSet}, {@code PreparedQuery#query()} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code Stream/Stream}, {@code PreparedQuery#stream(Class)} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code Map} or {@code Entity} class with {@code getter/setter} methods, {@code PreparedQuery#findFirst(Class).orElseNull()} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code Optional}:</li>
- *          <ul>
- *              <li>If the value type of {@code Optional} is {@code Map}, or {@code Entity} class with {@code getter/setter} methods, or {@code List}, or {@code Object[]}, {@code PreparedQuery#findFirst(Class)} will be called.</li>
- *          </ul>
- *          <ul>
- *              <li>Or else, {@code PreparedQuery#queryForSingleNonNull(Class)} will be called.</li>
- *          </ul>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code Nullable}:</li>
- *          <ul>
- *              <li>If the value type of {@code Nullable} is {@code Map}, or {@code Entity} class with {@code getter/setter} methods, or {@code List}, or {@code Object[]}, {@code PreparedQuery#findFirst(Class)} will be called.</li>
- *          </ul>
- *          <ul>
- *              <li>Or else, {@code PreparedQuery#queryForSingleResult(Class)} will be called.</li>
- *          </ul>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code OptionalBoolean/Byte/.../Double}, {@code PreparedQuery#queryForBoolean/Byte/...Double()} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code List}, and the method name doesn't start with {@code "get"/"findFirst"/"findOne"/"findOnlyOne"}, {@code PreparedQuery#list(Class)} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else if the return type of the method is {@code boolean/Boolean}, and the method name starts with {@code "exist"/"exists"/"notExist"/"notExists"}, {@code PreparedQuery#exists()} or {@code PreparedQuery#notExists()} will be called.</li>
- *      </ul>
- *      <ul>
- *          <li>Or else, {@code PreparedQuery#queryForSingleResult(Class).orElse(N.defaultValueOf(returnType)} will be called.</li>
- *      </ul>
+ *   <li>Type-safe database operations with compile-time checking</li>
+ *   <li>Support for both parameterized and named parameterized SQL queries</li>
+ *   <li>Lazy evaluation with Stream API integration</li>
+ *   <li>Asynchronous operation support</li>
+ *   <li>Transaction management integration</li>
+ *   <li>Flexible query building with Condition API</li>
  * </ul>
- *
- * <br />
- * <br />
- *
- * Here is a simple {@code UserDao} sample.
- *
- * <pre>
- * <code>
- * public static interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC> {
- *     &#064NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+ * 
+ * <h2>Performance Tips:</h2>
+ * <ul>
+ *   <li>Avoid unnecessary/repeated database calls</li>
+ *   <li>Only fetch the columns you need or update the columns you want</li>
+ *   <li>Index is the key point in a lot of database performance issues</li>
+ * </ul>
+ * 
+ * <h2>Usage Example:</h2>
+ * <pre>{@code
+ * public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC> {
+ *     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
- *     &#064NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
- *     int updateFirstAndLastName(@Bind("firstName") String newFirstName, @Bind("lastName") String newLastName, @Bind("id") long id) throws SQLException;
+ *     @NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+ *     int updateFirstAndLastName(@Bind("firstName") String newFirstName, 
+ *                                @Bind("lastName") String newLastName, 
+ *                                @Bind("id") long id) throws SQLException;
  *
- *     &#064NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
+ *     @NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
  *     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
  *
- *     &#064NamedSelect("SELECT id, first_name, last_name, email FROM user")
+ *     @NamedSelect("SELECT id, first_name, last_name, email FROM user")
  *     Stream<User> allUsers() throws SQLException;
  * }
- * </code>
- * </pre>
- *
- * Here is the generated way to work with transaction started by {@code SQLExecutor}.
- *
- * <pre>
- * <code>
- * static final UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
- * ...
- *
+ * 
+ * // Usage
+ * UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
+ * User user = userDao.getFirstAndLastNameBy(123L);
+ * }</pre>
+ * 
+ * <h2>Transaction Example:</h2>
+ * <pre>{@code
  * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
- *
  * try {
- *      userDao.getById(id);
- *      userDao.update(...);
- *      // more...
- *
- *      tran.commit();
+ *     userDao.getById(id);
+ *     userDao.update(...);
+ *     tran.commit();
  * } finally {
- *      // The connection will be automatically closed after the transaction is committed or rolled back.
- *      tran.rollbackIfNotCommitted();
+ *     tran.rollbackIfNotCommitted();
  * }
- * </code>
- * </pre>
+ * }</pre>
  *
- * @param <T>
- * @param <SB> {@code SQLBuilder} used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
- * @param <TD>
- * @see {@link com.landawn.abacus.condition.ConditionFactory}
- * @see {@link com.landawn.abacus.condition.ConditionFactory.CF}
+ * @param <T> the entity type that this DAO manages
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <TD> the self-type parameter for fluent API support
+ * 
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
- * @see Dao
- * @See CrudDao
- * @see com.landawn.abacus.annotation.AccessFieldByMethod
- * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
- *
- * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
+ * @see CrudDao
+ * @see ConditionFactory
+ * @see ConditionFactory.CF
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
-     * Retrieves the data source.
+     * Retrieves the underlying data source used by this DAO for database connections.
+     * This data source is used for all database operations performed by this DAO instance.
      *
-     * @return the data source
+     * @return the data source configured for this DAO
      */
     @NonDBOperation
     javax.sql.DataSource dataSource();
 
-    // SQLExecutor sqlExecutor();
-
     /**
-     * Retrieves the {@code SQLMapper} instance if it's configured. Otherwise, an empty {@code SQLMapper} will be returned.
+     * Retrieves the {@code SQLMapper} instance configured for this DAO.
+     * The SQLMapper provides SQL query templates that can be referenced by name.
+     * If no SQLMapper is configured, an empty SQLMapper instance will be returned.
      *
-     * @return the SQLMapper instance
+     * <pre>{@code
+     * SQLMapper sqlMapper = dao.sqlMapper();
+     * String query = sqlMapper.get("findUserByEmail");
+     * }</pre>
+     *
+     * @return the SQLMapper instance, never null
      */
     @NonDBOperation
     SQLMapper sqlMapper();
 
     /**
-     * Retrieves the class of the target entity.
+     * Retrieves the class object representing the entity type managed by this DAO.
+     * This is used internally for reflection-based operations.
      *
-     * @return the class of the target entity
-     * @deprecated for internal use only.
+     * @return the class of the target entity type T
+     * @deprecated for internal use only
      */
     @Deprecated
     @NonDBOperation
@@ -262,10 +175,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Class<T> targetEntityClass();
 
     /**
-     * Retrieves the name of the target table.
+     * Retrieves the name of the database table associated with the entity type.
+     * This is typically derived from the entity class name or specified via annotations.
      *
      * @return the name of the target table
-     * @deprecated for internal use only.
+     * @deprecated for internal use only
      */
     @Deprecated
     @NonDBOperation
@@ -273,10 +187,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     String targetTableName();
 
     /**
-     * Retrieves the executor for asynchronous operations.
+     * Retrieves the executor used for asynchronous operations.
+     * This executor is used when async methods are called without specifying a custom executor.
      *
-     * @return the executor for asynchronous operations
-     * @deprecated for internal use only.
+     * @return the default executor for asynchronous operations
+     * @deprecated for internal use only
      */
     @Deprecated
     @NonDBOperation
@@ -284,118 +199,29 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     Executor executor();
 
     /**
-     * Retrieves the asynchronous executor.
+     * Retrieves the async executor wrapper that provides enhanced async operation support.
+     * This provides additional functionality over the standard Executor interface.
      *
-     * @return the asynchronous executor
-     * @deprecated for internal use only.
+     * @return the async executor instance
+     * @deprecated for internal use only
      */
     @Deprecated
     @NonDBOperation
     @Internal
     AsyncExecutor asyncExecutor();
 
-    //    @NonDBOperation
-    //    @Beta
-    //    void cacheSql(String key, String sql);
-    //
-    //    @NonDBOperation
-    //    @Beta
-    //    void cacheSqls(String key, Collection<String> sqls);
-    //
-    //    @NonDBOperation
-    //    @Beta
-    //    String getCachedSql(String key);
-    //
-    //    @NonDBOperation
-    //    @Beta
-    //    ImmutableList<String> getCachedSqls(String key);
-
-    //    /**
-    //     *
-    //     * @param isolationLevel
-    //     * @return
-    //     * @throws UncheckedSQLException
-    //     */
-    //     @NonDBOperation
-    //    default SQLTransaction beginTransaction(final IsolationLevel isolationLevel) throws UncheckedSQLException {
-    //        return beginTransaction(isolationLevel, false);
-    //    }
-    //
-    //    /**
-    //     * The connection opened in the transaction will be automatically closed after the transaction is committed or rolled back.
-    //     * DON'T close it again by calling the close method.
-    //     * <br />
-    //     * <br />
-    //     * The transaction will be shared cross the instances of {@code SQLExecutor/Dao} by the methods called in the same thread with the same {@code DataSource}.
-    //     *
-    //     * <br />
-    //     * <br />
-    //     *
-    //     * The general programming way with SQLExecutor/Dao is to execute SQL scripts (generated by SQLBuilder) with array/list/map/entity by calling (batch)insert/update/delete/query/... methods.
-    //     * If a Transaction is required, it can be started:
-    //     *
-    //     * <pre>
-    //     * <code>
-    //     *   final SQLTransaction tran = someDao.beginTransaction(IsolationLevel.READ_COMMITTED);
-    //     *   try {
-    //     *       // sqlExecutor.insert(...);
-    //     *       // sqlExecutor.update(...);
-    //     *       // sqlExecutor.query(...);
-    //     *
-    //     *       tran.commit();
-    //     *   } finally {
-    //     *       // The connection will be automatically closed after the transaction is committed or rolled back.
-    //     *       tran.rollbackIfNotCommitted();
-    //     *   }
-    //     * </code>
-    //     * </pre>
-    //     *
-    //     * @param isolationLevel
-    //     * @param forUpdateOnly
-    //     * @return
-    //     * @throws UncheckedSQLException
-    //     * @see {@link SQLExecutor#beginTransaction(IsolationLevel, boolean)}
-    //     */
-    //     @NonDBOperation
-    //    default SQLTransaction beginTransaction(final IsolationLevel isolationLevel, final boolean forUpdateOnly) throws UncheckedSQLException {
-    //        N.checkArgNotNull(isolationLevel, "isolationLevel");
-    //
-    //        final javax.sql.DataSource ds = dataSource();
-    //        SQLTransaction tran = SQLTransaction.getTransaction(ds);
-    //
-    //        if (tran == null) {
-    //            Connection conn = null;
-    //            boolean noException = false;
-    //
-    //            try {
-    //                conn = getConnection(ds);
-    //                tran = new SQLTransaction(ds, conn, isolationLevel, true, true);
-    //                tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
-    //
-    //                noException = true;
-    //            } catch (SQLException e) {
-    //                throw new UncheckedSQLException(e);
-    //            } finally {
-    //                if (noException == false) {
-    //                    JdbcUtil.releaseConnection(conn, ds);
-    //                }
-    //            }
-    //
-    //            logger.info("Create a new SQLTransaction(id={})", tran.id());
-    //            SQLTransaction.putTransaction(ds, tran);
-    //        } else {
-    //            logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
-    //            tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
-    //        }
-    //
-    //        return tran;
-    //    }
-
     /**
+     * Creates a PreparedQuery for the specified SQL query string.
+     * The query can be any valid SQL statement (SELECT, INSERT, UPDATE, DELETE, etc.).
      *
-     * @param query
-     * @return
-     * @throws SQLException
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?");
+     * List<User> users = query.setInt(1, 18).list(User.class);
+     * }</pre>
+     *
+     * @param query the SQL query string
+     * @return a PreparedQuery instance for the specified query
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -404,11 +230,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a PreparedQuery with the option to generate keys for INSERT statements.
+     * When generateKeys is true, auto-generated keys can be retrieved after execution.
      *
-     * @param query
-     * @param generateKeys
-     * @return
-     * @throws SQLException
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery("INSERT INTO users (name) VALUES (?)", true);
+     * long generatedId = query.setString(1, "John").insert().getGeneratedKeys().getLong(1);
+     * }</pre>
+     *
+     * @param query the SQL query string
+     * @param generateKeys true to return generated keys, false otherwise
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -417,11 +250,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a PreparedQuery that will return specific columns as generated keys.
+     * This is useful when you need to retrieve specific auto-generated column values.
      *
-     * @param query
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param query the SQL query string
+     * @param returnColumnIndexes array of column indexes to return as generated keys
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -430,12 +265,20 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a PreparedQuery that will return specific named columns as generated keys.
+     * This allows retrieval of auto-generated values from specific columns by name.
      *
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery(
+     *     "INSERT INTO users (name) VALUES (?)", 
+     *     new String[]{"id", "created_at"}
+     * );
+     * }</pre>
      *
-     * @param query
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param query the SQL query string
+     * @param returnColumnNames array of column names to return as generated keys
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -444,11 +287,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a PreparedQuery using a custom statement creator function.
+     * This provides maximum flexibility for creating prepared statements with custom options.
      *
-     * @param sql
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
+     * @param sql the SQL query string
+     * @param stmtCreator function to create the PreparedStatement with custom options
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -458,14 +303,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a {@code select} query by specified {@code cond}.
-     * <br />
-     * {@code query} Could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
+     * Creates a SELECT query based on the specified condition.
+     * All columns from the entity table will be selected.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see {@link #prepareQuery(Collection, Condition)}
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery(CF.eq("status", "ACTIVE"));
+     * List<User> activeUsers = query.list(User.class);
+     * }</pre>
+     *
+     * @param cond the condition for the WHERE clause
+     * @return a PreparedQuery instance for the SELECT statement
+     * @throws SQLException if a database access error occurs
+     * @see ConditionFactory
      */
     @Beta
     @NonDBOperation
@@ -474,15 +323,20 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
-     * <br />
+     * Creates a SELECT query for specific columns based on the specified condition.
+     * Only the specified properties will be included in the SELECT clause.
      *
-     * {@code query} Could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
+     * <pre>{@code
+     * PreparedQuery query = dao.prepareQuery(
+     *     Arrays.asList("id", "name", "email"),
+     *     CF.eq("status", "ACTIVE")
+     * );
+     * }</pre>
      *
-     * @param selectPropNames
-     * @param cond
-     * @return
-     * @throws SQLException
+     * @param selectPropNames the property names to select, or null to select all
+     * @param cond the condition for the WHERE clause
+     * @return a PreparedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -491,10 +345,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a PreparedQuery optimized for queries that return large result sets.
+     * This configures the statement to use cursor-based fetching for better memory efficiency.
      *
-     * @param query
-     * @return
-     * @throws SQLException
+     * @param query the SQL query string
+     * @return a PreparedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -503,15 +359,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a big result {@code select} query by specified {@code cond}.
-     * <br />
+     * Creates a SELECT query optimized for large result sets based on the specified condition.
+     * All columns will be selected with cursor-based fetching enabled.
      *
-     * {@code query} could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
-     *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see {@link #prepareQueryForBigResult(Collection, Condition)}
+     * @param cond the condition for the WHERE clause
+     * @return a PreparedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -520,15 +373,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
-     * <br />
+     * Creates a SELECT query for specific columns optimized for large result sets.
+     * Combines column selection with cursor-based fetching for memory-efficient processing.
      *
-     * {@code query} could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
-     *
-     * @param selectPropNames
-     * @param cond
-     * @return
-     * @throws SQLException
+     * @param selectPropNames the property names to select, or null to select all
+     * @param cond the condition for the WHERE clause
+     * @return a PreparedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -537,10 +388,21 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery for the specified named SQL query string.
+     * Named queries use parameter names (e.g., :name) instead of positional parameters.
      *
-     * @param namedQuery
-     * @return
-     * @throws SQLException
+     * <pre>{@code
+     * NamedQuery query = dao.prepareNamedQuery(
+     *     "SELECT * FROM users WHERE age > :minAge AND status = :status"
+     * );
+     * List<User> users = query.setParameter("minAge", 18)
+     *                         .setParameter("status", "ACTIVE")
+     *                         .list(User.class);
+     * }</pre>
+     *
+     * @param namedQuery the named SQL query string with :paramName placeholders
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -549,11 +411,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery with the option to generate keys for INSERT statements.
+     * Combines named parameters with auto-generated key retrieval.
      *
-     * @param namedQuery
-     * @param generateKeys
-     * @return
-     * @throws SQLException
+     * @param namedQuery the named SQL query string
+     * @param generateKeys true to return generated keys
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -562,11 +426,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery that will return specific columns as generated keys.
+     * Useful for INSERT statements with named parameters that need to retrieve auto-generated values.
      *
-     * @param namedQuery
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param namedQuery the named SQL query string
+     * @param returnColumnIndexes array of column indexes to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -575,11 +441,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery that will return specific named columns as generated keys.
+     * Provides the most readable way to retrieve auto-generated values with named queries.
      *
-     * @param namedQuery
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param namedQuery the named SQL query string
+     * @param returnColumnNames array of column names to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -588,11 +456,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery using a custom statement creator function.
+     * Provides maximum control over statement creation with named parameters.
      *
-     * @param namedQuery
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
+     * @param namedQuery the named SQL query string
+     * @param stmtCreator function to create the PreparedStatement
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -602,10 +472,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery from a pre-parsed SQL object.
+     * This is more efficient when reusing the same query multiple times.
      *
-     * @param namedSql the named query
-     * @return
-     * @throws SQLException
+     * @param namedSql the pre-parsed named query
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -614,11 +486,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery from a pre-parsed SQL object with key generation option.
      *
-     * @param namedSql the named query
-     * @param generateKeys
-     * @return
-     * @throws SQLException
+     * @param namedSql the pre-parsed named query
+     * @param generateKeys true to return generated keys
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -627,11 +500,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
      *
-     * @param namedQuery
-     * @param returnColumnIndexes
-     * @return
-     * @throws SQLException
+     * @param namedQuery the pre-parsed named query
+     * @param returnColumnIndexes array of column indexes to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -640,11 +514,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
      *
-     * @param namedQuery
-     * @param returnColumnNames
-     * @return
-     * @throws SQLException
+     * @param namedQuery the pre-parsed named query
+     * @param returnColumnNames array of column names to return
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -653,11 +528,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery from a pre-parsed SQL with custom statement creation.
      *
-     * @param namedSql the named query
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
+     * @param namedSql the pre-parsed named query
+     * @param stmtCreator function to create the PreparedStatement
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -667,14 +543,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a {@code select} query by specified {@code cond}.
-     * <br />
-     * {@code query} could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
+     * Creates a named SELECT query based on the specified condition.
+     * All columns will be selected using named parameter syntax.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see {@link #prepareNamedQuery(Collection, Condition)}
+     * @param cond the condition for the WHERE clause
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -683,15 +557,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a {@code select} query by specified {@code selectPropNames} and {@code cond}.
-     * <br />
+     * Creates a named SELECT query for specific columns based on the specified condition.
+     * Generates a named parameter query with selected columns and WHERE clause.
      *
-     * {@code query} could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
-     *
-     * @param selectPropNames
-     * @param cond
-     * @return
-     * @throws SQLException
+     * @param selectPropNames the property names to select, or null for all
+     * @param cond the condition for the WHERE clause
+     * @return a NamedQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -700,10 +572,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery optimized for large result sets.
+     * Configures the query to use cursor-based fetching for memory efficiency.
      *
-     * @param namedQuery
-     * @return
-     * @throws SQLException
+     * @param namedQuery the named SQL query string
+     * @return a NamedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -712,10 +586,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a NamedQuery from pre-parsed SQL optimized for large result sets.
      *
-     * @param namedSql the named query
-     * @return
-     * @throws SQLException
+     * @param namedSql the pre-parsed named query
+     * @return a NamedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -724,15 +599,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a big result {@code select} query by specified {@code cond}.
-     * <br />
+     * Creates a named SELECT query optimized for large result sets based on condition.
+     * All columns will be selected with cursor-based fetching.
      *
-     * {@code query} could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
-     *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see {@link #prepareNamedQueryForBigResult(Collection, Condition)}
+     * @param cond the condition for the WHERE clause
+     * @return a NamedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -741,15 +613,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Prepare a big result {@code select} query by specified {@code selectPropNames} and {@code cond}.
-     * <br />
+     * Creates a named SELECT query for specific columns optimized for large result sets.
+     * Combines column selection with cursor-based fetching and named parameters.
      *
-     * {@code query} could be a {@code select/insert/update/delete} or other SQL statement. If it's {@code select} by default if not specified.
-     *
-     * @param selectPropNames
-     * @param cond
-     * @return
-     * @throws SQLException
+     * @param selectPropNames the property names to select, or null for all
+     * @param cond the condition for the WHERE clause
+     * @return a NamedQuery configured for large results
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -758,10 +628,19 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a CallableQuery for executing stored procedures or functions.
+     * The query should use the JDBC escape syntax: {call procedure_name(?, ?)}
      *
-     * @param query
-     * @return
-     * @throws SQLException
+     * <pre>{@code
+     * CallableQuery query = dao.prepareCallableQuery("{call get_user_count(?)}");
+     * query.registerOutParameter(1, Types.INTEGER);
+     * query.execute();
+     * int count = query.getInt(1);
+     * }</pre>
+     *
+     * @param query the stored procedure call string
+     * @return a CallableQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -770,11 +649,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Creates a CallableQuery using a custom statement creator.
+     * Provides maximum control over callable statement creation.
      *
-     * @param sql
-     * @param stmtCreator
-     * @return
-     * @throws SQLException
+     * @param sql the stored procedure call string
+     * @param stmtCreator function to create the CallableStatement
+     * @return a CallableQuery instance
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -784,82 +665,112 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Saves (inserts) the specified entity to the database.
+     * All non-null properties of the entity will be included in the INSERT statement.
      *
+     * <pre>{@code
+     * User user = new User("John", "Doe", "john@example.com");
+     * dao.save(user);
+     * }</pre>
      *
-     * @param entityToSave
-     * @throws SQLException
+     * @param entityToSave the entity to insert
+     * @throws SQLException if a database access error occurs
      */
     void save(final T entityToSave) throws SQLException;
 
     /**
+     * Saves (inserts) the specified entity with only the specified properties.
+     * Only the listed properties will be included in the INSERT statement.
      *
+     * <pre>{@code
+     * User user = new User();
+     * user.setEmail("john@example.com");
+     * dao.save(user, Arrays.asList("email"));
+     * }</pre>
      *
-     * @param entityToSave
-     * @param propNamesToSave
-     * @throws SQLException
+     * @param entityToSave the entity to insert
+     * @param propNamesToSave the property names to include in the INSERT
+     * @throws SQLException if a database access error occurs
      */
     void save(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException;
 
     /**
+     * Saves (inserts) the entity using a custom named INSERT SQL statement.
+     * The SQL should use named parameters that match the entity properties.
      *
+     * <pre>{@code
+     * String sql = "INSERT INTO users (name, email) VALUES (:name, :email)";
+     * dao.save(sql, user);
+     * }</pre>
      *
-     * @param namedInsertSQL
-     * @param entityToSave
-     * @throws SQLException
+     * @param namedInsertSQL the named INSERT SQL statement
+     * @param entityToSave the entity providing the parameter values
+     * @throws SQLException if a database access error occurs
      */
     void save(final String namedInsertSQL, final T entityToSave) throws SQLException;
 
     /**
-     * Insert the specified entities to a database by batch.
+     * Batch saves (inserts) multiple entities using the default batch size.
+     * More efficient than saving entities one by one.
      *
-     * @param entitiesToSave
-     * @throws SQLException
-     * @see CrudDao#batchInsert(Collection)
+     * <pre>{@code
+     * List<User> users = Arrays.asList(user1, user2, user3);
+     * dao.batchSave(users);
+     * }</pre>
+     *
+     * @param entitiesToSave the collection of entities to insert
+     * @throws SQLException if a database access error occurs
+     * @see #batchSave(Collection, int)
      */
     default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException {
         batchSave(entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-     * Insert the specified entities to a database by batch.
+     * Batch saves (inserts) multiple entities with a specified batch size.
+     * The entities are inserted in batches of the specified size for optimal performance.
      *
-     * @param entitiesToSave
-     * @param batchSize
-     * @throws SQLException
-     * @see CrudDao#batchInsert(Collection)
+     * <pre>{@code
+     * List<User> users = generateLargeUserList();
+     * dao.batchSave(users, 1000); // Insert in batches of 1000
+     * }</pre>
+     *
+     * @param entitiesToSave the collection of entities to insert
+     * @param batchSize the number of entities to insert in each batch
+     * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
 
     /**
-     * Insert the specified entities to a database by batch.
+     * Batch saves entities with only the specified properties using default batch size.
+     * Only the listed properties will be included in the INSERT statements.
      *
-     * @param entitiesToSave
-     * @param propNamesToSave
-     * @throws SQLException
-     * @see CrudDao#batchInsert(Collection)
+     * @param entitiesToSave the collection of entities to insert
+     * @param propNamesToSave the property names to include in the INSERT
+     * @throws SQLException if a database access error occurs
      */
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws SQLException {
         batchSave(entitiesToSave, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-     * Insert the specified entities to a database by batch.
+     * Batch saves entities with only the specified properties and custom batch size.
+     * Combines property selection with batch processing for optimal performance.
      *
-     * @param entitiesToSave
-     * @param propNamesToSave
-     * @param batchSize
-     * @throws SQLException
-     * @see CrudDao#batchInsert(Collection)
+     * @param entitiesToSave the collection of entities to insert
+     * @param propNamesToSave the property names to include
+     * @param batchSize the number of entities per batch
+     * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
 
     /**
-     * Insert the specified entities to a database by batch.
+     * Batch saves entities using a custom named INSERT SQL with default batch size.
+     * The SQL should use named parameters matching entity properties.
      *
-     * @param namedInsertSQL
-     * @param entitiesToSave
-     * @throws SQLException
-     * @see CrudDao#batchInsert(Collection)
+     * @param namedInsertSQL the named INSERT SQL statement
+     * @param entitiesToSave the entities providing parameter values
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
@@ -867,36 +778,48 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Insert the specified entities to a database by batch.
+     * Batch saves entities using a custom named INSERT SQL with specified batch size.
+     * Provides maximum control over batch insert operations.
      *
-     * @param namedInsertSQL
-     * @param entitiesToSave
-     * @param batchSize
-     * @throws SQLException
-     * @see CrudDao#batchInsert(Collection)
+     * @param namedInsertSQL the named INSERT SQL statement
+     * @param entitiesToSave the entities providing parameter values
+     * @param batchSize the number of entities per batch
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
 
     /**
+     * Checks if at least one record exists that matches the specified condition.
+     * More efficient than counting when you only need to know if records exist.
      *
-     * @param cond
-     * @return {@code true}, if there is at least one record found.
-     * @throws SQLException
+     * <pre>{@code
+     * boolean hasActiveUsers = dao.exists(CF.eq("status", "ACTIVE"));
+     * if (hasActiveUsers) {
+     *     // Process active users
+     * }
+     * }</pre>
+     *
+     * @param cond the condition to check
+     * @return true if at least one matching record exists
+     * @throws SQLException if a database access error occurs
      * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#exists()
      */
     boolean exists(final Condition cond) throws SQLException;
 
     /**
+     * Checks if no records exist that match the specified condition.
+     * Convenience method that returns the opposite of exists().
      *
-     * @param cond
-     * @return {@code true}, if there is no record found.
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#notExists()
+     * <pre>{@code
+     * if (dao.notExists(CF.eq("email", email))) {
+     *     // Email is available, proceed with registration
+     * }
+     * }</pre>
+     *
+     * @param cond the condition to check
+     * @return true if no matching records exist
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     default boolean notExists(final Condition cond) throws SQLException {
@@ -904,750 +827,730 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Counts the number of records that match the specified condition.
+     * Returns the exact count of matching records.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * int activeCount = dao.count(CF.eq("status", "ACTIVE"));
+     * System.out.println("Active users: " + activeCount);
+     * }</pre>
+     *
+     * @param cond the condition for counting
+     * @return the number of matching records
+     * @throws SQLException if a database access error occurs
      */
     int count(final Condition cond) throws SQLException;
 
-    // TODO dao.anyMatch/allMatch/noneMatch(...)
-    //    /**
-    //     *
-    //     * @param selectPropNames
-    //     * @param cond
-    //     * @param rowFilter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
-    //        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param selectPropNames
-    //     * @param cond
-    //     * @param rowFilter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default boolean anyMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
-    //        return prepareQuery(selectPropNames, cond).anyMatch(rowFilter);
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param selectPropNames
-    //     * @param cond
-    //     * @param rowFilter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
-    //        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param selectPropNames
-    //     * @param cond
-    //     * @param rowFilter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default boolean allMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
-    //        return prepareQuery(selectPropNames, cond).allMatch(rowFilter);
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param selectPropNames
-    //     * @param cond
-    //     * @param rowFilter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter) throws SQLException {
-    //        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
-    //    }
-    //
-    //    /**
-    //     *
-    //     * @param selectPropNames
-    //     * @param cond
-    //     * @param rowFilter
-    //     * @return
-    //     * @throws SQLException
-    //     */
-    //    @Beta
-    //    default boolean noneMatch(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter) throws SQLException {
-    //        return prepareQuery(selectPropNames, cond).noneMatch(rowFilter);
-    //    }
-
     /**
+     * Finds the first record that matches the specified condition.
+     * Returns an Optional containing the entity if found, empty otherwise.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * Optional<User> user = dao.findFirst(CF.eq("email", "john@example.com"));
+     * user.ifPresent(u -> System.out.println("Found: " + u.getName()));
+     * }</pre>
+     *
+     * @param cond the search condition
+     * @return Optional containing the first matching entity
+     * @throws SQLException if a database access error occurs
      */
     Optional<T> findFirst(final Condition cond) throws SQLException;
 
     /**
+     * Finds the first record matching the condition and maps it using the provided mapper.
+     * Allows custom transformation of the result.
      *
+     * <pre>{@code
+     * Optional<String> userName = dao.findFirst(
+     *     CF.eq("id", 123),
+     *     rs -> rs.getString("name")
+     * );
+     * }</pre>
      *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param cond the search condition
+     * @param rowMapper the function to map the result row
+     * @return Optional containing the mapped result
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
     /**
+     * Finds the first record matching the condition and maps it using a bi-function mapper.
+     * The mapper receives both the ResultSet and column labels.
      *
-     *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param cond the search condition
+     * @param rowMapper the bi-function to map the result row
+     * @return Optional containing the mapped result
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
     /**
+     * Finds the first record with only specified properties matching the condition.
+     * Useful for retrieving partial entities with only needed fields.
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * Optional<User> user = dao.findFirst(
+     *     Arrays.asList("id", "name", "email"),
+     *     CF.eq("status", "ACTIVE")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @return Optional containing the first matching entity
+     * @throws SQLException if a database access error occurs
      */
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
+     * Finds the first record with specified properties and maps the result.
+     * Combines property selection with custom result mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper the function to map the result
+     * @return Optional containing the mapped result
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws SQLException, IllegalArgumentException;
 
     /**
+     * Finds the first record with specified properties using a bi-function mapper.
+     * Provides maximum flexibility for property selection and result mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper the bi-function to map the result
+     * @return Optional containing the mapped result
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws SQLException, IllegalArgumentException;
 
     /**
+     * Finds exactly one record matching the condition, throwing exception if multiple found.
+     * Use this when you expect exactly zero or one result.
      *
-     * @param cond
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * Optional<User> user = dao.findOnlyOne(CF.eq("email", "john@example.com"));
+     * // Throws DuplicatedResultException if multiple users have this email
+     * }</pre>
+     *
+     * @param cond the search condition
+     * @return Optional containing the single matching entity
+     * @throws DuplicatedResultException if more than one record matches
+     * @throws SQLException if a database access error occurs
      */
     Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException;
 
     /**
+     * Finds exactly one record and maps it, throwing exception if multiple found.
+     * Ensures uniqueness while allowing custom result transformation.
      *
-     *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param cond the search condition
+     * @param rowMapper the function to map the result
+     * @return Optional containing the mapped result
+     * @throws DuplicatedResultException if more than one record matches
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
+     * Finds exactly one record using a bi-function mapper, throwing if multiple found.
+     * Provides column labels to the mapper for more flexible processing.
      *
-     *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param cond the search condition
+     * @param rowMapper the bi-function to map the result
+     * @return Optional containing the mapped result
+     * @throws DuplicatedResultException if more than one record matches
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
+     * Finds exactly one record with specified properties, throwing if multiple found.
+     * Combines property selection with uniqueness constraint.
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @return Optional containing the single matching entity
+     * @throws DuplicatedResultException if more than one record matches
+     * @throws SQLException if a database access error occurs
      */
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException;
 
     /**
+     * Finds exactly one record with specified properties and maps it.
+     * Ensures both property selection and uniqueness with custom mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
+     * @param <R> the type of the mapped result
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper the function to map the result
+     * @return Optional containing the mapped result
+     * @throws DuplicatedResultException if more than one record matches
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
+     * Finds exactly one record with specified properties using a bi-function mapper.
+     * Maximum flexibility with property selection, uniqueness, and custom mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @throws IllegalArgumentException if {@code rowMapper} returns {@code null} for the found record.
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the type of the mapped result
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper the bi-function to map the result
+     * @return Optional containing the mapped result
+     * @throws DuplicatedResultException if more than one record matches
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicatedResultException, SQLException, IllegalArgumentException;
 
     /**
-     * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalBoolean}.
+     * Queries for a boolean value from a single column.
+     * Returns an OptionalBoolean containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForBoolean()
+     * <pre>{@code
+     * OptionalBoolean isActive = dao.queryForBoolean("is_active", CF.eq("id", 123));
+     * if (isActive.orElse(false)) {
+     *     // User is active
+     * }
+     * }</pre>
+     *
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalBoolean containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalChar} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalChar}.
+     * Queries for a char value from a single column.
+     * Returns an OptionalChar containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForChar()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalChar containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalByte} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalByte}.
+     * Queries for a byte value from a single column.
+     * Returns an OptionalByte containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForByte()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalByte containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalShort} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalShort}.
+     * Queries for a short value from a single column.
+     * Returns an OptionalShort containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForShort()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalShort containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalInt} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalInt}.
+     * Queries for an integer value from a single column.
+     * Returns an OptionalInt containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForInt()
+     * <pre>{@code
+     * OptionalInt age = dao.queryForInt("age", CF.eq("id", 123));
+     * System.out.println("Age: " + age.orElse(0));
+     * }</pre>
+     *
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalInt containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalLong} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalLong}.
+     * Queries for a long value from a single column.
+     * Returns an OptionalLong containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForLong()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalLong containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalFloat} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalFloat}.
+     * Queries for a float value from a single column.
+     * Returns an OptionalFloat containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForFloat()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalFloat containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns an {@code OptionalDouble} describing the value in the first row/column if it exists, otherwise return an empty {@code OptionalDouble}.
+     * Queries for a double value from a single column.
+     * Returns an OptionalDouble containing the value if found.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForDouble()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return OptionalDouble containing the value
+     * @throws SQLException if a database access error occurs
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns a {@code Nullable<String>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * Queries for a String value from a single column.
+     * Returns a Nullable containing the value, which can be null.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForString()
+     * <pre>{@code
+     * Nullable<String> name = dao.queryForString("name", CF.eq("id", 123));
+     * System.out.println("Name: " + name.orElse("Unknown"));
+     * }</pre>
+     *
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return Nullable containing the String value
+     * @throws SQLException if a database access error occurs
      */
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Date>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * Queries for a Date value from a single column.
+     * Returns a Nullable containing the java.sql.Date value.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForDate()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return Nullable containing the Date value
+     * @throws SQLException if a database access error occurs
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Time>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * Queries for a Time value from a single column.
+     * Returns a Nullable containing the java.sql.Time value.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForTime()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return Nullable containing the Time value
+     * @throws SQLException if a database access error occurs
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * Queries for a Timestamp value from a single column.
+     * Returns a Nullable containing the java.sql.Timestamp value.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForTimestamp()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return Nullable containing the Timestamp value
+     * @throws SQLException if a database access error occurs
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns a {@code Nullable<byte[]>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
+     * Queries for a byte array from a single column.
+     * Returns a Nullable containing the byte array value.
      *
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForBytes()
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @return Nullable containing the byte array
+     * @throws SQLException if a database access error occurs
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
 
     /**
-     * Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     * @param singleSelectPropName
-     * @param cond
-     * @param targetValueType
+     * Queries for a single value of the specified type from a column.
+     * Returns a Nullable that can contain null values.
      *
-     * @param <V>
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForSingleResult(Class)
+     * <pre>{@code
+     * Nullable<BigDecimal> balance = dao.queryForSingleResult(
+     *     "balance", 
+     *     CF.eq("account_id", 123), 
+     *     BigDecimal.class
+     * );
+     * }</pre>
+     *
+     * @param <V> the value type
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @param targetValueType the class of the target value type
+     * @return Nullable containing the value
+     * @throws SQLException if a database access error occurs
      */
     <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
-     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     * @param singleSelectPropName
-     * @param cond
-     * @param targetValueType
+     * Queries for a single non-null value of the specified type.
+     * Returns an Optional, empty if no value found or if the value is null.
+     *
+     * <pre>{@code
+     * Optional<String> email = dao.queryForSingleNonNull(
+     *     "email", 
+     *     CF.eq("id", 123), 
+     *     String.class
+     * );
+     * }</pre>
      *
      * @param <V> the value type
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForSingleNonNull(Class)
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @param targetValueType the class of the target value type
+     * @return Optional containing the non-null value
+     * @throws SQLException if a database access error occurs
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws SQLException;
 
     /**
-     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
+     * Queries for a single value using a custom row mapper.
+     * Provides flexibility in how the single column value is transformed.
      *
      * @param <V> the value type
-     * @param singleSelectPropName
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForSingleNonNull(Class)
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @param rowMapper the function to map the result
+     * @return Optional containing the mapped value
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
             throws SQLException;
 
     /**
-     * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-     * And throws {@code DuplicatedResultException} if more than one record found.
-     * @param singleSelectPropName
-     * @param cond
-     * @param targetValueType
+     * Queries for a unique single value, throwing if multiple rows found.
+     * Returns a Nullable that can contain null values.
      *
      * @param <V> the value type
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForUniqueResult(Class)
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @param targetValueType the class of the target value type
+     * @return Nullable containing the unique value
+     * @throws DuplicatedResultException if more than one row matches
+     * @throws SQLException if a database access error occurs
      */
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
 
     /**
-     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
-     * @param singleSelectPropName
-     * @param cond
-     * @param targetValueType
+     * Queries for a unique non-null single value, throwing if multiple rows found.
+     * Combines uniqueness constraint with non-null requirement.
      *
      * @param <V> the value type
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForUniqueNonNull(Class)
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @param targetValueType the class of the target value type
+     * @return Optional containing the unique non-null value
+     * @throws DuplicatedResultException if more than one row matches
+     * @throws SQLException if a database access error occurs
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
 
     /**
-     * Returns an {@code Optional} describing the value in the first row/column if it exists, otherwise return an empty {@code Optional}.
+     * Queries for a unique value using a custom row mapper.
+     * Ensures uniqueness while allowing custom value transformation.
      *
      * @param <V> the value type
-     * @param singleSelectPropName
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id} (or {@code condition}).
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
-     * @see AbstractQuery#queryForUniqueNonNull(Class)
+     * @param singleSelectPropName the property name to select
+     * @param cond the search condition
+     * @param rowMapper the function to map the result
+     * @return Optional containing the unique mapped value
+     * @throws DuplicatedResultException if more than one row matches
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
             throws DuplicatedResultException, SQLException;
 
     /**
+     * Executes a query and returns the results as a DataSet.
+     * DataSet provides a flexible, column-oriented view of the results.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * DataSet ds = dao.query(CF.gt("age", 18));
+     * for (int i = 0; i < ds.size(); i++) {
+     *     System.out.println(ds.getString(i, "name"));
+     * }
+     * }</pre>
+     *
+     * @param cond the search condition
+     * @return DataSet containing the query results
+     * @throws SQLException if a database access error occurs
      */
     DataSet query(final Condition cond) throws SQLException;
 
     /**
+     * Executes a query for specific columns and returns results as a DataSet.
+     * Only the specified properties will be included in the result.
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @return DataSet containing the query results
+     * @throws SQLException if a database access error occurs
      */
     DataSet query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
+     * Executes a query and processes results with a custom result extractor.
+     * The ResultSet is passed to the extractor for custom processing.
      *
+     * <pre>{@code
+     * Map<Long, String> idToName = dao.query(
+     *     CF.isNotNull("id"),
+     *     rs -> {
+     *         Map<Long, String> map = new HashMap<>();
+     *         while (rs.next()) {
+     *             map.put(rs.getLong("id"), rs.getString("name"));
+     *         }
+     *         return map;
+     *     }
+     * );
+     * }</pre>
      *
-     * @param <R>
-     * @param cond
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param resultExtractor function to process the ResultSet
+     * @return the extracted result
+     * @throws SQLException if a database access error occurs
      */
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
+     * Executes a query for specific columns with a custom result extractor.
+     * Combines column selection with custom result processing.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param resultExtractor function to process the ResultSet
+     * @return the extracted result
+     * @throws SQLException if a database access error occurs
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
+     * Executes a query with a bi-function result extractor.
+     * The extractor receives both ResultSet and column labels.
      *
-     *
-     * @param <R>
-     * @param cond
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return
-     * @throws SQLException
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param resultExtractor bi-function to process the ResultSet
+     * @return the extracted result
+     * @throws SQLException if a database access error occurs
      */
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
+     * Executes a query for specific columns with a bi-function result extractor.
+     * Maximum flexibility for column selection and result processing.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param resultExtractor Don't save/return {@code ResultSet}. It will be closed after this call.
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param resultExtractor bi-function to process the ResultSet
+     * @return the extracted result
+     * @throws SQLException if a database access error occurs
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
 
     /**
+     * Returns a list of all entities matching the specified condition.
+     * The results are eagerly loaded into memory.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * List<User> activeUsers = dao.list(CF.eq("status", "ACTIVE"));
+     * for (User user : activeUsers) {
+     *     System.out.println(user.getName());
+     * }
+     * }</pre>
+     *
+     * @param cond the search condition
+     * @return list of matching entities
+     * @throws SQLException if a database access error occurs
      */
     List<T> list(final Condition cond) throws SQLException;
 
     /**
+     * Returns a list of results mapped by the provided row mapper.
+     * Each row is transformed by the mapper function.
      *
+     * <pre>{@code
+     * List<String> names = dao.list(
+     *     CF.eq("active", true),
+     *     rs -> rs.getString("name")
+     * );
+     * }</pre>
      *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowMapper function to map each row
+     * @return list of mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a list of results mapped by a bi-function row mapper.
+     * The mapper receives both ResultSet and column labels for each row.
      *
-     *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowMapper bi-function to map each row
+     * @return list of mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a filtered list of results mapped by the row mapper.
+     * Only rows passing the filter are included in the result.
      *
+     * <pre>{@code
+     * List<User> adultUsers = dao.list(
+     *     CF.isNotNull("age"),
+     *     rs -> rs.getInt("age") >= 18,  // filter
+     *     rs -> mapToUser(rs)             // mapper
+     * );
+     * }</pre>
      *
-     * @param <R>
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowFilter predicate to filter rows
+     * @param rowMapper function to map filtered rows
+     * @return list of filtered and mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a filtered list using bi-function filter and mapper.
+     * Both filter and mapper receive ResultSet and column labels.
      *
-     *
-     * @param <R>
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowFilter bi-predicate to filter rows
+     * @param rowMapper bi-function to map filtered rows
+     * @return list of filtered and mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a list of entities with only the specified properties populated.
+     * More efficient than loading full entities when only specific fields are needed.
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * List<User> users = dao.list(
+     *     Arrays.asList("id", "name", "email"),
+     *     CF.eq("department", "IT")
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @return list of partially loaded entities
+     * @throws SQLException if a database access error occurs
      */
     List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
+     * Returns a list of selected properties mapped by the row mapper.
+     * Combines property selection with custom mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper function to map each row
+     * @return list of mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a list of selected properties mapped by a bi-function mapper.
+     * The mapper receives column labels for the selected properties.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper bi-function to map each row
+     * @return list of mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a filtered list of selected properties mapped by the row mapper.
+     * Combines property selection, filtering, and mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowFilter predicate to filter rows
+     * @param rowMapper function to map filtered rows
+     * @return list of filtered and mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a filtered list with bi-function filter and mapper for selected properties.
+     * Maximum flexibility for property selection, filtering, and mapping.
      *
-     *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowFilter bi-predicate to filter rows
+     * @param rowMapper bi-function to map filtered rows
+     * @return list of filtered and mapped results
+     * @throws SQLException if a database access error occurs
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
     /**
+     * Returns a list of values from a single property/column.
+     * The property type is automatically detected and used for mapping.
      *
+     * <pre>{@code
+     * List<String> emails = dao.list("email", CF.eq("newsletter", true));
+     * }</pre>
      *
-     * @param <R>
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param singleSelectPropName the single property to select
+     * @param cond the search condition
+     * @return list of property values
+     * @throws SQLException if a database access error occurs
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
@@ -1657,192 +1560,196 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Returns a list of single property values mapped by the row mapper.
+     * Allows custom transformation of single column values.
      *
+     * <pre>{@code
+     * List<String> upperNames = dao.list(
+     *     "name", 
+     *     CF.isNotNull("name"),
+     *     rs -> rs.getString(1).toUpperCase()
+     * );
+     * }</pre>
      *
-     * @param <R>
-     * @param singleSelectPropName
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param singleSelectPropName the single property to select
+     * @param cond the search condition
+     * @param rowMapper function to map the property value
+     * @return list of mapped values
+     * @throws SQLException if a database access error occurs
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
         return list(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
     /**
+     * Returns a filtered list of single property values.
+     * Only values passing the filter are included.
      *
-     *
-     * @param <R>
-     * @param singleSelectPropName
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param singleSelectPropName the single property to select
+     * @param cond the search condition
+     * @param rowFilter predicate to filter values
+     * @param rowMapper function to map filtered values
+     * @return list of filtered and mapped values
+     * @throws SQLException if a database access error occurs
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException {
         return list(N.asList(singleSelectPropName), cond, rowFilter, rowMapper);
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream of entities matching the condition.
+     * The stream uses lazy evaluation - no database connection or query execution occurs until a terminal operation is called.
      *
-     * @param cond
-     * @return
+     * <pre>{@code
+     * try (Stream<User> users = dao.stream(CF.eq("status", "ACTIVE"))) {
+     *     users.filter(u -> u.getAge() > 21)
+     *          .map(User::getEmail)
+     *          .forEach(System.out::println);
+     * }
+     * }</pre>
+     *
+     * @param cond the search condition
+     * @return lazy stream of matching entities
      * @see ConditionFactory
-     * @see ConditionFactory.CF
      */
     @LazyEvaluation
     Stream<T> stream(final Condition cond);
 
-    // Will it cause confusion if it's called in transaction?
     /**
+     * Returns a lazy Stream with custom row mapping.
+     * Combines lazy evaluation with custom result transformation.
      *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowMapper function to map each row
+     * @return lazy stream of mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream with bi-function row mapping.
+     * The mapper receives both ResultSet and column labels.
      *
-     * @param <R>
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowMapper bi-function to map each row
+     * @return lazy stream of mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a filtered lazy Stream with row mapping.
+     * Only rows passing the filter are included in the stream.
      *
-     * @param <R>
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowFilter predicate to filter rows
+     * @param rowMapper function to map filtered rows
+     * @return lazy stream of filtered and mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
 
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a filtered lazy Stream with bi-function filter and mapper.
+     * Maximum flexibility for stream processing with filtering.
      *
-     * @param <R>
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param cond the search condition
+     * @param rowFilter bi-predicate to filter rows
+     * @param rowMapper bi-function to map filtered rows
+     * @return lazy stream of filtered and mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream of entities with selected properties.
+     * Only specified properties are loaded for each entity.
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @return lazy stream of partially loaded entities
      */
     @LazyEvaluation
     Stream<T> stream(final Collection<String> selectPropNames, final Condition cond);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream of selected properties with row mapping.
+     * Combines property selection with custom mapping in a lazy stream.
      *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper function to map each row
+     * @return lazy stream of mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream with bi-function mapping for selected properties.
+     * The mapper receives column labels for the selected properties.
      *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowMapper bi-function to map each row
+     * @return lazy stream of mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a filtered lazy Stream of selected properties with mapping.
+     * Combines property selection, filtering, and mapping in a lazy stream.
      *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowFilter predicate to filter rows
+     * @param rowMapper function to map filtered rows
+     * @return lazy stream of filtered and mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a filtered lazy Stream with maximum flexibility.
+     * Combines all features: property selection, bi-function filtering and mapping.
      *
-     * @param <R>
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities. All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowFilter bi-predicate to filter rows
+     * @param rowMapper bi-function to map filtered rows
+     * @return lazy stream of filtered and mapped results
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends R> rowMapper);
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream of values from a single property.
+     * The property type is automatically detected for mapping.
      *
-     * @param <R>
-     * @param singleSelectPropName
-     * @param cond
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * try (Stream<String> emails = dao.stream("email", CF.eq("active", true))) {
+     *     emails.distinct()
+     *           .sorted()
+     *           .forEach(System.out::println);
+     * }
+     * }</pre>
+     *
+     * @param <R> the result type
+     * @param singleSelectPropName the single property to select
+     * @param cond the search condition
+     * @return lazy stream of property values
      */
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) {
@@ -1852,35 +1759,31 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         return stream(singleSelectPropName, cond, rowMapper);
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a lazy Stream of single property values with custom mapping.
+     * Allows transformation of single column values in a stream.
      *
-     * @param <R>
-     * @param singleSelectPropName
-     * @param cond
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param singleSelectPropName the single property to select
+     * @param cond the search condition
+     * @param rowMapper function to map property values
+     * @return lazy stream of mapped values
      */
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) {
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
     }
 
-    // Will it cause confusion if it's called in transaction?
     /**
-     * Lazy execution, lazy fetching. No connection fetching/creating, no statement preparing or execution, no result fetching until {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
+     * Returns a filtered lazy Stream of single property values.
+     * Only values passing the filter are included in the stream.
      *
-     * @param <R>
-     * @param singleSelectPropName
-     * @param cond
-     * @param rowFilter
-     * @param rowMapper
-     * @return
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param <R> the result type
+     * @param singleSelectPropName the single property to select
+     * @param cond the search condition
+     * @param rowFilter predicate to filter values
+     * @param rowMapper function to map filtered values
+     * @return lazy stream of filtered and mapped values
      */
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
@@ -1889,26 +1792,41 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Paginates the results based on the given condition and page size.
+     * Returns a paginated Stream of query results as DataSet pages.
+     * Each element in the stream represents one page of results. The condition must include orderBy for consistent pagination.
      *
-     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * <pre>{@code
+     * Stream<DataSet> pages = dao.paginate(
+     *     CF.criteria().where(CF.gt("id", 0)).orderBy("id"),
+     *     100,
+     *     (query, lastPageResult) -> {
+     *         if (lastPageResult != null && lastPageResult.size() > 0) {
+     *             long lastId = lastPageResult.getLong(lastPageResult.size() - 1, "id");
+     *             query.setLong(1, lastId);
+     *         }
+     *     }
+     * );
+     * }</pre>
+     *
+     * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
-     * @param paramSetter the parameter setter for the prepared query
-     * @return a Stream of DataSet and SQLException
+     * @param paramSetter function to set parameters for next page based on previous results
+     * @return stream of DataSet pages
      */
     @Beta
     @LazyEvaluation
     Stream<DataSet> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
 
     /**
-     * Paginates the results based on the given condition and page size.
+     * Returns a paginated Stream with custom result extraction.
+     * Each page is processed by the result extractor.
      *
-     * @param <R> the type of the result
-     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param <R> the result type
+     * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
-     * @param paramSetter the parameter setter for the prepared query
-     * @param resultExtractor the result extractor to process the query results
-     * @return a Stream of the result type and SQLException
+     * @param paramSetter function to set parameters for next page
+     * @param resultExtractor function to process each page's ResultSet
+     * @return stream of processed page results
      */
     @Beta
     @LazyEvaluation
@@ -1916,14 +1834,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.ResultExtractor<? extends R> resultExtractor);
 
     /**
-     * Paginates the results based on the given condition and page size.
+     * Returns a paginated Stream with bi-function result extraction.
+     * The extractor receives both ResultSet and column labels for each page.
      *
-     * @param <R> the type of the result
-     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param <R> the result type
+     * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
-     * @param paramSetter the parameter setter for the prepared query
-     * @param resultExtractor the result extractor to process the query results
-     * @return a Stream of the result type and SQLException
+     * @param paramSetter function to set parameters for next page
+     * @param resultExtractor bi-function to process each page
+     * @return stream of processed page results
      */
     @Beta
     @LazyEvaluation
@@ -1931,13 +1850,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**
-     * Paginates the results based on the given condition, selected properties, and page size.
+     * Returns a paginated Stream with selected properties as DataSet pages.
+     * Only specified properties are included in each page.
      *
-     * @param selectPropNames the properties to select in the query
-     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
-     * @param paramSetter the parameter setter for the prepared query
-     * @return a Stream of DataSet and SQLException
+     * @param paramSetter function to set parameters for next page
+     * @return stream of DataSet pages with selected properties
      */
     @Beta
     @LazyEvaluation
@@ -1945,15 +1865,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
 
     /**
-     * Paginates the results based on the given condition, selected properties, and page size.
+     * Returns a paginated Stream of selected properties with custom extraction.
+     * Combines property selection with custom page processing.
      *
-     * @param <R> the type of the result
-     * @param selectPropNames the properties to select in the query
-     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
-     * @param paramSetter the parameter setter for the prepared query
-     * @param resultExtractor the result extractor to process the query results
-     * @return a Stream of the result type and SQLException
+     * @param paramSetter function to set parameters for next page
+     * @param resultExtractor function to process each page
+     * @return stream of processed page results
      */
     @Beta
     @LazyEvaluation
@@ -1961,15 +1882,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.ResultExtractor<? extends R> resultExtractor);
 
     /**
-     * Paginates the results based on the given condition, selected properties, and page size.
+     * Returns a paginated Stream with bi-function extraction for selected properties.
+     * Maximum flexibility for paginated queries with custom processing.
      *
-     * @param <R> the type of the result
-     * @param selectPropNames the properties to select in the query
-     * @param cond the condition to filter the results. It must contain {@code orderBy}
+     * @param <R> the result type
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
-     * @param paramSetter the parameter setter for the prepared query
-     * @param resultExtractor the result extractor to process the query results
-     * @return a Stream of the result type and SQLException
+     * @param paramSetter function to set parameters for next page
+     * @param resultExtractor bi-function to process each page
+     * @return stream of processed page results
      */
     @Beta
     @LazyEvaluation
@@ -1977,139 +1899,157 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**
+     * Iterates over query results, applying the row consumer to each row.
+     * This is useful for processing large result sets without loading all data into memory.
      *
+     * <pre>{@code
+     * dao.forEach(
+     *     CF.eq("status", "PENDING"),
+     *     rs -> processRecord(rs.getLong("id"), rs.getString("data"))
+     * );
+     * }</pre>
      *
-     * @param cond
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param cond the search condition
+     * @param rowConsumer consumer to process each row
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
     /**
+     * Iterates over results with a bi-consumer receiving ResultSet and column labels.
+     * Provides column metadata along with row data.
      *
-     *
-     * @param cond
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param cond the search condition
+     * @param rowConsumer bi-consumer to process each row
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
     /**
+     * Iterates over filtered results, processing only rows that pass the filter.
+     * Combines filtering with row processing for efficiency.
      *
-     *
-     * @param cond
-     * @param rowFilter
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param cond the search condition
+     * @param rowFilter predicate to filter rows
+     * @param rowConsumer consumer for filtered rows
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
     /**
+     * Iterates over filtered results with bi-function filter and consumer.
+     * Both receive ResultSet and column labels.
      *
-     *
-     * @param cond
-     * @param rowFilter
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param cond the search condition
+     * @param rowFilter bi-predicate to filter rows
+     * @param rowConsumer bi-consumer for filtered rows
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
     /**
+     * Iterates over selected properties, applying the consumer to each row.
+     * Only specified properties are retrieved and processed.
      *
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowConsumer consumer to process each row
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
     /**
+     * Iterates over selected properties with a bi-consumer.
+     * The consumer receives column labels for the selected properties.
      *
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowConsumer bi-consumer to process each row
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
     /**
+     * Iterates over filtered results of selected properties.
+     * Combines property selection, filtering, and processing.
      *
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowFilter predicate to filter rows
+     * @param rowConsumer consumer for filtered rows
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
             throws SQLException;
 
     /**
+     * Iterates over filtered results with maximum flexibility.
+     * All parameters support bi-function interfaces.
      *
-     *
-     * @param selectPropNames
-     * @param cond
-     * @param rowFilter
-     * @param rowConsumer
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param selectPropNames the properties to select, null for all
+     * @param cond the search condition
+     * @param rowFilter bi-predicate to filter rows
+     * @param rowConsumer bi-consumer for filtered rows
+     * @throws SQLException if a database access error occurs
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
             throws SQLException;
 
     /**
-     * Iterates over the results of a query and applies the specified consumer to each row.
+     * Iterates over results using a disposable object array consumer.
+     * The array is reused for each row to minimize object allocation.
+     * WARNING: Do not store or cache the array parameter as it's reused.
      *
-     * @param selectPropNames the properties (columns) to be selected, excluding the properties of joining entities.
-     *                        All the properties (columns) will be selected if the specified {@code selectPropNames} is {@code null}.
-     * @param cond the condition to filter the results.
-     * @param rowConsumer the consumer to process each row. The consumer should NOT update or cache input {@code row} parameter
-     * @throws SQLException if a database access error occurs.
+     * <pre>{@code
+     * dao.foreach(
+     *     Arrays.asList("id", "name", "age"),
+     *     CF.gt("age", 18),
+     *     row -> {
+     *         Long id = (Long) row.get(0);
+     *         String name = (String) row.get(1);
+     *         Integer age = (Integer) row.get(2);
+     *         // Process immediately, don't store row
+     *     }
+     * );
+     * }</pre>
+     *
+     * @param selectPropNames the properties to select
+     * @param cond the search condition
+     * @param rowConsumer consumer that receives reusable row array
+     * @throws SQLException if a database access error occurs
      */
     @Beta
-    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
+    default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
         forEach(selectPropNames, cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
     }
 
     /**
-     * Iterates over the results of a query and applies the specified consumer to each row.
+     * Iterates over all results using a disposable object array consumer.
+     * Convenience method that selects all properties.
      *
-     * @param cond the condition to filter the results.
-     * @param rowConsumer the consumer to process each row. The consumer should NOT update or cache input {@code row} parameter
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @param cond the search condition
+     * @param rowConsumer consumer that receives reusable row array
+     * @throws SQLException if a database access error occurs
      */
     @Beta
-    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
+    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
         forEach(cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
     }
 
     /**
+     * Updates a single property for all records matching the condition.
+     * Convenience method for updating one field.
      *
-     * @param propName
-     * @param propValue
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * int updated = dao.update("status", "INACTIVE", CF.lt("lastLogin", thirtyDaysAgo));
+     * System.out.println("Deactivated " + updated + " users");
+     * }</pre>
+     *
+     * @param propName the property name to update
+     * @param propValue the new value for the property
+     * @param cond the condition to match records
+     * @return the number of records updated
+     * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
         final Map<String, Object> updateProps = new HashMap<>();
@@ -2119,52 +2059,82 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Update all the records found by specified {@code cond} with all the properties from specified {@code updateProps}.
+     * Updates multiple properties for all records matching the condition.
+     * The map keys are property names and values are the new values.
      *
-     * @param updateProps
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * Map<String, Object> updates = new HashMap<>();
+     * updates.put("lastModified", new Date());
+     * updates.put("modifiedBy", currentUser);
+     * int count = dao.update(updates, CF.eq("status", "PENDING"));
+     * }</pre>
+     *
+     * @param updateProps map of property names to new values
+     * @param cond the condition to match records
+     * @return the number of records updated
+     * @throws SQLException if a database access error occurs
      */
     int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
     /**
-     * Update all the records found by specified {@code cond} with the properties from specified {@code entity}.
+     * Updates records matching the condition with all non-null properties from the entity.
+     * This updates all properties except those with null values.
      *
-     * @param entity
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * User updates = new User();
+     * updates.setStatus("ACTIVE");
+     * updates.setLastLogin(new Date());
+     * int count = dao.update(updates, CF.eq("id", userId));
+     * }</pre>
+     *
+     * @param entity the entity containing update values
+     * @param cond the condition to match records
+     * @return the number of records updated
+     * @throws SQLException if a database access error occurs
      */
     default int update(final T entity, final Condition cond) throws SQLException {
+        @SuppressWarnings("deprecation")
         final Collection<String> propNamesToUpdate = QueryUtil.getUpdatePropNames(targetEntityClass(), null);
 
         return update(entity, propNamesToUpdate, cond);
     }
 
     /**
-     * Update all the records found by specified {@code cond} with specified {@code propNamesToUpdate} from specified {@code entity}.
+     * Updates records with only the specified properties from the entity.
+     * This allows precise control over which fields are updated.
      *
-     * @param entity
-     * @param propNamesToUpdate
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * User user = new User();
+     * user.setEmail("new@example.com");
+     * user.setPhone("555-1234");
+     * int count = dao.update(
+     *     user, 
+     *     Arrays.asList("email", "phone"),
+     *     CF.eq("id", userId)
+     * );
+     * }</pre>
+     *
+     * @param entity the entity containing update values
+     * @param propNamesToUpdate the property names to update
+     * @param cond the condition to match records
+     * @return the number of records updated
+     * @throws SQLException if a database access error occurs
      */
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException;
 
     /**
-     * Executes {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Performs an upsert operation - inserts if not exists, updates if exists.
+     * The existence check is based on the specified unique properties.
      *
-     * @param entity the entity to add or update.
-     * @param uniquePropNamesForQuery the list of unique property names to use to verify if the record exists or not.
-     * @return the added or updated db record.
+     * <pre>{@code
+     * User user = new User("john@example.com", "John Doe");
+     * User saved = dao.upsert(user, Arrays.asList("email"));
+     * // Inserts if email doesn't exist, updates if it does
+     * }</pre>
+     *
+     * @param entity the entity to insert or update
+     * @param uniquePropNamesForQuery property names that uniquely identify the record
+     * @return the saved entity (newly inserted or updated)
      * @throws SQLException if a database access error occurs
      */
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
@@ -2177,14 +2147,26 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Executes {@code insertion} and return the added entity if the record doesn't, otherwise, {@code update} is executed and updated db record is returned.
+     * Performs an upsert operation based on a custom condition.
+     * More flexible than property-based upsert for complex conditions.
      *
-     * @param entity the entity to add or update.
-     * @param cond to verify if the record exists or not.
-     * @return the added or updated db record.
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * User user = new User();
+     * user.setEmail("john@example.com");
+     * user.setStatus("ACTIVE");
+     * 
+     * Condition cond = CF.and(
+     *     CF.eq("email", user.getEmail()),
+     *     CF.eq("deleted", false)
+     * );
+     * 
+     * User saved = dao.upsert(user, cond);
+     * }</pre>
+     *
+     * @param entity the entity to insert or update
+     * @param cond condition to check for existence
+     * @return the saved entity (newly inserted or updated)
+     * @throws SQLException if a database access error occurs
      */
     default T upsert(final T entity, final Condition cond) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
@@ -2203,23 +2185,38 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
+     * Deletes all records matching the specified condition.
+     * Returns the count of deleted records.
      *
-     * @param cond
-     * @return
-     * @throws SQLException
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * <pre>{@code
+     * int deleted = dao.delete(CF.lt("expiryDate", new Date()));
+     * System.out.println("Deleted " + deleted + " expired records");
+     * }</pre>
+     *
+     * @param cond the condition to match records for deletion
+     * @return the number of records deleted
+     * @throws SQLException if a database access error occurs
      */
     int delete(final Condition cond) throws SQLException;
 
     /**
-     * Asynchronously executes the given SQL action using the default executor.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Executes an asynchronous database operation using the default executor.
+     * The operation runs in a separate thread and returns a ContinuableFuture.
+     * Note: Transactions started in the current thread are NOT propagated to the async operation.
      *
-     * @param <R> the type of the result
-     * @param sqlAction the SQL action to be executed asynchronously
-     * @return a ContinuableFuture representing the result of the asynchronous computation
+     * <pre>{@code
+     * ContinuableFuture<List<User>> future = dao.asyncCall(d -> 
+     *     d.list(CF.eq("status", "ACTIVE"))
+     * );
+     * 
+     * future.thenAccept(users -> 
+     *     users.forEach(System.out::println)
+     * );
+     * }</pre>
+     *
+     * @param <R> the result type
+     * @param sqlAction function that performs database operations
+     * @return ContinuableFuture with the operation result
      */
     @Beta
     @NonDBOperation
@@ -2228,14 +2225,22 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Asynchronously executes the given SQL action using the specified executor.
-     * <br />
-     * Any transaction started in current thread won't be automatically applied to specified {@code sqlAction} which will be executed in another thread.
+     * Executes an asynchronous database operation using the specified executor.
+     * Provides control over which thread pool executes the operation.
      *
-     * @param <R> the type of the result
-     * @param sqlAction the SQL action to be executed asynchronously
-     * @param executor the executor to use for asynchronous execution
-     * @return a ContinuableFuture representing the result of the asynchronous computation
+     * <pre>{@code
+     * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
+     * 
+     * ContinuableFuture<Integer> future = dao.asyncCall(
+     *     d -> d.update("status", "PROCESSED", CF.eq("status", "PENDING")),
+     *     customExecutor
+     * );
+     * }</pre>
+     *
+     * @param <R> the result type
+     * @param sqlAction function that performs database operations
+     * @param executor the executor to run the operation
+     * @return ContinuableFuture with the operation result
      */
     @Beta
     @NonDBOperation
@@ -2249,12 +2254,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Asynchronously executes the given SQL action using the default executor.
-     * <br />
-     * Any transaction started in the current thread won't be automatically applied to the specified {@code sqlAction} which will be executed in another thread.
+     * Executes an asynchronous database operation without return value using default executor.
+     * Useful for fire-and-forget operations like logging or cleanup.
      *
-     * @param sqlAction the SQL action to be executed asynchronously
-     * @return a ContinuableFuture representing the result of the asynchronous computation
+     * <pre>{@code
+     * dao.asyncRun(d -> {
+     *     d.delete(CF.lt("createdDate", oneYearAgo));
+     *     d.update("archived", true, CF.lt("lastAccess", sixMonthsAgo));
+     * });
+     * }</pre>
+     *
+     * @param sqlAction consumer that performs database operations
+     * @return ContinuableFuture that completes when operation finishes
      */
     @Beta
     @NonDBOperation
@@ -2263,13 +2274,23 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Asynchronously executes the given SQL action using the specified executor.
-     * <br />
-     * Any transaction started in the current thread won't be automatically applied to the specified {@code sqlAction} which will be executed in another thread.
+     * Executes an asynchronous database operation without return value using specified executor.
+     * Combines async execution with custom thread pool management.
      *
-     * @param sqlAction the SQL action to be executed asynchronously
-     * @param executor the executor to use for asynchronous execution
-     * @return a ContinuableFuture representing the result of the asynchronous computation
+     * <pre>{@code
+     * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
+     * 
+     * dao.asyncRun(
+     *     d -> d.save(generateDailyReport()),
+     *     scheduler
+     * ).thenRun(() -> 
+     *     System.out.println("Report saved")
+     * );
+     * }</pre>
+     *
+     * @param sqlAction consumer that performs database operations
+     * @param executor the executor to run the operation
+     * @return ContinuableFuture that completes when operation finishes
      */
     @Beta
     @NonDBOperation
