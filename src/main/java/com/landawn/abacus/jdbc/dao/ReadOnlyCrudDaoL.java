@@ -16,7 +16,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A read-only CRUD (Create, Read, Update, Delete) Data Access Object interface specifically

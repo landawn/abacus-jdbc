@@ -27,7 +27,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
@@ -54,8 +54,8 @@ import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder.NSC;
-import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.query.SQLBuilder.NSC;
+import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple.Tuple2;

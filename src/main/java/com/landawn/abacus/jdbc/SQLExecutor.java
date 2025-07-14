@@ -1374,7 +1374,7 @@ final class SQLExecutor {
     //    //    int update(final Connection conn, final EntityId entityId, final Map<String, Object> props) {
     //    //        final Pair2 pair = generateUpdateSQL(entityId, props);
     //    //
-    //    //        return update(conn, sp.sql, sp.parameters);
+    //    //        return update(conn, sp.query, sp.parameters);
     //    //    }
     //    //
     //    //    private Pair2 generateUpdateSQL(final EntityId entityId, final Map<String, Object> props) {
@@ -1382,20 +1382,20 @@ final class SQLExecutor {
     //    //        final NamingPolicy namingPolicy = _jdbcSettings.getNamingPolicy();
     //    //
     //    //        if (namingPolicy == null) {
-    //    //            return NE.update(entityId.entityName()).set(props).where(cond).pair();
+    //    //            return NE.update(entityId.entityName()).set(props).where(cond).build();
     //    //        }
     //    //
     //    //        switch (namingPolicy) {
     //    //            case LOWER_CASE_WITH_UNDERSCORE: {
-    //    //                return NE.update(entityId.entityName()).set(props).where(cond).pair();
+    //    //                return NE.update(entityId.entityName()).set(props).where(cond).build();
     //    //            }
     //    //
     //    //            case UPPER_CASE_WITH_UNDERSCORE: {
-    //    //                return NE2.update(entityId.entityName()).set(props).where(cond).pair();
+    //    //                return NE2.update(entityId.entityName()).set(props).where(cond).build();
     //    //            }
     //    //
     //    //            case CAMEL_CASE: {
-    //    //                return NE3.update(entityId.entityName()).set(props).where(cond).pair();
+    //    //                return NE3.update(entityId.entityName()).set(props).where(cond).build();
     //    //            }
     //    //
     //    //            default:
@@ -1412,7 +1412,7 @@ final class SQLExecutor {
     //    //    int delete(final Connection conn, final EntityId entityId) {
     //    //        final Pair2 pair = generateDeleteSQL(entityId);
     //    //
-    //    //        return update(conn, sp.sql, sp.parameters);
+    //    //        return update(conn, sp.query, sp.parameters);
     //    //    }
     //    //
     //    //    private Pair2 generateDeleteSQL(final EntityId entityId) {
@@ -1420,20 +1420,20 @@ final class SQLExecutor {
     //    //        final NamingPolicy namingPolicy = _jdbcSettings.getNamingPolicy();
     //    //
     //    //        if (namingPolicy == null) {
-    //    //            return NE.deleteFrom(entityId.entityName()).where(cond).pair();
+    //    //            return NE.deleteFrom(entityId.entityName()).where(cond).build();
     //    //        }
     //    //
     //    //        switch (namingPolicy) {
     //    //            case LOWER_CASE_WITH_UNDERSCORE: {
-    //    //                return NE.deleteFrom(entityId.entityName()).where(cond).pair();
+    //    //                return NE.deleteFrom(entityId.entityName()).where(cond).build();
     //    //            }
     //    //
     //    //            case UPPER_CASE_WITH_UNDERSCORE: {
-    //    //                return NE2.deleteFrom(entityId.entityName()).where(cond).pair();
+    //    //                return NE2.deleteFrom(entityId.entityName()).where(cond).build();
     //    //            }
     //    //
     //    //            case CAMEL_CASE: {
-    //    //                return NE3.deleteFrom(entityId.entityName()).where(cond).pair();
+    //    //                return NE3.deleteFrom(entityId.entityName()).where(cond).build();
     //    //            }
     //    //
     //    //            default:
@@ -1450,7 +1450,7 @@ final class SQLExecutor {
     //    //    boolean exists(final Connection conn, final EntityId entityId) {
     //    //        final Pair2 pair = generateQuerySQL(entityId, NE._1_list);
     //    //
-    //    //        return query(conn, sp.sql, StatementSetter.DEFAULT, EXISTS_RESULT_SET_EXTRACTOR, null, sp.parameters);
+    //    //        return query(conn, sp.query, StatementSetter.DEFAULT, EXISTS_RESULT_SET_EXTRACTOR, null, sp.parameters);
     //    //    }
     //
     //    /**

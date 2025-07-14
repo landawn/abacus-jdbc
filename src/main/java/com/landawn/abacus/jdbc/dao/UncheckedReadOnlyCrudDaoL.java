@@ -16,7 +16,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 @Beta
 public interface UncheckedReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDaoL<T, SB, TD>>

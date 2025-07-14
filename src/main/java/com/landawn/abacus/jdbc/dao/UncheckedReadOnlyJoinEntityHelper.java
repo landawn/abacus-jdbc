@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.concurrent.Executor;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>>
         extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {

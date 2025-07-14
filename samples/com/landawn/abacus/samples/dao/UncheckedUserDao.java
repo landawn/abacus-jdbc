@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
 import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)

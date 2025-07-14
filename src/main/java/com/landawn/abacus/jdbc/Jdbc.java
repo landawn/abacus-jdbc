@@ -69,7 +69,7 @@ import com.landawn.abacus.util.Multimap;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.ObjectPool;
-import com.landawn.abacus.util.ParsedSql;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;

@@ -49,7 +49,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
-import com.landawn.abacus.util.ParsedSql;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.WD;

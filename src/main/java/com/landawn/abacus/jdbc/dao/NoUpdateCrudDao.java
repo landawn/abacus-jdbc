@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.condition.Condition;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A CRUD Data Access Object interface that disables update and delete operations while

@@ -39,7 +39,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -54,7 +54,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.util.SQLParser;
+import com.landawn.abacus.query.SQLParser;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;

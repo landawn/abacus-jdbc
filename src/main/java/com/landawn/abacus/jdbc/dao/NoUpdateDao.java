@@ -24,14 +24,14 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
-import com.landawn.abacus.util.ParsedSql;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.Throwables;
 
 /**

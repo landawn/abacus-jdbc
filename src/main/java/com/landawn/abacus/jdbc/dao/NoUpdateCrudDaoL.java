@@ -19,7 +19,7 @@ import java.sql.SQLException;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A CRUD Data Access Object interface for entities with {@code Long} type primary keys

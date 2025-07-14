@@ -18,7 +18,7 @@ import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.dao.NoUpdateCrudDao;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 @CacheResult(transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)

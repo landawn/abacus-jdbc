@@ -30,7 +30,7 @@ import com.landawn.abacus.util.CodeGenerationUtil.PropNameTableCodeConfig;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
-import com.landawn.abacus.util.SQLBuilder.SCSB;
+import com.landawn.abacus.query.SQLBuilder.SCSB;
 import com.landawn.abacus.util.Tuple;
 
 import codes.entity.Account;

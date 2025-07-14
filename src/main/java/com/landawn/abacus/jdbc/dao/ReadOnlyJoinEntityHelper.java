@@ -19,7 +19,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A read-only interface for handling join entity operations in a Data Access Object (DAO) pattern.

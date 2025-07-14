@@ -53,8 +53,8 @@ public class SQLExecutorTest {
     //
     //        assertEquals(users.size(), ids.size());
     //
-    //        SP sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).pair();
-    //        sqlExecutor.query(sp.sql, sp.parameters).println();
+    //        SP sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).build();
+    //        sqlExecutor.query(sp.query, sp.parameters).println();
     //
     //        // insert 3001 users, bigger the specified batch size.
     //        users = N.fill(User.class, 3001);
@@ -63,8 +63,8 @@ public class SQLExecutorTest {
     //
     //        assertEquals(users.size(), ids.size());
     //
-    //        sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).pair();
-    //        sqlExecutor.query(sp.sql, sp.parameters).println();
+    //        sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).build();
+    //        sqlExecutor.query(sp.query, sp.parameters).println();
     //
     //        userDao.delete(CF.alwaysTrue());
     //    }
@@ -79,8 +79,8 @@ public class SQLExecutorTest {
     //
     //        assertEquals(users.size(), ids.size());
     //
-    //        SP sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).pair();
-    //        assertEquals(users.size(), sqlExecutor.query(sp.sql, sp.parameters).size());
+    //        SP sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).build();
+    //        assertEquals(users.size(), sqlExecutor.query(sp.query, sp.parameters).size());
     //
     //        userDao.delete(CF.alwaysTrue());
     //    }

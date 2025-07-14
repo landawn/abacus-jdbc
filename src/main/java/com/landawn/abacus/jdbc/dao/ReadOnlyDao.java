@@ -23,8 +23,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
-import com.landawn.abacus.util.ParsedSql;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A strictly read-only Data Access Object interface that only allows SELECT queries.

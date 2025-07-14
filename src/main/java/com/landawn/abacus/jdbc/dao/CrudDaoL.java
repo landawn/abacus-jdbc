@@ -22,7 +22,7 @@ import java.util.Map;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;

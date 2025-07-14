@@ -24,7 +24,7 @@ import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -35,7 +35,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 

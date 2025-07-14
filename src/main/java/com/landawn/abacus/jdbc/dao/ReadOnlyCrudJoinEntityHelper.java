@@ -15,7 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A read-only interface for handling join entity operations with CRUD DAOs.

@@ -45,8 +45,8 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.condition.ConditionFactory.CB;
-import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.condition.ConditionFactory.CB;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
@@ -68,8 +68,8 @@ import com.landawn.abacus.util.Fn.Fnn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.util.SQLBuilder.PSC;
-import com.landawn.abacus.util.SQLParser;
+import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SQLParser;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
@@ -305,7 +305,7 @@ public class DaoTest {
     //
     //        NSC.deleteFrom(User.class)
     //                .where(CF.ge("id", users.get(0).getId()))
-    //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.sql, sp.parameters.toArray()));
+    //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.query, sp.parameters.toArray()));
     //    }
 
     @Test

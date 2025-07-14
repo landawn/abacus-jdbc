@@ -23,7 +23,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
 
 /**

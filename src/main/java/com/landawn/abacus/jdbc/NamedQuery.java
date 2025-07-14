@@ -47,7 +47,7 @@ import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.IntList;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.ParsedSql;
+import com.landawn.abacus.query.ParsedSql;
 
 /**
  * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's NamedParameterJdbcTemplate.

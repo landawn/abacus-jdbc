@@ -20,7 +20,7 @@ import java.util.Collection;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
 
 /**

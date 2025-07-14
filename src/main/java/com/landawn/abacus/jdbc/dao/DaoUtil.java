@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.condition.Condition;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
@@ -39,16 +39,16 @@ import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Result;
-import com.landawn.abacus.util.SQLBuilder;
-import com.landawn.abacus.util.SQLBuilder.NAC;
-import com.landawn.abacus.util.SQLBuilder.NLC;
-import com.landawn.abacus.util.SQLBuilder.NSB;
-import com.landawn.abacus.util.SQLBuilder.NSC;
-import com.landawn.abacus.util.SQLBuilder.PAC;
-import com.landawn.abacus.util.SQLBuilder.PLC;
-import com.landawn.abacus.util.SQLBuilder.PSB;
-import com.landawn.abacus.util.SQLBuilder.PSC;
-import com.landawn.abacus.util.SQLBuilder.SP;
+import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder.NAC;
+import com.landawn.abacus.query.SQLBuilder.NLC;
+import com.landawn.abacus.query.SQLBuilder.NSB;
+import com.landawn.abacus.query.SQLBuilder.NSC;
+import com.landawn.abacus.query.SQLBuilder.PAC;
+import com.landawn.abacus.query.SQLBuilder.PLC;
+import com.landawn.abacus.query.SQLBuilder.PSB;
+import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.AbstractQueryBuilder.SP;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
@@ -239,7 +239,7 @@ final class DaoUtil {
             final Class<?> targetEntityClass = dao.targetEntityClass();
 
             final Throwables.BiFunction<javax.sql.DataSource, SP, PreparedQuery, SQLException> prepareQueryFunc = (dataSource, sp) -> {
-                final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.sql);
+                final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.query);
 
                 if (N.notEmpty(sp.parameters)) {
                     boolean noException = false;
@@ -259,7 +259,7 @@ final class DaoUtil {
             };
 
             final Throwables.BiFunction<javax.sql.DataSource, SP, NamedQuery, SQLException> prepareNamedQueryFunc = (dataSource, sp) -> {
-                final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.sql);
+                final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.query);
 
                 if (N.notEmpty(sp.parameters)) {
                     boolean noException = false;
@@ -282,13 +282,13 @@ final class DaoUtil {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PSC.selectFrom(targetEntityClass) : PSC.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NSC.selectFrom(targetEntityClass) : NSC.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
                 });
@@ -296,13 +296,13 @@ final class DaoUtil {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PAC.selectFrom(targetEntityClass) : PAC.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NAC.selectFrom(targetEntityClass) : NAC.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
                 });
@@ -310,13 +310,13 @@ final class DaoUtil {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PLC.selectFrom(targetEntityClass) : PLC.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NLC.selectFrom(targetEntityClass) : NLC.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
                 });
@@ -324,13 +324,13 @@ final class DaoUtil {
                 tp = Tuple.of((selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? PSB.selectFrom(targetEntityClass) : PSB.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareQueryFunc.apply(dao.dataSource(), sp);
                 }, (selectPropNames, cond) -> {
                     final SP sp = (selectPropNames == null ? NSB.selectFrom(targetEntityClass) : NSB.select(selectPropNames).from(targetEntityClass))
                             .append(cond)
-                            .pair();
+                            .build();
 
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
                 });

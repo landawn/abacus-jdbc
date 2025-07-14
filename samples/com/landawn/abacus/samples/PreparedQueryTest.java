@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -35,8 +35,8 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fn.Factory;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.SQLBuilder.NSC;
-import com.landawn.abacus.util.SQLBuilder.PSC;
+import com.landawn.abacus.query.SQLBuilder.NSC;
+import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {

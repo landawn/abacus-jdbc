@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.util.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A completely read-only CRUD Data Access Object interface that prevents all data modification operations.
