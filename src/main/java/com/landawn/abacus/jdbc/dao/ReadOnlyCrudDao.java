@@ -62,8 +62,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * @param <TD> the type of the DAO implementation (self-referencing type parameter)
  * @see ReadOnlyDao
  * @see NoUpdateCrudDao
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 @SuppressWarnings("RedundantThrows")
 @Beta

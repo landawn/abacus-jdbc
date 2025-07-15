@@ -3972,6 +3972,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.PreparedStatement#addBatch()
      */
     public This addBatch() throws SQLException {
+        assertNotClosed();
+
         addBatchAction.accept((This) this, stmt);
 
         isBatch = true;
@@ -4007,6 +4009,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Statement#setFetchDirection(int)
      */
     public This setFetchDirection(final FetchDirection direction) throws SQLException {
+        assertNotClosed();
+
         defaultFetchDirection = stmt.getFetchDirection();
 
         stmt.setFetchDirection(direction.intValue);
@@ -4053,6 +4057,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Statement#setFetchSize(int)
      */
     public This setFetchSize(final int fetchSize) throws SQLException {
+        assertNotClosed();
+
         defaultFetchSize = stmt.getFetchSize();
 
         stmt.setFetchSize(fetchSize);
@@ -4077,6 +4083,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Statement#setMaxFieldSize(int)
      */
     public This setMaxFieldSize(final int max) throws SQLException {
+        assertNotClosed();
+
         defaultMaxFieldSize = stmt.getMaxFieldSize();
 
         stmt.setMaxFieldSize(max);
@@ -4100,6 +4108,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Statement#setMaxRows(int)
      */
     public This setMaxRows(final int max) throws SQLException {
+        assertNotClosed();
+
         stmt.setMaxRows(max);
 
         return (This) this;
@@ -4121,6 +4131,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
     public This setLargeMaxRows(final long max) throws SQLException {
+        assertNotClosed();
+
         stmt.setLargeMaxRows(max);
 
         return (This) this;
@@ -4142,6 +4154,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Statement#setQueryTimeout(int)
      */
     public This setQueryTimeout(final int seconds) throws SQLException {
+        assertNotClosed();
+
         defaultQueryTimeout = stmt.getQueryTimeout();
 
         stmt.setQueryTimeout(seconds);
@@ -4174,6 +4188,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public This configStmt(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(stmtSetter, cs.stmtSetter);
+        assertNotClosed();
+
         boolean noException = false;
 
         try {
@@ -4212,6 +4228,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This configStmt(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(stmtSetter, cs.stmtSetter);
+        assertNotClosed();
 
         boolean noException = false;
 

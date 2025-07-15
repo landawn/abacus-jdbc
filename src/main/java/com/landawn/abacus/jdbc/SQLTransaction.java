@@ -376,7 +376,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                     && (_status == Status.COMMITTED || _status == Status.FAILED_COMMIT || _status == Status.ROLLED_BACK || _status == Status.FAILED_ROLLBACK)) {
                 // Do nothing. It happened in finally block.
             } else {
-                logger.warn("Transaction(id={}) is already: {}. This rollback is ignored", _timedId, _status);
+                if (_status == Status.ACTIVE) {
+                    executeRollback();
+                } else {
+                    logger.warn("Transaction(id={}) is already: {}. This rollback is ignored", _timedId, _status);
+                }
             }
 
             return;

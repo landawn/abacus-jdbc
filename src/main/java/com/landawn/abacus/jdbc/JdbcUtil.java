@@ -78,6 +78,12 @@ import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.AbstractQueryBuilder.SP;
+import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.QueryUtil;
+import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SQLMapper;
+import com.landawn.abacus.query.SQLOperation;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Charsets;
@@ -95,13 +101,7 @@ import com.landawn.abacus.util.InternalUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.ObjectPool;
-import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.util.RowDataSet;
-import com.landawn.abacus.query.SQLBuilder;
-import com.landawn.abacus.query.AbstractQueryBuilder.SP;
-import com.landawn.abacus.query.SQLMapper;
-import com.landawn.abacus.query.SQLOperation;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
@@ -160,8 +160,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * }
  * }</pre>
  *
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  * @see com.landawn.abacus.annotation.ReadOnly
  * @see com.landawn.abacus.annotation.ReadOnlyId
  * @see com.landawn.abacus.annotation.NonUpdatable
@@ -463,7 +463,7 @@ public final class JdbcUtil {
                 dbVersion = DBVersion.SQL_SERVER;
             }
 
-            return new DBProductInfo(dbProductName, dbProductName, dbVersion);
+            return new DBProductInfo(dbProductName, dbProductVersion, dbVersion);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1338,10 +1338,10 @@ public final class JdbcUtil {
         Object apply(ResultSet rs, String columnLabel, Object columnValue) throws SQLException;
     }
 
-    private static final Throwables.Function<Object, java.sql.Timestamp, SQLException> oracleTimestampToJavaTimestamp = obj -> ((oracle.sql.Datum) obj)
+    static final Throwables.Function<Object, java.sql.Timestamp, SQLException> oracleTimestampToJavaTimestamp = obj -> ((oracle.sql.Datum) obj)
             .timestampValue();
 
-    private static final Throwables.Function<Object, java.sql.Date, SQLException> oracleTimestampToJavaDate = obj -> ((oracle.sql.Datum) obj).dateValue();
+    static final Throwables.Function<Object, java.sql.Date, SQLException> oracleTimestampToJavaDate = obj -> ((oracle.sql.Datum) obj).dateValue();
 
     private static final ObjectPool<Class<?>, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterPool = new ObjectPool<>(128);
 
@@ -1433,9 +1433,17 @@ public final class JdbcUtil {
         }
 
         if (ret instanceof final Blob blob) {
-            ret = blob.getBytes(1, (int) blob.length());
+            try {
+                ret = blob.getBytes(1, (int) blob.length());
+            } finally {
+                blob.free();
+            }
         } else if (ret instanceof final Clob clob) {
-            ret = clob.getSubString(1, (int) clob.length());
+            try {
+                ret = clob.getSubString(1, (int) clob.length());
+            } finally {
+                clob.free();
+            }
         } else if (checkDateType) {
             ret = columnConverterByIndex.apply(rs, columnIndex, ret);
         }
@@ -1477,9 +1485,17 @@ public final class JdbcUtil {
         }
 
         if (ret instanceof final Blob blob) {
-            ret = blob.getBytes(1, (int) blob.length());
+            try {
+                ret = blob.getBytes(1, (int) blob.length());
+            } finally {
+                blob.free();
+            }
         } else if (ret instanceof final Clob clob) {
-            ret = clob.getSubString(1, (int) clob.length());
+            try {
+                ret = clob.getSubString(1, (int) clob.length());
+            } finally {
+                clob.free();
+            }
         } else if (checkDateType) {
             ret = columnConverterByLabel.apply(rs, columnLabel, ret);
         }
@@ -1510,7 +1526,7 @@ public final class JdbcUtil {
         Object val = null;
 
         while (rs.next()) {
-            val = result.get(columnIndex);
+            val = rs.getObject(columnIndex);
 
             if (val == null) {
                 result.add(val);
@@ -1518,61 +1534,89 @@ public final class JdbcUtil {
                 result.add(val);
 
                 while (rs.next()) {
-                    result.add(result.get(columnIndex));
+                    result.add(rs.getObject(columnIndex));
                 }
             } else if (val instanceof Blob blob) {
-                result.add(blob.getBytes(1, (int) blob.length()));
-
-                while (rs.next()) {
-                    blob = (Blob) result.get(columnIndex);
+                try {
                     result.add(blob.getBytes(1, (int) blob.length()));
+                    blob.free();
+                    blob = null;
+
+                    while (rs.next()) {
+                        blob = rs.getBlob(columnIndex);
+                        result.add(blob.getBytes(1, (int) blob.length()));
+                        blob.free();
+                        blob = null;
+                    }
+                } finally {
+                    if (blob != null) {
+                        blob.free();
+                    }
+                }
+            } else if (val instanceof Clob clob) {
+                try {
+                    result.add(clob.getSubString(1, (int) clob.length()));
+                    clob.free();
+                    clob = null;
+
+                    while (rs.next()) {
+                        clob = rs.getClob(columnIndex);
+                        result.add(clob.getSubString(1, (int) clob.length()));
+                        clob.free();
+                        clob = null;
+                    }
+                } finally {
+                    if (clob != null) {
+                        clob.free();
+                    }
                 }
             } else {
                 final String className = val.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-                    result.add(oracleTimestampToJavaTimestamp.apply(val));
+                    result.add(rs.getTimestamp(columnIndex));
 
                     while (rs.next()) {
-                        result.add(oracleTimestampToJavaTimestamp.apply(result.get(columnIndex)));
+                        result.add(rs.getTimestamp(columnIndex));
                     }
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        result.add(oracleTimestampToJavaTimestamp.apply(val));
+                        result.add(rs.getTimestamp(columnIndex));
 
                         while (rs.next()) {
-                            result.add(oracleTimestampToJavaTimestamp.apply(result.get(columnIndex)));
+                            result.add(rs.getTimestamp(columnIndex));
                         }
                     } else {
-                        result.add(oracleTimestampToJavaDate.apply(val));
+                        result.add(rs.getDate(columnIndex));
 
                         while (rs.next()) {
-                            result.add(oracleTimestampToJavaDate.apply(result.get(columnIndex)));
+                            result.add(rs.getDate(columnIndex));
                         }
                     }
                 } else if ((val instanceof java.sql.Date)) {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
+                        result.add(rs.getTimestamp(columnIndex));
 
-                        do {
+                        while (rs.next()) {
                             result.add(rs.getTimestamp(columnIndex));
-                        } while (rs.next());
+                        }
                     } else {
                         result.add(val);
 
                         while (rs.next()) {
-                            result.add(result.get(columnIndex));
+                            result.add(rs.getDate(columnIndex));
                         }
                     }
                 } else {
                     result.add(val);
 
                     while (rs.next()) {
-                        result.add(result.get(columnIndex));
+                        result.add(rs.getDate(columnIndex));
                     }
                 }
             }
@@ -5500,7 +5544,7 @@ public final class JdbcUtil {
      */
     public static boolean doesTableExist(final Connection conn, final String tableName) {
         try {
-            executeQuery(conn, "SELECT 1 FROM " + tableName + " WHERE 1 > 2");
+            execute(conn, "SELECT 1 FROM " + tableName + " WHERE 1 > 2");
 
             return true;
         } catch (final SQLException e) {
@@ -6879,9 +6923,9 @@ public final class JdbcUtil {
      * @return {@code true} if the value is null or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
-        return (value == null) || N.equals(value, N.defaultValueOf(value.getClass()));
+        return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b.booleanValue())
+                || N.equals(value, N.defaultValueOf(value.getClass()));
     }
-
 
     static <K, V> void merge(final Map<K, V> map, final K key, final V value, final BinaryOperator<V> remappingFunction) {
         final V oldValue = map.get(key);
@@ -6990,7 +7034,6 @@ public final class JdbcUtil {
         isDaoMethodPerfLogAllowed = false;
     }
 
-
     /**
      * Enables/Disables SQL logging in the current thread.
      *
@@ -7094,7 +7137,6 @@ public final class JdbcUtil {
         return isSQLLogEnabled_TL.get().isEnabled;
     }
 
-
     static void logSql(final String sql) {
         if (!isSqlLogAllowed || !sqlLogger.isDebugEnabled()) {
             return;
@@ -7142,7 +7184,7 @@ public final class JdbcUtil {
     static boolean isToHandleSqlLog(final SqlLogConfig sqlLogConfig) {
         return _sqlLogHandler != null || (isSqlPerfLogAllowed && sqlLogConfig.minExecutionTimeForSqlPerfLog >= 0 && sqlLogger.isInfoEnabled());
     }
-    
+
     /**
      * Retrieves the current SQL extractor function used to extract SQL statements from Statement objects.
      * The SQL extractor is used internally for logging and monitoring purposes.
@@ -7951,6 +7993,7 @@ public final class JdbcUtil {
             }
         }
     }
+
     /**
      * Don't share {@code Spring Transactional} in the current thread.
      *

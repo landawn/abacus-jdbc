@@ -58,8 +58,8 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <T>
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD>
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 @Beta
 public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {

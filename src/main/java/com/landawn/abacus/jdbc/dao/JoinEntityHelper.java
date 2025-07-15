@@ -73,8 +73,8 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <TD> the type of the target DAO interface
  *
  * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {

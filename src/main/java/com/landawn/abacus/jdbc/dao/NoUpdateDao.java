@@ -66,8 +66,8 @@ import com.landawn.abacus.util.Throwables;
  * @param <T> the type of the entity managed by this DAO
  * @param <SB> the type of the SQL builder used for query construction
  * @param <TD> the self-referential type of the DAO for fluent API support
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  * @see Dao
  */
 @SuppressWarnings("RedundantThrows")

@@ -54,6 +54,7 @@ import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.ClassUtil;
@@ -69,7 +70,6 @@ import com.landawn.abacus.util.Multimap;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.ObjectPool;
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
@@ -1700,7 +1700,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static <C extends Collection<?>> RowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<C> supplier) {
+        static <C extends Collection<?>> RowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
             return new RowMapper<>() {
                 private int columnCount = -1;
 
@@ -2099,7 +2099,7 @@ public final class Jdbc {
              */
             @SequentialOnly
             @Stateful
-            public <C extends Collection<?>> RowMapper<C> toCollection(final IntFunction<C> supplier) {
+            public <C extends Collection<?>> RowMapper<C> toCollection(final IntFunction<? extends C> supplier) {
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
@@ -2143,7 +2143,7 @@ public final class Jdbc {
              */
             @SequentialOnly
             @Stateful
-            public RowMapper<Map<String, Object>> toMap(final IntFunction<Map<String, Object>> mapSupplier) {
+            public RowMapper<Map<String, Object>> toMap(final IntFunction<? extends Map<String, Object>> mapSupplier) {
                 return new RowMapper<>() {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
@@ -3000,7 +3000,8 @@ public final class Jdbc {
          * @param mapSupplier the supplier to create the map instance
          * @return a BiRowMapper that produces a filtered Map
          */
-        static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter, final IntFunction<Map<String, Object>> mapSupplier) {
+        static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter,
+                final IntFunction<? extends Map<String, Object>> mapSupplier) {
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
                 final Map<String, Object> result = mapSupplier.apply(columnCount);
@@ -3034,7 +3035,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> valueFilter,
-                final IntFunction<Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) {
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
 
@@ -3098,7 +3099,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter,
-                final IntFunction<Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) {
             return new BiRowMapper<>() {
                 private String[] keyNames = null;
 
@@ -3173,7 +3174,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final Function<? super String, String> columnNameConverter,
-                final IntFunction<Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) {
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
                 private String[] keyNames = null;
@@ -3247,7 +3248,7 @@ public final class Jdbc {
          * @return a BiRowMapper that produces a Collection
          */
         @Beta
-        static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<C> supplier) {
+        static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
             return (rs, columnLabels) -> {
                 final int columnCount = columnLabels.size();
 
@@ -5196,26 +5197,33 @@ public final class Jdbc {
          * The parameter index (1-based).
          */
         private int parameterIndex;
-        
+
         /**
          * The parameter name (optional, can be null for positional parameters).
          */
         private String parameterName;
-        
+
         /**
          * The SQL type as defined in java.sql.Types.
          */
         private int sqlType;
-        
+
         /**
          * The fully-qualified SQL type name (for SQL3 types).
          */
         private String typeName;
-        
+
         /**
          * The desired number of digits to the right of the decimal point (for NUMERIC or DECIMAL types).
          */
         private int scale;
+
+        public static OutParam of(int parameterIndex, int sqlType) {
+            final OutParam outParam = new OutParam();
+            outParam.setParameterIndex(parameterIndex);
+            outParam.setSqlType(sqlType);
+            return outParam;
+        }
     }
 
     /**

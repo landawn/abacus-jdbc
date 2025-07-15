@@ -104,8 +104,8 @@ package com.landawn.abacus.jdbc;
  * @see com.landawn.abacus.annotation.Transient
  * @see com.landawn.abacus.annotation.Table
  * @see com.landawn.abacus.annotation.Column
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  *
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>

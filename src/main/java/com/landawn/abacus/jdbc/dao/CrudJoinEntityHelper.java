@@ -77,8 +77,8 @@ import com.landawn.abacus.util.u.Optional;
  * @param <TD> the type of the CRUD DAO (self-type for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 

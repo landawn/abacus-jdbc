@@ -41,6 +41,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCSVWriter;
 import com.landawn.abacus.util.CSVUtil;
@@ -49,7 +50,6 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.WD;
@@ -83,8 +83,8 @@ import com.landawn.abacus.util.WD;
  * }</pre>
  *
  * @see com.landawn.abacus.util.CSVUtil
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  * @see com.landawn.abacus.annotation.ReadOnly
  * @see com.landawn.abacus.annotation.ReadOnlyId
  * @see com.landawn.abacus.annotation.NonUpdatable
@@ -759,7 +759,7 @@ public final class JdbcUtils {
                 }
 
                 for (int j = 0; j < columnCount; j++) {
-                    columnTypes[j].set(stmt, j + 1, dataset.get(columnIndexes[j]));
+                    columnTypes[j].set(stmt, j + 1, u[j]);
                 }
             }
         };
@@ -3017,21 +3017,17 @@ public final class JdbcUtils {
         PreparedStatement selectStmt = null;
         PreparedStatement insertStmt = null;
 
-        final int result = 0;
-
         try {
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             setFetchForBigResult(sourceConn, selectStmt, fetchSize);
 
             insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
 
-            copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return copy(selectStmt, insertStmt, batchSize, batchIntervalInMillis, stmtSetter);
         } finally {
             JdbcUtil.closeQuietly(selectStmt);
             JdbcUtil.closeQuietly(insertStmt);
         }
-
-        return result;
     }
 
     /**

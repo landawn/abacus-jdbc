@@ -70,8 +70,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * @param <SB> the type of SQLBuilder used for query construction
  * @param <TD> the type of the DAO implementation (self-referencing type parameter)
  * @see NoUpdateDao
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 @SuppressWarnings("RedundantThrows")
 @Beta

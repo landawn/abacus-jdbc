@@ -87,8 +87,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.condition.ConditionFactory
- * @see com.landawn.abacus.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
