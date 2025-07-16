@@ -29,6 +29,11 @@ public enum Propagation {
     SUPPORTS,
 
     /**
+     * Support a current transaction, throw an exception if none exists.
+     */
+    MANDATORY,
+
+    /**
      * Create a new transaction, and suspend the current transaction if one exists.
      */
     REQUIRES_NEW,
@@ -36,5 +41,10 @@ public enum Propagation {
     /**
      * Execute non-transactionally, suspend the current transaction if one exists.
      */
-    NOT_SUPPORTED
+    NOT_SUPPORTED,
+
+    /**
+     * Execute non-transactionally, throw an exception if a transaction exists.
+     */
+    NEVER
 }

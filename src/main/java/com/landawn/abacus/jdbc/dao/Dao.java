@@ -67,6 +67,8 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream;
 
+import javax.sql.DataSource;
+
 /**
  * The {@code Dao} interface provides a comprehensive data access abstraction layer for database operations.
  * It serves as a base interface for creating type-safe, SQL-based data access objects with support for
@@ -91,7 +93,7 @@ import com.landawn.abacus.util.stream.Stream;
  * 
  * <h2>Usage Example:</h2>
  * <pre>{@code
- * public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC> {
  *     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
@@ -108,7 +110,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  * 
  * // Usage
- * UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = userDao.getFirstAndLastNameBy(123L);
  * }</pre>
  * 
@@ -127,7 +129,9 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <T> the entity type that this DAO manages
  * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type parameter for fluent API support
- * 
+ *
+ * @see JdbcUtil#createDao(Class, DataSource)
+ * @see JdbcUtil#createDao(Class, DataSource, SQLMapper)
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -351,6 +355,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param query the SQL query string
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @see JdbcUtil#prepareNamedQueryForBigResult(DataSource, String)
      */
     @Beta
     @NonDBOperation
@@ -365,6 +370,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @see JdbcUtil#prepareNamedQueryForBigResult(DataSource, String)
      */
     @Beta
     @NonDBOperation

@@ -57,8 +57,10 @@ import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowConsumer;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
-import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
+import com.landawn.abacus.jdbc.Jdbc.RowMapper;
+import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowConsumer;
+import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
@@ -249,9 +251,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             this.closeHandler = () -> {
                 try {
-                    tmp.run();
-                } finally {
                     closeHandler.run();
+                } finally {
+                    tmp.run();
                 }
             };
         }
@@ -5461,7 +5463,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
      * 
-     * <p>Similar to {@link #findOnlyOne(RowMapper)}, but the mapper also receives the column labels.</p>
+     * <p>Similar to {@link #findOnlyOne(Jdbc.RowMapper)}, but the mapper also receives the column labels.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
@@ -5561,7 +5563,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns a single result extracted by the specified {@code RowMapper} if exactly one record is found.
      * 
-     * <p>Similar to {@link #findOnlyOne(RowMapper)}, but returns null instead of an empty Optional when no record is found.</p>
+     * <p>Similar to {@link #findOnlyOne(Jdbc.RowMapper)}, but returns null instead of an empty Optional when no record is found.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
@@ -6435,7 +6437,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException If this query is closed
      * @throws SQLException If a database access error occurs
      * @see #listAllResultsets(Jdbc.RowMapper)
-     * @see #streamAllResultsets(Class)
      */
     public <T> List<List<T>> listAllResultsets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetType, cs.targetType);
@@ -6952,7 +6953,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier)
+                .map(Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -6992,7 +6996,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier)
+                .map(Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -7035,7 +7042,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         return Stream.just(supplier)
                 .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
 
@@ -7088,7 +7095,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         return Stream.just(supplier)
                 .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
 
@@ -9031,8 +9038,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         {@code false} if it is an update count or there are no results
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
-     * @see #executeThenApply(Function)
-     * @see #executeThenAccept(Consumer)
+     * @see #executeThenApply(Throwables.Function)
+     * @see #executeThenApply(Throwables.BiFunction)
+     * @see #executeThenAccept(Throwables.Consumer)
+     * @see #executeThenAccept(Throwables.BiConsumer)
      */
     public boolean execute() throws IllegalStateException, SQLException {
         assertNotClosed();
@@ -9075,7 +9084,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
      * @see #execute()
-     * @see #executeThenApply(BiFunction)
+     * @see #executeThenApply(Throwables.BiFunction) 
      */
     public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9117,7 +9126,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided function is null
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
-     * @see #executeThenApply(Function)
+     * @see #executeThenApply(Throwables.Function) 
      */
     public <R> R executeThenApply(final Throwables.BiFunction<? super Stmt, Boolean, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9173,7 +9182,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
      * @see #execute()
-     * @see #executeThenAccept(BiConsumer)
+     * @see #executeThenAccept(Throwables.BiConsumer) 
      */
     public void executeThenAccept(final Throwables.Consumer<? super Stmt, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9216,7 +9225,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided consumer is null
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
-     * @see #executeThenAccept(Consumer)
+     * @see #executeThenAccept(Throwables.Consumer) 
      */
     public void executeThenAccept(final Throwables.BiConsumer<? super Stmt, Boolean, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9258,8 +9267,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalArgumentException If the provided SQL action is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncCall(Function, Executor)
-     * @see #asyncRun(Consumer)
+     * @see #asyncCall(Throwables.Function, Executor) 
+     * @see #asyncRun(Throwables.Consumer) 
      */
     @Beta
     public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
@@ -9302,7 +9311,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalArgumentException If sqlAction or executor is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncCall(Function)
+     * @see #asyncCall(Throwables.Function) 
      */
     @Beta
     public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
@@ -9319,7 +9328,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result.
      * 
-     * <p>This method is similar to {@link #asyncCall(Function)} but for operations that
+     * <p>This method is similar to {@link #asyncCall(Throwables.Function)} but for operations that
      * don't return a value (void operations). Useful for INSERT, UPDATE, DELETE operations
      * where you only care about completion, not the result.</p>
      * 
@@ -9344,8 +9353,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the completion of the asynchronous execution
      * @throws IllegalArgumentException If the provided SQL action is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncRun(Consumer, Executor)
-     * @see #asyncCall(Function)
+     * @see #asyncRun(Throwables.Consumer, Executor) 
+     * @see #asyncCall(Throwables.Function) 
      */
     @Beta
     public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction)
@@ -9361,7 +9370,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result using a custom executor.
      * 
-     * <p>This method is similar to {@link #asyncRun(Consumer)} but allows specification of
+     * <p>This method is similar to {@link #asyncCall(Throwables.Function, Executor)} but allows specification of
      * a custom executor for the asynchronous operation.</p>
      * 
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
@@ -9385,7 +9394,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the completion of the asynchronous execution
      * @throws IllegalArgumentException If sqlAction or executor is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncRun(Consumer)
+     * @see #asyncRun(Throwables.Consumer) 
      */
     @Beta
     public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)

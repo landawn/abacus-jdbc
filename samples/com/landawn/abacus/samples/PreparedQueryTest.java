@@ -33,7 +33,7 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.Factory;
+import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.query.SQLBuilder.NSC;
 import com.landawn.abacus.query.SQLBuilder.PSC;
@@ -62,7 +62,7 @@ public class PreparedQueryTest {
 
         JdbcUtil.prepareQuery(dataSource, "select * from user1 where id = ?")
                 .setLong(1, id)
-                .list(RowMapper.builder().getObject(3, Object.class).toMap(Factory.ofLinkedHashMap()))
+                .list(RowMapper.builder().getObject(3, Object.class).toMap(IntFunctions.ofLinkedHashMap()))
                 .forEach(Fn.println());
 
         JdbcUtil.prepareQuery(dataSource, "delete from user1 where id = ?").setLong(1, id).update();

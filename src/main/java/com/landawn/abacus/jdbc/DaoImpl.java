@@ -42,13 +42,6 @@ import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
-import com.landawn.abacus.query.condition.Criteria;
-import com.landawn.abacus.query.condition.Expression;
-import com.landawn.abacus.query.condition.Limit;
-import com.landawn.abacus.query.condition.SubQuery;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiParametersSetter;
@@ -103,6 +96,24 @@ import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.AbstractQueryBuilder.SP;
+import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.QueryUtil;
+import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SQLBuilder.NAC;
+import com.landawn.abacus.query.SQLBuilder.NLC;
+import com.landawn.abacus.query.SQLBuilder.NSC;
+import com.landawn.abacus.query.SQLBuilder.PAC;
+import com.landawn.abacus.query.SQLBuilder.PLC;
+import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SQLMapper;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.ConditionFactory;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.condition.Criteria;
+import com.landawn.abacus.query.condition.Expression;
+import com.landawn.abacus.query.condition.Limit;
+import com.landawn.abacus.query.condition.SubQuery;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.ClassUtil;
@@ -110,8 +121,8 @@ import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.IntFunctions;
-import com.landawn.abacus.util.Fn.Suppliers;
+import com.landawn.abacus.util.IntFunctions;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.Immutable;
 import com.landawn.abacus.util.ImmutableList;
@@ -123,17 +134,6 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Numbers;
 import com.landawn.abacus.util.Pair;
-import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
-import com.landawn.abacus.query.SQLBuilder.NAC;
-import com.landawn.abacus.query.SQLBuilder.NLC;
-import com.landawn.abacus.query.SQLBuilder.NSC;
-import com.landawn.abacus.query.SQLBuilder.PAC;
-import com.landawn.abacus.query.SQLBuilder.PLC;
-import com.landawn.abacus.query.SQLBuilder.PSC;
-import com.landawn.abacus.query.AbstractQueryBuilder.SP;
-import com.landawn.abacus.query.SQLMapper;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Splitter.MapSplitter;
@@ -4784,13 +4784,13 @@ final class DaoImpl {
                         //        if (N.isEmpty(entities)) {
                         //            return 0;
                         //        } else if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
-                        //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
+                        //            return ((CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
                         //
                         //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
                         //
                         //        if (N.isEmpty(entityJoinInfo)) {
-                        //            return ((JdbcUtil.CrudDao) proxy).batchDelete(entities, batchSize);
+                        //            return ((CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
                         //
                         //        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
@@ -5692,7 +5692,8 @@ final class DaoImpl {
                                             } else {
                                                 updatedRecordCount = Seq.of((Collection<List<?>>) (Collection) batchParameters)
                                                         .split(batchSize) //
-                                                        .sumLong(bp -> isLargeUpdate //
+                                                        .sumLong(bp -> isLargeUpdate
+                                                                //
                                                                 ? N.sum(preparedQuery.addBatchParameters(bp).largeBatchUpdate())
                                                                 : N.sum(preparedQuery.addBatchParameters(bp).batchUpdate()));
                                             }
@@ -5808,9 +5809,16 @@ final class DaoImpl {
                     } else {
                         // Do not need to do anything.
                     }
-                } else if (transactionalAnno.propagation() == Propagation.REQUIRED) {
+                } else if (transactionalAnno.propagation() == Propagation.REQUIRED || transactionalAnno.propagation() == Propagation.MANDATORY) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
                         call = (proxy, args) -> {
+                            final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                            if (transactionalAnno.propagation() == Propagation.MANDATORY && !JdbcUtil.isInTransaction(dataSource)) {
+                                throw new IllegalStateException("The method: " + fullClassMethodName + " with @Transactional(propagation = "
+                                        + transactionalAnno.propagation() + ") must be called in a transaction.");
+                            }
+
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
@@ -5944,9 +5952,14 @@ final class DaoImpl {
                             }
                         });
                     };
-                } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED) {
+                } else if (transactionalAnno.propagation() == Propagation.NOT_SUPPORTED || transactionalAnno.propagation() == Propagation.NEVER) {
                     call = (proxy, args) -> {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                        if (transactionalAnno.propagation() == Propagation.NEVER && JdbcUtil.isInTransaction(dataSource)) {
+                            throw new IllegalStateException("The method: " + fullClassMethodName + " with @Transactional(propagation = "
+                                    + transactionalAnno.propagation() + ") can't be called in a transaction.");
+                        }
 
                         if (hasSqlLogAnno || hasPerfLogAnno) {
                             return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {

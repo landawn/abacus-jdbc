@@ -51,7 +51,7 @@ import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.Fnn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.query.SQLParser;

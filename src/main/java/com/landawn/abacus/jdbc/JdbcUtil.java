@@ -1574,37 +1574,29 @@ public final class JdbcUtil {
                 final String className = val.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-                    result.add(rs.getTimestamp(columnIndex));
-
-                    while (rs.next()) {
+                    do {
                         result.add(rs.getTimestamp(columnIndex));
-                    }
+                    } while (rs.next());
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        result.add(rs.getTimestamp(columnIndex));
-
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
-                        result.add(rs.getDate(columnIndex));
-
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getDate(columnIndex));
-                        }
+                        } while (rs.next());
                     }
                 } else if ((val instanceof java.sql.Date)) {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                        result.add(rs.getTimestamp(columnIndex));
-
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
                         result.add(val);
 
@@ -3032,7 +3024,6 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    @SafeVarargs
     static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3055,7 +3046,6 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    @SafeVarargs
     static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3169,7 +3159,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the query
      * @see PreparedStatement#executeQuery()
      */
-    @SafeVarargs
     public static DataSet executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -3214,7 +3203,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the query
      * @see PreparedStatement#executeQuery()
      */
-    @SafeVarargs
     public static DataSet executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3254,7 +3242,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the update
      * @see PreparedStatement#executeUpdate()
      */
-    @SafeVarargs
     public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3298,7 +3285,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the update
      * @see PreparedStatement#executeUpdate()
      */
-    @SafeVarargs
     public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3654,7 +3640,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the statement
      * @see PreparedStatement#execute()
      */
-    @SafeVarargs
     public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3686,7 +3671,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the statement
      * @see PreparedStatement#execute()
      */
-    @SafeVarargs
     public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3911,7 +3895,6 @@ public final class JdbcUtil {
                     parameterTypes[i] = propInfo.dbType;
                 }
             } else if (parameter_0 instanceof Map) {
-                @SuppressWarnings("unchecked")
                 final Map<String, Object> m = (Map<String, Object>) parameter_0;
 
                 for (int i = 0; i < parameterCount; i++) {
@@ -6923,7 +6906,7 @@ public final class JdbcUtil {
      * @return {@code true} if the value is null or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
-        return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b.booleanValue())
+        return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b)
                 || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
@@ -8202,7 +8185,8 @@ public final class JdbcUtil {
                                         propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
                                     }
                                 } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                    logger.warn(
+                                            "Can't set generated keys by id type: " + (id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass())));
                                 }
                             }));
 

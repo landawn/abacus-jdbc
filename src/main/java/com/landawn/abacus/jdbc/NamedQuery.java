@@ -2753,7 +2753,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         return this;
     }
-    
+
     /**
      * Sets a CLOB (Character Large Object) parameter using a Reader for the specified parameter name.
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
@@ -4102,7 +4102,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return this;
     }
 
-
     /**
      * Adds a collection of parameter sets for batch execution.
      *
@@ -4145,7 +4144,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if batchParameters is null or contains invalid parameter objects
      * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      * @see #setParameters(Object)
-     * @see #executeBatch()
+     * @see #addBatch()
      */
     @Override
     public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
@@ -4201,7 +4200,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs or this method is called on a closed PreparedStatement
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
-     * @see #executeBatch()
+     * @see #addBatch()
      */
     @Beta
     @Override

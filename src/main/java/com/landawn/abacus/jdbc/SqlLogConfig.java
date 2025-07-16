@@ -28,8 +28,8 @@ package com.landawn.abacus.jdbc;
  * @author Haiyang Li
  * @since 3.0
  * 
- * @see JdbcUtil#enableSqlLog(boolean)
- * @see JdbcUtil#enableSqlPerfLog(long)
+ * @see JdbcUtil#enableSqlLog()
+ * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long) 
  */
 final class SqlLogConfig {
     boolean isEnabled;

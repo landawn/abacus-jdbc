@@ -64,7 +64,7 @@ import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.Fnn;
+import com.landawn.abacus.util.Fnn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;

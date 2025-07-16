@@ -69,7 +69,6 @@ import java.util.Map;
  * </ul>
  *
  * @see MergedById
- * @see GroupBy
  * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)

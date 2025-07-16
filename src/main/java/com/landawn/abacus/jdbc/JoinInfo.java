@@ -527,26 +527,26 @@ public final class JoinInfo {
                 srcEntityKeyExtractorTmp = entity -> getJoinPropValue(srcPropInfo, entity);
                 referencedEntityKeyExtractorTmp = referencedPropInfo::getPropValue;
             } else if (srcPropInfos.length == 2) {
-                final PropInfo srcPropInfo_1 = srcPropInfos[0];
-                final PropInfo srcPropInfo_2 = srcPropInfos[1];
-                final PropInfo referencedPropInfo_1 = referencedPropInfos[0];
-                final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
+                final PropInfo srcPropInfo1 = srcPropInfos[0];
+                final PropInfo srcPropInfo2 = srcPropInfos[1];
+                final PropInfo referencedPropInfo1 = referencedPropInfos[0];
+                final PropInfo referencedPropInfo2 = referencedPropInfos[1];
 
-                srcEntityKeyExtractorTmp = entity -> Tuple.of(getJoinPropValue(srcPropInfo_1, entity), getJoinPropValue(srcPropInfo_2, entity));
-                referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity));
+                srcEntityKeyExtractorTmp = entity -> Tuple.of(getJoinPropValue(srcPropInfo1, entity), getJoinPropValue(srcPropInfo2, entity));
+                referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo1.getPropValue(entity), referencedPropInfo2.getPropValue(entity));
             } else if (srcPropInfos.length == 3) {
-                final PropInfo srcPropInfo_1 = srcPropInfos[0];
-                final PropInfo srcPropInfo_2 = srcPropInfos[1];
-                final PropInfo srcPropInfo_3 = srcPropInfos[2];
-                final PropInfo referencedPropInfo_1 = referencedPropInfos[0];
-                final PropInfo referencedPropInfo_2 = referencedPropInfos[1];
-                final PropInfo referencedPropInfo_3 = referencedPropInfos[2];
+                final PropInfo srcPropInfo1 = srcPropInfos[0];
+                final PropInfo srcPropInfo2 = srcPropInfos[1];
+                final PropInfo srcPropInfo3 = srcPropInfos[2];
+                final PropInfo referencedPropInfo1 = referencedPropInfos[0];
+                final PropInfo referencedPropInfo2 = referencedPropInfos[1];
+                final PropInfo referencedPropInfo3 = referencedPropInfos[2];
 
-                srcEntityKeyExtractorTmp = entity -> Tuple.of(getJoinPropValue(srcPropInfo_1, entity), getJoinPropValue(srcPropInfo_2, entity),
-                        getJoinPropValue(srcPropInfo_3, entity));
+                srcEntityKeyExtractorTmp = entity -> Tuple.of(getJoinPropValue(srcPropInfo1, entity), getJoinPropValue(srcPropInfo2, entity),
+                        getJoinPropValue(srcPropInfo3, entity));
 
-                referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo_1.getPropValue(entity), referencedPropInfo_2.getPropValue(entity),
-                        referencedPropInfo_3.getPropValue(entity));
+                referencedEntityKeyExtractorTmp = entity -> Tuple.of(referencedPropInfo1.getPropValue(entity), referencedPropInfo2.getPropValue(entity),
+                        referencedPropInfo3.getPropValue(entity));
             } else {
                 srcEntityKeyExtractorTmp = entity -> {
                     final List<Object> keys = new ArrayList<>(srcPropInfos.length);

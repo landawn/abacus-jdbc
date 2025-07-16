@@ -45,6 +45,8 @@ import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
+import com.landawn.abacus.jdbc.Jdbc.RowFilter;
+import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;

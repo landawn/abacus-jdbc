@@ -61,10 +61,8 @@ import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.Factory;
-import com.landawn.abacus.util.Fn.IntFunctions;
-import com.landawn.abacus.util.Fn.Suppliers;
 import com.landawn.abacus.util.ImmutableList;
+import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.ListMultimap;
 import com.landawn.abacus.util.Multimap;
 import com.landawn.abacus.util.N;
@@ -72,6 +70,7 @@ import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.ObjectPool;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -1683,7 +1682,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
-            return toCollection(columnGetterForAll, Factory.ofList());
+            return toCollection(columnGetterForAll, IntFunctions.ofList());
         }
 
         /**
@@ -2086,7 +2085,7 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public RowMapper<List<Object>> toList() {
-                return toCollection(Factory.ofList());
+                return toCollection(IntFunctions.ofList());
             }
 
             /**
@@ -2131,7 +2130,7 @@ public final class Jdbc {
             @SequentialOnly
             @Stateful
             public RowMapper<Map<String, Object>> toMap() {
-                return toMap(Factory.ofMap());
+                return toMap(IntFunctions.ofMap());
             }
 
             /**
@@ -3235,7 +3234,7 @@ public final class Jdbc {
          */
         @Beta
         static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
-            return toCollection(columnGetterForAll, Factory.ofList());
+            return toCollection(columnGetterForAll, IntFunctions.ofList());
         }
 
         /**
@@ -4681,14 +4680,14 @@ public final class Jdbc {
                     }
 
                     private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
-                        final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[columnCount];
+                        final ColumnGetter<?>[] columnGetters = new ColumnGetter<?>[columnCount];
                         final ColumnGetter<?> defaultColumnGetter = columnGetterMap.get(0);
 
                         for (int i = 0; i < columnCount; i++) {
-                            rsColumnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
+                            columnGetters[i] = columnGetterMap.getOrDefault(i + 1, defaultColumnGetter);
                         }
 
-                        return rsColumnGetters;
+                        return columnGetters;
                     }
                 };
             }
