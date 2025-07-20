@@ -90,7 +90,6 @@ public final class PreparedQuery extends AbstractQuery<PreparedStatement, Prepar
      * }</pre>
      * 
      * @param stmt the {@link PreparedStatement} to be wrapped by this query. Must not be {@code null}.
-     * @throws NullPointerException if {@code stmt} is {@code null}
      * @throws IllegalArgumentException if the statement has already been closed
      */
     PreparedQuery(final PreparedStatement stmt) {

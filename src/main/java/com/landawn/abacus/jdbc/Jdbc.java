@@ -1566,7 +1566,6 @@ public final class Jdbc {
          * @param <R> the type of output of the after function
          * @param after the function to apply after this mapper is applied
          * @return a composed RowMapper
-         * @throws NullPointerException if after is null
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
