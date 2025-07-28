@@ -37,6 +37,7 @@ import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.ConditionFactory;
 import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
@@ -1775,7 +1776,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             save(entity);
             return entity;
         } else {
-            N.merge(entity, dbEntity);
+            Beans.merge(entity, dbEntity);
             update(dbEntity, cond);
             return dbEntity;
         }

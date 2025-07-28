@@ -39,22 +39,23 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.query.SQLParser;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.samples.entity.EmployeeProject;
 import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fnn;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.query.SQLParser;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
@@ -591,27 +592,27 @@ public class UncheckedDaoTest {
         final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         uncheckedUserDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
         userFromDB = uncheckedUserDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         uncheckedUserDao.loadJoinEntitiesIfNull(userFromDB);
         System.out.println(userFromDB);
 
         userFromDB = uncheckedUserDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         uncheckedUserDao.loadJoinEntities(userFromDB, Device.class);
         System.out.println(userFromDB);
 
         userFromDB = uncheckedUserDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         uncheckedUserDao.loadJoinEntitiesIfNull(userFromDB, Address.class);
         System.out.println(userFromDB);
 
         userFromDB = uncheckedUserDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         uncheckedUserDao.loadAllJoinEntities(userFromDB, true);
         System.out.println(userFromDB);
 
@@ -645,32 +646,32 @@ public class UncheckedDaoTest {
             addressDao.insert(address);
         }
 
-        List<User> users2 = Stream.of(users).map(N::copy).toList();
-        List<User> users3 = Stream.of(users).map(N::copy).toList();
+        List<User> users2 = Stream.of(users).map(Beans::copy).toList();
+        List<User> users3 = Stream.of(users).map(Beans::copy).toList();
 
         uncheckedUserDao.loadAllJoinEntities(users2);
         System.out.println(users2);
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         uncheckedUserDao.loadJoinEntitiesIfNull(users2);
         System.out.println(users2);
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         uncheckedUserDao.loadJoinEntities(users2, Device.class);
         System.out.println(users2);
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         uncheckedUserDao.loadJoinEntitiesIfNull(users2, Address.class);
         System.out.println(users2);
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         uncheckedUserDao.loadAllJoinEntities(users2, true);
         System.out.println(users2);

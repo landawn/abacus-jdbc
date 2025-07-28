@@ -30,6 +30,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
@@ -1236,7 +1237,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         }
 
         final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .filter(joinEntityPropName -> N.getPropValue(entity, joinEntityPropName) == null)
+                .filter(joinEntityPropName -> Beans.getPropValue(entity, joinEntityPropName) == null)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
                 .toList();
 

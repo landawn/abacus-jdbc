@@ -45,12 +45,14 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.condition.ConditionFactory.CB;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SQLParser;
+import com.landawn.abacus.query.condition.ConditionFactory.CB;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
@@ -60,6 +62,7 @@ import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.util.Array;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.EntityId;
@@ -68,8 +71,6 @@ import com.landawn.abacus.util.Fnn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.query.SQLBuilder.PSC;
-import com.landawn.abacus.query.SQLParser;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
@@ -439,7 +440,7 @@ public class DaoTest {
         final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        final List<User> dbUsers = userDao.batchGet(ids).stream().map(N::copy).collect(Collectors.toList());
+        final List<User> dbUsers = userDao.batchGet(ids).stream().map(Beans::copy).collect(Collectors.toList());
 
         dbUsers.forEach(it -> it.setFirstName(Strings.uuid()));
 
@@ -1195,7 +1196,7 @@ public class DaoTest {
         final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
@@ -1235,7 +1236,7 @@ public class DaoTest {
         final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
@@ -1277,27 +1278,27 @@ public class DaoTest {
         final Address address = Address.builder().userId(userFromDB.getId()).street("infinite loop 1").city("Cupertino").build();
         addressDao.insert(address);
 
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB);
         System.out.println(userFromDB);
 
         userFromDB = userDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadJoinEntitiesIfNull(userFromDB);
         System.out.println(userFromDB);
 
         userFromDB = userDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadJoinEntities(userFromDB, Device.class);
         System.out.println(userFromDB);
 
         userFromDB = userDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadJoinEntitiesIfNull(userFromDB, Address.class);
         System.out.println(userFromDB);
 
         userFromDB = userDao.gett(100L);
-        N.copy(userFromDB);
+        Beans.copy(userFromDB);
         userDao.loadAllJoinEntities(userFromDB, true);
         System.out.println(userFromDB);
 
@@ -1334,32 +1335,32 @@ public class DaoTest {
             addressDao.insert(address);
         }
 
-        List<User> users2 = Stream.of(users).map(N::copy).toList();
-        List<User> users3 = Stream.of(users).map(N::copy).toList();
+        List<User> users2 = Stream.of(users).map(Beans::copy).toList();
+        List<User> users3 = Stream.of(users).map(Beans::copy).toList();
 
         userDao.loadAllJoinEntities(users2);
         users2.forEach(Fn.println());
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         userDao.loadJoinEntitiesIfNull(users2);
         users2.forEach(Fn.println());
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         userDao.loadJoinEntities(users2, Device.class);
         users2.forEach(Fn.println());
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         userDao.loadJoinEntitiesIfNull(users2, Address.class);
         System.out.println(users2);
 
-        users2 = Stream.of(users).map(N::copy).toList();
-        users3 = Stream.of(users).map(N::copy).toList();
+        users2 = Stream.of(users).map(Beans::copy).toList();
+        users3 = Stream.of(users).map(Beans::copy).toList();
 
         userDao.loadAllJoinEntities(users2, true);
         users2.forEach(Fn.println());

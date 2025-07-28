@@ -86,6 +86,7 @@ import com.landawn.abacus.query.SQLMapper;
 import com.landawn.abacus.query.SQLOperation;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
@@ -3876,7 +3877,7 @@ public final class JdbcUtil {
 
             parameterValues = new Object[parameterCount];
 
-            if (ClassUtil.isBeanClass(cls)) {
+            if (Beans.isBeanClass(cls)) {
                 @SuppressWarnings("UnnecessaryLocalVariable")
                 final Object entity = parameter_0;
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
@@ -3966,7 +3967,7 @@ public final class JdbcUtil {
 
         final Class<?> cls = parameters[0].getClass();
 
-        return ClassUtil.isBeanClass(cls) || ClassUtil.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
+        return Beans.isBeanClass(cls) || Beans.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
 
     static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
@@ -5713,7 +5714,7 @@ public final class JdbcUtil {
             return true;
         } else if (value instanceof EntityId) {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
-        } else if (ClassUtil.isBeanClass(value.getClass())) {
+        } else if (Beans.isBeanClass(value.getClass())) {
             final Class<?> entityClass = value.getClass();
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
 
@@ -6353,7 +6354,7 @@ public final class JdbcUtil {
                 BeanInfo propBeanInfo = null;
 
                 for (int i = 0, len = strs.length; i < len; i++) {
-                    propBeanInfo = ClassUtil.isBeanClass(propClass) ? ParserUtil.getBeanInfo(propClass) : null;
+                    propBeanInfo = Beans.isBeanClass(propClass) ? ParserUtil.getBeanInfo(propClass) : null;
                     propInfo = propBeanInfo == null ? null : propBeanInfo.getPropInfo(strs[i]);
 
                     if (propInfo == null) {
@@ -6400,7 +6401,7 @@ public final class JdbcUtil {
     //            java.lang.reflect.Type[] typeArguments = parameterizedType.getActualTypeArguments();
     //
     //            if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
-    //                if (!ClassUtil.isBeanClass((Class) typeArguments[0])) {
+    //                if (!Beans.isBeanClass((Class) typeArguments[0])) {
     //                    throw new IllegalArgumentException(
     //                            "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
     //                                    + typeArguments[0]);
@@ -8120,7 +8121,7 @@ public final class JdbcUtil {
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
             final Class<? extends Dao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
-        if (!ClassUtil.isBeanClass(entityClass)) {
+        if (!Beans.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
@@ -8138,7 +8139,7 @@ public final class JdbcUtil {
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = !isNoId && idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
-            final BeanInfo idBeanInfo = ClassUtil.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
+            final BeanInfo idBeanInfo = Beans.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
 
             final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? idPropInfo::getPropValue //
@@ -8154,7 +8155,7 @@ public final class JdbcUtil {
                                 final Object ret = idBeanInfo.createBeanResult();
 
                                 for (final PropInfo propInfo : idPropInfoList) {
-                                    ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
+                                    Beans.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
                                 }
 
                                 return (ID) idBeanInfo.finishBeanResult(ret);
@@ -8177,12 +8178,12 @@ public final class JdbcUtil {
                                     logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             } : (id, entity) -> {
-                                if (id != null && ClassUtil.isBeanClass(id.getClass())) {
+                                if (id != null && Beans.isBeanClass(id.getClass())) {
                                     @SuppressWarnings("UnnecessaryLocalVariable")
                                     final Object entityId = id;
 
                                     for (final PropInfo propInfo : idPropInfoList) {
-                                        propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
+                                        propInfo.setPropValue(entity, Beans.getPropValue(entityId, propInfo.name));
                                     }
                                 } else {
                                     logger.warn(

@@ -26,12 +26,11 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import javax.sql.DataSource;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
-import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
@@ -44,16 +43,20 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.type.Type;
-import com.landawn.abacus.util.AsyncExecutor;
-import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLMapper;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.ConditionFactory;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -66,8 +69,6 @@ import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream;
-
-import javax.sql.DataSource;
 
 /**
  * The {@code Dao} interface provides a comprehensive data access abstraction layer for database operations.
@@ -2184,7 +2185,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             save(entity);
             return entity;
         } else {
-            N.merge(entity, dbEntity);
+            Beans.merge(entity, dbEntity);
             update(dbEntity, cond);
             return dbEntity;
         }

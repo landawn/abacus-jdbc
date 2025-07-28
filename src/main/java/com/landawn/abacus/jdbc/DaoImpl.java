@@ -116,18 +116,18 @@ import com.landawn.abacus.query.condition.Limit;
 import com.landawn.abacus.query.condition.SubQuery;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.IntFunctions;
-import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.Immutable;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.ImmutableSet;
+import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.Joiner;
 import com.landawn.abacus.util.MutableBoolean;
 import com.landawn.abacus.util.N;
@@ -138,6 +138,7 @@ import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Splitter.MapSplitter;
 import com.landawn.abacus.util.Strings;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -1083,7 +1084,7 @@ final class DaoImpl {
                 }
             }
         } else if (Strings.isNotEmpty(mappedByKey)) {
-            final Class<?> targetEntityClass = !ClassUtil.isBeanClass(secondReturnEleType) ? entityClass : secondReturnEleType;
+            final Class<?> targetEntityClass = !Beans.isBeanClass(secondReturnEleType) ? entityClass : secondReturnEleType;
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetEntityClass);
             final PropInfo propInfo = entityInfo.getPropInfo(mappedByKey);
             final Function<Object, Object> keyExtractor = propInfo::getPropValue;
@@ -1098,7 +1099,7 @@ final class DaoImpl {
         } else if (N.notEmpty(mergedByIds)) {
             if (returnType.isAssignableFrom(Collection.class) || returnType.isAssignableFrom(u.Optional.class)
                     || returnType.isAssignableFrom(java.util.Optional.class)) {
-                final Class<?> targetEntityClass = !ClassUtil.isBeanClass(firstReturnEleType) ? entityClass : firstReturnEleType;
+                final Class<?> targetEntityClass = !Beans.isBeanClass(firstReturnEleType) ? entityClass : firstReturnEleType;
                 ParserUtil.getBeanInfo(targetEntityClass);
                 final boolean isCollection = returnType.isAssignableFrom(Collection.class);
                 final boolean isJavaOption = returnType.isAssignableFrom(java.util.Optional.class);
@@ -1198,8 +1199,8 @@ final class DaoImpl {
     }
 
     private static boolean isFindOrListTargetClass(final Class<?> cls) {
-        return ClassUtil.isBeanClass(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
-                || ClassUtil.isRecordClass(cls);
+        return Beans.isBeanClass(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
+                ||Beans.isRecordClass(cls);
     }
 
     private static Class<?> getFirstReturnEleType(final Method method) {
@@ -1300,7 +1301,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((CallableQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
-                } else if (ClassUtil.isBeanClass(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) || ClassUtil.isRecordClass(paramTypeOne)) {
+                } else if (Beans.isBeanClass(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) ||Beans.isRecordClass(paramTypeOne)) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", parameters for call(procedure) have to be bound with names through annotation @Bind, or Map. Entity/EntityId type parameter are not supported");
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
@@ -1321,7 +1322,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (queryInfo.isSingleParameter) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
-                } else if (ClassUtil.isBeanClass(paramTypeOne) || ClassUtil.isRecordClass(paramTypeOne)) {
+                } else if (Beans.isBeanClass(paramTypeOne) ||Beans.isRecordClass(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
@@ -1868,7 +1869,7 @@ final class DaoImpl {
                 .orElseNull();
 
         if (N.notEmpty(typeArguments)) {
-            if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !ClassUtil.isBeanClass((Class) typeArguments[0])) {
+            if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !Beans.isBeanClass((Class) typeArguments[0])) {
                 throw new IllegalArgumentException(
                         "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
                                 + typeArguments[0]);
@@ -1897,13 +1898,13 @@ final class DaoImpl {
                             + " must have at least one field annotated with @Id");
                 } else if (idFieldNames.size() == 1 && !SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
                     if (!(ClassUtil.wrap((Class) typeArguments[1]))
-                            .isAssignableFrom(ClassUtil.wrap(ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
+                            .isAssignableFrom(ClassUtil.wrap(Beans.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao: " + ClassUtil.getCanonicalClassName(daoInterface)
                                 + " is not assignable from the id property type: "
-                                + ClassUtil.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
+                                + Beans.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
-                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || ClassUtil.isBeanClass((Class) typeArguments[1])
-                        || ClassUtil.isRecordClass((Class) typeArguments[1]))) {
+                } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || Beans.isBeanClass((Class) typeArguments[1])
+                        ||Beans.isRecordClass((Class) typeArguments[1]))) {
                     throw new IllegalArgumentException(
                             "To support composite ids, the 'ID' type must be EntityId/Entity/Record. It can't be: " + typeArguments[1]);
                 }
@@ -1932,7 +1933,7 @@ final class DaoImpl {
 
         final Class<?> idClass = isCrudDao ? (isCrudDaoL ? Long.class : (Class) typeArguments[1]) : null;
         final boolean isEntityId = idClass != null && EntityId.class.isAssignableFrom(idClass);
-        final BeanInfo idBeanInfo = ClassUtil.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
+        final BeanInfo idBeanInfo = Beans.isBeanClass(idClass) ? ParserUtil.getBeanInfo(idClass) : null;
 
         final Function<Condition, SQLBuilder.SP> selectFromSQLBuilderFunc = sbc.equals(PSC.class)
                 ? cond -> cond instanceof final Criteria criteria && Strings.isNotEmpty(criteria.preselect())
@@ -2039,11 +2040,11 @@ final class DaoImpl {
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
                 : (isEntityId ? id -> CF.id2Cond((EntityId) id)
                         : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
-                                : ClassUtil.isBeanClass(idClass) || ClassUtil.isRecordClass(idClass) ? ConditionFactory::eqAnd
+                                : Beans.isBeanClass(idClass) ||Beans.isRecordClass(idClass) ? ConditionFactory::eqAnd
                                         : id -> CF.eq(oneIdPropName, id));
 
         N.checkArgument(
-                idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (ClassUtil.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
+                idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (Beans.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
                 "Id type/class can not be EntityId/Map or Entity for single id ");
 
         String sql_getById = null;
@@ -2053,7 +2054,7 @@ final class DaoImpl {
         String sql_updateById = null;
         String sql_deleteById = null;
 
-        final boolean noOtherInsertPropNameExceptIdPropNames = idPropNameSet.containsAll(ClassUtil.getPropNameList(entityClass))
+        final boolean noOtherInsertPropNameExceptIdPropNames = idPropNameSet.containsAll(Beans.getPropNameList(entityClass))
                 || N.isEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet));
 
         if (sbc.equals(PSC.class)) {
@@ -4399,7 +4400,7 @@ final class DaoImpl {
 
                             final Object firstId = N.firstElement(ids).get();
                             final boolean isMap = firstId instanceof Map;
-                            final boolean isEntity = firstId != null && ClassUtil.isBeanClass(firstId.getClass());
+                            final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
 
                             N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
@@ -4515,7 +4516,7 @@ final class DaoImpl {
 
                             final Object firstId = N.firstElement(ids).get();
                             final boolean isMap = firstId instanceof Map;
-                            final boolean isEntity = firstId != null && ClassUtil.isBeanClass(firstId.getClass());
+                            final boolean isEntity = firstId != null && Beans.isBeanClass(firstId.getClass());
 
                             N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId),
                                     "Input 'ids' can not be EntityIds/Maps or entities for single id ");
@@ -5293,9 +5294,9 @@ final class DaoImpl {
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
-                    if (stmtParamLen == 1 && (ClassUtil.isBeanClass(paramTypes[stmtParamIndexes[0]])
+                    if (stmtParamLen == 1 && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]])
                             || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
-                            || ClassUtil.isRecordClass(paramTypes[stmtParamIndexes[0]])) && !isNamedQuery) {
+                            ||Beans.isRecordClass(paramTypes[stmtParamIndexes[0]])) && !isNamedQuery) {
                         throw new UnsupportedOperationException(
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
                                         + fullClassMethodName);
@@ -5350,7 +5351,7 @@ final class DaoImpl {
                     }
 
                     if (Strings.isNotEmpty(mappedByKey)) {
-                        final Method mappedByKeyMethod = ClassUtil.getPropGetMethod(entityClass, mappedByKey);
+                        final Method mappedByKeyMethod = Beans.getPropGetMethod(entityClass, mappedByKey);
 
                         if (mappedByKeyMethod == null) {
                             throw new IllegalArgumentException(
@@ -5395,7 +5396,7 @@ final class DaoImpl {
                             }
                         } else {
                             for (final String mergedById : mergedByIds) {
-                                final Method mergedByIdMethod = ClassUtil.getPropGetMethod(entityClass, mergedById);
+                                final Method mergedByIdMethod = Beans.getPropGetMethod(entityClass, mergedById);
 
                                 if (mergedByIdMethod == null) {
                                     throw new IllegalArgumentException("No method found by merged id: " + mergedById + " in entity class: "
@@ -5502,7 +5503,7 @@ final class DaoImpl {
                             call = (proxy, args) -> {
                                 final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
-                                        && ClassUtil.isBeanClass(args[stmtParamIndexes[0]].getClass());
+                                        && Beans.isBeanClass(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
@@ -5582,7 +5583,7 @@ final class DaoImpl {
                                     }
                                 }
 
-                                final boolean isEntity = ClassUtil.isBeanClass(N.firstOrNullIfEmpty(batchParameters).getClass());
+                                final boolean isEntity = Beans.isBeanClass(N.firstOrNullIfEmpty(batchParameters).getClass());
 
                                 if (JdbcUtil.isAllNullIds(ids)) {
                                     ids = new ArrayList<>();

@@ -57,6 +57,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.EntityId;
@@ -234,7 +235,7 @@ public final class Jdbc {
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> createForArray(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
-            N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
+            N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             return new BiParametersSetter<>() {
                 private final int len = fieldNameList.size();
@@ -287,7 +288,7 @@ public final class Jdbc {
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> createForList(final List<String> fieldNameList, final Class<?> entityClass) {
             N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
-            N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
+            N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             return new BiParametersSetter<>() {
                 private final int len = fieldNameList.size();
@@ -2689,7 +2690,7 @@ public final class Jdbc {
                         }
                     };
                 }
-            } else if (ClassUtil.isBeanClass(targetClass)) {
+            } else if (Beans.isBeanClass(targetClass)) {
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                 return new BiRowMapper<>() {
@@ -2855,7 +2856,7 @@ public final class Jdbc {
                 return to(entityClass, ignoreNonMatchedColumns);
             }
 
-            N.checkArgument(ClassUtil.isBeanClass(entityClass), "{} is not an entity class", entityClass);
+            N.checkArgument(Beans.isBeanClass(entityClass), "{} is not an entity class", entityClass);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
@@ -3679,7 +3680,7 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (ClassUtil.isBeanClass(targetClass)) {
+                } else if (Beans.isBeanClass(targetClass)) {
                     return new BiRowMapper<>() {
                         private final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
@@ -4374,7 +4375,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static RowExtractor createBy(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndFieldNameMap) {
-            N.checkArgument(ClassUtil.isBeanClass(entityClassForFetch), "entityClassForFetch");
+            N.checkArgument(Beans.isBeanClass(entityClassForFetch), "entityClassForFetch");
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);
 

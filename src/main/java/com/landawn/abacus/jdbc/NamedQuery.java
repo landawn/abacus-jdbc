@@ -42,12 +42,13 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.IntList;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.query.ParsedSql;
 
 /**
  * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's NamedParameterJdbcTemplate.
@@ -3937,7 +3938,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         final Class<?> cls = parameters.getClass();
 
-        if (ClassUtil.isBeanClass(cls)) {
+        if (Beans.isBeanClass(cls)) {
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
             PropInfo propInfo = null;
 
@@ -4004,7 +4005,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
 
         final Class<?> cls = entity.getClass();
-        if (ClassUtil.isBeanClass(cls)) {
+        if (Beans.isBeanClass(cls)) {
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
             PropInfo propInfo = null;
             Object propValue = null;
@@ -4234,7 +4235,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             } else {
                 final Class<?> cls = first.getClass();
 
-                if (ClassUtil.isBeanClass(cls)) {
+                if (Beans.isBeanClass(cls)) {
                     final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                     final PropInfo[] propInfos = new PropInfo[parameterCount];
 
