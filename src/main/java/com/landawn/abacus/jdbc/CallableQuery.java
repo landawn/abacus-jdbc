@@ -50,7 +50,7 @@ import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.DataSet;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
@@ -1515,8 +1515,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalArgumentException if the entity or parameterNames is null
      * @throws SQLException if a database access error occurs or if a parameter name doesn't
      *                      correspond to a valid property in the entity
-     * @see ClassUtil#getPropNameList(Class)
-     * @see ClassUtil#getPropNames(Class, Collection)
+     * @see Beans#getPropNameList(Class)
+     * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {

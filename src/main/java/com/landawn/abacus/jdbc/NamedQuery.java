@@ -3992,8 +3992,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if entity or parameterNames is null, if entity is not a bean class,
      *         if a property is not found in the entity, or if a parameter name is not found in the query
      * @throws SQLException if a database access error occurs
-     * @see ClassUtil#getPropNameList(Class)
-     * @see ClassUtil#getPropNames(Class, Collection)
+     * @see Beans#getPropNameList(Class)
+     * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
      */
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException {
