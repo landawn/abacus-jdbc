@@ -1023,18 +1023,18 @@ public final class JdbcUtils {
      * @param reader the Reader containing the data to be imported
      * @param sourceDataSource the DataSource to obtain database connections
      * @param insertSQL the SQL insert statement with placeholders
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
      */
     public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSQL,
-            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> line2Parameters) throws SQLException, IOException, E {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return importData(reader, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
+            return importData(reader, conn, insertSQL, JdbcUtil.DEFAULT_BATCH_SIZE, 0, line2Parameters);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -1105,14 +1105,14 @@ public final class JdbcUtils {
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
      */
     public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
+            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> line2Parameters)
             throws IllegalArgumentException, SQLException, IOException, E {
         // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative");
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1126,7 +1126,7 @@ public final class JdbcUtils {
             Object[] row = null;
 
             while ((line = br.readLine()) != null) {
-                row = func.apply(line);
+                row = line2Parameters.apply(line);
 
                 if (row == null) {
                     continue;
