@@ -1212,7 +1212,7 @@ final class DaoImpl {
 
     private static boolean isFindOrListTargetClass(final Class<?> cls) {
         return Beans.isBeanClass(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
-                ||Beans.isRecordClass(cls);
+                || Beans.isRecordClass(cls);
     }
 
     private static Class<?> getFirstReturnEleType(final Method method) {
@@ -1313,7 +1313,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((CallableQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
-                } else if (Beans.isBeanClass(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) ||Beans.isRecordClass(paramTypeOne)) {
+                } else if (Beans.isBeanClass(paramTypeOne) || EntityId.class.isAssignableFrom(paramTypeOne) || Beans.isRecordClass(paramTypeOne)) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", parameters for call(procedure) have to be bound with names through annotation @Bind, or Map. Entity/EntityId type parameter are not supported");
                 } else if (Collection.class.isAssignableFrom(paramTypeOne)) {
@@ -1334,7 +1334,7 @@ final class DaoImpl {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setObject(paramName, args[stmtParamIndexes[0]]);
                 } else if (queryInfo.isSingleParameter) {
                     parametersSetter = (preparedQuery, args) -> preparedQuery.setObject(1, args[stmtParamIndexes[0]]);
-                } else if (Beans.isBeanClass(paramTypeOne) ||Beans.isRecordClass(paramTypeOne)) {
+                } else if (Beans.isBeanClass(paramTypeOne) || Beans.isRecordClass(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[stmtParamIndexes[0]]);
                 } else if (Map.class.isAssignableFrom(paramTypeOne)) {
                     parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters((Map<String, ?>) args[stmtParamIndexes[0]]);
@@ -1916,7 +1916,7 @@ final class DaoImpl {
                                 + Beans.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
                 } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || Beans.isBeanClass((Class) typeArguments[1])
-                        ||Beans.isRecordClass((Class) typeArguments[1]))) {
+                        || Beans.isRecordClass((Class) typeArguments[1]))) {
                     throw new IllegalArgumentException(
                             "To support composite ids, the 'ID' type must be EntityId/Entity/Record. It can't be: " + typeArguments[1]);
                 }
@@ -2052,11 +2052,9 @@ final class DaoImpl {
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
                 : (isEntityId ? id -> CF.id2Cond((EntityId) id)
                         : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
-                                : Beans.isBeanClass(idClass) ||Beans.isRecordClass(idClass) ? ConditionFactory::eqAnd
-                                        : id -> CF.eq(oneIdPropName, id));
+                                : Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? ConditionFactory::eqAnd : id -> CF.eq(oneIdPropName, id));
 
-        N.checkArgument(
-                idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (Beans.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
+        N.checkArgument(idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (Beans.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
                 "Id type/class can not be EntityId/Map or Entity for single id ");
 
         String sql_getById = null;
@@ -5306,9 +5304,10 @@ final class DaoImpl {
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
-                    if (stmtParamLen == 1 && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]])
-                            || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
-                            ||Beans.isRecordClass(paramTypes[stmtParamIndexes[0]])) && !isNamedQuery) {
+                    if (stmtParamLen == 1
+                            && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                                    || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
+                            && !isNamedQuery) {
                         throw new UnsupportedOperationException(
                                 "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
                                         + fullClassMethodName);
@@ -6094,10 +6093,10 @@ final class DaoImpl {
                         Object result = null;
 
                         if (Strings.isNotEmpty(cacheKey)) {
-                            if (isAnnotatedCacheResult) {
-                                result = daoCacheToUseInMethod.get(cacheKey, proxy, args, methodSignature);
-                            } else if (isLocalThreadCacheEnabled) {
+                            if (isLocalThreadCacheEnabled) {
                                 result = localThreadCache.get(cacheKey, proxy, args, methodSignature);
+                            } else if (isAnnotatedCacheResult) {
+                                result = daoCacheToUseInMethod.get(cacheKey, proxy, args, methodSignature);
                             }
                         }
 
@@ -6109,12 +6108,12 @@ final class DaoImpl {
                             try {
                                 result = temp.apply(proxy, args);
                             } finally {
-                                if (isAnnotatedRefreshResult) {
-                                    daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
-                                }
-
                                 if (isRefreshLocalThreadCacheRequired) {
                                     localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
+                                }
+
+                                if (isAnnotatedRefreshResult) {
+                                    daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
                                 }
                             }
                         } else {
@@ -6122,7 +6121,9 @@ final class DaoImpl {
                         }
 
                         if (Strings.isNotEmpty(cacheKey) && result != null) {
-                            if (isAnnotatedCacheResult) {
+                            if (isLocalThreadCacheEnabled) {
+                                localThreadCache.put(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
+                            } else if (isAnnotatedCacheResult) {
                                 if (result instanceof final DataSet dataSet) {
                                     if (dataSet.size() >= cacheResultAnno.minSize() && dataSet.size() <= cacheResultAnno.maxSize()) {
                                         daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args,
@@ -6138,8 +6139,6 @@ final class DaoImpl {
                                 } else {
                                     daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args, methodSignature);
                                 }
-                            } else if (isLocalThreadCacheEnabled) {
-                                localThreadCache.put(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
                             }
                         }
 
