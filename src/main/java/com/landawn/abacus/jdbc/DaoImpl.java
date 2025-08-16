@@ -161,6 +161,18 @@ import com.landawn.abacus.util.stream.IntStream.IntStreamEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
+/**
+ * Internal implementation class for DAO (Data Access Object) functionality.
+ * This class provides the core implementation for dynamic proxy-based DAO interfaces
+ * using annotations like @Select, @Insert, @Update, @Delete, and @Call.
+ * 
+ * <p>This is an internal class and should not be used directly by application code.
+ * Use the public DAO interfaces and JdbcUtil methods instead.</p>
+ * 
+ * @see Dao
+ * @see CrudDao
+ * @see JdbcUtil#createDao(Class)
+ */
 @Internal
 @SuppressWarnings({ "deprecation", "java:S1192", "resource" })
 final class DaoImpl {
