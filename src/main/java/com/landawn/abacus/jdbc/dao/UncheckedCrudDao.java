@@ -785,7 +785,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Gets the entity with the specified ID. Returns the entity directly or null if not found.
-     * The 'gett' naming convention indicates this method returns T directly (may be null).
+     * The 'gett' naming convention indicates this method returns T directly.
      * 
      * <p>Example usage:</p>
      * <pre>{@code

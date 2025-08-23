@@ -1083,7 +1083,7 @@ final class DaoImpl {
                     final Class<?> resultExtractorReturnClass = resultExtractorReturnType instanceof Class ? (Class<?>) resultExtractorReturnType
                             : (Class<?>) ((ParameterizedType) resultExtractorReturnType).getRawType();
 
-                    if (returnType.isAssignableFrom(resultExtractorReturnClass)) {
+                    if (!returnType.isAssignableFrom(resultExtractorReturnClass)) {
                         throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName()
                                 + " is not assignable from the return type of ResultExtractor: " + resultExtractorReturnClass);
                     }
@@ -1099,6 +1099,9 @@ final class DaoImpl {
             final Class<?> targetEntityClass = !Beans.isBeanClass(secondReturnEleType) ? entityClass : secondReturnEleType;
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetEntityClass);
             final PropInfo propInfo = entityInfo.getPropInfo(mappedByKey);
+            if (propInfo == null) {
+                throw new IllegalArgumentException("No property found with name: " + mappedByKey + " in class: " + targetEntityClass);
+            }
             final Function<Object, Object> keyExtractor = propInfo::getPropValue;
             final List<String> mergedByKey = N.isEmpty(mergedByIds) ? N.asList(mappedByKey) : mergedByIds;
 
