@@ -144,7 +144,7 @@ public @interface CacheResult {
     /**
      * Specifies the minimum size requirement for caching collection results.
      * Results with fewer elements than this value will not be cached.
-     * Only applies to methods returning {@code Collection} or {@code DataSet}.
+     * Only applies to methods returning {@code Collection} or {@code Dataset}.
      * 
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
@@ -164,7 +164,7 @@ public @interface CacheResult {
     /**
      * Specifies the maximum size limit for caching collection results.
      * Results with more elements than this value will not be cached.
-     * Only applies to methods returning {@code Collection} or {@code DataSet}.
+     * Only applies to methods returning {@code Collection} or {@code Dataset}.
      * 
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>

@@ -38,7 +38,7 @@ import com.landawn.abacus.query.condition.ConditionFactory;
 import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Beans;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.u.Nullable;
@@ -960,27 +960,27 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * Executes a query and returns the results as a DataSet containing all matching records.
+     * Executes a query and returns the results as a Dataset containing all matching records.
      * 
      * <p>Example usage:</p>
      * <pre>{@code
-     * DataSet activeUsers = userDao.query(CF.eq("status", "ACTIVE"));
+     * Dataset activeUsers = userDao.query(CF.eq("status", "ACTIVE"));
      * activeUsers.forEach(row -> System.out.println(row.getString("email")));
      * }</pre>
      *
      * @param cond the condition to match
-     * @return a DataSet containing all matching records
+     * @return a Dataset containing all matching records
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    DataSet query(final Condition cond) throws UncheckedSQLException;
+    Dataset query(final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Executes a query selecting only specified properties and returns the results as a DataSet.
+     * Executes a query selecting only specified properties and returns the results as a Dataset.
      * 
      * <p>Example usage:</p>
      * <pre>{@code
-     * DataSet userEmails = userDao.query(
+     * Dataset userEmails = userDao.query(
      *     Arrays.asList("id", "email", "firstName"),
      *     CF.like("email", "%@company.com")
      * );
@@ -988,11 +988,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      *
      * @param selectPropNames the properties (columns) to be selected, or null to select all
      * @param cond the condition to match
-     * @return a DataSet containing the selected properties of matching records
+     * @return a Dataset containing the selected properties of matching records
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    DataSet query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
 
     /**
      * Executes a query and processes the result set using the provided result extractor.

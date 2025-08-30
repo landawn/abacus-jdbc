@@ -50,7 +50,7 @@ import com.landawn.abacus.samples.dao.UncheckedUserDaoL;
 import com.landawn.abacus.samples.dao.UserDao;
 import com.landawn.abacus.samples.dao.UserDaoL;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
@@ -221,7 +221,7 @@ public class JdbcTest {
         //            stmt.addBatch("select * from user1 where id > 990");
         //            stmt.executeBatch();
         //
-        //            JdbcUtil.extractAllResultSets(stmt).forEach(DataSet::println);
+        //            JdbcUtil.extractAllResultSets(stmt).forEach(Dataset::println);
         //
         //        }
 
@@ -230,7 +230,7 @@ public class JdbcTest {
         final String query1 = NSC.selectFrom(User.class).where(CF.lt("id", 0)).sql();
         final String query2 = NSC.selectFrom(User.class).where(CF.gt("id", 200)).sql();
 
-        final Tuple2<DataSet, DataSet> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
+        final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
                 .setInt(1, 10)
                 .setInt(2, 300)
                 .query2Resultsets(BiResultExtractor.TO_DATA_SET, BiResultExtractor.TO_DATA_SET);

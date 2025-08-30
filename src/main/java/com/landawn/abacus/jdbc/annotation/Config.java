@@ -32,7 +32,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *   <li>Automatic LIMIT clause addition for single-result queries</li>
  *   <li>ID generation behavior for insert operations</li>
  *   <li>Join condition handling with null values</li>
- *   <li>Column fetching strategies for DataSet queries</li>
+ *   <li>Column fetching strategies for Dataset queries</li>
  * </ul>
  * 
  * <p>Example usage:</p>
@@ -174,26 +174,26 @@ public @interface Config {
     boolean allowJoiningByNullOrDefaultValue() default false;
 
     /**
-     * Controls whether DataSet queries should fetch only columns that match entity class properties.
-     * When {@code true} (default), DataSet queries will only include columns that correspond
+     * Controls whether Dataset queries should fetch only columns that match entity class properties.
+     * When {@code true} (default), Dataset queries will only include columns that correspond
      * to properties in the target entity class, similar to {@link FetchColumnByEntityClass}.
      * 
-     * <p>This provides consistency between entity queries and DataSet queries,
+     * <p>This provides consistency between entity queries and Dataset queries,
      * and can improve performance by reducing unnecessary data transfer.</p>
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * @Config(fetchColumnByEntityClassForDataSetQuery = false)
+     * @Config(fetchColumnByEntityClassForDatasetQuery = false)
      * public interface ReportDao extends CrudDao<Report, Long> {
      *     // Will fetch all columns including calculated ones
      *     @Select("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
      *             "GROUP BY r.id")
-     *     DataSet getReportSummaries();
+     *     Dataset getReportSummaries();
      * }
      * }</pre>
      *
-     * @return {@code true} to fetch only entity columns in DataSet queries
+     * @return {@code true} to fetch only entity columns in Dataset queries
      */
-    boolean fetchColumnByEntityClassForDataSetQuery() default true;
+    boolean fetchColumnByEntityClassForDatasetQuery() default true;
 }

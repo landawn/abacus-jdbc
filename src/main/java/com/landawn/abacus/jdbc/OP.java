@@ -104,7 +104,7 @@ public enum OP {
      * <p>Example:
      * <pre>{@code
      * @Select(sql = "SELECT * FROM users WHERE age > ?", op = OP.query)
-     * DataSet queryUsersByAge(int age);
+     * Dataset queryUsersByAge(int age);
      * }</pre></p>
      * 
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code Select/NamedSelect}.
@@ -181,16 +181,16 @@ public enum OP {
     listAll,
 
     /**
-     * Retrieves all ResultSets from a stored procedure call as DataSets.
-     * Each ResultSet is converted to a DataSet for flexible data manipulation.
+     * Retrieves all ResultSets from a stored procedure call as Datasets.
+     * Each ResultSet is converted to a Dataset for flexible data manipulation.
      * 
-     * <p>Similar to listAll but returns DataSet objects which provide more
+     * <p>Similar to listAll but returns Dataset objects which provide more
      * flexibility for data processing and transformation compared to typed Lists.</p>
      * 
      * <p>Example:
      * <pre>{@code
      * @Call(sql = "{call getComplexReport(?, ?)}", op = OP.queryAll)
-     * List<DataSet> getComplexReport(Date startDate, Date endDate);
+     * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre></p>
      * 
      * <p>Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>

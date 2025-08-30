@@ -59,11 +59,11 @@ import com.landawn.abacus.jdbc.OP;
  *     
  *     // Multiple result sets
  *     @Call(sql = "{call get_user_details(?)}", op = OP.queryAll)
- *     List<DataSet> getUserDetails(Long userId);  // Returns user info + orders + payments
+ *     List<Dataset> getUserDetails(Long userId);  // Returns user info + orders + payments
  *     
  *     // With query timeout
  *     @Call(sql = "{call generate_report(?, ?)}", queryTimeout = 300)
- *     DataSet generateComplexReport(Date startDate, Date endDate);
+ *     Dataset generateComplexReport(Date startDate, Date endDate);
  * }
  * }</pre>
  * 
@@ -134,7 +134,7 @@ public @interface Call {
      * 
      * // In DAO
      * @Call(id = "monthlyRevenueReport")
-     * DataSet getMonthlyRevenue(int year, int month, OutParam<BigDecimal> totalRevenue);
+     * Dataset getMonthlyRevenue(int year, int month, OutParam<BigDecimal> totalRevenue);
      * }</pre>
      *
      * @return the procedure ID from SqlMapper
@@ -171,7 +171,7 @@ public @interface Call {
      * <pre>{@code
      * // Allow up to 10 minutes for complex calculation
      * @Call(sql = "{call calculate_yearly_statistics(?)}", queryTimeout = 600)
-     * DataSet calculateYearlyStats(int year);
+     * Dataset calculateYearlyStats(int year);
      * }</pre>
      *
      * @return timeout in seconds, or -1 for default timeout
@@ -210,16 +210,16 @@ public @interface Call {
      * <pre>{@code
      * // Procedure returns customer info, orders, and payments
      * @Call(sql = "{call get_customer_full_details(?)}", op = OP.queryAll)
-     * List<DataSet> getCustomerDetails(Long customerId);
+     * List<Dataset> getCustomerDetails(Long customerId);
      * 
      * // Usage
-     * List<DataSet> results = dao.getCustomerDetails(123L);
-     * DataSet customerInfo = results.get(0);
-     * DataSet orders = results.get(1);
-     * DataSet payments = results.get(2);
+     * List<Dataset> results = dao.getCustomerDetails(123L);
+     * Dataset customerInfo = results.get(0);
+     * Dataset orders = results.get(1);
+     * Dataset payments = results.get(2);
      * }</pre>
      * 
-     * <p>Note: When using {@code OP.queryAll}, the return type should be {@code List<DataSet>}
+     * <p>Note: When using {@code OP.queryAll}, the return type should be {@code List<Dataset>}
      * or use methods like {@code queryAll()}, {@code listAll()}, or {@code streamAll()} from
      * the query API.</p>
      *

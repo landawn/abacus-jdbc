@@ -44,7 +44,7 @@ import org.mockito.MockitoAnnotations;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IntFunctions;
@@ -209,9 +209,9 @@ public class JdbcTest extends TestBase {
 
     // ResultExtractor Tests
     @Test
-    public void testResultExtractorToDataSet() throws SQLException {
+    public void testResultExtractorToDataset() throws SQLException {
         when(mockResultSet.next()).thenReturn(false);
-        DataSet result = Jdbc.ResultExtractor.TO_DATA_SET.apply(mockResultSet);
+        Dataset result = Jdbc.ResultExtractor.TO_DATA_SET.apply(mockResultSet);
         assertNotNull(result);
     }
 
@@ -357,9 +357,9 @@ public class JdbcTest extends TestBase {
 
     // BiResultExtractor Tests
     @Test
-    public void testBiResultExtractorToDataSet() throws SQLException {
+    public void testBiResultExtractorToDataset() throws SQLException {
         when(mockResultSet.next()).thenReturn(false);
-        DataSet result = Jdbc.BiResultExtractor.TO_DATA_SET.apply(mockResultSet, Arrays.asList("col1"));
+        Dataset result = Jdbc.BiResultExtractor.TO_DATA_SET.apply(mockResultSet, Arrays.asList("col1"));
         assertNotNull(result);
     }
 
@@ -1653,14 +1653,14 @@ public class JdbcTest extends TestBase {
     @Test
     public void testNullHandling() throws SQLException {
         // Test null ResultSet in ResultExtractor
-        DataSet dataSet = Jdbc.ResultExtractor.TO_DATA_SET.apply(null);
-        assertNotNull(dataSet);
-        assertTrue(dataSet.isEmpty());
+        Dataset dataset = Jdbc.ResultExtractor.TO_DATA_SET.apply(null);
+        assertNotNull(dataset);
+        assertTrue(dataset.isEmpty());
 
         // Test null ResultSet in BiResultExtractor
-        DataSet biDataSet = Jdbc.BiResultExtractor.TO_DATA_SET.apply(null, Arrays.asList("col1"));
-        assertNotNull(biDataSet);
-        assertTrue(biDataSet.isEmpty());
+        Dataset biDataset = Jdbc.BiResultExtractor.TO_DATA_SET.apply(null, Arrays.asList("col1"));
+        assertNotNull(biDataset);
+        assertTrue(biDataset.isEmpty());
     }
 
     @Test

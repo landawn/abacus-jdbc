@@ -54,7 +54,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
@@ -1299,32 +1299,32 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws DuplicatedResultException, SQLException;
 
     /**
-     * Executes a query and returns the results as a DataSet.
-     * DataSet provides a flexible, column-oriented view of the results.
+     * Executes a query and returns the results as a Dataset.
+     * Dataset provides a flexible, column-oriented view of the results.
      *
      * <pre>{@code
-     * DataSet ds = dao.query(CF.gt("age", 18));
+     * Dataset ds = dao.query(CF.gt("age", 18));
      * for (int i = 0; i < ds.size(); i++) {
      *     System.out.println(ds.getString(i, "name"));
      * }
      * }</pre>
      *
      * @param cond the search condition
-     * @return DataSet containing the query results
+     * @return Dataset containing the query results
      * @throws SQLException if a database access error occurs
      */
-    DataSet query(final Condition cond) throws SQLException;
+    Dataset query(final Condition cond) throws SQLException;
 
     /**
-     * Executes a query for specific columns and returns results as a DataSet.
+     * Executes a query for specific columns and returns results as a Dataset.
      * Only the specified properties will be included in the result.
      *
      * @param selectPropNames the properties to select, null for all
      * @param cond the search condition
-     * @return DataSet containing the query results
+     * @return Dataset containing the query results
      * @throws SQLException if a database access error occurs
      */
-    DataSet query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
      * Executes a query and processes results with a custom result extractor.
@@ -1799,11 +1799,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Returns a paginated Stream of query results as DataSet pages.
+     * Returns a paginated Stream of query results as Dataset pages.
      * Each element in the stream represents one page of results. The condition must include orderBy for consistent pagination.
      *
      * <pre>{@code
-     * Stream<DataSet> pages = dao.paginate(
+     * Stream<Dataset> pages = dao.paginate(
      *     CF.criteria().where(CF.gt("id", 0)).orderBy("id"),
      *     100,
      *     (query, lastPageResult) -> {
@@ -1818,11 +1818,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page based on previous results
-     * @return stream of DataSet pages
+     * @return stream of Dataset pages
      */
     @Beta
     @LazyEvaluation
-    Stream<DataSet> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+    Stream<Dataset> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter);
 
     /**
      * Returns a paginated Stream with custom result extraction.
@@ -1857,19 +1857,19 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**
-     * Returns a paginated Stream with selected properties as DataSet pages.
+     * Returns a paginated Stream with selected properties as Dataset pages.
      * Only specified properties are included in each page.
      *
      * @param selectPropNames the properties to select, null for all
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page
-     * @return stream of DataSet pages with selected properties
+     * @return stream of Dataset pages with selected properties
      */
     @Beta
     @LazyEvaluation
-    Stream<DataSet> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
-            final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+    Stream<Dataset> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+            final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter);
 
     /**
      * Returns a paginated Stream of selected properties with custom extraction.

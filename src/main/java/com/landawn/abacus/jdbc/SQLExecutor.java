@@ -3264,7 +3264,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final String sql, final Object... parameters) {
+    //    public final Dataset query(final String sql, final Object... parameters) {
     //        return query(sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
@@ -3276,7 +3276,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final String sql, final StatementSetter statementSetter, final Object... parameters) {
+    //    public final Dataset query(final String sql, final StatementSetter statementSetter, final Object... parameters) {
     //        return query(sql, statementSetter, (JdbcSettings) null, parameters);
     //    }
     //
@@ -3288,7 +3288,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final Dataset query(final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return query(sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
@@ -3301,7 +3301,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final Dataset query(final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return query(sql, statementSetter, Jdbc.ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
     //    }
     //
@@ -3394,7 +3394,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final Connection conn, final String sql, final Object... parameters) {
+    //    public final Dataset query(final Connection conn, final String sql, final Object... parameters) {
     //        return query(conn, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
@@ -3407,7 +3407,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final Connection conn, final String sql, final StatementSetter statementSetter, final Object... parameters) {
+    //    public final Dataset query(final Connection conn, final String sql, final StatementSetter statementSetter, final Object... parameters) {
     //        return query(conn, sql, statementSetter, (JdbcSettings) null, parameters);
     //    }
     //
@@ -3420,7 +3420,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final Connection conn, final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final Dataset query(final Connection conn, final String sql, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return query(conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
@@ -3434,7 +3434,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet query(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
+    //    public final Dataset query(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
     //        return query(conn, sql, statementSetter, Jdbc.ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
     //    }
@@ -3593,7 +3593,7 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet queryAll(final List<String> sqls, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final Dataset queryAll(final List<String> sqls, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return queryAll(sqls, null, jdbcSettings, parameters);
     //    }
     //
@@ -3609,17 +3609,17 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final DataSet queryAll(final List<String> sqls, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
+    //    public final Dataset queryAll(final List<String> sqls, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        if (sqls.size() == 1) {
     //            return query(sqls.get(0), statementSetter, jdbcSettings, parameters);
     //        }
     //
     //        if (jdbcSettings != null && jdbcSettings.isQueryInParallel()) {
-    //            final List<DataSet> resultList = Stream.of(sqls).parallel(sqls.size()).map(sql -> query(sql, statementSetter, jdbcSettings, parameters)).toList();
+    //            final List<Dataset> resultList = Stream.of(sqls).parallel(sqls.size()).map(sql -> query(sql, statementSetter, jdbcSettings, parameters)).toList();
     //
     //            return Beans.merge(resultList);
     //        } else {
-    //            final List<DataSet> resultList = new ArrayList<>(sqls.size());
+    //            final List<Dataset> resultList = new ArrayList<>(sqls.size());
     //
     //            for (String sql : sqls) {
     //                resultList.add(query(sql, statementSetter, jdbcSettings, parameters));

@@ -59,7 +59,7 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.ImmutableList;
@@ -382,12 +382,12 @@ public final class Jdbc {
     public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
-         * A pre-defined ResultExtractor that converts a ResultSet to a DataSet.
-         * Returns an empty DataSet if the ResultSet is null.
+         * A pre-defined ResultExtractor that converts a ResultSet to a Dataset.
+         * Returns an empty Dataset if the ResultSet is null.
          */
-        ResultExtractor<DataSet> TO_DATA_SET = rs -> {
+        ResultExtractor<Dataset> TO_DATA_SET = rs -> {
             if (rs == null) {
-                return N.newEmptyDataSet();
+                return N.newEmptyDataset();
             }
 
             return JdbcUtil.extractData(rs);
@@ -895,7 +895,7 @@ public final class Jdbc {
          * @param <T> the entity type
          * @param targetClass the class of entities to create
          * @return a ResultExtractor that produces a List of merged entities
-         * @see DataSet#toMergedEntities(Class)
+         * @see Dataset#toMergedEntities(Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, cs.targetClass);
@@ -921,7 +921,7 @@ public final class Jdbc {
          * @param targetClass the class of entities to create
          * @param idPropNameForMerge the property name to use for identifying entities to merge
          * @return a ResultExtractor that produces a List of merged entities
-         * @see DataSet#toMergedEntities(Collection, Collection, Class)
+         * @see Dataset#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
             N.checkArgNotNull(targetClass, cs.targetClass);
@@ -950,7 +950,7 @@ public final class Jdbc {
          * @param targetClass the class of entities to create
          * @param idPropNamesForMerge the property names to use for identifying entities to merge
          * @return a ResultExtractor that produces a List of merged entities
-         * @see DataSet#toMergedEntities(Collection, Collection, Class)
+         * @see Dataset#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {
             N.checkArgNotNull(targetClass, cs.targetClass);
@@ -963,75 +963,75 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a DataSet using a specific entity class.
+         * Creates a ResultExtractor that converts the result set into a Dataset using a specific entity class.
          * The entity class is used to determine how to map columns to fields.
          * 
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<DataSet> extractor = ResultExtractor.toDataSet(User.class);
+         * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class);
          * }</pre>
          *
          * @param entityClassForExtractor The class used to map the fields from the columns in the result set
-         * @return a ResultExtractor that produces a DataSet
+         * @return a ResultExtractor that produces a Dataset
          */
-        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClassForExtractor) {
+        static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor));
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a DataSet with field name mapping.
+         * Creates a ResultExtractor that converts the result set into a Dataset with field name mapping.
          * The prefix and field name map allows for custom column-to-field mapping.
          * 
          * <p>Example usage:</p>
          * <pre>{@code
          * Map<String, String> prefixMap = new HashMap<>();
          * prefixMap.put("u_", "user.");
-         * ResultExtractor<DataSet> extractor = ResultExtractor.toDataSet(User.class, prefixMap);
+         * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class, prefixMap);
          * }</pre>
          *
          * @param entityClassForExtractor The class used to map the fields from the columns in the result set
          * @param prefixAndFieldNameMap map of column prefixes to field name prefixes
-         * @return a ResultExtractor that produces a DataSet
+         * @return a ResultExtractor that produces a Dataset
          */
-        static ResultExtractor<DataSet> toDataSet(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
+        static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor, prefixAndFieldNameMap));
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a DataSet with row filtering.
-         * Only rows that pass the filter are included in the DataSet.
+         * Creates a ResultExtractor that converts the result set into a Dataset with row filtering.
+         * Only rows that pass the filter are included in the Dataset.
          * 
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<DataSet> extractor = ResultExtractor.toDataSet(
+         * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
          *     rs -> rs.getBoolean("active")  // Only active records
          * );
          * }</pre>
          *
          * @param rowFilter the predicate to filter rows
-         * @return a ResultExtractor that produces a filtered DataSet
+         * @return a ResultExtractor that produces a filtered Dataset
          */
-        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter) {
+        static ResultExtractor<Dataset> toDataset(final RowFilter rowFilter) {
             return rs -> JdbcUtil.extractData(rs, rowFilter);
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a DataSet using a custom row extractor.
+         * Creates a ResultExtractor that converts the result set into a Dataset using a custom row extractor.
          * The row extractor provides full control over how each row is extracted.
          *
          * @param rowExtractor the custom row extractor
-         * @return a ResultExtractor that produces a DataSet
+         * @return a ResultExtractor that produces a Dataset
          */
-        static ResultExtractor<DataSet> toDataSet(final RowExtractor rowExtractor) {
+        static ResultExtractor<Dataset> toDataset(final RowExtractor rowExtractor) {
             return rs -> JdbcUtil.extractData(rs, rowExtractor);
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a DataSet with both filtering and custom extraction.
+         * Creates a ResultExtractor that converts the result set into a Dataset with both filtering and custom extraction.
          * 
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<DataSet> extractor = ResultExtractor.toDataSet(
+         * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
          *     rs -> rs.getInt("status") > 0,  // Filter
          *     RowExtractor.createBy(User.class)  // Custom extraction
          * );
@@ -1039,28 +1039,28 @@ public final class Jdbc {
          *
          * @param rowFilter the predicate to filter rows
          * @param rowExtractor the custom row extractor
-         * @return a ResultExtractor that produces a filtered DataSet with custom extraction
+         * @return a ResultExtractor that produces a filtered Dataset with custom extraction
          */
-        static ResultExtractor<DataSet> toDataSet(final RowFilter rowFilter, final RowExtractor rowExtractor) {
+        static ResultExtractor<Dataset> toDataset(final RowFilter rowFilter, final RowExtractor rowExtractor) {
             return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, rowExtractor, false);
         }
 
         /**
-         * Creates a ResultExtractor that first converts to DataSet and then applies a transformation function.
-         * This is useful for chaining DataSet operations.
+         * Creates a ResultExtractor that first converts to Dataset and then applies a transformation function.
+         * This is useful for chaining Dataset operations.
          * 
          * <p>Example usage:</p>
          * <pre>{@code
          * ResultExtractor<List<User>> extractor = ResultExtractor.to(
-         *     dataSet -> dataSet.toList(User.class)
+         *     dataset -> dataset.toList(User.class)
          * );
          * }</pre>
          *
          * @param <R> the result type
-         * @param after the function to apply to the DataSet
+         * @param after the function to apply to the Dataset
          * @return a ResultExtractor that produces the transformed result
          */
-        static <R> ResultExtractor<R> to(final Throwables.Function<DataSet, R, SQLException> after) {
+        static <R> ResultExtractor<R> to(final Throwables.Function<Dataset, R, SQLException> after) {
             return rs -> after.apply(TO_DATA_SET.apply(rs));
         }
     }
@@ -1079,12 +1079,12 @@ public final class Jdbc {
     public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /**
-         * A pre-defined BiResultExtractor that converts a ResultSet to a DataSet.
-         * Returns an empty DataSet if the ResultSet is null.
+         * A pre-defined BiResultExtractor that converts a ResultSet to a Dataset.
+         * Returns an empty Dataset if the ResultSet is null.
          */
-        BiResultExtractor<DataSet> TO_DATA_SET = (rs, columnLabels) -> {
+        BiResultExtractor<Dataset> TO_DATA_SET = (rs, columnLabels) -> {
             if (rs == null) {
-                return N.newEmptyDataSet();
+                return N.newEmptyDataset();
             }
 
             return JdbcUtil.extractData(rs);

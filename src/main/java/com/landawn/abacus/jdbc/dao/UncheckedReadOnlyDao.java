@@ -48,7 +48,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * // These operations work:
  * List<Report> reports = dao.list(CF.between("date", startDate, endDate));
  * Optional<Report> report = dao.findFirst(CF.eq("id", reportId));
- * DataSet results = dao.query(CF.eq("status", "PUBLISHED"));
+ * Dataset results = dao.query(CF.eq("status", "PUBLISHED"));
  * 
  * // All write operations throw UnsupportedOperationException:
  * // dao.save(report);         // throws exception

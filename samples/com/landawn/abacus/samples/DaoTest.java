@@ -1203,7 +1203,7 @@ public class DaoTest {
         final String query = "select first_name, last_name, device.manufacture as \" devices.manufacture\", device.model as \"devices.model\", device.user_id as \"devices.user_id\", address.street as \"address.street\", address.city as \"address.city\" from user1 left join device on user1.id = device.user_id left join address on user1.id = address.user_id";
 
         userDao.prepareQuery(query).list(User.class).forEach(Fn.println());
-        userDao.prepareQuery(query).query(Jdbc.ResultExtractor.toDataSet(User.class)).println();
+        userDao.prepareQuery(query).query(Jdbc.ResultExtractor.toDataset(User.class)).println();
 
         userDao.deleteAllJoinEntities(user);
         userDao.delete(user);

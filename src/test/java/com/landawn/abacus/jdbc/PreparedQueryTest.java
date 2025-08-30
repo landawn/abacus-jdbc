@@ -72,7 +72,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Nullable;
@@ -1736,21 +1736,21 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testQueryDataSet() throws SQLException {
+    public void testQueryDataset() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(1)).thenReturn("value");
 
-        DataSet result = query.query();
+        Dataset result = query.query();
 
         assertNotNull(result);
         verify(mockResultSet).close();
     }
 
     @Test
-    public void testQueryDataSetWithEntityClass() throws SQLException {
+    public void testQueryDatasetWithEntityClass() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
 
-        DataSet result = query.query(TestEntity.class);
+        Dataset result = query.query(TestEntity.class);
 
         assertNotNull(result);
         verify(mockResultSet).close();
@@ -1817,7 +1817,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockStmt.getMoreResults()).thenReturn(true, false);
         when(mockStmt.getUpdateCount()).thenReturn(0, -1);
 
-        List<DataSet> results = query.queryAllResultsets();
+        List<Dataset> results = query.queryAllResultsets();
 
         assertNotNull(results);
         assertFalse(results.isEmpty());
@@ -1856,7 +1856,7 @@ public class PreparedQueryTest extends TestBase {
     public void testQueryThenApply() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
 
-        Integer result = query.queryThenApply(dataSet -> dataSet.size());
+        Integer result = query.queryThenApply(dataset -> dataset.size());
 
         assertNotNull(result);
         verify(mockResultSet).close();
@@ -1866,7 +1866,7 @@ public class PreparedQueryTest extends TestBase {
     public void testQueryThenApplyWithEntityClass() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
 
-        Integer result = query.queryThenApply(TestEntity.class, dataSet -> dataSet.size());
+        Integer result = query.queryThenApply(TestEntity.class, dataset -> dataset.size());
 
         assertNotNull(result);
         verify(mockResultSet).close();
@@ -1876,8 +1876,8 @@ public class PreparedQueryTest extends TestBase {
     public void testQueryThenAccept() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
 
-        List<DataSet> captured = new ArrayList<>();
-        query.queryThenAccept(dataSet -> captured.add(dataSet));
+        List<Dataset> captured = new ArrayList<>();
+        query.queryThenAccept(dataset -> captured.add(dataset));
 
         assertEquals(1, captured.size());
         verify(mockResultSet).close();
@@ -1887,8 +1887,8 @@ public class PreparedQueryTest extends TestBase {
     public void testQueryThenAcceptWithEntityClass() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
 
-        List<DataSet> captured = new ArrayList<>();
-        query.queryThenAccept(TestEntity.class, dataSet -> captured.add(dataSet));
+        List<Dataset> captured = new ArrayList<>();
+        query.queryThenAccept(TestEntity.class, dataset -> captured.add(dataset));
 
         assertEquals(1, captured.size());
         verify(mockResultSet).close();
@@ -2397,7 +2397,7 @@ public class PreparedQueryTest extends TestBase {
     //        when(mockStmt.getUpdateCount()).thenReturn(-1);
     //        when(mockResultSet.next()).thenReturn(true, false);
     //
-    //        try (Stream<DataSet> stream = query.streamAllResultsets()) {
+    //        try (Stream<Dataset> stream = query.streamAllResultsets()) {
     //            long count = stream.count();
     //            assertEquals(1, count);
     //        }
