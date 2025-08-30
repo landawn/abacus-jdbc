@@ -171,7 +171,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * 
  * @see Dao
  * @see CrudDao
- * @see JdbcUtil#createDao(Class)
+ * @see JdbcUtil#createDao(Class, javax.sql.DataSource)
  */
 @Internal
 @SuppressWarnings({ "deprecation", "java:S1192", "resource" })
