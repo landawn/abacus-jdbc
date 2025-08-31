@@ -7,9 +7,29 @@
 	<artifactId>abacus-jdbc</artifactId>
 	<version>3.10.9</version>
 	<packaging>jar</packaging>
-
 	<name>abacus-jdbc</name>
+	<description>abacus jdbc</description>
 	<url>https://github.com/landawn/abacus-jdbc</url>
+
+	<licenses>
+		<license>
+			<name>The Apache License, Version 2.0</name>
+			<url>https://github.com/landawn/abacus-jdbc/blob/master/LICENSE.txt</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>Haiyang Li</name>
+			<email>70lihy@gmail.com</email>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:https://github.com/landawn/abacus-jdbc.git</connection>
+		<developerConnection>scm:git:https://github.com/landawn/abacus-jdbc.git</developerConnection>
+		<url>https://github.com/landawn/abacus-jdbc</url>
+	</scm>
 
 	<properties>
 		<java.version>17</java.version>
@@ -17,6 +37,7 @@
 		<maven.compiler.target>17</maven.compiler.target>
 		<junit.jupiter.version>5.10.2</junit.jupiter.version>
 		<junit.platform.version>1.10.2</junit.platform.version>
+		<mockito.version>5.18.0</mockito.version> 
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
@@ -201,6 +222,19 @@
 			<version>1.10.2</version>
 			<scope>test</scope>
 		</dependency>
+		
+		<dependency>
+		    <groupId>org.mockito</groupId>
+		    <artifactId>mockito-core</artifactId>
+			<version>${mockito.version}</version>
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.mockito</groupId>
+		    <artifactId>mockito-junit-jupiter</artifactId>
+			<version>${mockito.version}</version>
+		    <scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -274,6 +308,32 @@
 					</execution>
 				</executions>
 			</plugin>
+
+	        <plugin>
+	          <groupId>org.sonatype.central</groupId>
+	          <artifactId>central-publishing-maven-plugin</artifactId>
+	          <version>0.8.0</version>
+	          <extensions>true</extensions>
+	          <configuration>
+	             <publishingServerId>central</publishingServerId>
+	             <autoPublish>true</autoPublish>
+	          </configuration>
+	        </plugin>
+
+		    <plugin>
+		      <groupId>org.apache.maven.plugins</groupId>
+		      <artifactId>maven-gpg-plugin</artifactId>
+		      <version>3.1.0</version>
+		      <executions>
+		        <execution>
+		          <id>sign-artifacts</id>
+		          <phase>verify</phase> <!-- or deploy -->
+		          <goals>
+		            <goal>sign</goal>
+		          </goals>
+		        </execution>
+		      </executions>
+		    </plugin>
 		</plugins>
 	</build>
 </project>
