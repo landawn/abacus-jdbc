@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
@@ -32,10 +31,11 @@ import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Throwables;
 
 /**
- * This interface extends the base Dao interface but explicitly disables UPDATE, DELETE, and stored procedure operations
+ * This interface extends the base Dao interface but disables update and delete operations while allowing read and insert operations
  * to ensure data integrity in scenarios where modifications to existing records should be prevented.
  * 
  * <p>This interface is particularly useful for:

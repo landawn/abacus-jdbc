@@ -215,8 +215,9 @@ public final class DBSequence {
         synchronized (seqName) { //NOSONAR
             try {
                 while (lowSeqId.get() >= highSeqId.get()) {
-                    //noinspection resource
-                    lowSeqId.set(JdbcUtil.prepareQuery(ds, querySQL).setString(1, seqName).queryForLong().orElse(0));
+                    try (PreparedQuery query = JdbcUtil.prepareQuery(ds, querySQL)) {
+                        lowSeqId.set(query.setString(1, seqName).queryForLong().orElse(0));
+                    }
 
                     if (JdbcUtil.executeUpdate(ds, updateSQL, lowSeqId.get() + seqBufferSize, DateUtil.currentTimestamp(), lowSeqId.get(), seqName) > 0) {
                         highSeqId.set(lowSeqId.get() + seqBufferSize);

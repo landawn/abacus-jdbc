@@ -24,9 +24,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
@@ -38,11 +35,15 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.QueryUtil;
+import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.ConditionFactory;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.u.Nullable;
@@ -1074,7 +1075,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
-            N.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            Beans.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
             update(dbEntity);
             return dbEntity;
         }
@@ -1219,7 +1220,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
                 }
 
                 final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> N.merge(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
+                        .map(it -> Beans.merge(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
                         .toList();
 
                 batchUpdate(dbEntitiesToUpdate, batchSize);
@@ -1299,7 +1300,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         if (dbEntity == null) {
             return false;
         } else {
-            N.merge(dbEntity, entity, propNamesToRefresh);
+            Beans.merge(dbEntity, entity, propNamesToRefresh);
 
             return true;
         }
@@ -1404,7 +1405,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
                 if (N.notEmpty(tmp)) {
                     for (final T entity : tmp) {
-                        N.merge(dbEntity, entity, propNamesToRefresh);
+                        Beans.merge(dbEntity, entity, propNamesToRefresh);
                     }
                 }
 

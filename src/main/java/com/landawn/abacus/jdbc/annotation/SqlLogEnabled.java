@@ -111,7 +111,7 @@ public @interface SqlLogEnabled {
      * <p>Example:</p>
      * <pre>{@code
      * @SqlLogEnabled(maxSqlLogLength = 500)
-     * void insertBatchData(List<Data> largeDataSet);
+     * void insertBatchData(List<Data> largeDataset);
      * 
      * @SqlLogEnabled(maxSqlLogLength = 2048) // Allow longer logs for complex queries
      * List<Report> generateComplexReport();

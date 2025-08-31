@@ -23,7 +23,7 @@ import com.landawn.abacus.query.SQLBuilder;
 
 /**
  * A CRUD Data Access Object interface for entities with {@code Long} type primary keys
- * that disables update and delete operations. This interface extends both
+ * that disables update and delete operations while allowing read and insert operations. This interface extends both
  * {@link NoUpdateCrudDao} and {@link CrudDaoL}, providing read and insert operations
  * while blocking update and delete functionality.
  * 

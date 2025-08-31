@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fn.Suppliers;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;

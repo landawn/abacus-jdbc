@@ -166,8 +166,7 @@ public final class DBLock {
 
             final String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
 
-            JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(),
-                    Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+            JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(), Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         } finally {
@@ -181,14 +180,15 @@ public final class DBLock {
                 try {
                     m.putAll(targetCodePool);
 
+                    final Connection refreshConn = JdbcUtil.getConnection(ds);
                     try {
                         for (final Map.Entry<String, String> entry : m.entrySet()) {
-                            JdbcUtil.executeUpdate(conn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), m.get(entry.getKey()));
+                            JdbcUtil.executeUpdate(refreshConn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), m.get(entry.getKey()));
                         }
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     } finally {
-                        JdbcUtil.releaseConnection(conn, ds);
+                        JdbcUtil.releaseConnection(refreshConn, ds);
                     }
                 } finally {
                     Objectory.recycle(m);
@@ -394,7 +394,7 @@ public final class DBLock {
 
     private void assertNotClosed() {
         if (isClosed) {
-            throw new RuntimeException("This object pool has been closed");
+            throw new RuntimeException("This DBLock has been closed");
         }
     }
 }

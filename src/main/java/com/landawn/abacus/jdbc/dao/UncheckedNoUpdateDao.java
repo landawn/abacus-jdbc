@@ -20,17 +20,44 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.condition.Condition;
 
 /**
- * Interface for an unchecked Data Access Object (DAO) that does not support update operations.
- * Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}.
+ * Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while allowing read and insert operations.
+ * This interface provides all basic DAO operations except updates and deletes. It supports create (insert/save)
+ * and read (select/query) operations, but all update and delete methods will throw {@code UnsupportedOperationException}.
+ * 
+ * <p>This is useful for DAOs where update and delete operations should be prevented,
+ * such as append-only data stores, immutable records, or when you want to ensure data is never modified
+ * after creation.</p>
+ * 
+ * <p>Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}, providing a more
+ * convenient API for developers who prefer unchecked exceptions.</p>
+ * 
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, SQLBuilder.PSC, EventLogDao> {
+ *     // Can insert new logs and query existing logs
+ *     // But cannot update or delete any logs
+ * }
+ * 
+ * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
+ * 
+ * // These operations work:
+ * dao.save(new EventLog("System startup"));
+ * List<EventLog> logs = dao.list(CF.between("timestamp", startTime, endTime));
+ * boolean hasErrors = dao.exists(CF.eq("severity", "ERROR"));
+ * 
+ * // These operations throw UnsupportedOperationException:
+ * // dao.update("status", "ARCHIVED", CF.lt("timestamp", cutoffTime));
+ * // dao.delete(CF.eq("id", 123));
+ * }</pre>
  *
- * @param <T>
+ * @param <T> the entity type
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
- * @param <TD>
+ * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.condition.ConditionFactory
  * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
@@ -39,14 +66,15 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
         extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
 
     /**
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
      *
-     *
-     * @param propName
-     * @param propValue
-     * @param cond
-     * @return
-     * @throws UncheckedSQLException the unchecked SQL exception
-     * @throws UnsupportedOperationException
+     * @param propName the property name to update (ignored)
+     * @param propValue the new value (ignored)
+     * @param cond the condition to match records (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as update operations are not allowed
      * @deprecated unsupported Operation
      */
     @Override
@@ -56,12 +84,14 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
      *
-     * @param updateProps
-     * @param cond
-     * @return
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
+     * @param updateProps the properties to update (ignored)
+     * @param cond the condition to match records (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as update operations are not allowed
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -71,11 +101,14 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * @param entity
-     * @param cond to verify if the record exists or not.
-     * @return
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * @param entity the entity containing values to update (ignored)
+     * @param cond the condition to match records (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as update operations are not allowed
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -85,14 +118,15 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
      *
-     *
-     * @param entity
-     * @param propNamesToUpdate
-     * @param cond
-     * @return
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
+     * @param entity the entity containing values to update (ignored)
+     * @param propNamesToUpdate the properties to update (ignored)
+     * @param cond the condition to match records (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as update operations are not allowed
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -103,13 +137,15 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Inserts the specified entity if it does not exist, otherwise updates the existing entity.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
+     * Upsert operations require update capability which is not allowed in this DAO type.
      *
-     * @param entity the entity to be upserted
-     * @param uniquePropNamesForQuery the list of property names to be used for querying the uniqueness of the entity
-     * @return the upserted entity
-     * @throws UncheckedSQLException if a database access error occurs
-     * @throws UnsupportedOperationException if the operation is not supported
+     * @param entity the entity to upsert (ignored)
+     * @param uniquePropNamesForQuery the unique properties for query (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as update operations are not allowed
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -119,13 +155,15 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Inserts the specified entity if it does not exist, otherwise updates the existing entity.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
+     * Upsert operations require update capability which is not allowed in this DAO type.
      *
-     * @param entity
-     * @param cond to verify if the record exists or not.
-     * @return
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
+     * @param entity the entity to upsert (ignored)
+     * @param cond the condition to verify existence (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as update operations are not allowed
      * @deprecated unsupported Operation
      */
     @Deprecated
@@ -135,11 +173,13 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
+     * This operation is not supported in no-update DAO.
+     * Always throws {@code UnsupportedOperationException}.
      *
-     * @param cond
-     * @return
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
+     * @param cond the condition to match records to delete (ignored)
+     * @return never returns, always throws exception
+     * @throws UncheckedSQLException never thrown
+     * @throws UnsupportedOperationException always thrown as delete operations are not allowed
      * @deprecated unsupported Operation
      */
     @Deprecated

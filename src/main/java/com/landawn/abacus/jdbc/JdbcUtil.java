@@ -86,10 +86,11 @@ import com.landawn.abacus.query.SQLMapper;
 import com.landawn.abacus.query.SQLOperation;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ExceptionUtil;
 import com.landawn.abacus.util.Fn;
@@ -101,7 +102,7 @@ import com.landawn.abacus.util.InternalUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.ObjectPool;
-import com.landawn.abacus.util.RowDataSet;
+import com.landawn.abacus.util.RowDataset;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Strings;
@@ -143,7 +144,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <h3>Example Usage:</h3>
  * <pre>{@code
  * // Simple query execution
- * DataSet result = JdbcUtil.executeQuery(dataSource, "SELECT * FROM users WHERE age > ?", 18);
+ * Dataset result = JdbcUtil.executeQuery(dataSource, "SELECT * FROM users WHERE age > ?", 18);
  * 
  * // Using PreparedQuery
  * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")) {
@@ -1574,37 +1575,29 @@ public final class JdbcUtil {
                 final String className = val.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
-                    result.add(rs.getTimestamp(columnIndex));
-
-                    while (rs.next()) {
+                    do {
                         result.add(rs.getTimestamp(columnIndex));
-                    }
+                    } while (rs.next());
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        result.add(rs.getTimestamp(columnIndex));
-
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
-                        result.add(rs.getDate(columnIndex));
-
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getDate(columnIndex));
-                        }
+                        } while (rs.next());
                     }
                 } else if ((val instanceof java.sql.Date)) {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                        result.add(rs.getTimestamp(columnIndex));
-
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
                         result.add(val);
 
@@ -3032,7 +3025,6 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    @SafeVarargs
     static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3055,7 +3047,6 @@ public final class JdbcUtil {
      * @return
      * @throws SQLException
      */
-    @SafeVarargs
     static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3156,7 +3147,7 @@ public final class JdbcUtil {
      * 
      * <h3>Example:</h3>
      * <pre>{@code
-     * DataSet result = JdbcUtil.executeQuery(dataSource, 
+     * Dataset result = JdbcUtil.executeQuery(dataSource, 
      *     "SELECT * FROM users WHERE age > ? AND city = ?", 
      *     18, "New York");
      * }</pre>
@@ -3164,13 +3155,12 @@ public final class JdbcUtil {
      * @param ds The DataSource to use for the query
      * @param sql The SQL string to execute
      * @param parameters Optional parameters for the SQL query
-     * @return A DataSet object containing the result of the query
+     * @return A Dataset object containing the result of the query
      * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
      * @throws SQLException If a SQL exception occurs while executing the query
      * @see PreparedStatement#executeQuery()
      */
-    @SafeVarargs
-    public static DataSet executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
+    public static Dataset executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3198,7 +3188,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try {
-     *     DataSet result = JdbcUtil.executeQuery(conn, 
+     *     Dataset result = JdbcUtil.executeQuery(conn, 
      *         "SELECT * FROM products WHERE price BETWEEN ? AND ?", 
      *         10.0, 100.0);
      * } finally {
@@ -3209,13 +3199,12 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the query
      * @param sql The SQL string to execute
      * @param parameters Optional parameters for the SQL query
-     * @return A DataSet object containing the result of the query
+     * @return A Dataset object containing the result of the query
      * @throws IllegalArgumentException If the Connection or SQL string is null or empty
      * @throws SQLException If a SQL exception occurs while executing the query
      * @see PreparedStatement#executeQuery()
      */
-    @SafeVarargs
-    public static DataSet executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
+    public static Dataset executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -3254,7 +3243,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the update
      * @see PreparedStatement#executeUpdate()
      */
-    @SafeVarargs
     public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3298,7 +3286,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the update
      * @see PreparedStatement#executeUpdate()
      */
-    @SafeVarargs
     public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3654,7 +3641,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the statement
      * @see PreparedStatement#execute()
      */
-    @SafeVarargs
     public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3686,7 +3672,6 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while executing the statement
      * @see PreparedStatement#execute()
      */
-    @SafeVarargs
     public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
@@ -3892,7 +3877,7 @@ public final class JdbcUtil {
 
             parameterValues = new Object[parameterCount];
 
-            if (ClassUtil.isBeanClass(cls)) {
+            if (Beans.isBeanClass(cls)) {
                 @SuppressWarnings("UnnecessaryLocalVariable")
                 final Object entity = parameter_0;
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
@@ -3911,7 +3896,6 @@ public final class JdbcUtil {
                     parameterTypes[i] = propInfo.dbType;
                 }
             } else if (parameter_0 instanceof Map) {
-                @SuppressWarnings("unchecked")
                 final Map<String, Object> m = (Map<String, Object>) parameter_0;
 
                 for (int i = 0; i < parameterCount; i++) {
@@ -3983,7 +3967,7 @@ public final class JdbcUtil {
 
         final Class<?> cls = parameters[0].getClass();
 
-        return ClassUtil.isBeanClass(cls) || ClassUtil.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
+        return Beans.isBeanClass(cls) || Beans.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
 
     static final RowFilter INTERNAL_DUMMY_ROW_FILTER = RowFilter.ALWAYS_TRUE;
@@ -3993,20 +3977,20 @@ public final class JdbcUtil {
     };
 
     /**
-     * Extracts data from the provided ResultSet and returns it as a DataSet.
+     * Extracts data from the provided ResultSet and returns it as a Dataset.
      * This method reads all rows from the current position of the ResultSet.
      * 
      * <h3>Example:</h3>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * DataSet dataSet = JdbcUtil.extractData(rs);
+     * Dataset dataset = JdbcUtil.extractData(rs);
      * }</pre>
      *
      * @param rs The ResultSet to extract data from
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs) throws SQLException {
+    public static Dataset extractData(final ResultSet rs) throws SQLException {
         return extractData(rs, false);
     }
 
@@ -4016,16 +4000,16 @@ public final class JdbcUtil {
      * <h3>Example:</h3>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * DataSet dataSet = JdbcUtil.extractData(rs, 10, 50); // Skip 10 rows, get next 50
+     * Dataset dataset = JdbcUtil.extractData(rs, 10, 50); // Skip 10 rows, get next 50
      * }</pre>
      *
      * @param rs The ResultSet to extract data from
      * @param offset The starting position in the ResultSet (0-based)
      * @param count The maximum number of rows to extract
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final int offset, final int count) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count) throws SQLException {
         return extractData(rs, offset, count, false);
     }
 
@@ -4035,10 +4019,10 @@ public final class JdbcUtil {
      *
      * @param rs The ResultSet to extract data from
      * @param filter The RowFilter to apply while extracting data
-     * @return A DataSet containing the filtered data
+     * @return A Dataset containing the filtered data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
     }
 
@@ -4048,10 +4032,10 @@ public final class JdbcUtil {
      *
      * @param rs The ResultSet to extract data from
      * @param rowExtractor The RowExtractor to apply while extracting data
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
     }
 
@@ -4061,23 +4045,23 @@ public final class JdbcUtil {
      * @param rs The ResultSet to extract data from
      * @param filter The RowFilter to apply while extracting data
      * @param rowExtractor The RowExtractor to apply while extracting data
-     * @return A DataSet containing the filtered and extracted data
+     * @return A Dataset containing the filtered and extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, rowExtractor, false);
     }
 
     /**
-     * Extracts data from the provided ResultSet and returns it as a DataSet.
+     * Extracts data from the provided ResultSet and returns it as a Dataset.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
      * @param rs The ResultSet to extract data from
      * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, closeResultSet);
     }
 
@@ -4089,10 +4073,10 @@ public final class JdbcUtil {
      * @param offset The starting position in the ResultSet
      * @param count The number of rows to extract
      * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet) throws SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -4105,10 +4089,10 @@ public final class JdbcUtil {
      * @param count The number of rows to extract
      * @param filter The RowFilter to apply while extracting data
      * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
             throws SQLException {
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
@@ -4122,10 +4106,10 @@ public final class JdbcUtil {
      * @param count The number of rows to extract
      * @param rowExtractor The RowExtractor to apply while extracting data
      * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      */
-    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
     }
@@ -4140,11 +4124,11 @@ public final class JdbcUtil {
      * @param filter The RowFilter to apply while extracting data
      * @param rowExtractor The RowExtractor to apply while extracting data
      * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A DataSet containing the extracted data
+     * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
      * @throws IllegalArgumentException If the provided arguments are invalid
      */
-    public static DataSet extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, cs.ResultSet);
         N.checkArgNotNegative(offset, cs.offset);
@@ -4154,7 +4138,7 @@ public final class JdbcUtil {
         final boolean checkDateType = checkDateType(rs);
 
         try {
-            return JdbcUtil.extractResultSetToDataSet(rs, offset, count, filter, rowExtractor, checkDateType);
+            return JdbcUtil.extractResultSetToDataset(rs, offset, count, filter, rowExtractor, checkDateType);
         } finally {
             if (closeResultSet) {
                 closeQuietly(rs);
@@ -4162,7 +4146,7 @@ public final class JdbcUtil {
         }
     }
 
-    static DataSet extractResultSetToDataSet(final ResultSet rs, final int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
+    static Dataset extractResultSetToDataset(final ResultSet rs, final int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean checkDateType) throws SQLException {
         final ResultSetMetaData rsmd = rs.getMetaData();
         final int columnCount = rsmd.getColumnCount();
@@ -4226,8 +4210,8 @@ public final class JdbcUtil {
             }
         }
 
-        // return new RowDataSet(null, entityClass, columnNameList, columnList);
-        return new RowDataSet(columnNameList, columnList);
+        // return new RowDataset(null, entityClass, columnNameList, columnList);
+        return new RowDataset(columnNameList, columnList);
     }
 
     static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
@@ -4776,7 +4760,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Extracts all ResultSets from the provided Statement and returns them as a Stream of DataSet.
+     * Extracts all ResultSets from the provided Statement and returns them as a Stream of Dataset.
      * This is useful when executing stored procedures that return multiple result sets.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      * 
@@ -4785,16 +4769,16 @@ public final class JdbcUtil {
      * CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}");
      * JdbcUtil.streamAllResultSets(stmt)
      *     .onClose(Fn.closeQuietly(stmt))
-     *     .forEach(dataSet -> {
-     *         System.out.println("Result set with " + dataSet.size() + " rows");
-     *         dataSet.println();
+     *     .forEach(dataset -> {
+     *         System.out.println("Result set with " + dataset.size() + " rows");
+     *         dataset.println();
      *     });
      * }</pre>
      *
      * @param stmt the Statement to extract ResultSets from
-     * @return a Stream of DataSet containing the extracted ResultSets
+     * @return a Stream of Dataset containing the extracted ResultSets
      */
-    public static Stream<DataSet> streamAllResultSets(final Statement stmt) {
+    public static Stream<Dataset> streamAllResultSets(final Statement stmt) {
         return streamAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
     }
 
@@ -4966,12 +4950,12 @@ public final class JdbcUtil {
      * @param query the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page (null for first page)
-     * @return a Stream of DataSet, each representing a page of results
+     * @return a Stream of Dataset, each representing a page of results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static Stream<DataSet> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
+    public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter) {
         return queryByPage(ds, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
@@ -5086,12 +5070,12 @@ public final class JdbcUtil {
      * @param query the SQL query to run for each page
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query
-     * @return a Stream of DataSet, each representing a page of results
+     * @return a Stream of Dataset, each representing a page of results
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
-    public static Stream<DataSet> queryByPage(final Connection conn, final String query, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, DataSet> paramSetter) {
+    public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize,
+            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter) {
         return queryByPage(conn, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
@@ -5181,8 +5165,8 @@ public final class JdbcUtil {
             return false;
         }
 
-        if (ret instanceof DataSet) {
-            return N.notEmpty((DataSet) ret);
+        if (ret instanceof Dataset) {
+            return N.notEmpty((Dataset) ret);
         } else if (ret instanceof Collection) {
             return N.notEmpty((Collection) ret);
         } else if (ret instanceof Map) {
@@ -5530,6 +5514,37 @@ public final class JdbcUtil {
      * 
      * <h3>Example:</h3>
      * <pre>{@code
+     * if (JdbcUtil.doesTableExist(ds, "users")) {
+     *     System.out.println("Users table exists");
+     * } else {
+     *     System.out.println("Users table does not exist");
+     * }
+     * }</pre>
+     *
+     * @param ds The data source to get the connection from
+     * @param tableName The name of the table to check
+     * @return {@code true} if the table exists, {@code false} otherwise
+     * @throws UncheckedSQLException if a database error occurs (other than table not existing)
+     */
+    public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName) {
+        Connection conn = null;
+
+        try {
+            conn = ds.getConnection();
+            return doesTableExist(conn, tableName);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        } finally {
+            releaseConnection(conn, ds);
+        }
+    }
+
+    /**
+     * Checks if a table exists in the database.
+     * This method attempts to execute a simple SELECT query on the table to determine its existence.
+     * 
+     * <h3>Example:</h3>
+     * <pre>{@code
      * if (JdbcUtil.doesTableExist(connection, "users")) {
      *     System.out.println("Users table exists");
      * } else {
@@ -5730,7 +5745,7 @@ public final class JdbcUtil {
             return true;
         } else if (value instanceof EntityId) {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
-        } else if (ClassUtil.isBeanClass(value.getClass())) {
+        } else if (Beans.isBeanClass(value.getClass())) {
             final Class<?> entityClass = value.getClass();
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(entityClass);
 
@@ -6370,7 +6385,7 @@ public final class JdbcUtil {
                 BeanInfo propBeanInfo = null;
 
                 for (int i = 0, len = strs.length; i < len; i++) {
-                    propBeanInfo = ClassUtil.isBeanClass(propClass) ? ParserUtil.getBeanInfo(propClass) : null;
+                    propBeanInfo = Beans.isBeanClass(propClass) ? ParserUtil.getBeanInfo(propClass) : null;
                     propInfo = propBeanInfo == null ? null : propBeanInfo.getPropInfo(strs[i]);
 
                     if (propInfo == null) {
@@ -6417,7 +6432,7 @@ public final class JdbcUtil {
     //            java.lang.reflect.Type[] typeArguments = parameterizedType.getActualTypeArguments();
     //
     //            if (typeArguments.length >= 1 && typeArguments[0] instanceof Class) {
-    //                if (!ClassUtil.isBeanClass((Class) typeArguments[0])) {
+    //                if (!Beans.isBeanClass((Class) typeArguments[0])) {
     //                    throw new IllegalArgumentException(
     //                            "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
     //                                    + typeArguments[0]);
@@ -6923,7 +6938,7 @@ public final class JdbcUtil {
      * @return {@code true} if the value is null or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
-        return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b.booleanValue())
+        return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b)
                 || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
@@ -8137,7 +8152,7 @@ public final class JdbcUtil {
     @SuppressWarnings({ "rawtypes", "deprecation", "null" })
     static <ID> Tuple3<BiRowMapper<ID>, com.landawn.abacus.util.function.Function<Object, ID>, com.landawn.abacus.util.function.BiConsumer<ID, Object>> getIdGeneratorGetterSetter(
             final Class<? extends Dao> daoInterface, final Class<?> entityClass, final NamingPolicy namingPolicy, final Class<?> idType) {
-        if (!ClassUtil.isBeanClass(entityClass)) {
+        if (!Beans.isBeanClass(entityClass)) {
             return (Tuple3) noIdGeneratorGetterSetter;
         }
 
@@ -8155,7 +8170,7 @@ public final class JdbcUtil {
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = !isNoId && idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
-            final BeanInfo idBeanInfo = ClassUtil.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
+            final BeanInfo idBeanInfo = Beans.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
 
             final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
                     : (isOneId ? idPropInfo::getPropValue //
@@ -8171,7 +8186,7 @@ public final class JdbcUtil {
                                 final Object ret = idBeanInfo.createBeanResult();
 
                                 for (final PropInfo propInfo : idPropInfoList) {
-                                    ClassUtil.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
+                                    Beans.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
                                 }
 
                                 return (ID) idBeanInfo.finishBeanResult(ret);
@@ -8194,15 +8209,16 @@ public final class JdbcUtil {
                                     logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             } : (id, entity) -> {
-                                if (id != null && ClassUtil.isBeanClass(id.getClass())) {
+                                if (id != null && Beans.isBeanClass(id.getClass())) {
                                     @SuppressWarnings("UnnecessaryLocalVariable")
                                     final Object entityId = id;
 
                                     for (final PropInfo propInfo : idPropInfoList) {
-                                        propInfo.setPropValue(entity, ClassUtil.getPropValue(entityId, propInfo.name));
+                                        propInfo.setPropValue(entity, Beans.getPropValue(entityId, propInfo.name));
                                     }
                                 } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                    logger.warn(
+                                            "Can't set generated keys by id type: " + (id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass())));
                                 }
                             }));
 

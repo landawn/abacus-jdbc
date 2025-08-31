@@ -26,12 +26,11 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import javax.sql.DataSource;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
-import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
@@ -44,16 +43,20 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.type.Type;
-import com.landawn.abacus.util.AsyncExecutor;
-import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLMapper;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.ConditionFactory;
+import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.AsyncExecutor;
+import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -91,7 +94,7 @@ import com.landawn.abacus.util.stream.Stream;
  * 
  * <h2>Usage Example:</h2>
  * <pre>{@code
- * public interface UserDao extends JdbcUtil.CrudDao<User, Long, SQLBuilder.PSC> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC> {
  *     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
@@ -108,7 +111,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  * 
  * // Usage
- * UserDao userDao = Dao.newInstance(UserDao.class, dataSource);
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = userDao.getFirstAndLastNameBy(123L);
  * }</pre>
  * 
@@ -127,7 +130,9 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <T> the entity type that this DAO manages
  * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type parameter for fluent API support
- * 
+ *
+ * @see JdbcUtil#createDao(Class, DataSource)
+ * @see JdbcUtil#createDao(Class, DataSource, SQLMapper)
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -351,6 +356,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param query the SQL query string
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @see JdbcUtil#prepareNamedQueryForBigResult(DataSource, String)
      */
     @Beta
     @NonDBOperation
@@ -365,6 +371,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
+     * @see JdbcUtil#prepareNamedQueryForBigResult(DataSource, String)
      */
     @Beta
     @NonDBOperation
@@ -1292,32 +1299,32 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             throws DuplicatedResultException, SQLException;
 
     /**
-     * Executes a query and returns the results as a DataSet.
-     * DataSet provides a flexible, column-oriented view of the results.
+     * Executes a query and returns the results as a Dataset.
+     * Dataset provides a flexible, column-oriented view of the results.
      *
      * <pre>{@code
-     * DataSet ds = dao.query(CF.gt("age", 18));
+     * Dataset ds = dao.query(CF.gt("age", 18));
      * for (int i = 0; i < ds.size(); i++) {
      *     System.out.println(ds.getString(i, "name"));
      * }
      * }</pre>
      *
      * @param cond the search condition
-     * @return DataSet containing the query results
+     * @return Dataset containing the query results
      * @throws SQLException if a database access error occurs
      */
-    DataSet query(final Condition cond) throws SQLException;
+    Dataset query(final Condition cond) throws SQLException;
 
     /**
-     * Executes a query for specific columns and returns results as a DataSet.
+     * Executes a query for specific columns and returns results as a Dataset.
      * Only the specified properties will be included in the result.
      *
      * @param selectPropNames the properties to select, null for all
      * @param cond the search condition
-     * @return DataSet containing the query results
+     * @return Dataset containing the query results
      * @throws SQLException if a database access error occurs
      */
-    DataSet query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
     /**
      * Executes a query and processes results with a custom result extractor.
@@ -1792,11 +1799,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     }
 
     /**
-     * Returns a paginated Stream of query results as DataSet pages.
+     * Returns a paginated Stream of query results as Dataset pages.
      * Each element in the stream represents one page of results. The condition must include orderBy for consistent pagination.
      *
      * <pre>{@code
-     * Stream<DataSet> pages = dao.paginate(
+     * Stream<Dataset> pages = dao.paginate(
      *     CF.criteria().where(CF.gt("id", 0)).orderBy("id"),
      *     100,
      *     (query, lastPageResult) -> {
@@ -1811,11 +1818,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page based on previous results
-     * @return stream of DataSet pages
+     * @return stream of Dataset pages
      */
     @Beta
     @LazyEvaluation
-    Stream<DataSet> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+    Stream<Dataset> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter);
 
     /**
      * Returns a paginated Stream with custom result extraction.
@@ -1850,19 +1857,19 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             final Jdbc.BiResultExtractor<? extends R> resultExtractor);
 
     /**
-     * Returns a paginated Stream with selected properties as DataSet pages.
+     * Returns a paginated Stream with selected properties as Dataset pages.
      * Only specified properties are included in each page.
      *
      * @param selectPropNames the properties to select, null for all
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page
-     * @return stream of DataSet pages with selected properties
+     * @return stream of Dataset pages with selected properties
      */
     @Beta
     @LazyEvaluation
-    Stream<DataSet> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
-            final Jdbc.BiParametersSetter<? super PreparedQuery, DataSet> paramSetter);
+    Stream<Dataset> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
+            final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter);
 
     /**
      * Returns a paginated Stream of selected properties with custom extraction.
@@ -2178,7 +2185,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             save(entity);
             return entity;
         } else {
-            N.merge(entity, dbEntity);
+            Beans.merge(entity, dbEntity);
             update(dbEntity, cond);
             return dbEntity;
         }

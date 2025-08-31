@@ -21,12 +21,12 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.condition.Condition;
 
 /**
- * A CRUD Data Access Object interface that disables update and delete operations while
- * allowing read and insert operations. This interface extends both {@link NoUpdateDao}
+ * A CRUD Data Access Object interface that disables update and delete operations while allowing read and insert operations. 
+ * This interface extends both {@link NoUpdateDao}
  * and {@link CrudDao}, effectively creating a DAO that can only read existing records
  * and insert new ones, but cannot modify or delete existing records.
  * 

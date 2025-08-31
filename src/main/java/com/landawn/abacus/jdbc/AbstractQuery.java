@@ -57,15 +57,17 @@ import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowConsumer;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
-import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
+import com.landawn.abacus.jdbc.Jdbc.RowMapper;
+import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowConsumer;
+import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.Strings;
@@ -249,9 +251,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
             this.closeHandler = () -> {
                 try {
-                    tmp.run();
-                } finally {
                     closeHandler.run();
+                } finally {
+                    tmp.run();
                 }
             };
         }
@@ -3562,7 +3564,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Usage Example:</p>
      * <pre>{@code
-     * Iterator<Object[]> dataIterator = getLargeDataSet();
+     * Iterator<Object[]> dataIterator = getLargeDataset();
      * query.addBatchParameters(dataIterator).batchUpdate();
      * }</pre>
      *
@@ -4886,45 +4888,45 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Retrieves the first {@code ResultSet} and converts it to a {@code DataSet}.
+     * Retrieves the first {@code ResultSet} and converts it to a {@code Dataset}.
      * 
-     * <p>This method executes the query and returns all results in a DataSet, which provides
-     * a flexible, in-memory representation of the result set data. The DataSet can be used
+     * <p>This method executes the query and returns all results in a Dataset, which provides
+     * a flexible, in-memory representation of the result set data. The Dataset can be used
      * for further data manipulation and transformation.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * DataSet dataSet = preparedQuery.query();
-     * dataSet.forEach(row -> System.out.println(row));
+     * Dataset dataset = preparedQuery.query();
+     * dataset.forEach(row -> System.out.println(row));
      * }</pre>
      *
-     * @return A {@code DataSet} containing all rows from the query result
+     * @return A {@code Dataset} containing all rows from the query result
      * @throws SQLException If a database access error occurs
-     * @see DataSet
+     * @see Dataset
      */
-    public DataSet query() throws SQLException {
+    public Dataset query() throws SQLException {
         return query(Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
     /**
-     * Retrieves the first {@code ResultSet} and maps it to a {@code DataSet} using the specified entity class.
+     * Retrieves the first {@code ResultSet} and maps it to a {@code Dataset} using the specified entity class.
      * 
-     * <p>The entity class is used to determine how to map columns from the result set to the DataSet.
+     * <p>The entity class is used to determine how to map columns from the result set to the Dataset.
      * This provides type information for better data handling and conversion.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * DataSet dataSet = preparedQuery.query(User.class);
-     * // DataSet will use User class metadata for column mapping
+     * Dataset dataset = preparedQuery.query(User.class);
+     * // Dataset will use User class metadata for column mapping
      * }</pre>
      *
      * @param entityClassForExtractor The class used to provide metadata for mapping columns in the result set
-     * @return A {@code DataSet} containing the results with entity-aware column mapping
+     * @return A {@code Dataset} containing the results with entity-aware column mapping
      * @throws SQLException If a database access error occurs
-     * @see Jdbc.ResultExtractor#toDataSet(Class)
+     * @see Jdbc.ResultExtractor#toDataset(Class)
      */
-    public DataSet query(final Class<?> entityClassForExtractor) throws SQLException {
-        return query(Jdbc.ResultExtractor.toDataSet(entityClassForExtractor));
+    public Dataset query(final Class<?> entityClassForExtractor) throws SQLException {
+        return query(Jdbc.ResultExtractor.toDataset(entityClassForExtractor));
     }
 
     /**
@@ -5140,25 +5142,25 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Retrieves all {@code ResultSets} and converts them to a list of {@code DataSet}.
+     * Retrieves all {@code ResultSets} and converts them to a list of {@code Dataset}.
      * 
      * <p>This method is useful for stored procedures that return multiple result sets.
-     * Each result set is converted to a separate DataSet in the returned list.</p>
+     * Each result set is converted to a separate Dataset in the returned list.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Call a stored procedure that returns multiple result sets
-     * List<DataSet> allResults = callableQuery.queryAllResultsets();
-     * DataSet firstResultSet = allResults.get(0);
-     * DataSet secondResultSet = allResults.get(1);
+     * List<Dataset> allResults = callableQuery.queryAllResultsets();
+     * Dataset firstResultSet = allResults.get(0);
+     * Dataset secondResultSet = allResults.get(1);
      * }</pre>
      *
-     * @return A list of {@code DataSet} objects, one for each ResultSet returned by the query
+     * @return A list of {@code Dataset} objects, one for each ResultSet returned by the query
      * @throws SQLException If a database access error occurs
      * @see #queryAllResultsets(ResultExtractor)
      * @see #streamAllResultsets()
      */
-    public List<DataSet> queryAllResultsets() throws SQLException {
+    public List<Dataset> queryAllResultsets() throws SQLException {
         return queryAllResultsets(ResultExtractor.TO_DATA_SET);
     }
 
@@ -5274,7 +5276,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes a query and applies a function to the resulting {@code DataSet}.
+     * Executes a query and applies a function to the resulting {@code Dataset}.
      * 
      * <p>This method combines query execution with result transformation in a single operation,
      * useful for chaining operations on the query result.</p>
@@ -5282,54 +5284,54 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Calculate average from query result
-     * Double average = preparedQuery.queryThenApply(dataSet -> 
-     *     dataSet.stream().mapToDouble(row -> row.getDouble("amount")).average().orElse(0.0)
+     * Double average = preparedQuery.queryThenApply(dataset -> 
+     *     dataset.stream().mapToDouble(row -> row.getDouble("amount")).average().orElse(0.0)
      * );
      * }</pre>
      *
      * @param <R> The type of the result produced by the function
      * @param <E> The type of exception that the function might throw
-     * @param func The function to apply to the {@code DataSet} resulting from the query
-     * @return The result produced by applying the function to the {@code DataSet}
+     * @param func The function to apply to the {@code Dataset} resulting from the query
+     * @return The result produced by applying the function to the {@code Dataset}
      * @throws SQLException If a database access error occurs
      * @throws E If the function throws an exception
      */
     @Beta
-    public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super DataSet, ? extends R, E> func) throws SQLException, E {
+    public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super Dataset, ? extends R, E> func) throws SQLException, E {
         return func.apply(query());
     }
 
     /**
-     * Executes a query and applies a function to the resulting {@code DataSet}, using the specified entity class.
+     * Executes a query and applies a function to the resulting {@code Dataset}, using the specified entity class.
      * 
      * <p>Similar to {@link #queryThenApply(Throwables.Function)}, but uses an entity class
-     * for better type-aware column mapping in the DataSet.</p>
+     * for better type-aware column mapping in the Dataset.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Process User entities from query
-     * List<String> names = preparedQuery.queryThenApply(User.class, dataSet -> 
-     *     dataSet.stream().map(row -> row.getString("name")).toList()
+     * List<String> names = preparedQuery.queryThenApply(User.class, dataset -> 
+     *     dataset.stream().map(row -> row.getString("name")).toList()
      * );
      * }</pre>
      *
      * @param <R> The type of the result produced by the function
      * @param <E> The type of exception that the function might throw
      * @param entityClassForExtractor The class used to provide metadata for column mapping
-     * @param func The function to apply to the {@code DataSet} resulting from the query
-     * @return The result produced by applying the function to the {@code DataSet}
+     * @param func The function to apply to the {@code Dataset} resulting from the query
+     * @return The result produced by applying the function to the {@code Dataset}
      * @throws SQLException If a database access error occurs
      * @throws E If the function throws an exception
-     * @see Jdbc.ResultExtractor#toDataSet(Class)
+     * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
-    public <R, E extends Exception> R queryThenApply(final Class<?> entityClassForExtractor, final Throwables.Function<? super DataSet, ? extends R, E> func)
+    public <R, E extends Exception> R queryThenApply(final Class<?> entityClassForExtractor, final Throwables.Function<? super Dataset, ? extends R, E> func)
             throws SQLException, E {
         return func.apply(query(entityClassForExtractor));
     }
 
     /**
-     * Executes a query and applies a consumer action to the resulting {@code DataSet}.
+     * Executes a query and applies a consumer action to the resulting {@code Dataset}.
      * 
      * <p>This method is useful when you need to perform side effects with the query results
      * without returning a value.</p>
@@ -5337,46 +5339,46 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Print all results
-     * preparedQuery.queryThenAccept(dataSet -> 
-     *     dataSet.forEach(row -> System.out.println(row))
+     * preparedQuery.queryThenAccept(dataset -> 
+     *     dataset.forEach(row -> System.out.println(row))
      * );
      * }</pre>
      *
      * @param <E> The type of exception that the consumer action might throw
-     * @param action The consumer action to apply to the {@code DataSet} resulting from the query
+     * @param action The consumer action to apply to the {@code Dataset} resulting from the query
      * @throws SQLException If a database access error occurs
      * @throws E If the consumer action throws an exception
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super DataSet, E> action) throws SQLException, E {
+    public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> action) throws SQLException, E {
         action.accept(query());
     }
 
     /**
-     * Executes a query and applies a consumer action to the resulting {@code DataSet}, using the specified entity class.
+     * Executes a query and applies a consumer action to the resulting {@code Dataset}, using the specified entity class.
      * 
      * <p>Similar to {@link #queryThenAccept(Throwables.Consumer)}, but uses an entity class
-     * for better type-aware column mapping in the DataSet.</p>
+     * for better type-aware column mapping in the Dataset.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Process User entities and save to file
-     * preparedQuery.queryThenAccept(User.class, dataSet -> {
+     * preparedQuery.queryThenAccept(User.class, dataset -> {
      *     try (Writer writer = new FileWriter("users.csv")) {
-     *         dataSet.writeCsv(writer);
+     *         dataset.writeCsv(writer);
      *     }
      * });
      * }</pre>
      *
      * @param <E> The type of exception that the consumer action might throw
      * @param entityClassForExtractor The class used to provide metadata for column mapping
-     * @param action The consumer action to apply to the {@code DataSet} resulting from the query
+     * @param action The consumer action to apply to the {@code Dataset} resulting from the query
      * @throws SQLException If a database access error occurs
      * @throws E If the consumer action throws an exception
-     * @see Jdbc.ResultExtractor#toDataSet(Class)
+     * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
-    public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super DataSet, E> action)
+    public <E extends Exception> void queryThenAccept(final Class<?> entityClassForExtractor, final Throwables.Consumer<? super Dataset, E> action)
             throws SQLException, E {
         action.accept(query(entityClassForExtractor));
     }
@@ -5461,7 +5463,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
      * 
-     * <p>Similar to {@link #findOnlyOne(RowMapper)}, but the mapper also receives the column labels.</p>
+     * <p>Similar to {@link #findOnlyOne(Jdbc.RowMapper)}, but the mapper also receives the column labels.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
@@ -5561,7 +5563,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns a single result extracted by the specified {@code RowMapper} if exactly one record is found.
      * 
-     * <p>Similar to {@link #findOnlyOne(RowMapper)}, but returns null instead of an empty Optional when no record is found.</p>
+     * <p>Similar to {@link #findOnlyOne(Jdbc.RowMapper)}, but returns null instead of an empty Optional when no record is found.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
@@ -6435,7 +6437,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException If this query is closed
      * @throws SQLException If a database access error occurs
      * @see #listAllResultsets(Jdbc.RowMapper)
-     * @see #streamAllResultsets(Class)
      */
     public <T> List<List<T>> listAllResultsets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetType, cs.targetType);
@@ -6952,7 +6953,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier)
+                .map(Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -6992,7 +6996,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final Supplier<ResultSet> supplier = createQuerySupplier();
 
-        return Stream.just(supplier).map(Supplier::get).flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper)).onClose(this::closeAfterExecutionIfAllowed);
+        return Stream.just(supplier)
+                .map(Supplier::get)
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
+                .onClose(this::closeAfterExecutionIfAllowed);
     }
 
     /**
@@ -7035,7 +7042,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         return Stream.just(supplier)
                 .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
 
@@ -7088,7 +7095,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         return Stream.just(supplier)
                 .map(Supplier::get)
-                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper))
+                .flatMap(rs -> JdbcUtil.<T> stream(rs, rowFilter, rowMapper).onClose(() -> JdbcUtil.closeQuietly(rs)))
                 .onClose(this::closeAfterExecutionIfAllowed);
     }
 
@@ -7230,30 +7237,30 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Streams all ResultSets as DataSets from a stored procedure or multi-result query.
+     * Streams all ResultSets as Datasets from a stored procedure or multi-result query.
      * 
      * <p>This method is typically used when executing stored procedures that return multiple result sets.
-     * Each ResultSet is converted to a DataSet for easy manipulation and processing.</p>
+     * Each ResultSet is converted to a Dataset for easy manipulation and processing.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Execute a stored procedure that returns multiple result sets
-     * try (Stream<DataSet> resultSets = callableQuery.streamAllResultsets()) {
-     *     resultSets.forEach(dataSet -> {
-     *         System.out.println("Result set with " + dataSet.size() + " rows");
-     *         dataSet.forEach(row -> processRow(row));
+     * try (Stream<Dataset> resultSets = callableQuery.streamAllResultsets()) {
+     *     resultSets.forEach(dataset -> {
+     *         System.out.println("Result set with " + dataset.size() + " rows");
+     *         dataset.forEach(row -> processRow(row));
      *     });
      * }
      * }</pre>
      *
-     * @return A stream of DataSet objects, one for each ResultSet returned by the query
+     * @return A stream of Dataset objects, one for each ResultSet returned by the query
      * @throws IllegalStateException If this query is closed
      * @throws UncheckedSQLException If a database access error occurs
      * @see #queryAllResultsets()
-     * @see DataSet
+     * @see Dataset
      */
     @Beta
-    public Stream<DataSet> streamAllResultsets() {
+    public Stream<Dataset> streamAllResultsets() {
         return streamAllResultsets(ResultExtractor.TO_DATA_SET);
     }
 
@@ -9031,8 +9038,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         {@code false} if it is an update count or there are no results
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
-     * @see #executeThenApply(Function)
-     * @see #executeThenAccept(Consumer)
+     * @see #executeThenApply(Throwables.Function)
+     * @see #executeThenApply(Throwables.BiFunction)
+     * @see #executeThenAccept(Throwables.Consumer)
+     * @see #executeThenAccept(Throwables.BiConsumer)
      */
     public boolean execute() throws IllegalStateException, SQLException {
         assertNotClosed();
@@ -9075,7 +9084,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
      * @see #execute()
-     * @see #executeThenApply(BiFunction)
+     * @see #executeThenApply(Throwables.BiFunction) 
      */
     public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9117,7 +9126,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided function is null
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
-     * @see #executeThenApply(Function)
+     * @see #executeThenApply(Throwables.Function) 
      */
     public <R> R executeThenApply(final Throwables.BiFunction<? super Stmt, Boolean, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9173,7 +9182,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
      * @see #execute()
-     * @see #executeThenAccept(BiConsumer)
+     * @see #executeThenAccept(Throwables.BiConsumer) 
      */
     public void executeThenAccept(final Throwables.Consumer<? super Stmt, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9216,7 +9225,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided consumer is null
      * @throws IllegalStateException If this instance is closed
      * @throws SQLException If a database access error occurs
-     * @see #executeThenAccept(Consumer)
+     * @see #executeThenAccept(Throwables.Consumer) 
      */
     public void executeThenAccept(final Throwables.BiConsumer<? super Stmt, Boolean, SQLException> consumer)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -9258,8 +9267,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalArgumentException If the provided SQL action is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncCall(Function, Executor)
-     * @see #asyncRun(Consumer)
+     * @see #asyncCall(Throwables.Function, Executor) 
+     * @see #asyncRun(Throwables.Consumer) 
      */
     @Beta
     public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
@@ -9302,7 +9311,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalArgumentException If sqlAction or executor is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncCall(Function)
+     * @see #asyncCall(Throwables.Function) 
      */
     @Beta
     public <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
@@ -9319,7 +9328,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result.
      * 
-     * <p>This method is similar to {@link #asyncCall(Function)} but for operations that
+     * <p>This method is similar to {@link #asyncCall(Throwables.Function)} but for operations that
      * don't return a value (void operations). Useful for INSERT, UPDATE, DELETE operations
      * where you only care about completion, not the result.</p>
      * 
@@ -9344,8 +9353,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the completion of the asynchronous execution
      * @throws IllegalArgumentException If the provided SQL action is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncRun(Consumer, Executor)
-     * @see #asyncCall(Function)
+     * @see #asyncRun(Throwables.Consumer, Executor) 
+     * @see #asyncCall(Throwables.Function) 
      */
     @Beta
     public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction)
@@ -9361,7 +9370,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Asynchronously executes the provided SQL action without returning a result using a custom executor.
      * 
-     * <p>This method is similar to {@link #asyncRun(Consumer)} but allows specification of
+     * <p>This method is similar to {@link #asyncCall(Throwables.Function, Executor)} but allows specification of
      * a custom executor for the asynchronous operation.</p>
      * 
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
@@ -9385,7 +9394,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A ContinuableFuture representing the completion of the asynchronous execution
      * @throws IllegalArgumentException If sqlAction or executor is null
      * @throws IllegalStateException If this instance is closed
-     * @see #asyncRun(Consumer)
+     * @see #asyncRun(Throwables.Consumer) 
      */
     @Beta
     public ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)

@@ -51,7 +51,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -582,7 +582,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("name");
         when(mockResultSet.next()).thenReturn(false);
 
-        DataSet result = JdbcUtil.executeQuery(mockDataSource, sql);
+        Dataset result = JdbcUtil.executeQuery(mockDataSource, sql);
         assertNotNull(result);
     }
 
@@ -633,7 +633,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.getObject(1)).thenReturn(1L);
         when(mockResultSet.getObject(2)).thenReturn("John");
 
-        DataSet data = JdbcUtil.extractData(mockResultSet);
+        Dataset data = JdbcUtil.extractData(mockResultSet);
         assertNotNull(data);
         assertEquals(1, data.size());
     }
@@ -645,7 +645,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true, true, false);
         when(mockResultSet.getObject(1)).thenReturn(1L, 2L, 3L);
 
-        DataSet data = JdbcUtil.extractData(mockResultSet, 1, 2);
+        Dataset data = JdbcUtil.extractData(mockResultSet, 1, 2);
         assertNotNull(data);
         assertEquals(2, data.size());
     }
@@ -662,7 +662,7 @@ public class JdbcUtilTest extends TestBase {
             return id > 1;
         };
 
-        DataSet data = JdbcUtil.extractData(mockResultSet, filter);
+        Dataset data = JdbcUtil.extractData(mockResultSet, filter);
         assertNotNull(data);
     }
 
@@ -744,8 +744,8 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col");
         when(mockResultSet.next()).thenReturn(false);
 
-        Stream<DataSet> stream = JdbcUtil.streamAllResultSets(mockStatement);
-        List<DataSet> list = stream.toList();
+        Stream<Dataset> stream = JdbcUtil.streamAllResultSets(mockStatement);
+        List<Dataset> list = stream.toList();
 
         assertNotNull(list);
     }
@@ -758,11 +758,11 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(1)).thenReturn(1L);
 
-        Stream<DataSet> pages = JdbcUtil.queryByPage(mockDataSource, query, 10, (pq, prev) -> {
+        Stream<Dataset> pages = JdbcUtil.queryByPage(mockDataSource, query, 10, (pq, prev) -> {
             pq.setLong(1, 0);
         });
 
-        DataSet firstPage = pages.first().orElse(null);
+        Dataset firstPage = pages.first().orElse(null);
         assertNotNull(firstPage);
     }
 

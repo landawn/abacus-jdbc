@@ -24,7 +24,6 @@ import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -32,10 +31,12 @@ import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -1231,7 +1232,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         }
 
         final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .filter(joinEntityPropName -> N.getPropValue(entity, joinEntityPropName) == null)
+                .filter(joinEntityPropName -> Beans.getPropValue(entity, joinEntityPropName) == null)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
 

@@ -21,18 +21,55 @@ import java.util.concurrent.Executor;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SQLBuilder;
 
+/**
+ * A read-only interface for managing join entity relationships in database operations without checked exceptions.
+ * This interface extends both {@link UncheckedJoinEntityHelper} and {@link ReadOnlyJoinEntityHelper} to provide
+ * unchecked exception handling for read-only join entity operations.
+ * 
+ * <p>All mutation operations (delete operations) in this interface are deprecated and will throw
+ * {@link UnsupportedOperationException} when called, enforcing the read-only nature of this interface.</p>
+ * 
+ * <p>This interface is designed for scenarios where you need to query and read join entity relationships
+ * but want to prevent any accidental modifications to the data.</p>
+ * 
+ * <p>Example usage:
+ * <pre>{@code
+ * // Assuming we have a UserDao that extends this interface
+ * UserDao userDao = daoFactory.getUserDao();
+ * // Read operations are allowed
+ * User user = userDao.selectJoinEntitiesById(userId, "orders");
+ * // Delete operations will throw UnsupportedOperationException
+ * // userDao.deleteJoinEntities(user, Order.class); // This will fail
+ * }</pre></p>
+ * 
+ * @param <T> the type of the entity
+ * @param <SB> the type of SQLBuilder used for query construction
+ * @param <TD> the type of the DAO extending this interface
+ * 
+ * @see UncheckedJoinEntityHelper
+ * @see ReadOnlyJoinEntityHelper
+ * @see UncheckedSQLException
+ */
 public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>>
         extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
 
     /**
+     * Attempts to delete join entities of a specific class related to the given entity.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(user, Order.class);
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param joinEntityClass
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose related join entities should be deleted
+     * @param joinEntityClass the class of the join entities to delete
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -41,14 +78,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete join entities of a specific class related to the given collection of entities.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(users, Order.class);
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param joinEntityClass
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose related join entities should be deleted
+     * @param joinEntityClass the class of the join entities to delete
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -57,14 +102,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete join entities identified by property name related to the given entity.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(user, "orders");
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param joinEntityPropName
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose related join entities should be deleted
+     * @param joinEntityPropName the property name identifying the join entities to delete
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -73,14 +126,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete join entities identified by property name related to the given collection of entities.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(users, "orders");
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param joinEntityPropName
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose related join entities should be deleted
+     * @param joinEntityPropName the property name identifying the join entities to delete
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -89,14 +150,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete multiple types of join entities identified by property names related to the given entity.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"));
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param joinEntityPropNames
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose related join entities should be deleted
+     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -105,15 +174,23 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete multiple types of join entities with optional parallel execution.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), true);
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param joinEntityPropNames
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose related join entities should be deleted
+     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
+     * @param inParallel whether to execute the deletions in parallel
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -123,15 +200,24 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete multiple types of join entities using a custom executor.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * ExecutorService executor = Executors.newFixedThreadPool(4);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), executor);
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param joinEntityPropNames
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose related join entities should be deleted
+     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
+     * @param executor the executor to use for parallel execution
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -141,14 +227,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete multiple types of join entities for a collection of entities.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"));
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param joinEntityPropNames
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose related join entities should be deleted
+     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -158,15 +252,23 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete multiple types of join entities for a collection of entities with optional parallel execution.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), true);
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param joinEntityPropNames
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose related join entities should be deleted
+     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
+     * @param inParallel whether to execute the deletions in parallel
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -176,15 +278,24 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete multiple types of join entities for a collection of entities using a custom executor.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * ExecutorService executor = Executors.newFixedThreadPool(4);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), executor);
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param joinEntityPropNames
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose related join entities should be deleted
+     * @param joinEntityPropNames the collection of property names identifying the join entities to delete
+     * @param executor the executor to use for parallel execution
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -194,13 +305,21 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete all join entities related to the given entity.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteAllJoinEntities(user);
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose all related join entities should be deleted
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -209,14 +328,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete all join entities related to the given entity with optional parallel execution.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteAllJoinEntities(user, true);
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose all related join entities should be deleted
+     * @param inParallel whether to execute the deletions in parallel
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -225,14 +352,23 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete all join entities related to the given entity using a custom executor.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * User user = userDao.selectById(123L);
+     * ExecutorService executor = Executors.newFixedThreadPool(4);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteAllJoinEntities(user, executor);
+     * }</pre></p>
      *
-     *
-     * @param entity
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entity the entity whose all related join entities should be deleted
+     * @param executor the executor to use for parallel execution
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -241,13 +377,21 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete all join entities related to the given collection of entities.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteAllJoinEntities(users);
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose all related join entities should be deleted
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -256,14 +400,22 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete all join entities related to the given collection of entities with optional parallel execution.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteAllJoinEntities(users, true);
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param inParallel
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose all related join entities should be deleted
+     * @param inParallel whether to execute the deletions in parallel
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
@@ -272,14 +424,23 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
     }
 
     /**
+     * Attempts to delete all join entities related to the given collection of entities using a custom executor.
+     * This operation is not supported in a read-only interface.
+     * 
+     * <p>Example that will fail:
+     * <pre>{@code
+     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * ExecutorService executor = Executors.newFixedThreadPool(4);
+     * // This will throw UnsupportedOperationException
+     * userDao.deleteAllJoinEntities(users, executor);
+     * }</pre></p>
      *
-     *
-     * @param entities
-     * @param executor
-     * @return the total count of updated/deleted records.
-     * @throws UncheckedSQLException
-     * @throws UnsupportedOperationException
-     * @deprecated unsupported Operation
+     * @param entities the collection of entities whose all related join entities should be deleted
+     * @param executor the executor to use for parallel execution
+     * @return the total count of updated/deleted records (never returned, always throws exception)
+     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
+     * @throws UnsupportedOperationException always thrown as this is a read-only operation
+     * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override

@@ -45,11 +45,13 @@ import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowFilter;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
+import com.landawn.abacus.jdbc.Jdbc.RowFilter;
+import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.util.ClassUtil;
-import com.landawn.abacus.util.DataSet;
+import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
@@ -1513,8 +1515,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalArgumentException if the entity or parameterNames is null
      * @throws SQLException if a database access error occurs or if a parameter name doesn't
      *                      correspond to a valid property in the entity
-     * @see ClassUtil#getPropNameList(Class)
-     * @see ClassUtil#getPropNames(Class, Collection)
+     * @see Beans#getPropNameList(Class)
+     * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {
@@ -2335,21 +2337,21 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Executes the stored procedure and returns both the first result set (as a DataSet) and OUT parameters.
-     * This is a convenience method that uses the default DataSet result extractor.
+     * Executes the stored procedure and returns both the first result set (as a Dataset) and OUT parameters.
+     * This is a convenience method that uses the default Dataset result extractor.
      * 
-     * <p>The result set is fully loaded into memory as a {@link DataSet}, which provides
+     * <p>The result set is fully loaded into memory as a {@link Dataset}, which provides
      * a convenient API for working with tabular data.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * Tuple2<DataSet, OutParamResult> result = query.queryAndGetOutParameters();
+     * Tuple2<Dataset, OutParamResult> result = query.queryAndGetOutParameters();
      * 
-     * DataSet dataSet = result._1;
+     * Dataset dataset = result._1;
      * OutParamResult outParams = result._2;
      * 
      * // Process the data set
-     * dataSet.forEach(row -> {
+     * dataset.forEach(row -> {
      *     System.out.println(row.getString("name") + ": " + row.getInt("value"));
      * });
      * 
@@ -2357,12 +2359,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * int totalCount = outParams.getInt("totalCount");
      * }</pre>
      *
-     * @return a {@link Tuple2} containing the DataSet (first element) and OUT parameters (second element)
+     * @return a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element)
      * @throws SQLException if a database access error occurs
      * @see #queryAndGetOutParameters(Jdbc.ResultExtractor)
-     * @see DataSet
+     * @see Dataset
      */
-    public Tuple2<DataSet, Jdbc.OutParamResult> queryAndGetOutParameters() throws SQLException {
+    public Tuple2<Dataset, Jdbc.OutParamResult> queryAndGetOutParameters() throws SQLException {
         return queryAndGetOutParameters(Jdbc.ResultExtractor.TO_DATA_SET);
     }
 
@@ -2471,35 +2473,35 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Executes the stored procedure and returns all result sets as DataSets along with OUT parameters.
+     * Executes the stored procedure and returns all result sets as Datasets along with OUT parameters.
      * This method is useful for procedures that return multiple result sets.
      * 
-     * <p>Each result set is converted to a {@link DataSet} and collected in a list. The method
+     * <p>Each result set is converted to a {@link Dataset} and collected in a list. The method
      * processes all available result sets, not just the first one.</p>
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * Tuple2<List<DataSet>, OutParamResult> results = 
+     * Tuple2<List<Dataset>, OutParamResult> results = 
      *     query.queryAllResultsetsAndGetOutParameters();
      * 
-     * List<DataSet> dataSets = results._1;
+     * List<Dataset> datasets = results._1;
      * OutParamResult outParams = results._2;
      * 
      * // Process each result set
-     * for (int i = 0; i < dataSets.size(); i++) {
+     * for (int i = 0; i < datasets.size(); i++) {
      *     System.out.println("Result set " + (i + 1) + ":");
-     *     dataSets.get(i).println();
+     *     datasets.get(i).println();
      * }
      * 
      * // Get OUT parameters
      * String status = outParams.getString("status");
      * }</pre>
      *
-     * @return a {@link Tuple2} containing a list of DataSets (one per result set) and OUT parameters
+     * @return a {@link Tuple2} containing a list of Datasets (one per result set) and OUT parameters
      * @throws SQLException if a database access error occurs
      * @see #queryAllResultsetsAndGetOutParameters(Jdbc.ResultExtractor)
      */
-    public Tuple2<List<DataSet>, Jdbc.OutParamResult> queryAllResultsetsAndGetOutParameters() throws SQLException {
+    public Tuple2<List<Dataset>, Jdbc.OutParamResult> queryAllResultsetsAndGetOutParameters() throws SQLException {
         return queryAllResultsetsAndGetOutParameters(ResultExtractor.TO_DATA_SET);
     }
 
@@ -2585,13 +2587,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setInt(1, customerId)
      *          .registerOutParameter(2, Types.DECIMAL);  // total amount
      *     
-     *     Tuple2<List<DataSet>, OutParamResult> result = 
+     *     Tuple2<List<Dataset>, OutParamResult> result = 
      *         query.queryAllResultsetsAndGetOutParameters(
-     *             (rs, columnLabels) -> JdbcUtil.extractResultSetToDataSet(rs)
+     *             (rs, columnLabels) -> JdbcUtil.extractResultSetToDataset(rs)
      *         );
      *     
-     *     DataSet orders = result._1.get(0);      // First result set
-     *     DataSet orderItems = result._1.get(1);  // Second result set
+     *     Dataset orders = result._1.get(0);      // First result set
+     *     Dataset orderItems = result._1.get(1);  // Second result set
      *     BigDecimal totalAmount = result._2.getBigDecimal(2);
      * }
      * }</pre>

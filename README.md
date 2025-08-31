@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-3.10.1-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.10.1/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-3.10.8-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/3.10.8/index.html)
 
 Experience the simplicity of coding with SQL/DB as if you're working with Collections.
 
@@ -97,7 +97,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 * Calling methods in the prepared `statement/query` or `Dao` and retrieve the result(If needed):
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
-[DataSet](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DataSet_view.html), 
+[Dataset](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dataset_view.html), 
 [ConditionFactory(CF)](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/ConditionFactory_view.html), 
 [JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
@@ -143,7 +143,7 @@ The biggest difference between this library and other data(database) access fram
 <dependency>
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.10.1</version> 
+	<version>3.10.8</version> 
 <dependency>
 ```
 
@@ -151,7 +151,7 @@ The biggest difference between this library and other data(database) access fram
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn:abacus-jdbc:3.10.1'
+compile 'com.landawn:abacus-jdbc:3.10.8'
 ```
 
 ## User Guide:

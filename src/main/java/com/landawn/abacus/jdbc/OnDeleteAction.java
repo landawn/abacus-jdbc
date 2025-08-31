@@ -19,27 +19,52 @@ package com.landawn.abacus.jdbc;
 import com.landawn.abacus.annotation.Beta;
 
 /**
- * It should be defined and done in DB server side.
- * @deprecated won't and should not be implemented.
+ * Represents foreign key constraint actions that can be performed when a referenced row is deleted.
+ * 
+ * <p>This enum defines the behavior that should occur when a parent record is deleted and 
+ * there are child records that reference it through a foreign key constraint. These actions
+ * are typically implemented at the database level as part of the foreign key definition.</p>
+ * 
+ * <p><strong>Note:</strong> This enum is deprecated and should not be used in new code.
+ * Foreign key constraints and their associated actions should be defined directly in the
+ * database schema rather than being managed by application code.</p>
+ * 
+ * <p>Example database usage (for reference only):
+ * <pre>{@code
+ * CREATE TABLE orders (
+ *     id INT PRIMARY KEY,
+ *     customer_id INT,
+ *     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+ * );
+ * }</pre>
+ * 
+ * @deprecated Foreign key actions should be defined and implemented at the database server level,
+ *             not in application code. Use proper database schema definitions instead.
+ * @since 1.0
  */
 @Beta
 @Deprecated
 public enum OnDeleteAction {
     /**
-     * Field NO_ACTION.
+     * No action is taken when the referenced row is deleted.
+     * The delete operation will fail if there are still child rows referencing the parent.
+     * This is equivalent to the SQL RESTRICT action.
      */
     NO_ACTION(0),
     /**
-     * Field SET_NULL.
+     * When the referenced row is deleted, the foreign key columns in child rows are set to NULL.
+     * This action requires that the foreign key columns be nullable.
      */
     SET_NULL(1),
     /**
-     * Field CASCADE.
+     * When the referenced row is deleted, all child rows that reference it are also deleted.
+     * This action cascades the delete operation through the relationship hierarchy.
+     * Use with caution as it can result in the deletion of large amounts of data.
      */
     CASCADE(2);
 
     /**
-     * Field intValue.
+     * The integer representation of this delete action.
      */
     private final int intValue;
 
@@ -48,17 +73,21 @@ public enum OnDeleteAction {
     }
 
     /**
-     *
-     * @return int
+     * Returns the integer value representing this delete action.
+     * 
+     * @return The integer value of this action
      */
     public int value() {
         return intValue;
     }
 
     /**
-     *
-     * @param name
-     * @return ConstraintType
+     * Returns the OnDeleteAction enum constant for the specified string name.
+     * The lookup is case-insensitive.
+     * 
+     * @param name The string representation of the delete action ("noAction", "setNull", or "cascade")
+     * @return The corresponding OnDeleteAction enum constant
+     * @throws IllegalArgumentException if the name does not match any known action
      */
     public static OnDeleteAction get(final String name) {
         if ("noAction".equalsIgnoreCase(name)) {
@@ -68,7 +97,7 @@ public enum OnDeleteAction {
         } else if ("cascade".equalsIgnoreCase(name)) {
             return CASCADE;
         } else {
-            throw new IllegalArgumentException("Invalid CascadeType value[" + name + "]. ");
+            throw new IllegalArgumentException("Invalid OnDeleteAction value[" + name + "]. ");
         }
     }
 }
