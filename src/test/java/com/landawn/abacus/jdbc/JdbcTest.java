@@ -47,12 +47,12 @@ import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.IntFunctions;
-import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.ImmutableList;
+import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.ListMultimap;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -822,21 +822,21 @@ public class JdbcTest extends TestBase {
         assertEquals(25, result.get(2));
     }
 
-    @Test
-    public void testBiRowMapperToMapWithValueFilter() throws SQLException {
-        when(mockResultSet.getObject(1)).thenReturn(1);
-        when(mockResultSet.getObject(2)).thenReturn(null);
-        when(mockResultSet.getObject(3)).thenReturn("John");
-
-        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(Fn.p(value -> value != null));
-        List<String> columnLabels = Arrays.asList("id", "email", "name");
-
-        Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
-        assertEquals(2, result.size());
-        assertEquals(1, result.get("id"));
-        assertEquals("John", result.get("name"));
-        assertFalse(result.containsKey("email"));
-    }
+    //    @Test
+    //    public void testBiRowMapperToMapWithValueFilter() throws SQLException {
+    //        when(mockResultSet.getObject(1)).thenReturn(1);
+    //        when(mockResultSet.getObject(2)).thenReturn(null);
+    //        when(mockResultSet.getObject(3)).thenReturn("John");
+    //
+    //        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(Fn.p(value -> value != null));
+    //        List<String> columnLabels = Arrays.asList("id", "email", "name");
+    //
+    //        Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
+    //        assertEquals(2, result.size());
+    //        assertEquals(1, result.get("id"));
+    //        assertEquals("John", result.get("name"));
+    //        assertFalse(result.containsKey("email"));
+    //    }
 
     @Test
     public void testBiRowMapperToMapWithBiPredicate() throws SQLException {

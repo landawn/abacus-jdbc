@@ -1545,28 +1545,37 @@ public final class Jdbc {
 
         /**
          * Maps a row of the ResultSet to an object of type T.
-         * This method should not advance the ResultSet cursor; it should only read
-         * from the current row.
+         * This is the core method that performs the actual transformation of a database row
+         * into a Java object. The method should not advance the ResultSet cursor; it should 
+         * only read from the current row that the ResultSet is positioned on.
+         * 
+         * <p>Implementation example:</p>
+         * <pre>{@code
+         * return new Person(rs.getString("name"), rs.getInt("age"));
+         * }</pre>
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @return the mapped object of type T
-         * @throws SQLException if a database access error occurs
+         * @param rs the ResultSet positioned at a valid row to be mapped
+         * @return the mapped object of type T created from the current row data
+         * @throws SQLException if a database access error occurs during column value retrieval
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
         /**
          * Returns a composed RowMapper that first applies this mapper and then applies the after function.
+         * This allows for chaining transformations where you first map a row to an intermediate object,
+         * then transform that object to a final result type.
          * 
-         * <p>Example usage:</p>
+         * <p>Usage example:</p>
          * <pre>{@code
-         * RowMapper<User> userMapper = ...;
+         * RowMapper<User> userMapper = rs -> new User(rs.getString("name"));
          * RowMapper<String> nameMapper = userMapper.andThen(User::getName);
          * }</pre>
          *
          * @param <R> the type of output of the after function
-         * @param after the function to apply after this mapper is applied
-         * @return a composed RowMapper
+         * @param after the function to apply after this mapper is applied; must not be null
+         * @return a composed RowMapper that applies this mapper first, then the after function
+         * @throws IllegalArgumentException if after is null
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1576,9 +1585,17 @@ public final class Jdbc {
 
         /**
          * Converts this RowMapper to a BiRowMapper.
-         * The resulting BiRowMapper ignores the column labels parameter.
+         * The resulting BiRowMapper ignores the column labels parameter and delegates
+         * all calls to this RowMapper's apply method. This is useful when you need
+         * to use a simple RowMapper in contexts that expect a BiRowMapper.
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<String> simpleMapper = rs -> rs.getString(1);
+         * BiRowMapper<String> biMapper = simpleMapper.toBiRowMapper();
+         * }</pre>
          *
-         * @return a BiRowMapper that delegates to this RowMapper
+         * @return a BiRowMapper that delegates to this RowMapper, ignoring column labels
          */
         default BiRowMapper<T> toBiRowMapper() {
             return (rs, columnLabels) -> this.apply(rs);
@@ -1586,19 +1603,23 @@ public final class Jdbc {
 
         /**
          * Combines two RowMapper instances into a RowMapper that returns a Tuple2 of their results.
+         * This static method creates a new mapper that applies both input mappers to the same
+         * ResultSet row and packages their results into a Tuple2. This is useful when you need
+         * to extract multiple different object types from the same row.
          * 
-         * <p>Example usage:</p>
+         * <p>Usage example:</p>
          * <pre>{@code
          * RowMapper<Integer> idMapper = rs -> rs.getInt("id");
          * RowMapper<String> nameMapper = rs -> rs.getString("name");
          * RowMapper<Tuple2<Integer, String>> combined = RowMapper.combine(idMapper, nameMapper);
          * }</pre>
          *
-         * @param <T> the type of the first RowMapper
-         * @param <U> the type of the second RowMapper
-         * @param rowMapper1 the first RowMapper
-         * @param rowMapper2 the second RowMapper
-         * @return a RowMapper that returns a Tuple2 of the results
+         * @param <T> the type of the first RowMapper's result
+         * @param <U> the type of the second RowMapper's result
+         * @param rowMapper1 the first RowMapper; must not be null
+         * @param rowMapper2 the second RowMapper; must not be null
+         * @return a RowMapper that returns a Tuple2 containing results from both mappers
+         * @throws IllegalArgumentException if either rowMapper1 or rowMapper2 is null
          */
         static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, cs.rowMapper1);
@@ -1609,8 +1630,11 @@ public final class Jdbc {
 
         /**
          * Combines three RowMapper instances into a RowMapper that returns a Tuple3 of their results.
+         * This static method creates a new mapper that applies all three input mappers to the same
+         * ResultSet row and packages their results into a Tuple3. This extends the capability of
+         * the two-mapper combine method for scenarios requiring three different object extractions.
          * 
-         * <p>Example usage:</p>
+         * <p>Usage example:</p>
          * <pre>{@code
          * RowMapper<Integer> idMapper = rs -> rs.getInt("id");
          * RowMapper<String> nameMapper = rs -> rs.getString("name");
@@ -1619,13 +1643,14 @@ public final class Jdbc {
          *     RowMapper.combine(idMapper, nameMapper, ageMapper);
          * }</pre>
          *
-         * @param <A> the type of the first RowMapper
-         * @param <B> the type of the second RowMapper
-         * @param <C> the type of the third RowMapper
-         * @param rowMapper1 the first RowMapper
-         * @param rowMapper2 the second RowMapper
-         * @param rowMapper3 the third RowMapper
-         * @return a RowMapper that returns a Tuple3 of the results
+         * @param <A> the type of the first RowMapper's result
+         * @param <B> the type of the second RowMapper's result
+         * @param <C> the type of the third RowMapper's result
+         * @param rowMapper1 the first RowMapper; must not be null
+         * @param rowMapper2 the second RowMapper; must not be null
+         * @param rowMapper3 the third RowMapper; must not be null
+         * @return a RowMapper that returns a Tuple3 containing results from all three mappers
+         * @throws IllegalArgumentException if any of the rowMapper parameters is null
          */
         static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
                 final RowMapper<? extends C> rowMapper3) {
@@ -1638,12 +1663,21 @@ public final class Jdbc {
 
         /**
          * Creates a stateful RowMapper that maps all columns to an Object array.
-         * Uses the provided ColumnGetter for all columns.
+         * Uses the provided ColumnGetter for all columns in the ResultSet. The returned
+         * mapper maintains internal state to cache column count information for efficiency.
          * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * <p>This method is marked as stateful and should not be cached or used in parallel streams
+         * as it maintains internal state that could cause race conditions.</p>
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<Object[]> mapper = RowMapper.toArray(ColumnGetter.GET_STRING);
+         * Object[] row = mapper.apply(resultSet);
+         * }</pre>
          *
-         * @param columnGetterForAll the ColumnGetter to use for all columns
-         * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
+         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
+         * @throws IllegalArgumentException if columnGetterForAll is null
          */
         @Beta
         @SequentialOnly
@@ -1671,12 +1705,20 @@ public final class Jdbc {
 
         /**
          * Creates a stateful RowMapper that maps all columns to a List.
-         * Uses the provided ColumnGetter for all columns.
+         * Uses the provided ColumnGetter for all columns and returns the results as a List.
+         * This is a convenience method that internally uses toCollection with a List supplier.
          * 
          * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<List<Object>> mapper = RowMapper.toList(ColumnGetter.GET_OBJECT);
+         * List<Object> row = mapper.apply(resultSet);
+         * }</pre>
          *
-         * @param columnGetterForAll the ColumnGetter to use for all columns
-         * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
+         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
+         * @throws IllegalArgumentException if columnGetterForAll is null
          */
         @Beta
         @SequentialOnly
@@ -1687,14 +1729,24 @@ public final class Jdbc {
 
         /**
          * Creates a stateful RowMapper that maps all columns to a Collection.
-         * Uses the provided ColumnGetter for all columns and the supplier to create the collection.
+         * Uses the provided ColumnGetter for all columns and the supplier to create the collection
+         * instance. The supplier receives the expected size (column count) as a parameter to allow
+         * for optimal collection sizing.
          * 
          * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<LinkedList<Object>> mapper = RowMapper.toCollection(
+         *     ColumnGetter.GET_STRING, size -> new LinkedList<>());
+         * LinkedList<Object> row = mapper.apply(resultSet);
+         * }</pre>
          *
-         * @param <C> the collection type
-         * @param columnGetterForAll the ColumnGetter to use for all columns
+         * @param <C> the collection type to be returned
+         * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
          * @param supplier the function to create the collection with the expected size
-         * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
+         * @throws IllegalArgumentException if columnGetterForAll or supplier is null
          */
         @Beta
         @SequentialOnly
@@ -1722,11 +1774,20 @@ public final class Jdbc {
 
         /**
          * Creates a stateful RowMapper that maps all columns to a DisposableObjArray.
-         * This is useful for efficient row processing where the same array can be reused.
+         * This is useful for efficient row processing where the same array can be reused
+         * across multiple row mappings, reducing garbage collection pressure. The DisposableObjArray
+         * wraps the internal array and provides controlled access to the data.
          * 
          * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray();
+         * DisposableObjArray row = mapper.apply(resultSet);
+         * Object firstColumn = row.get(0);
+         * }</pre>
          *
-         * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
          */
         @Beta
         @SequentialOnly
@@ -1756,12 +1817,21 @@ public final class Jdbc {
 
         /**
          * Creates a stateful RowMapper that maps columns to a DisposableObjArray using entity class metadata.
-         * The entity class is used to determine the appropriate type conversions for each column.
+         * The entity class is used to determine the appropriate type conversions for each column
+         * by analyzing the class's field types and annotations. This provides type-safe mapping
+         * based on the entity's structure and database column mappings.
          * 
          * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray(User.class);
+         * DisposableObjArray row = mapper.apply(resultSet);
+         * }</pre>
          *
-         * @param entityClass used to fetch column/row value from ResultSet by the type of fields/columns defined in this class
-         * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param entityClass used to fetch column/row value from ResultSet by the type of fields/columns defined in this class; must not be null
+         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
+         * @throws IllegalArgumentException if entityClass is null
          */
         @Beta
         @SequentialOnly
@@ -1826,8 +1896,16 @@ public final class Jdbc {
 
         /**
          * Creates a RowMapperBuilder with default column getter for object values.
+         * The builder allows for fine-grained control over how each column is extracted
+         * and converted, providing a fluent API for building complex row mappers.
+         * 
+         * <p>Usage example:</p>
+         * <pre>{@code
+         * RowMapper<Object[]> mapper = RowMapper.builder()
+         *     .getInt(1).getString(2).toArray();
+         * }</pre>
          *
-         * @return a new RowMapperBuilder
+         * @return a new RowMapperBuilder with GET_OBJECT as the default column getter
          */
         static RowMapperBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
@@ -1835,19 +1913,19 @@ public final class Jdbc {
 
         /**
          * Creates a RowMapperBuilder with the specified default column getter.
-         * The builder allows for custom configuration of how each column is extracted.
+         * The builder allows for custom configuration of how each column is extracted,
+         * with the provided default getter being used for any columns not explicitly configured.
          * 
-         * <p>Example usage:</p>
+         * <p>Usage example:</p>
          * <pre>{@code
-         * RowMapper<Object[]> mapper = RowMapper.builder()
-         *     .getInt(1)
-         *     .getString(2)
-         *     .getDate(3)
+         * RowMapper<Object[]> mapper = RowMapper.builder(ColumnGetter.GET_STRING)
+         *     .getInt(1)  // Override default for column 1
          *     .toArray();
          * }</pre>
          *
-         * @param defaultColumnGetter the default ColumnGetter to use for columns not explicitly configured
-         * @return a new RowMapperBuilder
+         * @param defaultColumnGetter the default ColumnGetter to use for columns not explicitly configured; must not be null
+         * @return a new RowMapperBuilder configured with the specified default getter
+         * @throws IllegalArgumentException if defaultColumnGetter is null
          */
         static RowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowMapperBuilder(defaultColumnGetter);
@@ -1856,12 +1934,34 @@ public final class Jdbc {
         /**
          * A builder class for creating customized RowMapper instances.
          * This builder allows specifying different column getters for specific columns
-         * and provides various output formats (array, list, map, etc.).
+         * and provides various output formats (array, list, map, etc.). The builder uses
+         * a fluent API pattern where each method returns the builder instance for method chaining.
+         * 
+         * <p>The builder maintains a map of column-specific getters and applies a default
+         * getter to any columns not explicitly configured. All built mappers are stateful
+         * and should not be cached or used in parallel processing.</p>
+         * 
+         * <p>Example usage:</p>
+         * <pre>{@code
+         * RowMapper<Map<String, Object>> mapper = RowMapper.builder()
+         *     .getInt("id")
+         *     .getString("name") 
+         *     .getDate("created_date")
+         *     .toMap();
+         * }</pre>
          */
         @SequentialOnly
         class RowMapperBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
+            /**
+             * Creates a new RowMapperBuilder with the specified default column getter.
+             * The default getter will be used for any columns that don't have specific
+             * getters configured through the builder methods.
+             *
+             * @param defaultColumnGetter the default ColumnGetter to use; must not be null
+             * @throws IllegalArgumentException if defaultColumnGetter is null
+             */
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
 
@@ -1871,9 +1971,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a boolean value from the specified column.
+             * This method sets up the mapper to extract boolean values from the given
+             * column index using the appropriate JDBC boolean getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getBoolean(3); // Extract boolean from column 3
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract boolean value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getBoolean(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
@@ -1881,9 +1989,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a byte value from the specified column.
+             * This method sets up the mapper to extract byte values from the given
+             * column index using the appropriate JDBC byte getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getByte(2); // Extract byte from column 2
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract byte value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getByte(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
@@ -1891,9 +2007,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a short value from the specified column.
+             * This method sets up the mapper to extract short values from the given
+             * column index using the appropriate JDBC short getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getShort(1); // Extract short from column 1
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract short value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getShort(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
@@ -1901,9 +2025,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get an int value from the specified column.
+             * This method sets up the mapper to extract integer values from the given
+             * column index using the appropriate JDBC int getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getInt(1); // Extract int from column 1
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract int value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getInt(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_INT);
@@ -1911,9 +2043,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a long value from the specified column.
+             * This method sets up the mapper to extract long values from the given
+             * column index using the appropriate JDBC long getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getLong(4); // Extract long from column 4
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract long value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getLong(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_LONG);
@@ -1921,9 +2061,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a float value from the specified column.
+             * This method sets up the mapper to extract float values from the given
+             * column index using the appropriate JDBC float getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getFloat(3); // Extract float from column 3
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract float value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getFloat(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
@@ -1931,9 +2079,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a double value from the specified column.
+             * This method sets up the mapper to extract double values from the given
+             * column index using the appropriate JDBC double getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getDouble(5); // Extract double from column 5
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract double value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getDouble(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
@@ -1941,9 +2097,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a BigDecimal value from the specified column.
+             * This method sets up the mapper to extract BigDecimal values from the given
+             * column index using the appropriate JDBC BigDecimal getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getBigDecimal(6); // Extract BigDecimal from column 6
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract BigDecimal value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getBigDecimal(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
@@ -1951,9 +2115,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a String value from the specified column.
+             * This method sets up the mapper to extract String values from the given
+             * column index using the appropriate JDBC String getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getString(2); // Extract String from column 2
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract String value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getString(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_STRING);
@@ -1961,9 +2133,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a Date value from the specified column.
+             * This method sets up the mapper to extract java.sql.Date values from the given
+             * column index using the appropriate JDBC Date getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getDate(7); // Extract Date from column 7
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract Date value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getDate(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DATE);
@@ -1971,9 +2151,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a Time value from the specified column.
+             * This method sets up the mapper to extract java.sql.Time values from the given
+             * column index using the appropriate JDBC Time getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getTime(8); // Extract Time from column 8
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract Time value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getTime(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIME);
@@ -1981,9 +2169,17 @@ public final class Jdbc {
 
             /**
              * Configures the builder to get a Timestamp value from the specified column.
+             * This method sets up the mapper to extract java.sql.Timestamp values from the given
+             * column index using the appropriate JDBC Timestamp getter.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getTimestamp(9); // Extract Timestamp from column 9
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract Timestamp value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              */
             public RowMapperBuilder getTimestamp(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
@@ -1992,9 +2188,17 @@ public final class Jdbc {
             /**
              * Configures the builder to get an Object value from the specified column.
              * Uses the default object getter if no specific getter is set for the column.
+             * This method is deprecated as the default behavior already applies the object
+             * getter for unconfigured columns.
+             * 
+             * <p>Usage example:</p>
+             * <pre>{@code
+             * builder.getObject(10); // Extract Object from column 10
+             * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the column index (1-based) to extract Object value from
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if columnIndex is not positive
              * @deprecated default {@link #getObject(int)} if there is no {@code ColumnGetter} set for the target column
              */
             @Deprecated
@@ -2950,38 +3154,38 @@ public final class Jdbc {
             };
         }
 
-        /**
-         * Creates a BiRowMapper that converts rows to a Map with value filtering.
-         * Only values that pass the filter predicate are included in the map.
-         * 
-         * <p>Example usage:</p>
-         * <pre>{@code
-         * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         *     value -> value != null  // Exclude null values
-         * );
-         * }</pre>
-         *
-         * @param valueFilter the predicate to test values
-         * @return a BiRowMapper that produces a filtered Map
-         */
-        static BiRowMapper<Map<String, Object>> toMap(final Predicate<Object> valueFilter) {
-            return (rs, columnLabels) -> {
-                final int columnCount = columnLabels.size();
-                final Map<String, Object> result = N.newHashMap(columnCount);
-
-                Object value = null;
-
-                for (int i = 1; i <= columnCount; i++) {
-                    value = JdbcUtil.getColumnValue(rs, i);
-
-                    if (valueFilter.test(value)) {
-                        result.put(columnLabels.get(i - 1), value);
-                    }
-                }
-
-                return result;
-            };
-        }
+        //    /**
+        //     * Creates a BiRowMapper that converts rows to a Map with value filtering.
+        //     * Only values that pass the filter predicate are included in the map.
+        //     * 
+        //     * <p>Example usage:</p>
+        //     * <pre>{@code
+        //     * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
+        //     *     value -> value != null  // Exclude null values
+        //     * );
+        //     * }</pre>
+        //     *
+        //     * @param valueFilter the predicate to test values
+        //     * @return a BiRowMapper that produces a filtered Map
+        //     */
+        //    static BiRowMapper<Map<String, Object>> toMap(final Predicate<Object> valueFilter) {
+        //        return (rs, columnLabels) -> {
+        //            final int columnCount = columnLabels.size();
+        //            final Map<String, Object> result = N.newHashMap(columnCount);
+        //
+        //            Object value = null;
+        //
+        //            for (int i = 1; i <= columnCount; i++) {
+        //                value = JdbcUtil.getColumnValue(rs, i);
+        //
+        //                if (valueFilter.test(value)) {
+        //                    result.put(columnLabels.get(i - 1), value);
+        //                }
+        //            }
+        //
+        //            return result;
+        //        };
+        //    }
 
         /**
          * Creates a BiRowMapper that converts rows to a Map with key-value filtering.
