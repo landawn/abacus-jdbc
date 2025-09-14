@@ -3154,6 +3154,7 @@ public final class Jdbc {
             };
         }
 
+        // Removed because: The method toMap(Predicate<Object>) is ambiguous for the type Jdbc.BiRowMapper
         //    /**
         //     * Creates a BiRowMapper that converts rows to a Map with value filtering.
         //     * Only values that pass the filter predicate are included in the map.
