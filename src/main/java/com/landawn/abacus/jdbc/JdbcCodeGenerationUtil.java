@@ -58,6 +58,7 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.CharStream;
+import com.landawn.abacus.util.stream.Collectors;
 import com.landawn.abacus.util.stream.Stream;
 
 import lombok.AllArgsConstructor;
@@ -748,7 +749,7 @@ public final class JdbcCodeGenerationUtil {
 
                 final File file = new File(packageDir + IOUtil.DIR_SEPARATOR + finalClassName + ".java");
 
-                IOUtil.createIfNotExists(file);
+                IOUtil.createFileIfNotExists(file);
 
                 IOUtil.write(result, file);
             }
@@ -762,7 +763,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String createQueryByTableName(final String tableName) {
-        return "select * from " + tableName + " where 1 > 2"; // NOSONAR
+        return "SELECT * FROM " + tableName + " WHERE 1 > 2"; // NOSONAR
     }
 
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
@@ -816,12 +817,12 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "employee");
-     * // Returns: "select id, name, department, salary from employee"
+    SELECT* // Returns: "select id, name, department, salary from employee"
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
      * @param tableName The name of the table for which to generate the SELECT statement
-     * @return A SELECT SQL statement string with all columns from the table
+     * @return A SELECT SQL statement string with all columns FROM the table
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
@@ -840,7 +841,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns: "select user_id, first_name, last_name, `created-date` from user_profile"
+     *     // Returns: "SELECT user_id, first_name, last_name, `created-date` FROM user_profile"
      * }
      * }</pre>
      *
@@ -850,14 +851,87 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateSelectSql(final Connection conn, final String tableName) {
-        final String query = "select * from " + tableName + " where 1 > 2";
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return Strings.join(checkColumnName(columnLabelList), ", ", "select ", " from " + checkTableName(tableName));
+            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ", " FROM " + checkTableName(tableName, dbProductInfo));
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a SELECT SQL statement for the specified table, excluding certain columns and applying a WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * List<String> excludedColumns = Arrays.asList("password", "ssn");
+     * String whereClause = "status = 'active'";
+     * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "users", excludedColumns, whereClause);
+     * // Returns: "SELECT id, username, email FROM users WHERE status = 'active'"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the SELECT statement
+     * @param excludedColumnNames A collection of column names to exclude from the SELECT statement
+     * @param whereClause An optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
+     * @return A SELECT SQL statement string with specified columns excluded and an optional WHERE clause
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateSelectSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames,
+            final String whereClause) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateSelectSql(conn, tableName, excludedColumnNames, whereClause);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a SELECT SQL statement for the specified table using an existing connection,
+     * excluding certain columns and applying a WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     List<String> excludedColumns = Arrays.asList("salary", "birth_date");
+     *     String whereClause = "department = 'Engineering'";
+     *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "employees", excludedColumns, whereClause);
+     *     // Returns: "SELECT id, name, position FROM employees WHERE department = 'Engineering'"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the SELECT statement
+     * @param excludedColumnNames A collection of column names to exclude from the SELECT statement
+     * @param whereClause An optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
+     * @return A SELECT SQL statement string with specified columns excluded and an optional WHERE clause
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
+            final String whereClause) throws UncheckedSQLException {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(c -> Strings.toCamelCase(c)).collect(Collectors.toSet());
+
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .toList();
+
+            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ",
+                    " FROM " + checkTableName(tableName, dbProductInfo) + (Strings.isEmpty(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -871,7 +945,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "product");
-     * // Returns: "insert into product(id, name, price, category) values (?, ?, ?, ?)"
+     * // Returns: "INSERT INTO product(id, name, price, category) VALUES (?, ?, ?, ?)"
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
@@ -895,7 +969,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order_items");
-     *     // Returns: "insert into order_items(order_id, item_id, quantity, price) values (?, ?, ?, ?)"
+     *     // Returns: "INSERT INTO order_items(order_id, item_id, quantity, price) VALUES (?, ?, ?, ?)"
      * }
      * }</pre>
      *
@@ -905,15 +979,87 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateInsertSql(final Connection conn, final String tableName) {
-        final String query = "select * from " + tableName + " where 1 > 2";
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return Strings.join(checkColumnName(columnLabelList), ", ", "insert into " + checkTableName(tableName) + "(",
-                    ") values (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
+            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
+                    ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates an INSERT SQL statement for the specified table, excluding certain columns.
+     * The generated SQL uses positional parameters (?) for the included column values.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "order", excludedColumns);
+     * // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (?, ?, ?)"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the INSERT statement
+     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement
+     * @return An INSERT SQL statement string with positional parameters for included columns
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames)
+            throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateInsertSql(conn, tableName, excludedColumnNames);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates an INSERT SQL statement for the specified table, excluding certain columns.
+     * The generated SQL uses positional parameters (?) for the included column values.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order", excludedColumns);
+     *     // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (?, ?, ?)"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the INSERT statement
+     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @return An INSERT SQL statement string with positional parameters for all included columns
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
+     * @see #generateInsertSql(Connection, String)
+     * @see #generateInsertSql(DataSource, String, Collection)
+     * @see #generateNamedInsertSql(Connection, String, Collection)
+     */
+    public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(c -> Strings.toCamelCase(c)).collect(Collectors.toSet());
+
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .toList();
+
+            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
+                    ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -927,7 +1073,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "customer");
-     * // Returns: "insert into customer(customer_id, first_name, last_name) values (:customerId, :firstName, :lastName)"
+     * // Returns: "INSERT INTO customer(customer_id, first_name, last_name) VALUES (:customerId, :firstName, :lastName)"
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
@@ -951,8 +1097,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "user_settings");
-     *     // Returns: "insert into user_settings(user_id, theme_preference, notification_enabled) 
-     *     //           values (:userId, :themePreference, :notificationEnabled)"
+     *     // Returns: "INSERT INTO user_settings(user_id, theme_preference, notification_enabled) 
+     *     //           VALUES (:userId, :themePreference, :notificationEnabled)"
      * }
      * }</pre>
      *
@@ -962,15 +1108,87 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
-        final String query = "select * from " + tableName + " where 1 > 2";
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return Strings.join(checkColumnName(columnLabelList), ", ", "insert into " + checkTableName(tableName) + "(",
-                    Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") values (", ")"));
+            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
+                    Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a named INSERT SQL statement for the specified table, excluding certain columns.
+     * The generated SQL uses named parameters (:paramName) based on camelCase column names.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "order", excludedColumns);
+     * // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the named INSERT statement
+     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement
+     * @return An INSERT SQL statement string with named parameters for included columns
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateNamedInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames)
+            throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedInsertSql(conn, tableName, excludedColumnNames);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a named INSERT SQL statement for the specified table using an existing connection,
+     * excluding certain columns. Column names with underscores are converted to camelCase for parameter names.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "order", excludedColumns);
+     *     // Returns: "INSERT INTO order(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the named INSERT statement
+     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @return An INSERT SQL statement string with named parameters for all included columns
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
+     * @see #generateNamedInsertSql(Connection, String)
+     * @see #generateNamedInsertSql(DataSource, String, Collection)
+     * @see #generateInsertSql(Connection, String, Collection)
+     */
+    public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(c -> Strings.toCamelCase(c)).collect(Collectors.toSet());
+
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .toList();
+
+            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
+                    Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -984,7 +1202,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
-     * // Returns: "update employee set name = ?, department = ?, salary = ?, updated_date = ?"
+     * // Returns: "UPDATE employee SET name = ?, department = ?, salary = ?, updated_date = ?"
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
@@ -1009,7 +1227,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
-     *     // Returns: "update product set name = ?, description = ?, price = ?, stock_quantity = ?"
+     *     // Returns: "UPDATE product SET name = ?, description = ?, price = ?, stock_quantity = ?"
      *     // Usage: updateSql += " WHERE id = ?";
      * }
      * }</pre>
@@ -1020,15 +1238,176 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
-        final String query = "select * from " + tableName + " where 1 > 2";
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return "update " + checkTableName(tableName) + " set "
-                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = ?").join(", ");
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
+                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ");
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
+     * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee", "id");
+     * // Returns: "UPDATE employee SET name = ?, department = ?, salary = ? WHERE id = ?"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @param keyColumnName The column name to use in the WHERE clause
+     * @return An UPDATE SQL statement string with positional parameters for all columns and a WHERE clause
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateUpdateSql(final DataSource dataSource, final String tableName, final String keyColumnName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateUpdateSql(conn, tableName, keyColumnName);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
+     * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "employee", "id");
+     *     // Returns: "UPDATE employee SET name = ?, department = ?, salary = ? WHERE id = ?"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @param keyColumnName The column name to use in the WHERE clause
+     * @return An UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+                    .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
+                    .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?")
+                    .join(", ") + " WHERE " + checkColumnName(keyColumnName, dbProductInfo) + " = ?";
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates an UPDATE SQL statement for the specified table using an existing connection,
+     * excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
+     * <p>
+     * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
+     * and those used in WHERE conditions), uses positional parameters (?) for all values,
+     * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     * List<String> keyColumnNames = Arrays.asList("id", "status");
+     * String customWhere = "version > 1";
+     * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "order",
+     *                                                            excludedColumns, keyColumnNames, customWhere);
+     * // Returns: "UPDATE order SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND version > 1"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @param excludedColumnNames A collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param keyColumnNames A collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param whereClause An optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
+     * @return An UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
+     * @see #generateUpdateSql(Connection, String, String)
+     * @see #generateUpdateSql(Connection, String, Collection, Collection, String)
+     * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
+     */
+    public static String generateUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames,
+            final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateUpdateSql(conn, tableName, excludedColumnNames, keyColumnNames, whereClause);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates an UPDATE SQL statement for the specified table using an existing connection,
+     * excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
+     * <p>
+     * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
+     * and those used in WHERE conditions), uses positional parameters (?) for all values,
+     * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     *     List<String> keyColumnNames = Arrays.asList("id", "status");
+     *     String customWhere = "version > 1";
+     *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "order",
+     *                                                                excludedColumns, keyColumnNames, customWhere);
+     *     // Returns: "UPDATE order SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND version > 1"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @param excludedColumnNames A collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param keyColumnNames A collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param whereClause An optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
+     * @return An UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
+     * @see #generateUpdateSql(Connection, String, String)
+     * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
+     * @see #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
+     */
+    public static String generateUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
+            final Collection<String> keyColumnNames, final String whereClause) {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
+                    .append(keyColumnNames)
+                    .map(c -> Strings.toCamelCase(c))
+                    .collect(Collectors.toSet());
+
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .toList();
+
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
+                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ")
+                    + (N.isEmpty(keyColumnNames) && Strings.isEmpty(whereClause) ? ""
+                            : " WHERE " + Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = ?").join(" AND "))
+                    + (N.isEmpty(keyColumnNames) ? "" : (Strings.isEmpty(whereClause) ? "" : " AND " + whereClause));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1042,7 +1421,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
-     * // Returns: "update user_profile set first_name = :firstName, last_name = :lastName, 
+     * // Returns: "UPDATE user_profile SET first_name = :firstName, last_name = :lastName, 
      * //           email = :email, phone_number = :phoneNumber"
      * }</pre>
      *
@@ -1068,7 +1447,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
-     *     // Returns: "update order_status set status = :status, updated_by = :updatedBy, 
+     *     // Returns: "UPDATE order_status SET status = :status, updated_by = :updatedBy, 
      *     //           updated_date = :updatedDate"
      *     // Usage: updateSql += " WHERE order_id = :orderId";
      * }
@@ -1080,15 +1459,177 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
-        final String query = "select * from " + tableName + " where 1 > 2";
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
 
-            return "update " + checkTableName(tableName) + " set "
-                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel) + " = :" + Strings.toCamelCase(columnLabel)).join(", ");
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
+                    + Stream.of(columnLabelList)
+                            .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
+                            .join(", ");
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
+     * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "customer", "customer_id");
+     * // Returns: "UPDATE customer SET first_name = :firstName, last_name = :lastName, email = :email WHERE customer_id = :customerId"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the named UPDATE statement
+     * @param keyColumnName The column name to use in the WHERE clause
+     * @return An UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final String keyColumnName) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedUpdateSql(conn, tableName, keyColumnName);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
+     * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "customer", "customer_id");
+     *     // Returns: "UPDATE customer SET first_name = :firstName, last_name = :lastName, email = :email WHERE customer_id = :customerId"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the named UPDATE statement
+     * @param keyColumnName The column name to use in the WHERE clause
+     * @return An UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
+                    .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
+                    .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
+                    .join(", ") + " WHERE " + checkColumnName(keyColumnName, dbProductInfo) + " = :" + Strings.toCamelCase(keyColumnName);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a named UPDATE SQL statement for the specified table using an existing connection,
+     * excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
+     * <p>
+     * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
+     * and the key columns used in WHERE conditions), uses named parameters (:paramName) based on camelCase column names,
+     * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
+     * 
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * DataSource ds = getDataSource();
+     * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     * List<String> keyColumns = Arrays.asList("id", "status");
+     * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "order", excludedColumns, keyColumns, "version > 1");
+     * // Returns: "UPDATE order SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
+     * }</pre>
+     *
+     * @param dataSource The data source to connect to the database
+     * @param tableName The name of the table for which to generate the named UPDATE statement
+     * @param excludedColumnNames A collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param keyColumnNames A collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param whereClause An optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
+     * @return An UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
+     * @throws UncheckedSQLException if a database access error occurs
+     */
+    public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames,
+            final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return generateNamedUpdateSql(conn, tableName, excludedColumnNames, keyColumnNames, whereClause);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Generates a named UPDATE SQL statement for the specified table using an existing connection,
+     * excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
+     * <p>
+     * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
+     * and the key columns used in WHERE conditions), uses named parameters (:paramName) based on camelCase column names,
+     * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
+     *
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * try (Connection conn = dataSource.getConnection()) {
+     *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
+     *     List<String> keyColumnNames = Arrays.asList("id", "status");
+     *     String customWhere = "version > 1";
+     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order", 
+     *                                                                      excludedColumns, keyColumnNames, customWhere);
+     *     // Returns: "UPDATE order SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
+     * }
+     * }</pre>
+     *
+     * @param conn The database connection to use
+     * @param tableName The name of the table for which to generate the UPDATE statement
+     * @param excludedColumnNames A collection of column names to exclude from the SET clause. Can be {@code null} or empty
+     * @param keyColumnNames A collection of column names to use in the WHERE clause. Can be {@code null} or empty
+     * @param whereClause An optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
+     * @return An UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
+     * @see #generateNamedUpdateSql(Connection, String, String)
+     * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
+     * @see #generateUpdateSql(Connection, String, Collection, Collection, String)
+     */
+    public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
+            final Collection<String> keyColumnNames, final String whereClause) {
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+
+        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+                final ResultSet rs = stmt.executeQuery()) {
+
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
+                    .append(keyColumnNames)
+                    .map(c -> Strings.toCamelCase(c))
+                    .collect(Collectors.toSet());
+
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .toList();
+
+            return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
+                    + Stream.of(columnLabelList)
+                            .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
+                            .join(", ")
+                    + (N.isEmpty(keyColumnNames) && Strings.isEmpty(whereClause) ? ""
+                            : " WHERE " + Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = :" + Strings.toCamelCase(c)).join(" AND "))
+                    + (N.isEmpty(keyColumnNames) ? "" : (Strings.isEmpty(whereClause) ? "" : " AND " + whereClause));
+
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1096,45 +1637,47 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Converts an INSERT SQL statement to an UPDATE SQL statement.
-     * This method is marked as @Beta and may change in future versions.
-     * The generated UPDATE statement will have a WHERE clause placeholder that needs to be completed.
      * 
      * <p>Example usage:</p>
      * <pre>{@code
-     * String insertSql = "insert into users(name, email) values ('John', 'john@example.com')";
-     * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(insertSql);
-     * // Returns: "UPDATE users SET name = 'John', email = 'john@example.com' WHERE ;"
+     * String insertSql = "INSERT INTO users(name, email) VALUES ('John', 'john@example.com')";
+     * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, insertSql);
+     * // Returns: "UPDATE users SET name = 'John', email = 'john@example.com'"
      * }</pre>
      *
+     * @param dataSource The data source to connect to the database
      * @param insertSql The INSERT SQL statement to convert
-     * @return An UPDATE SQL statement derived from the INSERT statement with an incomplete WHERE clause
+     * @return An UPDATE SQL statement derived from the INSERT statement
      * @throws IllegalArgumentException if the INSERT SQL cannot be parsed or converted
      */
     @Beta
-    public static String convertInsertSqlToUpdateSql(final String insertSql) {
-        return convertInsertSqlToUpdateSql(insertSql, null);
+    public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql) {
+        return convertInsertSqlToUpdateSql(dataSource, insertSql, null);
     }
 
     /**
      * Converts an INSERT SQL statement to an UPDATE SQL statement with a specified WHERE clause.
-     * This method is marked as @Beta and may change in future versions.
      * The method parses the INSERT statement and reconstructs it as an UPDATE statement.
      * 
      * <p>Example usage:</p>
      * <pre>{@code
-     * String insertSql = "insert into products(name, price, stock) values ('Widget', 19.99, 100)";
-     * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(insertSql, "id = 123");
-     * // Returns: "UPDATE products SET name = 'Widget', price = 19.99, stock = 100 WHERE id = 123;"
+     * String insertSql = "INSERT INTO products(name, price, stock) VALUES ('Widget', 19.99, 100)";
+     * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, insertSql, "id = 123");
+     * // Returns: "UPDATE products SET name = 'Widget', price = 19.99, stock = 100 WHERE id = 123"
      * }</pre>
      *
+     * @param dataSource The data source to connect to the database
      * @param insertSql The INSERT SQL statement to convert
      * @param whereClause The WHERE clause to append to the UPDATE statement (without the WHERE keyword)
      * @return An UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
      * @throws IllegalArgumentException if the INSERT SQL cannot be parsed or converted
      */
     @Beta
-    public static String convertInsertSqlToUpdateSql(final String insertSql, final String whereClause) {
-        final String insertInto = "insert into ";
+    public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql, final String whereClause) {
+
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(dataSource);
+
+        final String insertInto = "INSERT INTO ";
         final int insertIntoLen = insertInto.length();
         final StringBuilder sb = Objectory.createStringBuilder();
 
@@ -1157,7 +1700,7 @@ public final class JdbcCodeGenerationUtil {
                     sb.append(", ");
                 }
 
-                sb.append(checkColumnName(columnNames[i]));
+                sb.append(checkColumnName(columnNames[i], dbProductInfo));
 
                 if (values.get(i) instanceof String) {
                     sb.append(" = '").append(N.stringOf(values.get(i))).append('\'');
@@ -1166,13 +1709,10 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            sb.append(" WHERE ");
-
             if (Strings.isNotEmpty(whereClause)) {
+                sb.append(" WHERE ");
                 sb.append(whereClause);
             }
-
-            sb.append(";");
 
             return sb.toString();
         } catch (Exception e) {
@@ -1182,18 +1722,26 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
-    private static String checkTableName(final String tableName) {
+    private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {
+        String quote = getTableColumnNameQuoteChar(dbProductInfo);
+
         return CharStream.of(tableName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? tableName
-                : Strings.wrap(tableName, "`");
+                : Strings.wrap(tableName, quote);
     }
 
-    private static String checkColumnName(final String columnLabel) {
+    private static String checkColumnName(final String columnLabel, final DBProductInfo dbProductInfo) {
+        String quote = getTableColumnNameQuoteChar(dbProductInfo);
+
         return CharStream.of(columnLabel).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnLabel
-                : Strings.wrap(columnLabel, "`");
+                : Strings.wrap(columnLabel, quote);
     }
 
-    private static List<String> checkColumnName(final List<String> columnLabelList) {
-        return N.map(columnLabelList, JdbcCodeGenerationUtil::checkColumnName);
+    private static List<String> checkColumnName(final List<String> columnLabelList, final DBProductInfo dbProductInfo) {
+        return N.map(columnLabelList, it -> checkColumnName(it, dbProductInfo));
+    }
+
+    private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {
+        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.productName(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
     /**

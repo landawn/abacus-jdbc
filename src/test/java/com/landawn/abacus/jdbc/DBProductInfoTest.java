@@ -16,7 +16,7 @@ public class DBProductInfoTest extends TestBase {
     public void testConstructor() {
         String productName = "MySQL";
         String productVersion = "8.0.33";
-        DBVersion version = DBVersion.MYSQL_8;
+        DBVersion version = DBVersion.MySQL_8;
         
         DBProductInfo dbInfo = new DBProductInfo(productName, productVersion, version);
         
@@ -36,18 +36,18 @@ public class DBProductInfoTest extends TestBase {
 
     @Test
     public void testRecordComponents() {
-        DBProductInfo dbInfo = new DBProductInfo("PostgreSQL", "15.3", DBVersion.POSTGRESQL_OTHERS);
+        DBProductInfo dbInfo = new DBProductInfo("PostgreSQL", "15.3", DBVersion.PostgreSQL_OTHERS);
         
         assertEquals("PostgreSQL", dbInfo.productName());
         assertEquals("15.3", dbInfo.productVersion());
-        assertEquals(DBVersion.POSTGRESQL_OTHERS, dbInfo.version());
+        assertEquals(DBVersion.PostgreSQL_OTHERS, dbInfo.version());
     }
 
     @Test
     public void testEqualsAndHashCode() {
-        DBProductInfo dbInfo1 = new DBProductInfo("Oracle", "19c", DBVersion.ORACLE);
-        DBProductInfo dbInfo2 = new DBProductInfo("Oracle", "19c", DBVersion.ORACLE);
-        DBProductInfo dbInfo3 = new DBProductInfo("MySQL", "8.0", DBVersion.MYSQL_8);
+        DBProductInfo dbInfo1 = new DBProductInfo("Oracle", "19c", DBVersion.Oracle);
+        DBProductInfo dbInfo2 = new DBProductInfo("Oracle", "19c", DBVersion.Oracle);
+        DBProductInfo dbInfo3 = new DBProductInfo("MySQL", "8.0", DBVersion.MySQL_8);
         
         assertEquals(dbInfo1, dbInfo2);
         assertNotEquals(dbInfo1, dbInfo3);

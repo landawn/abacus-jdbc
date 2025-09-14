@@ -3122,7 +3122,6 @@ public final class Jdbc {
                     return result;
                 }
             };
-
         }
 
         /**

@@ -30,7 +30,7 @@ import com.landawn.abacus.util.Strings;
  * 
  * <p>Usage example:
  * <pre>{@code
- * DBVersion version = DBVersion.MYSQL_8;
+ * DBVersion version = DBVersion.MySQL_8;
  * if (version.isMySQL()) {
  *     // Use MySQL-specific syntax
  *     query = "SELECT * FROM users LIMIT 10";
@@ -58,107 +58,112 @@ public enum DBVersion {
     /**
      * MySQL version 5.5.
      */
-    MYSQL_5_5,
+    MySQL_5_5,
 
     /**
      * MySQL version 5.6.
      */
-    MYSQL_5_6,
+    MySQL_5_6,
 
     /**
      * MySQL version 5.7.
      */
-    MYSQL_5_7,
+    MySQL_5_7,
 
     /**
      * MySQL version 5.8.
      */
-    MYSQL_5_8,
+    MySQL_5_8,
 
     /**
      * MySQL version 5.9.
      */
-    MYSQL_5_9,
+    MySQL_5_9,
 
     /**
      * MySQL version 6.x.
      */
-    MYSQL_6,
+    MySQL_6,
 
     /**
      * MySQL version 7.x.
      */
-    MYSQL_7,
+    MySQL_7,
 
     /**
      * MySQL version 8.x.
      */
-    MYSQL_8,
+    MySQL_8,
 
     /**
      * MySQL version 9.x.
      */
-    MYSQL_9,
+    MySQL_9,
 
     /**
      * MySQL version 10.x (MariaDB).
      */
-    MYSQL_10,
+    MySQL_10,
 
     /**
      * Other MySQL versions not specifically enumerated.
      */
-    MYSQL_OTHERS,
+    MySQL_OTHERS,
+
+    /**
+     * MariaDB (a fork of MySQL).
+     */
+    MariaDB,
 
     /**
      * PostgreSQL version 9.2.
      */
-    POSTGRESQL_9_2,
+    PostgreSQL_9_2,
 
     /**
      * PostgreSQL version 9.3.
      */
-    POSTGRESQL_9_3,
+    PostgreSQL_9_3,
 
     /**
      * PostgreSQL version 9.4.
      */
-    POSTGRESQL_9_4,
+    PostgreSQL_9_4,
 
     /**
      * PostgreSQL version 9.5.
      */
-    POSTGRESQL_9_5,
+    PostgreSQL_9_5,
 
     /**
      * PostgreSQL version 9.6.
      */
-    POSTGRESQL_9_6,
+    PostgreSQL_9_6,
 
     /**
      * PostgreSQL version 10.x.
      */
-    POSTGRESQL_10,
+    PostgreSQL_10,
 
     /**
      * PostgreSQL version 11.x.
      */
-    POSTGRESQL_11,
+    PostgreSQL_11,
 
     /**
      * PostgreSQL version 12.x.
      */
-    POSTGRESQL_12,
+    PostgreSQL_12,
 
     /**
      * Other PostgreSQL versions not specifically enumerated.
      */
-    POSTGRESQL_OTHERS,
+    PostgreSQL_OTHERS,
 
     /**
      * Oracle Database.
      */
-    ORACLE,
+    Oracle,
 
     /**
      * IBM DB2 Database.
@@ -168,7 +173,7 @@ public enum DBVersion {
     /**
      * Microsoft SQL Server.
      */
-    SQL_SERVER,
+    SQL_Server,
 
     /**
      * Other database systems not specifically enumerated.
@@ -179,12 +184,12 @@ public enum DBVersion {
      * Checks if this database version represents any variant of MySQL.
      * 
      * <p>This method performs a case-insensitive check to determine if the
-     * enum constant's name starts with "mysql", which includes all MySQL
-     * versions and MYSQL_OTHERS.</p>
+     * enum constant's name starts with "MySQL", which includes all MySQL
+     * versions and MySQL_OTHERS.</p>
      * 
      * <p>Example:
      * <pre>{@code
-     * DBVersion version = DBVersion.MYSQL_8;
+     * DBVersion version = DBVersion.MySQL_8;
      * if (version.isMySQL()) {
      *     // Execute MySQL-specific logic
      * }
@@ -193,7 +198,7 @@ public enum DBVersion {
      * @return {@code true} if this is a MySQL database version, {@code false} otherwise
      */
     public boolean isMySQL() {
-        return Strings.startsWithIgnoreCase(name(), "mysql");
+        return Strings.startsWithIgnoreCase(name(), "MySQL");
     }
 
     /**
@@ -201,11 +206,11 @@ public enum DBVersion {
      * 
      * <p>This method performs a case-insensitive check to determine if the
      * enum constant's name starts with "postgresql", which includes all PostgreSQL
-     * versions and POSTGRESQL_OTHERS.</p>
+     * versions and PostgreSQL_OTHERS.</p>
      * 
      * <p>Example:
      * <pre>{@code
-     * DBVersion version = DBVersion.POSTGRESQL_12;
+     * DBVersion version = DBVersion.PostgreSQL_12;
      * if (version.isPostgreSQL()) {
      *     // Execute PostgreSQL-specific logic
      * }

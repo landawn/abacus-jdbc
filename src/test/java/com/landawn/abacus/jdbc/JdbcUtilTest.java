@@ -113,7 +113,7 @@ public class JdbcUtilTest extends TestBase {
         assertNotNull(info);
         assertEquals("MySQL", info.productName());
         assertEquals("8.0.23", info.productVersion());
-        assertEquals(DBVersion.MYSQL_8, info.version());
+        assertEquals(DBVersion.MySQL_8, info.version());
     }
 
     @Test
@@ -126,7 +126,7 @@ public class JdbcUtilTest extends TestBase {
         assertNotNull(info);
         assertEquals("PostgreSQL", info.productName());
         assertEquals("12.5", info.productVersion());
-        assertEquals(DBVersion.POSTGRESQL_12, info.version());
+        assertEquals(DBVersion.PostgreSQL_12, info.version());
     }
 
     @Test

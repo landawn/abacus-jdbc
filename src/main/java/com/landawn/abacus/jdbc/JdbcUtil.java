@@ -391,7 +391,7 @@ public final class JdbcUtil {
      * <h3>Example:</h3>
      * <pre>{@code
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
-     * if (dbInfo.version() == DBVersion.MYSQL_8) {
+     * if (dbInfo.version() == DBVersion.MySQL_8) {
      *     // Use MySQL 8 specific features
      * }
      * }</pre>
@@ -406,62 +406,63 @@ public final class JdbcUtil {
 
             final String dbProductName = metaData.getDatabaseProductName();
             final String dbProductVersion = metaData.getDatabaseProductVersion();
-            final String upperCaseProductName = dbProductName.toUpperCase();
 
             DBVersion dbVersion = DBVersion.OTHERS;
 
-            if (upperCaseProductName.contains("H2")) {
+            if (Strings.containsIgnoreCase(dbProductName, "H2")) {
                 dbVersion = DBVersion.H2;
-            } else if (upperCaseProductName.contains("HSQL")) {
+            } else if (Strings.containsIgnoreCase(dbProductName, "HSQL")) {
                 dbVersion = DBVersion.HSQLDB;
-            } else if (upperCaseProductName.contains("MYSQL")) {
+            } else if (Strings.containsIgnoreCase(dbProductName, "MySQL")) {
                 if (dbProductVersion.startsWith("5.5")) {
-                    dbVersion = DBVersion.MYSQL_5_5;
+                    dbVersion = DBVersion.MySQL_5_5;
                 } else if (dbProductVersion.startsWith("5.6")) {
-                    dbVersion = DBVersion.MYSQL_5_6;
+                    dbVersion = DBVersion.MySQL_5_6;
                 } else if (dbProductVersion.startsWith("5.7")) {
-                    dbVersion = DBVersion.MYSQL_5_7;
+                    dbVersion = DBVersion.MySQL_5_7;
                 } else if (dbProductVersion.startsWith("5.8")) {
-                    dbVersion = DBVersion.MYSQL_5_8;
+                    dbVersion = DBVersion.MySQL_5_8;
                 } else if (dbProductVersion.startsWith("5.9")) {
-                    dbVersion = DBVersion.MYSQL_5_9;
+                    dbVersion = DBVersion.MySQL_5_9;
                 } else if (dbProductVersion.startsWith("6")) {
-                    dbVersion = DBVersion.MYSQL_6;
+                    dbVersion = DBVersion.MySQL_6;
                 } else if (dbProductVersion.startsWith("7")) {
-                    dbVersion = DBVersion.MYSQL_7;
+                    dbVersion = DBVersion.MySQL_7;
                 } else if (dbProductVersion.startsWith("8")) {
-                    dbVersion = DBVersion.MYSQL_8;
+                    dbVersion = DBVersion.MySQL_8;
                 } else if (dbProductVersion.startsWith("9")) {
-                    dbVersion = DBVersion.MYSQL_9;
+                    dbVersion = DBVersion.MySQL_9;
                 } else if (dbProductVersion.startsWith("10")) {
-                    dbVersion = DBVersion.MYSQL_10;
+                    dbVersion = DBVersion.MySQL_10;
                 } else {
-                    dbVersion = DBVersion.MYSQL_OTHERS;
+                    dbVersion = DBVersion.MySQL_OTHERS;
                 }
-            } else if (upperCaseProductName.contains("POSTGRESQL")) {
+            } else if (Strings.containsIgnoreCase(dbProductName, "MariaDB")) {
+                dbVersion = DBVersion.MariaDB;
+            } else if (Strings.containsIgnoreCase(dbProductName, "PostgreSQL")) {
                 if (dbProductVersion.startsWith("9.2")) {
-                    dbVersion = DBVersion.POSTGRESQL_9_2;
+                    dbVersion = DBVersion.PostgreSQL_9_2;
                 } else if (dbProductVersion.startsWith("9.3")) {
-                    dbVersion = DBVersion.POSTGRESQL_9_3;
+                    dbVersion = DBVersion.PostgreSQL_9_3;
                 } else if (dbProductVersion.startsWith("9.4")) {
-                    dbVersion = DBVersion.POSTGRESQL_9_4;
+                    dbVersion = DBVersion.PostgreSQL_9_4;
                 } else if (dbProductVersion.startsWith("9.5")) {
-                    dbVersion = DBVersion.POSTGRESQL_9_5;
+                    dbVersion = DBVersion.PostgreSQL_9_5;
                 } else if (dbProductVersion.startsWith("10")) {
-                    dbVersion = DBVersion.POSTGRESQL_10;
+                    dbVersion = DBVersion.PostgreSQL_10;
                 } else if (dbProductVersion.startsWith("11")) {
-                    dbVersion = DBVersion.POSTGRESQL_11;
+                    dbVersion = DBVersion.PostgreSQL_11;
                 } else if (dbProductVersion.startsWith("12")) {
-                    dbVersion = DBVersion.POSTGRESQL_12;
+                    dbVersion = DBVersion.PostgreSQL_12;
                 } else {
-                    dbVersion = DBVersion.POSTGRESQL_OTHERS;
+                    dbVersion = DBVersion.PostgreSQL_OTHERS;
                 }
-            } else if (upperCaseProductName.contains("ORACLE")) {
-                dbVersion = DBVersion.ORACLE;
-            } else if (upperCaseProductName.contains("DB2")) {
+            } else if (Strings.containsIgnoreCase(dbProductName, "Oracle")) {
+                dbVersion = DBVersion.Oracle;
+            } else if (Strings.containsIgnoreCase(dbProductName, "DB2")) {
                 dbVersion = DBVersion.DB2;
-            } else if (upperCaseProductName.contains("SQL SERVER")) {
-                dbVersion = DBVersion.SQL_SERVER;
+            } else if (Strings.containsIgnoreCase(dbProductName, "SQL SERVER")) {
+                dbVersion = DBVersion.SQL_Server;
             }
 
             return new DBProductInfo(dbProductName, dbProductVersion, dbVersion);
