@@ -84,24 +84,20 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * The Jdbc class provides a comprehensive set of utilities for JDBC operations.
- * It includes interfaces and implementations for parameter setting, result extraction,
- * row mapping, filtering, and various other JDBC-related functionalities.
- * 
- * <p>This class serves as a central hub for JDBC utilities and is designed to work
- * seamlessly with the Abacus JDBC framework, providing type-safe and efficient
- * database operations.</p>
- * 
+ * Provides a collection of utility interfaces and classes for simplifying JDBC operations.
+ * This class serves as a central hub for functional interfaces like {@code ParametersSetter},
+ * {@code ResultExtractor}, and {@code RowMapper}, which are designed to streamline database
+ * interactions in a type-safe and efficient manner.
+ *
  * <p>Key features include:</p>
  * <ul>
- *   <li>Parameter setters for prepared statements</li>
- *   <li>Result extractors for converting ResultSet to various data structures</li>
- *   <li>Row mappers for object mapping</li>
- *   <li>Column getters for type-safe column value retrieval</li>
- *   <li>Row filters for result filtering</li>
- *   <li>Handler and cache support for advanced use cases</li>
+ * <li>Functional interfaces for setting parameters on {@code PreparedStatement}s.</li>
+ * <li>Flexible mechanisms for extracting data from a {@code ResultSet} into various data structures like Lists, Maps, and custom objects.</li>
+ * <li>Row mappers for converting individual {@code ResultSet} rows into objects.</li>
+ * <li>Type-safe column getters for retrieving values from a {@code ResultSet}.</li>
+ * <li>Fluent builders for creating complex row mappers with customized column handling.</li>
  * </ul>
- * 
+ *
  * @see ParametersSetter
  * @see ResultExtractor
  * @see RowMapper
@@ -140,18 +136,18 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for setting parameters on a prepared query.
-     * This interface is typically used to set parameters on PreparedStatement or CallableStatement.
-     * 
+     * A functional interface for setting parameters on a prepared query, such as
+     * a {@code PreparedStatement} or {@code CallableStatement}.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * ParametersSetter<PreparedStatement> setter = ps -> {
-     *     ps.setString(1, "John");
-     *     ps.setInt(2, 25);
+     * ps.setString(1, "John Doe");
+     * ps.setInt(2, 30);
      * };
      * }</pre>
      *
-     * @param <QS> the type of the query statement (typically PreparedStatement or CallableStatement)
+     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement})
      */
     @FunctionalInterface
     public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
@@ -165,28 +161,30 @@ public final class Jdbc {
         };
 
         /**
-         * Sets parameters on the given prepared query.
+         * Sets the parameters on the given prepared query.
          *
          * @param preparedQuery the prepared query to set parameters on
-         * @throws SQLException if a database access error occurs
+         * @throws SQLException if a database access error occurs or this method is
+         * called on a closed {@code PreparedStatement}
          */
         @Override
         void accept(QS preparedQuery) throws SQLException;
     }
 
     /**
-     * A functional interface for setting parameters on a prepared query using an additional parameter object.
-     * This interface is useful when you need to set multiple parameters based on an object's properties.
-     * 
+     * A functional interface for setting parameters on a prepared query using a parameter object.
+     * This is useful for mapping an object's properties to the parameters of a statement.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
+     * // Assuming a User class with getName() and getAge()
      * BiParametersSetter<PreparedStatement, User> setter = (ps, user) -> {
-     *     ps.setString(1, user.getName());
-     *     ps.setInt(2, user.getAge());
+     * ps.setString(1, user.getName());
+     * ps.setInt(2, user.getAge());
      * };
      * }</pre>
      *
-     * @param <QS> the type of the query statement
+     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement})
      * @param <T> the type of the parameter object
      */
     @FunctionalInterface
@@ -201,34 +199,43 @@ public final class Jdbc {
         };
 
         /**
-         * Sets parameters on the given prepared query using the provided parameter object.
+         * Sets the parameters on the given prepared query using the provided parameter object.
          *
          * @param preparedQuery the prepared query to set parameters on
          * @param param the parameter object containing values to set
-         * @throws SQLException if a database access error occurs
+         * @throws SQLException if a database access error occurs or this method is
+         * called on a closed {@code PreparedStatement}
          */
         @Override
         void accept(QS preparedQuery, T param) throws SQLException;
 
         /**
-         * Creates a stateful BiParametersSetter for setting parameters from an array.
-         * The setter maps array elements to prepared statement parameters based on field names and types.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code BiParametersSetter} for setting parameters from an array.
+         * It maps array elements to prepared statement parameters based on a list of field names,
+         * inferring the SQL type from the corresponding property in the provided {@code entityClass}.
+         *
+         * <p>
+         * <b>Warning:</b> The returned setter is stateful because it caches type information
+         * upon first execution. It should not be cached, shared, or used in parallel streams.
+         * A new instance should be created for each use.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * List<String> fields = Arrays.asList("name", "age");
-         * BiParametersSetter<PreparedStatement, Object[]> setter = 
-         *     BiParametersSetter.createForArray(fields, User.class);
-         * setter.accept(ps, new Object[]{"John", 25});
+         * List<String> fields = List.of("firstName", "age");
+         * BiParametersSetter<PreparedStatement, Object[]> setter =
+         * BiParametersSetter.createForArray(fields, User.class);
+         *
+         * // In an execution context:
+         * // setter.accept(preparedStatement, new Object[]{"John", 30});
          * }</pre>
          *
-         * @param <T> the array type
-         * @param fieldNameList the list of field names corresponding to array indices
-         * @param entityClass the entity class to extract type information from
-         * @return a stateful {@code BiParametersSetter}. Don't save or cache for reuse or use it in parallel stream.
-         * @throws IllegalArgumentException if fieldNameList is empty or entityClass is not a valid bean class
+         * @param <T> the component type of the array
+         * @param fieldNameList the list of property names from the {@code entityClass}. The order
+         * must match the order of values in the input array and the '?' placeholders in the SQL statement.
+         * @param entityClass the entity class used to infer the data type for each parameter.
+         * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
+         * @throws IllegalArgumentException if {@code fieldNameList} is null or empty, or if {@code entityClass} is not a valid bean class.
          */
         @Beta
         @SequentialOnly
@@ -264,24 +271,32 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiParametersSetter for setting parameters from a List.
-         * The setter maps list elements to prepared statement parameters based on field names and types.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code BiParametersSetter} for setting parameters from a {@code List}.
+         * It maps list elements to prepared statement parameters based on a list of field names,
+         * inferring the SQL type from the corresponding property in the provided {@code entityClass}.
+         *
+         * <p>
+         * <b>Warning:</b> The returned setter is stateful because it caches type information
+         * upon first execution. It should not be cached, shared, or used in parallel streams.
+         * A new instance should be created for each use.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * List<String> fields = Arrays.asList("name", "age");
-         * BiParametersSetter<PreparedStatement, List<Object>> setter = 
-         *     BiParametersSetter.createForList(fields, User.class);
-         * setter.accept(ps, Arrays.asList("John", 25));
+         * List<String> fields = List.of("firstName", "age");
+         * BiParametersSetter<PreparedStatement, List<Object>> setter =
+         * BiParametersSetter.createForList(fields, User.class);
+         *
+         * // In an execution context:
+         * // setter.accept(preparedStatement, List.of("John", 30));
          * }</pre>
          *
          * @param <T> the element type of the list
-         * @param fieldNameList the list of field names corresponding to list indices
-         * @param entityClass the entity class to extract type information from
-         * @return a stateful {@code BiParametersSetter}. Don't save or cache for reuse or use it in parallel stream.
-         * @throws IllegalArgumentException if fieldNameList is empty or entityClass is not a valid bean class
+         * @param fieldNameList the list of property names from the {@code entityClass}. The order
+         * must match the order of values in the input list and the '?' placeholders in the SQL statement.
+         * @param entityClass the entity class used to infer the data type for each parameter.
+         * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
+         * @throws IllegalArgumentException if {@code fieldNameList} is null or empty, or if {@code entityClass} is not a valid bean class.
          */
         @Beta
         @SequentialOnly
@@ -318,20 +333,21 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for setting parameters on a prepared query using parsed SQL information.
-     * This interface provides access to the parsed SQL structure, allowing for more sophisticated
-     * parameter setting based on the SQL content.
-     * 
+     * A functional interface for setting parameters on a prepared query, providing access
+     * to the parsed SQL structure. This allows for more advanced parameter setting logic
+     * that may depend on the details of the SQL statement itself.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
+     * // Assuming a User class and a ParsedSql object
      * TriParametersSetter<PreparedStatement, User> setter = (parsedSql, ps, user) -> {
-     *     // Use parsedSql to determine parameter positions
-     *     ps.setString(1, user.getName());
-     *     ps.setInt(2, user.getAge());
+     * // Use parsedSql to find parameter indices dynamically if needed
+     * ps.setString(1, user.getName());
+     * ps.setInt(2, user.getAge());
      * };
      * }</pre>
      *
-     * @param <QS> the type of the query statement
+     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement})
      * @param <T> the type of the parameter object
      */
     @SuppressWarnings("RedundantThrows")
@@ -349,30 +365,34 @@ public final class Jdbc {
         /**
          * Sets parameters on the given prepared query using parsed SQL information and a parameter object.
          *
-         * @param parsedSql the parsed SQL containing parameter information
+         * @param parsedSql the parsed SQL containing information about the query and its parameters
          * @param preparedQuery the prepared query to set parameters on
          * @param param the parameter object containing values to set
-         * @throws SQLException if a database access error occurs
+         * @throws SQLException if a database access error occurs or this method is
+         * called on a closed {@code PreparedStatement}
          */
         @Override
         void accept(ParsedSql parsedSql, QS preparedQuery, T param) throws SQLException;
     }
 
     /**
-     * A functional interface for extracting results from a ResultSet.
-     * This interface is used to convert a ResultSet into a desired object or data structure.
-     * 
-     * <p>Note: In many scenarios, the ResultSet will be closed after the apply() method returns,
-     * so the ResultSet should not be saved or returned directly.</p>
-     * 
+     * A functional interface for extracting a result from a {@code ResultSet}.
+     * This interface is responsible for iterating over the {@code ResultSet} and
+     * converting its contents into a desired object or collection.
+     *
+     * <p><b>Important Note:</b> In most execution contexts (like {@code SQLExecutor}),
+     * the {@code ResultSet} passed to the {@code apply} method will be closed automatically
+     * after the method returns. Therefore, you should process all required data within
+     * the method and not attempt to return or store the {@code ResultSet} itself.</p>
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * ResultExtractor<List<String>> extractor = rs -> {
-     *     List<String> names = new ArrayList<>();
-     *     while (rs.next()) {
-     *         names.add(rs.getString("name"));
-     *     }
-     *     return names;
+     * List<String> names = new ArrayList<>();
+     * while (rs.next()) {
+     * names.add(rs.getString("name"));
+     * }
+     * return names;
      * };
      * }</pre>
      *
@@ -382,8 +402,8 @@ public final class Jdbc {
     public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
-         * A pre-defined ResultExtractor that converts a ResultSet to a Dataset.
-         * Returns an empty Dataset if the ResultSet is null.
+         * A pre-defined {@code ResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
+         * If the {@code ResultSet} is null, it returns an empty {@code Dataset}.
          */
         ResultExtractor<Dataset> TO_DATA_SET = rs -> {
             if (rs == null) {
@@ -394,32 +414,36 @@ public final class Jdbc {
         };
 
         /**
-         * Extracts a result from the given ResultSet.
-         * 
-         * <p>Important: In many scenarios, including PreparedQuery/Dao/SQLExecutor, 
-         * the input ResultSet will be closed after this method returns. 
-         * Do not save or return the input ResultSet.</p>
+         * Extracts a result from the given {@code ResultSet}. The implementation is responsible
+         * for iterating through the result set (e.g., using a {@code while(rs.next())} loop)
+         * and building the final return object.
          *
-         * @param rs the ResultSet to extract data from
-         * @return the extracted result
-         * @throws SQLException if a database access error occurs
+         * <p><b>Warning:</b> The input {@code ResultSet} will often be closed by the calling
+         * framework immediately after this method completes. Do not return the {@code ResultSet}
+         * or any resources tied to it that might become invalid after closing.</p>
+         *
+         * @param rs the {@code ResultSet} to extract data from; may be null.
+         * @return the extracted result.
+         * @throws SQLException if a database access error occurs.
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
         /**
-         * Returns a composed ResultExtractor that first applies this extractor and then applies the after function.
-         * 
+         * Returns a composed {@code ResultExtractor} that first applies this extractor to
+         * the {@code ResultSet} and then applies the {@code after} function to the result.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<List<User>> userExtractor = ...;
-         * ResultExtractor<Integer> countExtractor = userExtractor.andThen(List::size);
+         * ResultExtractor<List<User>> userListExtractor = ...;
+         * // Creates an extractor that returns the count of users.
+         * ResultExtractor<Integer> userCountExtractor = userListExtractor.andThen(List::size);
          * }</pre>
          *
-         * @param <R> the type of output of the after function
-         * @param after the function to apply after this extractor
-         * @return a composed ResultExtractor
-         * @throws IllegalArgumentException if after is null
+         * @param <R> the type of the result of the {@code after} function
+         * @param after the function to apply after this extractor is applied
+         * @return a composed {@code ResultExtractor}
+         * @throws IllegalArgumentException if {@code after} is null
          */
         default <R> ResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -428,56 +452,60 @@ public final class Jdbc {
         }
 
         /**
-         * Converts this ResultExtractor to a BiResultExtractor.
-         * The resulting BiResultExtractor ignores the column labels parameter.
+         * Converts this {@code ResultExtractor} to a {@code BiResultExtractor}.
+         * The resulting extractor will ignore the {@code columnLabels} parameter provided to it.
          *
-         * @return a BiResultExtractor that delegates to this ResultExtractor
+         * @return a {@code BiResultExtractor} that delegates to this extractor.
          */
         default BiResultExtractor<T> toBiResultExtractor() {
             return (rs, columnLabels) -> this.apply(rs);
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Map.
-         * Each row is processed to extract a key-value pair using the provided extractors.
-         * 
+         * Creates a {@code ResultExtractor} that processes a {@code ResultSet} into a {@code Map}.
+         * Each row is mapped to a key-value pair. If duplicate keys are encountered, an
+         * {@code IllegalStateException} will be thrown.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<Map<Integer, String>> extractor = ResultExtractor.toMap(
-         *     rs -> rs.getInt("id"),
-         *     rs -> rs.getString("name")
+         * ResultExtractor<Map<Integer, String>> idToNameMapExtractor = ResultExtractor.toMap(
+         * rs -> rs.getInt("id"),
+         * rs -> rs.getString("name")
          * );
          * }</pre>
          *
-         * @param <K> the type of keys in the map
-         * @param <V> the type of values in the map
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @return a ResultExtractor that produces a Map
+         * @param <K> the type of the map keys
+         * @param <V> the type of the map values
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @return a {@code ResultExtractor} that produces a {@code Map}
+         * @see #toMap(RowMapper, RowMapper, BinaryOperator)
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Map with a custom map supplier.
-         * 
+         * Creates a {@code ResultExtractor} that processes a {@code ResultSet} into a custom {@code Map}.
+         * Each row is mapped to a key-value pair. If duplicate keys are encountered, an
+         * {@code IllegalStateException} will be thrown.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * ResultExtractor<LinkedHashMap<Integer, String>> extractor = ResultExtractor.toMap(
-         *     rs -> rs.getInt("id"),
-         *     rs -> rs.getString("name"),
-         *     LinkedHashMap::new
+         * rs -> rs.getInt("id"),
+         * rs -> rs.getString("name"),
+         * LinkedHashMap::new
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param supplier the supplier to create the map instance
-         * @return a ResultExtractor that produces a Map
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code ResultExtractor} that produces a custom {@code Map}
          */
         static <K, V, M extends Map<K, V>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Supplier<? extends M> supplier) {
@@ -485,24 +513,25 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Map with a merge function.
-         * The merge function is used when duplicate keys are encountered.
-         * 
+         * Creates a {@code ResultExtractor} that processes a {@code ResultSet} into a {@code Map},
+         * with a specified function to merge values of duplicate keys.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<Map<String, Integer>> extractor = ResultExtractor.toMap(
-         *     rs -> rs.getString("category"),
-         *     rs -> rs.getInt("value"),
-         *     Integer::sum  // Sum values for duplicate keys
+         * // Sums values for the same category key.
+         * ResultExtractor<Map<String, Integer>> categorySumExtractor = ResultExtractor.toMap(
+         * rs -> rs.getString("category"),
+         * rs -> rs.getInt("value"),
+         * Integer::sum
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param mergeFunction the function to merge values when duplicate keys are encountered
-         * @return a ResultExtractor that produces a Map
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param mergeFunction a function to resolve collisions between values associated with the same key
+         * @return a {@code ResultExtractor} that produces a {@code Map}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -513,27 +542,28 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Map with full customization.
-         * Allows specifying key/value extractors, merge function, and map supplier.
-         * 
+         * Creates a {@code ResultExtractor} that processes a {@code ResultSet} into a custom {@code Map},
+         * with a specified function to merge values of duplicate keys.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<TreeMap<String, List<Integer>>> extractor = ResultExtractor.toMap(
-         *     rs -> rs.getString("category"),
-         *     rs -> Arrays.asList(rs.getInt("value")),
-         *     (list1, list2) -> { list1.addAll(list2); return list1; },
-         *     TreeMap::new
+         * // Groups numbers by their parity, collecting them into lists.
+         * ResultExtractor<TreeMap<String, List<Integer>>> parityGroupExtractor = ResultExtractor.toMap(
+         * rs -> rs.getInt("num") % 2 == 0 ? "EVEN" : "ODD",
+         * rs -> new ArrayList<>(List.of(rs.getInt("num"))),
+         * (list1, list2) -> { list1.addAll(list2); return list1; },
+         * TreeMap::new
          * );
          * }</pre>
          *
-         * @param <K> the type of keys in the map
-         * @param <V> the type of values in the map
-         * @param <M> the type of the map
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param mergeFunction the function to merge values when duplicate keys are encountered
-         * @param supplier the supplier to create the map instance
-         * @return a ResultExtractor that produces a Map
+         * @param <K> the type of the map keys
+         * @param <V> the type of the map values
+         * @param <M> the type of the resulting {@code Map}
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param mergeFunction a function to resolve collisions between values associated with the same key
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code ResultExtractor} that produces a custom {@code Map}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -557,17 +587,19 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Map with downstream collector.
-         * 
+         * Creates a {@code ResultExtractor} that groups rows into a {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key. This is analogous
+         * to {@code java.util.stream.Collectors.groupingBy}.
+         *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector
-         * @return a ResultExtractor that produces a Map
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row, which is then fed into the collector
+         * @param downstream the {@code Collector} to process values associated with each key
+         * @return a {@code ResultExtractor} that produces a {@code Map}
          * @see #groupTo(RowMapper, RowMapper, Collector)
-         * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector)}
+         * @deprecated Replaced by {@link #groupTo(RowMapper, RowMapper, Collector)} which has a more descriptive name.
          */
         @Deprecated
         static <K, V, D> ResultExtractor<Map<K, D>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
@@ -576,19 +608,20 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Map with downstream collector and custom supplier.
+         * Creates a {@code ResultExtractor} that groups rows into a custom {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
          *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
-         * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector
-         * @param supplier the supplier to create the map instance
-         * @return a ResultExtractor that produces a Map
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
+         * @param <M> the type of the resulting {@code Map}
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row, which is then fed into the collector
+         * @param downstream the {@code Collector} to process values associated with each key
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code ResultExtractor} that produces a custom {@code Map}
          * @see #groupTo(RowMapper, RowMapper, Collector, Supplier)
-         * @deprecated replaced by {@code groupTo(RowMapper, RowMapper, Collector, Supplier)}
+         * @deprecated Replaced by {@link #groupTo(RowMapper, RowMapper, Collector, Supplier)} which has a more descriptive name.
          */
         @Deprecated
         static <K, V, D, M extends Map<K, D>> ResultExtractor<M> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
@@ -597,47 +630,50 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a ListMultimap.
-         * Each key can be associated with multiple values.
-         * 
+         * Creates a {@code ResultExtractor} that groups rows into a {@code ListMultimap}, where
+         * each key can be associated with multiple values.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<ListMultimap<String, Integer>> extractor = ResultExtractor.toMultimap(
-         *     rs -> rs.getString("category"),
-         *     rs -> rs.getInt("value")
+         * // Groups users by their department.
+         * ResultExtractor<ListMultimap<String, User>> extractor = ResultExtractor.toMultimap(
+         * rs -> rs.getString("department"),
+         * rs -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @return a ResultExtractor that produces a ListMultimap
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @return a {@code ResultExtractor} that produces a {@code ListMultimap}
          */
         static <K, V> ResultExtractor<ListMultimap<K, V>> toMultimap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return toMultimap(keyExtractor, valueExtractor, Suppliers.ofListMultimap());
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Multimap with custom supplier.
-         * 
+         * Creates a {@code ResultExtractor} that groups rows into a custom {@code Multimap}.
+         * This allows using different collection types for values, such as a {@code Set}.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Groups unique user IDs by department.
          * ResultExtractor<SetMultimap<String, Integer>> extractor = ResultExtractor.toMultimap(
-         *     rs -> rs.getString("category"),
-         *     rs -> rs.getInt("value"),
-         *     Suppliers.ofSetMultimap()
+         * rs -> rs.getString("department"),
+         * rs -> rs.getInt("user_id"),
+         * Suppliers.ofSetMultimap()
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param <C> the collection type for values
+         * @param <C> the collection type for values (e.g., {@code List<V>}, {@code Set<V>})
          * @param <M> the multimap type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param multimapSupplier the supplier to create the multimap instance
-         * @return a ResultExtractor that produces a Multimap
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param multimapSupplier a {@code Supplier} that provides a new, empty {@code Multimap} instance
+         * @return a {@code ResultExtractor} that produces a custom {@code Multimap}
          */
         static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> ResultExtractor<M> toMultimap(final RowMapper<? extends K> keyExtractor,
                 final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
@@ -657,37 +693,38 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that groups result set rows into a Map of Lists.
-         * Each key is associated with a list of values.
-         * 
+         * Creates a {@code ResultExtractor} that groups rows into a {@code Map} where each key is
+         * associated with a {@code List} of values. This is a common grouping operation.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * ResultExtractor<Map<String, List<User>>> extractor = ResultExtractor.groupTo(
-         *     rs -> rs.getString("department"),
-         *     rs -> new User(rs.getString("name"), rs.getInt("age"))
+         * rs -> rs.getString("department"),
+         * rs -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @return a ResultExtractor that produces a Map with List values
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @return a {@code ResultExtractor} that produces a {@code Map} with {@code List} values
          */
         static <K, V> ResultExtractor<Map<K, List<V>>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
-         * Creates a ResultExtractor that groups result set rows into a Map of Lists with custom map supplier.
+         * Creates a {@code ResultExtractor} that groups rows into a custom {@code Map} where each key is
+         * associated with a {@code List} of values.
          *
          * @param <K> the key type
          * @param <V> the value type
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param supplier the supplier to create the map instance
-         * @return a ResultExtractor that produces a Map with List values
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code ResultExtractor} that produces a custom {@code Map} with {@code List} values
          */
         static <K, V, M extends Map<K, List<V>>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor,
                 final RowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
@@ -712,25 +749,26 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that groups result set rows with a downstream collector.
-         * This allows for more complex aggregations beyond simple list collection.
-         * 
+         * Creates a {@code ResultExtractor} that groups rows into a {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Calculates the average amount per category.
          * ResultExtractor<Map<String, Double>> extractor = ResultExtractor.groupTo(
-         *     rs -> rs.getString("category"),
-         *     rs -> rs.getDouble("amount"),
-         *     Collectors.summingDouble(Double::doubleValue)
+         * rs -> rs.getString("category"),
+         * rs -> rs.getDouble("amount"),
+         * Collectors.averagingDouble(Double::doubleValue)
          * );
          * }</pre>
          *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector for aggregating values
-         * @return a ResultExtractor that produces a Map with collected values
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param downstream the {@code Collector} for aggregating values associated with each key
+         * @return a {@code ResultExtractor} that produces a {@code Map} with collected values
          */
         static <K, V, D> ResultExtractor<Map<K, D>> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
@@ -738,27 +776,29 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that groups result set rows with a downstream collector and custom map supplier.
-         * 
+         * Creates a {@code ResultExtractor} that groups rows into a custom {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Counts the number of items per category, storing results in a TreeMap.
          * ResultExtractor<TreeMap<String, Long>> extractor = ResultExtractor.groupTo(
-         *     rs -> rs.getString("category"),
-         *     rs -> rs.getInt("count"),
-         *     Collectors.counting(),
-         *     TreeMap::new
+         * rs -> rs.getString("category"),
+         * rs -> rs.getInt("item_id"), // Value extractor can be anything, it's just for the collector
+         * Collectors.counting(),
+         * TreeMap::new
          * );
          * }</pre>
          *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector for aggregating values
-         * @param supplier the supplier to create the map instance
-         * @return a ResultExtractor that produces a Map with collected values
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param downstream the {@code Collector} for aggregating values associated with each key
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code ResultExtractor} that produces a custom {@code Map} with collected values
          */
         static <K, V, D, M extends Map<K, D>> ResultExtractor<M> groupTo(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
@@ -798,40 +838,41 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a List.
-         * Each row is mapped to an element using the provided row mapper.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List}
+         * of objects, where each object is created by applying the given {@code rowMapper} to each row.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<List<String>> extractor = ResultExtractor.toList(
-         *     rs -> rs.getString("name")
+         * ResultExtractor<List<String>> nameListExtractor = ResultExtractor.toList(
+         * rs -> rs.getString("name")
          * );
          * }</pre>
          *
-         * @param <T> the element type
+         * @param <T> the element type of the list
          * @param rowMapper the function to map each row to an element
-         * @return a ResultExtractor that produces a List
+         * @return a {@code ResultExtractor} that produces a {@code List}
          */
         static <T> ResultExtractor<List<T>> toList(final RowMapper<? extends T> rowMapper) {
             return toList(RowFilter.ALWAYS_TRUE, rowMapper);
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a List with filtering.
-         * Only rows that pass the filter are included in the result.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List}
+         * of objects, including only the rows that satisfy the {@code rowFilter}.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<List<User>> extractor = ResultExtractor.toList(
-         *     rs -> rs.getInt("age") >= 18,  // Only adults
-         *     rs -> new User(rs.getString("name"), rs.getInt("age"))
+         * // Extracts a list of users who are 18 or older.
+         * ResultExtractor<List<User>> adultUserExtractor = ResultExtractor.toList(
+         * rs -> rs.getInt("age") >= 18,
+         * rs -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
          *
-         * @param <T> the element type
-         * @param rowFilter the predicate to filter rows
-         * @param rowMapper the function to map each row to an element
-         * @return a ResultExtractor that produces a filtered List
+         * @param <T> the element type of the list
+         * @param rowFilter a predicate to filter rows from the result set
+         * @param rowMapper the function to map each accepted row to an element
+         * @return a {@code ResultExtractor} that produces a filtered {@code List}
          */
         static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, cs.rowFilter);
@@ -851,17 +892,19 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a List of entities.
-         * The target class must be a valid bean class with appropriate getters/setters.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List} of entities.
+         * The mapping from columns to entity properties is done automatically based on column names
+         * and property names in the {@code targetClass}.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * ResultExtractor<List<User>> extractor = ResultExtractor.toList(User.class);
+         * // Assumes User class has properties matching column names (e.g., 'id', 'name').
+         * ResultExtractor<List<User>> userListExtractor = ResultExtractor.toList(User.class);
          * }</pre>
          *
          * @param <T> the entity type
-         * @param targetClass the class of entities to create
-         * @return a ResultExtractor that produces a List of entities
+         * @param targetClass the class of the entities to be created
+         * @return a {@code ResultExtractor} that produces a {@code List} of entities
          * @see BiResultExtractor#toList(Class)
          */
         static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
@@ -882,19 +925,24 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a List of merged entities.
-         * This method is useful for handling results from JOIN queries where the same entity
-         * appears in multiple rows with different related data.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} from a JOIN query
+         * into a {@code List} of merged entities. It groups rows by the primary entity's ID
+         * and merges related data (e.g., from one-to-many relationships) into collections
+         * within each primary entity.
+         *
+         * <p>This method assumes the {@code targetClass} has identifiable ID properties (e.g., annotated
+         * with {@code @Id}).</p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * // For a query that joins users with their orders
+         * // For a query like "SELECT u.*, o.* FROM users u JOIN orders o ON u.id = o.user_id"
+         * // where User has a List<Order> property.
          * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class);
          * }</pre>
          *
          * @param <T> the entity type
-         * @param targetClass the class of entities to create
-         * @return a ResultExtractor that produces a List of merged entities
+         * @param targetClass the class of the entities to create and merge
+         * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
          * @see Dataset#toMergedEntities(Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
@@ -908,19 +956,20 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a List of merged entities
-         * using a specific property for merging.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List} of
+         * merged entities, using a specific property to identify unique entities for merging.
+         * This is useful when the default ID detection is not sufficient.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * // Merge users by their ID
-         * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class, "id");
+         * // Merge User entities based on the 'email' property instead of 'id'.
+         * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class, "email");
          * }</pre>
          *
          * @param <T> the entity type
-         * @param targetClass the class of entities to create
-         * @param idPropNameForMerge the property name to use for identifying entities to merge
-         * @return a ResultExtractor that produces a List of merged entities
+         * @param targetClass the class of the entities to create and merge
+         * @param idPropNameForMerge the property name to use for identifying unique entities to merge
+         * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
          * @see Dataset#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final String idPropNameForMerge) {
@@ -934,22 +983,22 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a List of merged entities
-         * using multiple properties for merging.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List} of
+         * merged entities, using a composite key (multiple properties) to identify unique entities for merging.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * // Merge orders by customer ID and order date
+         * // Merge Order entities based on a composite key of 'customerId' and 'orderDate'.
          * ResultExtractor<List<Order>> extractor = ResultExtractor.toMergedList(
-         *     Order.class, 
-         *     Arrays.asList("customerId", "orderDate")
+         * Order.class,
+         * List.of("customerId", "orderDate")
          * );
          * }</pre>
          *
          * @param <T> the entity type
-         * @param targetClass the class of entities to create
-         * @param idPropNamesForMerge the property names to use for identifying entities to merge
-         * @return a ResultExtractor that produces a List of merged entities
+         * @param targetClass the class of the entities to create and merge
+         * @param idPropNamesForMerge the collection of property names that form the composite key for merging
+         * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
          * @see Dataset#toMergedEntities(Collection, Collection, Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass, final Collection<String> idPropNamesForMerge) {
@@ -963,102 +1012,107 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Dataset using a specific entity class.
-         * The entity class is used to determine how to map columns to fields.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}.
+         * Column types within the {@code Dataset} are inferred from the properties of the provided {@code entityClassForExtractor}.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // The resulting Dataset will have columns with types matching User properties.
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class);
          * }</pre>
          *
-         * @param entityClassForExtractor The class used to map the fields from the columns in the result set
-         * @return a ResultExtractor that produces a Dataset
+         * @param entityClassForExtractor the class used to map column names to property types
+         * @return a {@code ResultExtractor} that produces a {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor));
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Dataset with field name mapping.
-         * The prefix and field name map allows for custom column-to-field mapping.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
+         * with custom field name mapping for nested objects. This is useful for JOIN queries
+         * where column names might have prefixes.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * Map<String, String> prefixMap = new HashMap<>();
-         * prefixMap.put("u_", "user.");
+         * // Maps 'u_id' to 'user.id', 'u_name' to 'user.name', etc.
+         * Map<String, String> prefixMap = Map.of("u_", "user.");
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class, prefixMap);
          * }</pre>
          *
-         * @param entityClassForExtractor The class used to map the fields from the columns in the result set
-         * @param prefixAndFieldNameMap map of column prefixes to field name prefixes
-         * @return a ResultExtractor that produces a Dataset
+         * @param entityClassForExtractor the class used to map fields from columns
+         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are field name prefixes for dot notation
+         * @return a {@code ResultExtractor} that produces a {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final Class<?> entityClassForExtractor, final Map<String, String> prefixAndFieldNameMap) {
             return rs -> JdbcUtil.extractData(rs, RowExtractor.createBy(entityClassForExtractor, prefixAndFieldNameMap));
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Dataset with row filtering.
-         * Only rows that pass the filter are included in the Dataset.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset},
+         * including only the rows that satisfy the specified filter.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Creates a Dataset containing only active records.
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
-         *     rs -> rs.getBoolean("active")  // Only active records
+         * rs -> rs.getBoolean("is_active")
          * );
          * }</pre>
          *
-         * @param rowFilter the predicate to filter rows
-         * @return a ResultExtractor that produces a filtered Dataset
+         * @param rowFilter a predicate to filter rows
+         * @return a {@code ResultExtractor} that produces a filtered {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final RowFilter rowFilter) {
             return rs -> JdbcUtil.extractData(rs, rowFilter);
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Dataset using a custom row extractor.
-         * The row extractor provides full control over how each row is extracted.
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
+         * using a custom {@code RowExtractor} for fine-grained control over value extraction.
          *
-         * @param rowExtractor the custom row extractor
-         * @return a ResultExtractor that produces a Dataset
+         * @param rowExtractor the custom row extractor to process each row
+         * @return a {@code ResultExtractor} that produces a {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final RowExtractor rowExtractor) {
             return rs -> JdbcUtil.extractData(rs, rowExtractor);
         }
 
         /**
-         * Creates a ResultExtractor that converts the result set into a Dataset with both filtering and custom extraction.
-         * 
+         * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
+         * using both a filter and a custom row extractor.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
-         *     rs -> rs.getInt("status") > 0,  // Filter
-         *     RowExtractor.createBy(User.class)  // Custom extraction
+         * rs -> rs.getInt("status") > 0,      // Filter for positive status
+         * RowExtractor.createBy(User.class)   // Use User class for type info
          * );
          * }</pre>
          *
-         * @param rowFilter the predicate to filter rows
-         * @param rowExtractor the custom row extractor
-         * @return a ResultExtractor that produces a filtered Dataset with custom extraction
+         * @param rowFilter a predicate to filter rows
+         * @param rowExtractor the custom row extractor to process each accepted row
+         * @return a {@code ResultExtractor} that produces a filtered {@code Dataset}
          */
         static ResultExtractor<Dataset> toDataset(final RowFilter rowFilter, final RowExtractor rowExtractor) {
             return rs -> JdbcUtil.extractData(rs, 0, Integer.MAX_VALUE, rowFilter, rowExtractor, false);
         }
 
         /**
-         * Creates a ResultExtractor that first converts to Dataset and then applies a transformation function.
-         * This is useful for chaining Dataset operations.
-         * 
+         * Creates a {@code ResultExtractor} that first converts the {@code ResultSet} to a {@code Dataset}
+         * and then applies a transformation function to it.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Converts the ResultSet to a Dataset, then to a List of Users.
          * ResultExtractor<List<User>> extractor = ResultExtractor.to(
-         *     dataset -> dataset.toList(User.class)
+         * dataset -> dataset.toList(User.class)
          * );
          * }</pre>
          *
-         * @param <R> the result type
-         * @param after the function to apply to the Dataset
-         * @return a ResultExtractor that produces the transformed result
+         * @param <R> the final result type
+         * @param after the function to apply to the intermediate {@code Dataset}
+         * @return a {@code ResultExtractor} that produces the transformed result
          */
         static <R> ResultExtractor<R> to(final Throwables.Function<Dataset, R, SQLException> after) {
             return rs -> after.apply(TO_DATA_SET.apply(rs));
@@ -1066,12 +1120,13 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for extracting results from a ResultSet with column label information.
-     * This interface is similar to ResultExtractor but also provides access to column labels,
-     * which can be useful for dynamic result processing.
-     * 
-     * <p>Note: In many scenarios, the ResultSet will be closed after the apply() method returns,
-     * so the ResultSet should not be saved or returned directly.</p>
+     * A functional interface for extracting a result from a {@code ResultSet}, with access to
+     * the list of column labels from the result set's metadata. This is useful when the
+     * extraction logic needs to be dynamic based on the columns present in the result.
+     *
+     * <p><b>Important Note:</b> Like {@code ResultExtractor}, the {@code ResultSet} passed to
+     * the {@code apply} method will typically be closed automatically after the method returns.
+     * Do not attempt to return or store the {@code ResultSet} itself.</p>
      *
      * @param <T> the type of the result
      */
@@ -1079,8 +1134,8 @@ public final class Jdbc {
     public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /**
-         * A pre-defined BiResultExtractor that converts a ResultSet to a Dataset.
-         * Returns an empty Dataset if the ResultSet is null.
+         * A pre-defined {@code BiResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
+         * If the {@code ResultSet} is null, it returns an empty {@code Dataset}.
          */
         BiResultExtractor<Dataset> TO_DATA_SET = (rs, columnLabels) -> {
             if (rs == null) {
@@ -1091,14 +1146,14 @@ public final class Jdbc {
         };
 
         /**
-         * Extracts a result from the given ResultSet using column label information.
-         * 
-         * <p>Important: In many scenarios, including PreparedQuery/Dao/SQLExecutor,
-         * the input ResultSet will be closed after this method returns.
-         * Do not save or return the input ResultSet.</p>
+         * Extracts a result from the given {@code ResultSet} using column label information.
          *
-         * @param rs the ResultSet to extract data from
-         * @param columnLabels the list of column labels in the result set
+         * <p><b>Warning:</b> The input {@code ResultSet} will often be closed by the calling
+         * framework immediately after this method completes. Do not return the {@code ResultSet}
+         * or any resources tied to it.</p>
+         *
+         * @param rs the {@code ResultSet} to extract data from
+         * @param columnLabels the list of column labels from the result set's metadata
          * @return the extracted result
          * @throws SQLException if a database access error occurs
          */
@@ -1106,12 +1161,13 @@ public final class Jdbc {
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * Returns a composed BiResultExtractor that first applies this extractor and then applies the after function.
+         * Returns a composed {@code BiResultExtractor} that first applies this extractor to
+         * the {@code ResultSet} and then applies the {@code after} function to the result.
          *
-         * @param <R> the type of output of the after function
-         * @param after the function to apply after this extractor
-         * @return a composed BiResultExtractor
-         * @throws IllegalArgumentException if after is null
+         * @param <R> the type of the result of the {@code after} function
+         * @param after the function to apply after this extractor is applied
+         * @return a composed {@code BiResultExtractor}
+         * @throws IllegalArgumentException if {@code after} is null
          */
         default <R> BiResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1120,37 +1176,38 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Map.
-         * Each row is processed to extract a key-value pair using the provided extractors.
-         * 
+         * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a {@code Map}.
+         * Each row is mapped to a key-value pair. Throws an {@code IllegalStateException} on duplicate keys.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<Map<Integer, String>> extractor = BiResultExtractor.toMap(
-         *     (rs, cols) -> rs.getInt("id"),
-         *     (rs, cols) -> rs.getString("name")
+         * (rs, cols) -> rs.getInt("id"),
+         * (rs, cols) -> rs.getString("name")
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @return a BiResultExtractor that produces a Map
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @return a {@code BiResultExtractor} that produces a {@code Map}
          */
         static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Map with a custom map supplier.
+         * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a custom {@code Map}.
+         * Each row is mapped to a key-value pair. Throws an {@code IllegalStateException} on duplicate keys.
          *
          * @param <K> the key type
          * @param <V> the value type
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param supplier the supplier to create the map instance
-         * @return a BiResultExtractor that produces a Map
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code BiResultExtractor} that produces a custom {@code Map}
          */
         static <K, V, M extends Map<K, V>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
@@ -1158,15 +1215,24 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Map with a merge function.
-         * The merge function is used when duplicate keys are encountered.
+         * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a {@code Map},
+         * with a specified function to merge values of duplicate keys.
+         *
+         * <p>Example usage:</p>
+         * <pre>{@code
+         * BiResultExtractor<Map<String, Integer>> extractor = BiResultExtractor.toMap(
+         * (rs, cols) -> rs.getString("category"),
+         * (rs, cols) -> rs.getInt("value"),
+         * Integer::sum // Sum values for duplicate keys
+         * );
+         * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param mergeFunction the function to merge values when duplicate keys are encountered
-         * @return a BiResultExtractor that produces a Map
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param mergeFunction a function to resolve collisions for the same key
+         * @return a {@code BiResultExtractor} that produces a {@code Map}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -1177,16 +1243,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Map with full customization.
+         * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a custom {@code Map},
+         * with a specified function to merge values of duplicate keys.
          *
          * @param <K> the key type
          * @param <V> the value type
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param mergeFunction the function to merge values when duplicate keys are encountered
-         * @param supplier the supplier to create the map instance
-         * @return a BiResultExtractor that produces a Map
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param mergeFunction a function to resolve collisions for the same key
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code BiResultExtractor} that produces a custom {@code Map}
          * @see Fn#throwingMerger()
          * @see Fn#replacingMerger()
          * @see Fn#ignoringMerger()
@@ -1210,17 +1277,18 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Map with downstream collector.
+         * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
          *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector
-         * @return a BiResultExtractor that produces a Map
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param downstream the {@code Collector} to process values for each key
+         * @return a {@code BiResultExtractor} that produces a {@code Map}
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector)
-         * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector)}
+         * @deprecated Replaced by {@link #groupTo(BiRowMapper, BiRowMapper, Collector)} which has a more descriptive name.
          */
         @Deprecated
         static <K, V, D> BiResultExtractor<Map<K, D>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
@@ -1229,19 +1297,20 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Map with downstream collector and custom supplier.
+         * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
          *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector
-         * @param supplier the supplier to create the map instance
-         * @return a BiResultExtractor that produces a Map
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param downstream the {@code Collector} to process values for each key
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code BiResultExtractor} that produces a custom {@code Map}
          * @see #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)
-         * @deprecated replaced by {@code groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)}
+         * @deprecated Replaced by {@link #groupTo(BiRowMapper, BiRowMapper, Collector, Supplier)} which has a more descriptive name.
          */
         @Deprecated
         static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> toMap(final BiRowMapper<? extends K> keyExtractor,
@@ -1250,22 +1319,22 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a ListMultimap.
-         * Each key can be associated with multiple values.
-         * 
+         * Creates a {@code BiResultExtractor} that groups rows into a {@code ListMultimap}, where
+         * each key can be associated with multiple values.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<ListMultimap<String, Integer>> extractor = BiResultExtractor.toMultimap(
-         *     (rs, cols) -> rs.getString("category"),
-         *     (rs, cols) -> rs.getInt("value")
+         * (rs, cols) -> rs.getString("category"),
+         * (rs, cols) -> rs.getInt("value")
          * );
          * }</pre>
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @return a BiResultExtractor that produces a ListMultimap
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @return a {@code BiResultExtractor} that produces a {@code ListMultimap}
          */
         static <K, V> BiResultExtractor<ListMultimap<K, V>> toMultimap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor) {
@@ -1273,16 +1342,16 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a Multimap with custom supplier.
+         * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Multimap}.
          *
          * @param <K> the key type
          * @param <V> the value type
          * @param <C> the collection type for values
          * @param <M> the multimap type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param multimapSupplier the supplier to create the multimap instance
-         * @return a BiResultExtractor that produces a Multimap
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param multimapSupplier a {@code Supplier} that provides a new, empty {@code Multimap} instance
+         * @return a {@code BiResultExtractor} that produces a custom {@code Multimap}
          */
         static <K, V, C extends Collection<V>, M extends Multimap<K, V, C>> BiResultExtractor<M> toMultimap(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> multimapSupplier) {
@@ -1302,29 +1371,30 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that groups result set rows into a Map of Lists.
-         * Each key is associated with a list of values.
+         * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} where each key is
+         * associated with a {@code List} of values.
          *
          * @param <K> the key type
          * @param <V> the value type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @return a BiResultExtractor that produces a Map with List values
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @return a {@code BiResultExtractor} that produces a {@code Map} with {@code List} values
          */
         static <K, V> BiResultExtractor<Map<K, List<V>>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
             return groupTo(keyExtractor, valueExtractor, Suppliers.ofMap());
         }
 
         /**
-         * Creates a BiResultExtractor that groups result set rows into a Map of Lists with custom map supplier.
+         * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} where each key is
+         * associated with a {@code List} of values.
          *
          * @param <K> the key type
          * @param <V> the value type
          * @param <M> the map type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param supplier the supplier to create the map instance
-         * @return a BiResultExtractor that produces a Map with List values
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code BiResultExtractor} that produces a custom {@code Map} with {@code List} values
          */
         static <K, V, M extends Map<K, List<V>>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Supplier<? extends M> supplier) {
@@ -1349,25 +1419,25 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that groups result set rows with a downstream collector.
-         * This allows for more complex aggregations beyond simple list collection.
-         * 
+         * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<Map<String, Double>> extractor = BiResultExtractor.groupTo(
-         *     (rs, cols) -> rs.getString("category"),
-         *     (rs, cols) -> rs.getDouble("amount"),
-         *     Collectors.summingDouble(Double::doubleValue)
+         * (rs, cols) -> rs.getString("category"),
+         * (rs, cols) -> rs.getDouble("amount"),
+         * Collectors.summingDouble(Double::doubleValue)
          * );
          * }</pre>
          *
          * @param <K> the key type
-         * @param <V> the value type
-         * @param <D> the downstream result type
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the downstream collector for aggregating values
-         * @return a BiResultExtractor that produces a Map with collected values
+         * @param <V> the input value type for the downstream collector
+         * @param <D> the result type of the downstream collector
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param downstream the {@code Collector} for aggregating values associated with each key
+         * @return a {@code BiResultExtractor} that produces a {@code Map} with collected values
          */
         static <K, V, D> BiResultExtractor<Map<K, D>> groupTo(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor,
                 final Collector<? super V, ?, D> downstream) {
@@ -1375,28 +1445,28 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that groups result set rows with a downstream collector and custom map supplier.
-         * Provides full control over grouping with custom aggregation and map type.
-         * 
+         * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} and applies a
+         * downstream {@code Collector} to the values associated with each key.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<TreeMap<String, Long>> extractor = BiResultExtractor.groupTo(
-         *     (rs, cols) -> rs.getString("category"),
-         *     (rs, cols) -> rs.getInt("count"),
-         *     Collectors.counting(),
-         *     TreeMap::new
+         * (rs, cols) -> rs.getString("category"),
+         * (rs, cols) -> rs.getInt("count"), // Value extractor provides input to collector
+         * Collectors.counting(),
+         * TreeMap::new
          * );
          * }</pre>
          *
-         * @param <K> the type of keys maintained by the map
-         * @param <V> the type of mapped values
-         * @param <D> the type of the result of the downstream collector
-         * @param <M> the type of the map
-         * @param keyExtractor the function to extract keys from the result set
-         * @param valueExtractor the function to extract values from the result set
-         * @param downstream the collector to accumulate values associated with a key
-         * @param supplier the supplier to provide a new map instance
-         * @return a BiResultExtractor that produces a Map with collected values
+         * @param <K> the type of keys in the map
+         * @param <V> the type of input values for the collector
+         * @param <D> the result type of the downstream collector
+         * @param <M> the type of the resulting map
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param downstream the {@code Collector} for aggregating values associated with each key
+         * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
+         * @return a {@code BiResultExtractor} that produces a custom {@code Map} with collected values
          */
         static <K, V, D, M extends Map<K, D>> BiResultExtractor<M> groupTo(final BiRowMapper<? extends K> keyExtractor,
                 final BiRowMapper<? extends V> valueExtractor, final Collector<? super V, ?, D> downstream, final Supplier<? extends M> supplier) {
@@ -1437,40 +1507,40 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a List.
-         * Each row is mapped to an element using the provided row mapper.
-         * 
+         * Creates a {@code BiResultExtractor} that converts a {@code ResultSet} into a {@code List}
+         * of objects, where each object is created by applying the given {@code rowMapper} to each row.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<List<String>> extractor = BiResultExtractor.toList(
-         *     (rs, cols) -> rs.getString("name")
+         * (rs, cols) -> rs.getString("name")
          * );
          * }</pre>
          *
-         * @param <T> the element type
+         * @param <T> the element type of the list
          * @param rowMapper the function to map each row to an element
-         * @return a BiResultExtractor that produces a List
+         * @return a {@code BiResultExtractor} that produces a {@code List}
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowMapper<? extends T> rowMapper) {
             return toList(BiRowFilter.ALWAYS_TRUE, rowMapper);
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a List with filtering.
-         * Only rows that pass the filter are included in the result.
-         * 
+         * Creates a {@code BiResultExtractor} that converts a {@code ResultSet} into a {@code List}
+         * of objects, including only the rows that satisfy the {@code rowFilter}.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(
-         *     (rs, cols) -> rs.getInt("age") >= 18,  // Only adults
-         *     (rs, cols) -> new User(rs.getString("name"), rs.getInt("age"))
+         * (rs, cols) -> rs.getInt("age") >= 18,  // Filter for adults
+         * (rs, cols) -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
          *
-         * @param <T> the element type
-         * @param rowFilter the predicate to filter rows
-         * @param rowMapper the function to map each row to an element
-         * @return a BiResultExtractor that produces a filtered List
+         * @param <T> the element type of the list
+         * @param rowFilter a predicate to filter rows
+         * @param rowMapper the function to map each accepted row to an element
+         * @return a {@code BiResultExtractor} that produces a filtered {@code List}
          */
         static <T> BiResultExtractor<List<T>> toList(final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, cs.rowFilter);
@@ -1490,20 +1560,26 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiResultExtractor that converts the result set into a List of entities.
-         * The target class must be a valid bean class with appropriate getters/setters.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a {@code BiResultExtractor} that converts a {@code ResultSet} into a {@code List} of entities.
+         * The mapping from columns to entity properties is done automatically.
+         *
+         * <p>
+         * This method internally uses a stateful {@code BiRowMapper} that caches metadata on its first run.
+         * While the returned {@code BiResultExtractor} itself is stateless, for performance-critical
+         * scenarios, consider creating the stateful {@code BiRowMapper} once and reusing it if the
+         * result set structure is consistent.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(User.class);
          * }</pre>
          *
          * @param <T> the entity type
-         * @param targetClass the class of entities to create
-         * @return a stateful {@code BiResultExtractor}. Don't save or cache for reuse or use it in parallel stream.
+         * @param targetClass the class of the entities to be created
+         * @return a {@code BiResultExtractor} that produces a {@code List} of entities.
          * @see ResultExtractor#toList(Class)
+         * @see BiRowMapper#to(Class)
          */
         static <T> BiResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
             N.checkArgNotNull(targetClass, cs.targetClass);
@@ -1522,60 +1598,53 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for mapping rows of a ResultSet to objects.
-     * This interface is designed to convert a single row of a ResultSet into an object of type T.
-     * 
-     * <p>If column labels/count are used in the apply() method, consider using BiRowMapper instead
-     * as it's more efficient for retrieving multiple records when column labels/count are needed.</p>
-     * 
+     * A functional interface for mapping the current row of a {@code ResultSet} to an object.
+     * The mapper should only read from the current row and should not advance the cursor (e.g., by calling {@code rs.next()}).
+     *
+     * <p>For better performance when processing multiple records where column metadata is needed repeatedly,
+     * consider using {@link BiRowMapper}, as it provides column labels and avoids repeated metadata lookups.</p>
+     *
      * <p>Example usage:</p>
      * <pre>{@code
-     * RowMapper<User> mapper = rs -> new User(
-     *     rs.getInt("id"),
-     *     rs.getString("name"),
-     *     rs.getInt("age")
+     * RowMapper<User> userMapper = rs -> new User(
+     * rs.getInt("id"),
+     * rs.getString("name")
      * );
      * }</pre>
      *
-     * @param <T> the type of the object that each row of the ResultSet will be mapped to
+     * @param <T> the type of the object to be mapped from a row
      * @see ColumnOne
      */
     @FunctionalInterface
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
-         * Maps a row of the ResultSet to an object of type T.
-         * This is the core method that performs the actual transformation of a database row
-         * into a Java object. The method should not advance the ResultSet cursor; it should 
-         * only read from the current row that the ResultSet is positioned on.
-         * 
-         * <p>Implementation example:</p>
-         * <pre>{@code
-         * return new Person(rs.getString("name"), rs.getInt("age"));
-         * }</pre>
+         * Maps the current row of the given {@code ResultSet} to an object of type {@code T}.
+         * This method should not advance the ResultSet cursor (e.g., call {@code rs.next()}). It
+         * operates solely on the data available at the current cursor position.
          *
-         * @param rs the ResultSet positioned at a valid row to be mapped
-         * @return the mapped object of type T created from the current row data
+         * @param rs the {@code ResultSet} positioned at the row to be mapped
+         * @return the mapped object of type {@code T}
          * @throws SQLException if a database access error occurs during column value retrieval
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
 
         /**
-         * Returns a composed RowMapper that first applies this mapper and then applies the after function.
-         * This allows for chaining transformations where you first map a row to an intermediate object,
-         * then transform that object to a final result type.
-         * 
-         * <p>Usage example:</p>
+         * Returns a composed {@code RowMapper} that first applies this mapper to the row and then
+         * applies the {@code after} function to the result. This allows for chaining transformations.
+         *
+         * <p>Example usage:</p>
          * <pre>{@code
          * RowMapper<User> userMapper = rs -> new User(rs.getString("name"));
+         * // Creates a mapper that extracts just the user's name as a String.
          * RowMapper<String> nameMapper = userMapper.andThen(User::getName);
          * }</pre>
          *
-         * @param <R> the type of output of the after function
-         * @param after the function to apply after this mapper is applied; must not be null
-         * @return a composed RowMapper that applies this mapper first, then the after function
-         * @throws IllegalArgumentException if after is null
+         * @param <R> the type of the result of the {@code after} function
+         * @param after the function to apply to the result of this mapper; must not be null
+         * @return a composed {@code RowMapper}
+         * @throws IllegalArgumentException if {@code after} is null
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1584,42 +1653,34 @@ public final class Jdbc {
         }
 
         /**
-         * Converts this RowMapper to a BiRowMapper.
-         * The resulting BiRowMapper ignores the column labels parameter and delegates
-         * all calls to this RowMapper's apply method. This is useful when you need
-         * to use a simple RowMapper in contexts that expect a BiRowMapper.
-         * 
-         * <p>Usage example:</p>
-         * <pre>{@code
-         * RowMapper<String> simpleMapper = rs -> rs.getString(1);
-         * BiRowMapper<String> biMapper = simpleMapper.toBiRowMapper();
-         * }</pre>
+         * Converts this {@code RowMapper} to a {@code BiRowMapper}.
+         * The resulting mapper will ignore the {@code columnLabels} parameter. This is useful for
+         * adapting a simple {@code RowMapper} to an API that requires a {@code BiRowMapper}.
          *
-         * @return a BiRowMapper that delegates to this RowMapper, ignoring column labels
+         * @return a {@code BiRowMapper} that delegates to this {@code RowMapper}.
          */
         default BiRowMapper<T> toBiRowMapper() {
             return (rs, columnLabels) -> this.apply(rs);
         }
 
         /**
-         * Combines two RowMapper instances into a RowMapper that returns a Tuple2 of their results.
-         * This static method creates a new mapper that applies both input mappers to the same
-         * ResultSet row and packages their results into a Tuple2. This is useful when you need
-         * to extract multiple different object types from the same row.
-         * 
-         * <p>Usage example:</p>
+         * Combines two {@code RowMapper} instances into a single mapper that returns a {@code Tuple2}
+         * containing the results of both. Both mappers are applied to the same row of the {@code ResultSet}.
+         *
+         * <p>Example usage:</p>
          * <pre>{@code
          * RowMapper<Integer> idMapper = rs -> rs.getInt("id");
          * RowMapper<String> nameMapper = rs -> rs.getString("name");
-         * RowMapper<Tuple2<Integer, String>> combined = RowMapper.combine(idMapper, nameMapper);
+         * RowMapper<Tuple2<Integer, String>> combinedMapper = RowMapper.combine(idMapper, nameMapper);
+         * // combinedMapper.apply(rs) would return Tuple.of(1, "John") for a given row.
          * }</pre>
          *
-         * @param <T> the type of the first RowMapper's result
-         * @param <U> the type of the second RowMapper's result
-         * @param rowMapper1 the first RowMapper; must not be null
-         * @param rowMapper2 the second RowMapper; must not be null
-         * @return a RowMapper that returns a Tuple2 containing results from both mappers
-         * @throws IllegalArgumentException if either rowMapper1 or rowMapper2 is null
+         * @param <T> the result type of the first mapper
+         * @param <U> the result type of the second mapper
+         * @param rowMapper1 the first mapper; must not be null
+         * @param rowMapper2 the second mapper; must not be null
+         * @return a new {@code RowMapper} that produces a {@code Tuple2}
+         * @throws IllegalArgumentException if either mapper is null
          */
         static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, cs.rowMapper1);
@@ -1629,28 +1690,25 @@ public final class Jdbc {
         }
 
         /**
-         * Combines three RowMapper instances into a RowMapper that returns a Tuple3 of their results.
-         * This static method creates a new mapper that applies all three input mappers to the same
-         * ResultSet row and packages their results into a Tuple3. This extends the capability of
-         * the two-mapper combine method for scenarios requiring three different object extractions.
-         * 
-         * <p>Usage example:</p>
+         * Combines three {@code RowMapper} instances into a single mapper that returns a {@code Tuple3}
+         * containing the results of all three. All mappers are applied to the same row of the {@code ResultSet}.
+         *
+         * <p>Example usage:</p>
          * <pre>{@code
          * RowMapper<Integer> idMapper = rs -> rs.getInt("id");
          * RowMapper<String> nameMapper = rs -> rs.getString("name");
-         * RowMapper<Integer> ageMapper = rs -> rs.getInt("age");
-         * RowMapper<Tuple3<Integer, String, Integer>> combined = 
-         *     RowMapper.combine(idMapper, nameMapper, ageMapper);
+         * RowMapper<Date> dateMapper = rs -> rs.getDate("join_date");
+         * RowMapper<Tuple3<Integer, String, Date>> combinedMapper = RowMapper.combine(idMapper, nameMapper, dateMapper);
          * }</pre>
          *
-         * @param <A> the type of the first RowMapper's result
-         * @param <B> the type of the second RowMapper's result
-         * @param <C> the type of the third RowMapper's result
-         * @param rowMapper1 the first RowMapper; must not be null
-         * @param rowMapper2 the second RowMapper; must not be null
-         * @param rowMapper3 the third RowMapper; must not be null
-         * @return a RowMapper that returns a Tuple3 containing results from all three mappers
-         * @throws IllegalArgumentException if any of the rowMapper parameters is null
+         * @param <A> the result type of the first mapper
+         * @param <B> the result type of the second mapper
+         * @param <C> the result type of the third mapper
+         * @param rowMapper1 the first mapper; must not be null
+         * @param rowMapper2 the second mapper; must not be null
+         * @param rowMapper3 the third mapper; must not be null
+         * @return a new {@code RowMapper} that produces a {@code Tuple3}
+         * @throws IllegalArgumentException if any mapper is null
          */
         static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
                 final RowMapper<? extends C> rowMapper3) {
@@ -1662,22 +1720,16 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowMapper that maps all columns to an Object array.
-         * Uses the provided ColumnGetter for all columns in the ResultSet. The returned
-         * mapper maintains internal state to cache column count information for efficiency.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams
-         * as it maintains internal state that could cause race conditions.</p>
-         * 
-         * <p>Usage example:</p>
-         * <pre>{@code
-         * RowMapper<Object[]> mapper = RowMapper.toArray(ColumnGetter.GET_STRING);
-         * Object[] row = mapper.apply(resultSet);
-         * }</pre>
+         * Creates a stateful {@code RowMapper} that maps all columns of a row to an {@code Object[]}.
+         * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
-         * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
-         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
-         * @throws IllegalArgumentException if columnGetterForAll is null
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful because it caches the column count
+         * after the first execution. It should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
+         * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
+         * @return a stateful {@code RowMapper} that maps a row to an {@code Object[]}
          */
         @Beta
         @SequentialOnly
@@ -1704,21 +1756,16 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowMapper that maps all columns to a List.
-         * Uses the provided ColumnGetter for all columns and returns the results as a List.
-         * This is a convenience method that internally uses toCollection with a List supplier.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
-         * <p>Usage example:</p>
-         * <pre>{@code
-         * RowMapper<List<Object>> mapper = RowMapper.toList(ColumnGetter.GET_OBJECT);
-         * List<Object> row = mapper.apply(resultSet);
-         * }</pre>
+         * Creates a stateful {@code RowMapper} that maps all columns of a row to a {@code List<Object>}.
+         * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
-         * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
-         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
-         * @throws IllegalArgumentException if columnGetterForAll is null
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful because it caches the column count
+         * after the first execution. It should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
+         * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
+         * @return a stateful {@code RowMapper} that maps a row to a {@code List<Object>}
          */
         @Beta
         @SequentialOnly
@@ -1728,25 +1775,19 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowMapper that maps all columns to a Collection.
-         * Uses the provided ColumnGetter for all columns and the supplier to create the collection
-         * instance. The supplier receives the expected size (column count) as a parameter to allow
-         * for optimal collection sizing.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
-         * <p>Usage example:</p>
-         * <pre>{@code
-         * RowMapper<LinkedList<Object>> mapper = RowMapper.toCollection(
-         *     ColumnGetter.GET_STRING, size -> new LinkedList<>());
-         * LinkedList<Object> row = mapper.apply(resultSet);
-         * }</pre>
+         * Creates a stateful {@code RowMapper} that maps all columns of a row to a {@code Collection}.
+         * The specified {@code columnGetterForAll} extracts values, and the {@code supplier} provides
+         * the collection instance (e.g., {@code ArrayList::new}, {@code HashSet::new}).
          *
-         * @param <C> the collection type to be returned
-         * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
-         * @param supplier the function to create the collection with the expected size
-         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
-         * @throws IllegalArgumentException if columnGetterForAll or supplier is null
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful because it caches the column count
+         * after the first execution. It should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
+         * @param <C> the collection type
+         * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
+         * @param supplier a function that takes the column count and returns a new {@code Collection} instance
+         * @return a stateful {@code RowMapper} that maps a row to a {@code Collection}
          */
         @Beta
         @SequentialOnly
@@ -1773,21 +1814,18 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowMapper that maps all columns to a DisposableObjArray.
-         * This is useful for efficient row processing where the same array can be reused
-         * across multiple row mappings, reducing garbage collection pressure. The DisposableObjArray
-         * wraps the internal array and provides controlled access to the data.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
-         * <p>Usage example:</p>
-         * <pre>{@code
-         * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray();
-         * DisposableObjArray row = mapper.apply(resultSet);
-         * Object firstColumn = row.get(0);
-         * }</pre>
+         * Creates a stateful {@code RowMapper} that maps a row to a reusable {@code DisposableObjArray}.
+         * This is an performance optimization for row processing that avoids creating a new array for
+         * each row, reducing garbage collection overhead. The underlying array is reused on subsequent calls.
          *
-         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
+         * <p>
+         * <b>Warning:</b> The returned mapper is highly stateful. The returned {@code DisposableObjArray}
+         * is a wrapper around an internal array that will be overwritten on the next call to {@code apply}.
+         * You must process or copy its contents before the next row is mapped. Do not cache, share, or
+         * use this mapper in parallel streams.
+         * </p>
+         *
+         * @return a stateful {@code RowMapper} for high-performance, single-threaded row processing
          */
         @Beta
         @SequentialOnly
@@ -1816,22 +1854,19 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowMapper that maps columns to a DisposableObjArray using entity class metadata.
-         * The entity class is used to determine the appropriate type conversions for each column
-         * by analyzing the class's field types and annotations. This provides type-safe mapping
-         * based on the entity's structure and database column mappings.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
-         * <p>Usage example:</p>
-         * <pre>{@code
-         * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray(User.class);
-         * DisposableObjArray row = mapper.apply(resultSet);
-         * }</pre>
+         * Creates a stateful {@code RowMapper} that maps a row to a reusable {@code DisposableObjArray},
+         * using type information from an entity class to perform appropriate type conversions for each column.
          *
-         * @param entityClass used to fetch column/row value from ResultSet by the type of fields/columns defined in this class; must not be null
-         * @return a stateful RowMapper that should not be cached, reused, or used in parallel streams
-         * @throws IllegalArgumentException if entityClass is null
+         * <p>
+         * <b>Warning:</b> The returned mapper is highly stateful and caches type information and the output array.
+         * The returned {@code DisposableObjArray} is a wrapper around an internal array that will be overwritten on
+         * the next call to {@code apply}. You must process or copy its contents before the next row is mapped.
+         * Do not cache, share, or use this mapper in parallel streams.
+         * </p>
+         *
+         * @param entityClass the class used to infer the data type for each column based on matching property names
+         * @return a stateful {@code RowMapper} for high-performance, type-aware, single-threaded row processing
+         * @throws IllegalArgumentException if {@code entityClass} is null
          */
         @Beta
         @SequentialOnly
@@ -1895,59 +1930,62 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a RowMapperBuilder with default column getter for object values.
-         * The builder allows for fine-grained control over how each column is extracted
-         * and converted, providing a fluent API for building complex row mappers.
-         * 
-         * <p>Usage example:</p>
+         * Creates a new {@code RowMapperBuilder} with a default column getter of {@code ColumnGetter.GET_OBJECT}.
+         * This builder provides a fluent API for constructing complex {@code RowMapper} instances.
+         *
+         * <p>Example usage:</p>
          * <pre>{@code
          * RowMapper<Object[]> mapper = RowMapper.builder()
-         *     .getInt(1).getString(2).toArray();
+         * .getInt(1)
+         * .getString(2)
+         * .toArray();
          * }</pre>
          *
-         * @return a new RowMapperBuilder with GET_OBJECT as the default column getter
+         * @return a new {@code RowMapperBuilder}
          */
         static RowMapperBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
         }
 
         /**
-         * Creates a RowMapperBuilder with the specified default column getter.
-         * The builder allows for custom configuration of how each column is extracted,
-         * with the provided default getter being used for any columns not explicitly configured.
-         * 
-         * <p>Usage example:</p>
+         * Creates a new {@code RowMapperBuilder} with the specified default column getter.
+         * This default getter will be used for any column whose type is not explicitly configured in the builder.
+         *
+         * <p>Example usage:</p>
          * <pre>{@code
+         * // Default to String, but override column 1 to be an Integer.
          * RowMapper<Object[]> mapper = RowMapper.builder(ColumnGetter.GET_STRING)
-         *     .getInt(1)  // Override default for column 1
-         *     .toArray();
+         * .getInt(1)
+         * .toArray();
          * }</pre>
          *
-         * @param defaultColumnGetter the default ColumnGetter to use for columns not explicitly configured; must not be null
-         * @return a new RowMapperBuilder configured with the specified default getter
-         * @throws IllegalArgumentException if defaultColumnGetter is null
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns
+         * @return a new {@code RowMapperBuilder}
+         * @throws IllegalArgumentException if {@code defaultColumnGetter} is null
          */
         static RowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowMapperBuilder(defaultColumnGetter);
         }
 
         /**
-         * A builder class for creating customized RowMapper instances.
-         * This builder allows specifying different column getters for specific columns
-         * and provides various output formats (array, list, map, etc.). The builder uses
-         * a fluent API pattern where each method returns the builder instance for method chaining.
-         * 
-         * <p>The builder maintains a map of column-specific getters and applies a default
-         * getter to any columns not explicitly configured. All built mappers are stateful
-         * and should not be cached or used in parallel processing.</p>
-         * 
+         * A fluent builder for creating customized, stateful {@code RowMapper} instances.
+         * This builder allows specifying different {@code ColumnGetter}s for specific column indices
+         * and provides terminal methods to create mappers that output various formats
+         * (e.g., array, list, map).
+         *
+         * <p>
+         * <b>Warning:</b> All {@code RowMapper} instances created by this builder are stateful,
+         * as they cache metadata (like column count and getter configurations) upon first execution.
+         * They should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * RowMapper<Map<String, Object>> mapper = RowMapper.builder()
-         *     .getInt("id")
-         *     .getString("name") 
-         *     .getDate("created_date")
-         *     .toMap();
+         * .getInt(1)        // Column 1 as int
+         * .getString(2)     // Column 2 as String
+         * .getDate(3)       // Column 3 as Date
+         * .toMap();
          * }</pre>
          */
         @SequentialOnly
@@ -1955,12 +1993,11 @@ public final class Jdbc {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
             /**
-             * Creates a new RowMapperBuilder with the specified default column getter.
-             * The default getter will be used for any columns that don't have specific
-             * getters configured through the builder methods.
+             * Constructs a new {@code RowMapperBuilder} with a specified default column getter.
+             * This getter will be applied to any column index for which a specific getter has not been configured.
              *
-             * @param defaultColumnGetter the default ColumnGetter to use; must not be null
-             * @throws IllegalArgumentException if defaultColumnGetter is null
+             * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is null
              */
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -1970,236 +2007,144 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the builder to get a boolean value from the specified column.
-             * This method sets up the mapper to extract boolean values from the given
-             * column index using the appropriate JDBC boolean getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getBoolean(3); // Extract boolean from column 3
-             * }</pre>
+             * Configures the mapper to retrieve a {@code boolean} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract boolean value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getBoolean(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
             }
 
             /**
-             * Configures the builder to get a byte value from the specified column.
-             * This method sets up the mapper to extract byte values from the given
-             * column index using the appropriate JDBC byte getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getByte(2); // Extract byte from column 2
-             * }</pre>
+             * Configures the mapper to retrieve a {@code byte} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract byte value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getByte(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
             }
 
             /**
-             * Configures the builder to get a short value from the specified column.
-             * This method sets up the mapper to extract short values from the given
-             * column index using the appropriate JDBC short getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getShort(1); // Extract short from column 1
-             * }</pre>
+             * Configures the mapper to retrieve a {@code short} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract short value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getShort(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
             }
 
             /**
-             * Configures the builder to get an int value from the specified column.
-             * This method sets up the mapper to extract integer values from the given
-             * column index using the appropriate JDBC int getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getInt(1); // Extract int from column 1
-             * }</pre>
+             * Configures the mapper to retrieve an {@code int} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract int value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getInt(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_INT);
             }
 
             /**
-             * Configures the builder to get a long value from the specified column.
-             * This method sets up the mapper to extract long values from the given
-             * column index using the appropriate JDBC long getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getLong(4); // Extract long from column 4
-             * }</pre>
+             * Configures the mapper to retrieve a {@code long} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract long value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getLong(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_LONG);
             }
 
             /**
-             * Configures the builder to get a float value from the specified column.
-             * This method sets up the mapper to extract float values from the given
-             * column index using the appropriate JDBC float getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getFloat(3); // Extract float from column 3
-             * }</pre>
+             * Configures the mapper to retrieve a {@code float} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract float value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getFloat(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
             }
 
             /**
-             * Configures the builder to get a double value from the specified column.
-             * This method sets up the mapper to extract double values from the given
-             * column index using the appropriate JDBC double getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getDouble(5); // Extract double from column 5
-             * }</pre>
+             * Configures the mapper to retrieve a {@code double} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract double value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getDouble(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
             }
 
             /**
-             * Configures the builder to get a BigDecimal value from the specified column.
-             * This method sets up the mapper to extract BigDecimal values from the given
-             * column index using the appropriate JDBC BigDecimal getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getBigDecimal(6); // Extract BigDecimal from column 6
-             * }</pre>
+             * Configures the mapper to retrieve a {@code BigDecimal} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract BigDecimal value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getBigDecimal(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
             }
 
             /**
-             * Configures the builder to get a String value from the specified column.
-             * This method sets up the mapper to extract String values from the given
-             * column index using the appropriate JDBC String getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getString(2); // Extract String from column 2
-             * }</pre>
+             * Configures the mapper to retrieve a {@code String} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract String value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getString(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_STRING);
             }
 
             /**
-             * Configures the builder to get a Date value from the specified column.
-             * This method sets up the mapper to extract java.sql.Date values from the given
-             * column index using the appropriate JDBC Date getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getDate(7); // Extract Date from column 7
-             * }</pre>
+             * Configures the mapper to retrieve a {@code java.sql.Date} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract Date value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getDate(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DATE);
             }
 
             /**
-             * Configures the builder to get a Time value from the specified column.
-             * This method sets up the mapper to extract java.sql.Time values from the given
-             * column index using the appropriate JDBC Time getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getTime(8); // Extract Time from column 8
-             * }</pre>
+             * Configures the mapper to retrieve a {@code java.sql.Time} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract Time value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getTime(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIME);
             }
 
             /**
-             * Configures the builder to get a Timestamp value from the specified column.
-             * This method sets up the mapper to extract java.sql.Timestamp values from the given
-             * column index using the appropriate JDBC Timestamp getter.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getTimestamp(9); // Extract Timestamp from column 9
-             * }</pre>
+             * Configures the mapper to retrieve a {@code java.sql.Timestamp} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract Timestamp value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              */
             public RowMapperBuilder getTimestamp(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
             }
 
             /**
-             * Configures the builder to get an Object value from the specified column.
-             * Uses the default object getter if no specific getter is set for the column.
-             * This method is deprecated as the default behavior already applies the object
-             * getter for unconfigured columns.
-             * 
-             * <p>Usage example:</p>
-             * <pre>{@code
-             * builder.getObject(10); // Extract Object from column 10
-             * }</pre>
+             * Configures the mapper to retrieve an {@code Object} value from the specified column index.
              *
-             * @param columnIndex the column index (1-based) to extract Object value from
+             * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if columnIndex is not positive
-             * @deprecated default {@link #getObject(int)} if there is no {@code ColumnGetter} set for the target column
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
+             * @deprecated The default behavior already uses {@code ColumnGetter.GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
             public RowMapperBuilder getObject(final int columnIndex) {
@@ -2207,28 +2152,30 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the builder to get an Object of specific type from the specified column.
+             * Configures the mapper to retrieve an object of a specific type from the specified column index.
+             * A suitable {@code ColumnGetter} for the given type will be used.
              *
-             * @param columnIndex the column index (1-based)
-             * @param type the class type to convert the column value to
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column
+             * @param type the target class type to convert the column value to
+             * @return this builder instance for method chaining
              */
             public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
             }
 
             /**
-             * Configures the builder to use a custom ColumnGetter for the specified column.
-             * 
+             * Configures the mapper to use a custom {@code ColumnGetter} for the specified column index.
+             *
              * <p>Example usage:</p>
              * <pre>{@code
+             * // Get a string from column 1 and convert it to uppercase.
              * builder.get(1, (rs, idx) -> rs.getString(idx).toUpperCase());
              * }</pre>
              *
-             * @param columnIndex the column index (1-based)
-             * @param columnGetter the custom ColumnGetter to use
-             * @return this builder instance
-             * @throws IllegalArgumentException if columnIndex is not positive or columnGetter is null
+             * @param columnIndex the 1-based index of the column
+             * @param columnGetter the custom {@code ColumnGetter} to use
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive or {@code columnGetter} is null
              */
             public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, cs.columnIndex);
@@ -2250,10 +2197,13 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper that maps columns to an Object array.
-             * Don't cache or reuse the returned RowMapper instance.
+             * Builds and returns a stateful {@code RowMapper} that maps each row to an {@code Object[]}.
              *
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * </p>
+             *
+             * @return a new stateful {@code RowMapper<Object[]>}
              */
             @SequentialOnly
             @Stateful
@@ -2281,10 +2231,13 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper that maps columns to a List.
-             * Don't cache or reuse the returned RowMapper instance.
+             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code List<Object>}.
              *
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * </p>
+             *
+             * @return a new stateful {@code RowMapper<List<Object>>}
              */
             @SequentialOnly
             @Stateful
@@ -2293,12 +2246,15 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper that maps columns to a Collection.
-             * Don't cache or reuse the returned RowMapper instance.
-             * 
-             * @param <C> the collection type
-             * @param supplier the supplier to provide a new collection instance
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code Collection}.
+             *
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * </p>
+             *
+             * @param <C> the specific collection type (e.g., {@code List}, {@code Set})
+             * @param supplier a function that provides a new collection instance, given the column count
+             * @return a new stateful {@code RowMapper<C>}
              */
             @SequentialOnly
             @Stateful
@@ -2326,10 +2282,14 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper that maps columns to a Map with column names as keys.
-             * Don't cache or reuse the returned RowMapper instance.
+             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code Map<String, Object>},
+             * where keys are the column labels.
              *
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * </p>
+             *
+             * @return a new stateful {@code RowMapper<Map<String, Object>>}
              */
             @SequentialOnly
             @Stateful
@@ -2338,11 +2298,15 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper that maps columns to a Map with custom supplier.
-             * Don't cache or reuse the returned RowMapper instance.
-             * 
-             * @param mapSupplier the supplier to provide a new map instance
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code Map<String, Object>},
+             * using the provided supplier to create the map instance.
+             *
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * </p>
+             *
+             * @param mapSupplier a function that provides a new map instance, given the column count
+             * @return a new stateful {@code RowMapper<Map<String, Object>>}
              */
             @SequentialOnly
             @Stateful
@@ -2372,20 +2336,24 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper with a custom finisher function.
-             * The finisher receives a DisposableObjArray containing the row values.
-             * 
+             * Builds a stateful {@code RowMapper} that processes row values into a final object using a custom finisher function.
+             * The row values are passed to the finisher as a {@code DisposableObjArray} to minimize object creation.
+             *
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * </p>
+             *
              * <p>Example usage:</p>
              * <pre>{@code
-             * RowMapper<User> mapper = builder
-             *     .getString(1)
-             *     .getInt(2)
-             *     .to(arr -> new User((String)arr.get(0), (Integer)arr.get(1)));
+             * RowMapper<User> userMapper = RowMapper.builder()
+             * .getString(1)
+             * .getInt(2)
+             * .to(arr -> new User((String) arr.get(0), (int) arr.get(1)));
              * }</pre>
              *
-             * @param <R> the result type
-             * @param finisher the function to transform the row array into the result
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * @param <R> the final result type
+             * @param finisher a function that transforms the row's values into the final result object
+             * @return a new stateful {@code RowMapper<R>}
              */
             @SequentialOnly
             @Stateful
@@ -2415,22 +2383,16 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowMapper with a custom finisher function that also receives column labels.
-             * 
-             * <p>Example usage:</p>
-             * <pre>{@code
-             * RowMapper<Map<String, Object>> mapper = builder.to((labels, arr) -> {
-             *     Map<String, Object> map = new HashMap<>();
-             *     for (int i = 0; i < labels.size(); i++) {
-             *         map.put(labels.get(i), arr.get(i));
-             *     }
-             *     return map;
-             * });
-             * }</pre>
+             * Builds a stateful {@code RowMapper} that uses a custom finisher function which receives both
+             * the column labels and the row values (as a {@code DisposableObjArray}).
              *
-             * @param <R> the result type
-             * @param finisher the function to transform the column labels and row array into the result
-             * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * </p>
+             *
+             * @param <R> the final result type
+             * @param finisher a function that transforms column labels and row values into the final result object
+             * @return a new stateful {@code RowMapper<R>}
              */
             @SequentialOnly
             @Stateful
@@ -2464,20 +2426,21 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for mapping rows of a ResultSet to objects with access to column labels.
-     * This interface is similar to RowMapper but also provides column label information,
-     * which makes it more efficient when processing multiple records that need column metadata.
-     * 
+     * A functional interface for mapping the current row of a {@code ResultSet} to an object,
+     * with access to the list of column labels. This is more efficient than a simple {@code RowMapper}
+     * when column metadata is needed, as the labels are fetched once and passed to each invocation,
+     * avoiding repeated metadata lookups.
+     *
+     * <p>The mapper should only read from the current row and should not advance the cursor (e.g., by calling {@code rs.next()}).</p>
+     *
      * <p>Example usage:</p>
      * <pre>{@code
-     * BiRowMapper<User> mapper = (rs, columnLabels) -> {
-     *     User user = new User();
-     *     for (int i = 0; i < columnLabels.size(); i++) {
-     *         String label = columnLabels.get(i);
-     *         if ("id".equals(label)) user.setId(rs.getInt(i + 1));
-     *         else if ("name".equals(label)) user.setName(rs.getString(i + 1));
-     *     }
-     *     return user;
+     * BiRowMapper<Map<String, Object>> dynamicMapper = (rs, columnLabels) -> {
+     * Map<String, Object> rowMap = new LinkedHashMap<>();
+     * for (int i = 0; i < columnLabels.size(); i++) {
+     * rowMap.put(columnLabels.get(i), rs.getObject(i + 1));
+     * }
+     * return rowMap;
      * };
      * }</pre>
      *
@@ -2486,8 +2449,8 @@ public final class Jdbc {
     @FunctionalInterface
     public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
-        /** 
-         * Pre-defined mapper that converts a row to an Object array.
+        /**
+         * A pre-defined mapper that converts a row into an {@code Object[]}.
          */
         BiRowMapper<Object[]> TO_ARRAY = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2500,8 +2463,8 @@ public final class Jdbc {
             return result;
         };
 
-        /** 
-         * Pre-defined mapper that converts a row to a List of Objects.
+        /**
+         * A pre-defined mapper that converts a row into a {@code List<Object>}.
          */
         BiRowMapper<List<Object>> TO_LIST = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2514,8 +2477,9 @@ public final class Jdbc {
             return result;
         };
 
-        /** 
-         * Pre-defined mapper that converts a row to a Map with column names as keys.
+        /**
+         * A pre-defined mapper that converts a row into a {@code Map<String, Object>},
+         * where keys are the column labels.
          */
         BiRowMapper<Map<String, Object>> TO_MAP = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2528,9 +2492,9 @@ public final class Jdbc {
             return result;
         };
 
-        /** 
-         * Pre-defined mapper that converts a row to a LinkedHashMap with column names as keys.
-         * Preserves the order of columns.
+        /**
+         * A pre-defined mapper that converts a row into a {@code LinkedHashMap<String, Object>},
+         * preserving the order of columns from the {@code ResultSet}.
          */
         BiRowMapper<Map<String, Object>> TO_LINKED_HASH_MAP = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2544,7 +2508,8 @@ public final class Jdbc {
         };
 
         /**
-         * Pre-defined mapper that converts a row to an EntityId.
+         * A pre-defined mapper that converts a row into an {@code EntityId}. The property names
+         * in the {@code EntityId} correspond to the column labels.
          */
         BiRowMapper<EntityId> TO_ENTITY_ID = new BiRowMapper<>() {
             @SuppressWarnings("deprecation")
@@ -2562,23 +2527,25 @@ public final class Jdbc {
         };
 
         /**
-         * Maps a row of the ResultSet to an object of type T using column label information.
+         * Maps the current row of the given {@code ResultSet} to an object of type {@code T}, using the
+         * provided list of column labels. This method should not advance the ResultSet cursor.
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @param columnLabels the list of column labels in the result set
-         * @return the mapped object of type T
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} positioned at the row to be mapped
+         * @param columnLabels the list of column labels from the result set's metadata
+         * @return the mapped object of type {@code T}
+         * @throws SQLException if a database access error occurs during column value retrieval
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * Returns a composed BiRowMapper that first applies this mapper and then applies the after function.
+         * Returns a composed {@code BiRowMapper} that first applies this mapper to the row and then
+         * applies the {@code after} function to the result.
          *
-         * @param <R> the type of output of the after function
-         * @param after the function to apply after this mapper is applied
-         * @return a composed BiRowMapper
-         * @throws IllegalArgumentException if after is null
+         * @param <R> the type of the result of the {@code after} function
+         * @param after the function to apply to the result of this mapper; must not be null
+         * @return a composed {@code BiRowMapper}
+         * @throws IllegalArgumentException if {@code after} is null
          */
         default <R> BiRowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -2587,14 +2554,14 @@ public final class Jdbc {
         }
 
         /**
-         * Converts this BiRowMapper to a RowMapper.
-         * The resulting RowMapper is stateful and caches column labels on first use.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Converts this {@code BiRowMapper} to a stateful {@code RowMapper}. The resulting
+         * {@code RowMapper} caches the column labels on its first execution.
          *
-         * @return a stateful RowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @return a stateful {@code RowMapper}. Do not cache, share, or use it in parallel streams.
          * @see RowMapper#toBiRowMapper()
-         * @deprecated because it's stateful and may be misused easily and frequently
+         * @deprecated This method creates a stateful {@code RowMapper} that can be easily misused,
+         * leading to potential issues in multithreaded environments or when reused across different
+         * queries. It is recommended to use {@code BiRowMapper} directly where possible.
          */
         @Deprecated
         @SequentialOnly
@@ -2617,13 +2584,14 @@ public final class Jdbc {
         }
 
         /**
-         * Combines two BiRowMapper instances into a BiRowMapper that returns a Tuple2 of their results.
+         * Combines two {@code BiRowMapper} instances into a single mapper that returns a {@code Tuple2}
+         * containing the results of both. Both mappers are applied to the same row.
          *
-         * @param <T> the type of the first BiRowMapper
-         * @param <U> the type of the second BiRowMapper
-         * @param rowMapper1 the first BiRowMapper
-         * @param rowMapper2 the second BiRowMapper
-         * @return a BiRowMapper that returns a Tuple2 of the results
+         * @param <T> the result type of the first mapper
+         * @param <U> the result type of the second mapper
+         * @param rowMapper1 the first mapper; must not be null
+         * @param rowMapper2 the second mapper; must not be null
+         * @return a new {@code BiRowMapper} that produces a {@code Tuple2}
          */
         static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<? extends T> rowMapper1, final BiRowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, cs.rowMapper1);
@@ -2633,15 +2601,16 @@ public final class Jdbc {
         }
 
         /**
-         * Combines three BiRowMapper instances into a BiRowMapper that returns a Tuple3 of their results.
+         * Combines three {@code BiRowMapper} instances into a single mapper that returns a {@code Tuple3}
+         * containing the results of all three. All mappers are applied to the same row.
          *
-         * @param <A> the type of the first BiRowMapper
-         * @param <B> the type of the second BiRowMapper
-         * @param <C> the type of the third BiRowMapper
-         * @param rowMapper1 the first BiRowMapper
-         * @param rowMapper2 the second BiRowMapper
-         * @param rowMapper3 the third BiRowMapper
-         * @return a BiRowMapper that returns a Tuple3 of the results
+         * @param <A> the result type of the first mapper
+         * @param <B> the result type of the second mapper
+         * @param <C> the result type of the third mapper
+         * @param rowMapper1 the first mapper; must not be null
+         * @param rowMapper2 the second mapper; must not be null
+         * @param rowMapper3 the third mapper; must not be null
+         * @return a new {@code BiRowMapper} that produces a {@code Tuple3}
          */
         static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<? extends A> rowMapper1, final BiRowMapper<? extends B> rowMapper2,
                 final BiRowMapper<? extends C> rowMapper3) {
@@ -2653,19 +2622,26 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that maps a row to an instance of the target class.
-         * The target class must be a valid bean class with appropriate getters/setters.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code BiRowMapper} that maps a row to an instance of the specified {@code targetClass}.
+         * It automatically maps column values to the properties of the target object based on matching names.
+         * This factory supports mapping to beans, Maps, Lists, arrays, and primitive wrapper types (for single-column results).
+         *
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful. It caches metadata (like property and column mappings)
+         * upon its first execution. It should not be cached or shared for use with different SQL queries
+         * (which may have different column structures), nor should it be used in parallel streams.
+         * Create a new instance for each distinct query structure.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * BiRowMapper<User> mapper = BiRowMapper.to(User.class);
+         * // Assumes User class has properties matching column names like 'id', 'name'.
+         * BiRowMapper<User> userMapper = BiRowMapper.to(User.class);
          * }</pre>
          *
          * @param <T> the target type
          * @param targetClass the class to map rows to
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
@@ -2674,15 +2650,19 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that maps a row to an instance of the target class.
-         * Allows ignoring columns that don't match any property in the target class.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that maps a row to an instance of the specified {@code targetClass},
+         * with an option to ignore columns in the {@code ResultSet} that do not have a matching property in the class.
+         *
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
+         * cached, shared across different query structures, or used in parallel streams.
+         * </p>
          *
          * @param <T> the target type
          * @param targetClass the class to map rows to
-         * @param ignoreNonMatchedColumns if true, columns without matching properties are ignored
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param ignoreNonMatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are ignored;
+         * if {@code false}, an {@code IllegalArgumentException} is thrown.
+         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
@@ -2691,24 +2671,28 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper with column name filtering and conversion.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code BiRowMapper} with custom filtering and conversion for column names before mapping
+         * them to object properties.
+         *
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
+         * cached, shared across different query structures, or used in parallel streams.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
          * BiRowMapper<User> mapper = BiRowMapper.to(
-         *     User.class,
-         *     colName -> !colName.startsWith("internal_"),  // Filter out internal columns
-         *     colName -> colName.toLowerCase()               // Convert to lowercase
+         * User.class,
+         * colName -> !colName.startsWith("temp_"),  // Filter out temporary columns
+         * String::toLowerCase                      // Convert column names to lowercase before matching
          * );
          * }</pre>
          *
          * @param <T> the target type
          * @param targetClass the class to map rows to
-         * @param columnNameFilter predicate to filter column names
-         * @param columnNameConverter function to convert column names
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param columnNameFilter a predicate to filter which columns should be considered for mapping
+         * @param columnNameConverter a function to transform column names before matching them to properties
+         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
@@ -2718,16 +2702,21 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper with full customization options.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} with full customization over column filtering, name conversion,
+         * and handling of non-matched columns.
+         *
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
+         * cached, shared across different query structures, or used in parallel streams.
+         * </p>
          *
          * @param <T> the target type
          * @param targetClass the class to map rows to
-         * @param columnNameFilter predicate to filter column names
-         * @param columnNameConverter function to convert column names
-         * @param ignoreNonMatchedColumns if true, columns without matching properties are ignored
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param columnNameFilter a predicate to filter which columns should be considered for mapping
+         * @param columnNameConverter a function to transform column names before matching them to properties
+         * @param ignoreNonMatchedColumns if {@code true}, filtered columns without a corresponding property are ignored;
+         * if {@code false}, an {@code IllegalArgumentException} is thrown.
+         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
@@ -3017,23 +3006,26 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper with prefix and field name mapping.
-         * This is useful for handling queries with table prefixes or custom column naming conventions.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code BiRowMapper} for a target entity class, using a map to resolve
+         * column name prefixes to nested property paths. This is useful for mapping results from JOIN
+         * queries where columns are prefixed (e.g., {@code "u_id"}, {@code "a_street"}).
+         *
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
+         * cached, shared across different query structures, or used in parallel streams.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * Map<String, String> prefixMap = new HashMap<>();
-         * prefixMap.put("u_", "user.");
-         * prefixMap.put("a_", "address.");
+         * // Maps "u_id" to user.id, "a_street" to user.address.street
+         * Map<String, String> prefixMap = Map.of("u_", "user.", "a_", "user.address.");
          * BiRowMapper<User> mapper = BiRowMapper.to(User.class, prefixMap);
          * }</pre>
          *
-         * @param <T> the target type
+         * @param <T> the target entity type
          * @param entityClass the class to map rows to
-         * @param prefixAndFieldNameMap map of column prefixes to field name prefixes
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
+         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
@@ -3042,15 +3034,19 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper with prefix and field name mapping and option to ignore non-matched columns.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} with prefix-to-property mapping and an option to ignore
+         * non-matched columns.
          *
-         * @param <T> the target type
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
+         * cached, shared across different query structures, or used in parallel streams.
+         * </p>
+         *
+         * @param <T> the target entity type
          * @param entityClass the class to map rows to
-         * @param prefixAndFieldNameMap map of column prefixes to field name prefixes
-         * @param ignoreNonMatchedColumns if true, columns without matching properties are ignored
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
+         * @param ignoreNonMatchedColumns if {@code true}, columns without a matching property are ignored
+         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
@@ -3158,11 +3154,11 @@ public final class Jdbc {
         //    /**
         //     * Creates a BiRowMapper that converts rows to a Map with value filtering.
         //     * Only values that pass the filter predicate are included in the map.
-        //     * 
+        //     *
         //     * <p>Example usage:</p>
         //     * <pre>{@code
         //     * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-        //     *     value -> value != null  // Exclude null values
+        //     * value -> value != null  // Exclude null values
         //     * );
         //     * }</pre>
         //     *
@@ -3189,20 +3185,21 @@ public final class Jdbc {
         //    }
 
         /**
-         * Creates a BiRowMapper that converts rows to a Map with key-value filtering.
-         * Only entries where both key and value pass the filter are included.
-         * 
+         * Creates a {@code BiRowMapper} that converts a row to a {@code Map}, including only the
+         * entries that satisfy the given key-value filter.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Creates a TreeMap excluding internal columns and null values.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         *     (key, value) -> !key.startsWith("_") && value != null,
-         *     TreeMap::new
+         * (key, value) -> !key.startsWith("_") && value != null,
+         * (size) -> new TreeMap<>()
          * );
          * }</pre>
          *
-         * @param valueFilter the bi-predicate to test column names and values
-         * @param mapSupplier the supplier to create the map instance
-         * @return a BiRowMapper that produces a filtered Map
+         * @param valueFilter a bi-predicate to test column names and their corresponding values
+         * @param mapSupplier a function that provides a new map instance, given the column count
+         * @return a {@code BiRowMapper} that produces a filtered {@code Map}
          */
         static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> valueFilter,
                 final IntFunction<? extends Map<String, Object>> mapSupplier) {
@@ -3227,14 +3224,18 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper with custom row extraction and value filtering.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that converts a row to a {@code Map} using a custom
+         * {@code RowExtractor} and then filters the results.
          *
-         * @param rowExtractor the custom row extractor
-         * @param valueFilter the bi-predicate to test column names and values
-         * @param mapSupplier the supplier to create the map instance
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful because it reuses an internal array for the extractor.
+         * It should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
+         * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
+         * @param valueFilter a bi-predicate to test column names and their corresponding values
+         * @param mapSupplier a function that provides a new map instance, given the column count
+         * @return a new stateful {@code BiRowMapper}.
          */
         @SequentialOnly
         @Stateful
@@ -3271,19 +3272,24 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that converts rows to a Map with column name conversion.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code BiRowMapper} that converts a row to a {@code Map}, applying a
+         * conversion function to each column name to generate the map keys.
+         *
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
+         * It should not be cached, shared across different query structures, or used in parallel streams.
+         * </p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
+         * // Converts "FIRST_NAME" to "firstName" for map keys.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         *     colName -> colName.toLowerCase().replace("_", "")
+         * N::toCamelCase
          * );
          * }</pre>
          *
-         * @param columnNameConverter the function to transform column names
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * @param columnNameConverter a function to transform column names into map keys
+         * @return a new stateful {@code BiRowMapper}.
          */
         @SequentialOnly
         @Stateful
@@ -3292,13 +3298,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that converts rows to a Map with column name conversion and custom map supplier.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that converts a row to a custom {@code Map}, applying a
+         * conversion function to each column name to generate the map keys.
          *
-         * @param columnNameConverter the function to transform column names
-         * @param mapSupplier the supplier to create the map instance
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
+         * It should not be cached, shared across different query structures, or used in parallel streams.
+         * </p>
+         *
+         * @param columnNameConverter a function to transform column names into map keys
+         * @param mapSupplier a function that provides a new map instance, given the column count
+         * @return a new stateful {@code BiRowMapper}.
          */
         @SequentialOnly
         @Stateful
@@ -3330,12 +3340,15 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that uses a custom row extractor.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that converts a row to a {@code Map} using a custom {@code RowExtractor}.
          *
-         * @param rowExtractor the custom row extractor
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful as it reuses an internal array.
+         * It should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
+         * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
+         * @return a new stateful {@code BiRowMapper}.
          */
         @SequentialOnly
         @Stateful
@@ -3365,14 +3378,18 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper with custom row extraction and column name conversion.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that converts a row to a custom {@code Map} using a
+         * {@code RowExtractor} and applying a conversion to the column names for keys.
          *
-         * @param rowExtractor the custom row extractor
-         * @param columnNameConverter the function to transform column names
-         * @param mapSupplier the supplier to create the map instance
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * <p>
+         * <b>Warning:</b> The returned mapper is stateful as it caches converted key names and reuses an internal array.
+         * It should not be cached, shared across different query structures, or used in parallel streams.
+         * </p>
+         *
+         * @param rowExtractor the custom extractor to get values from the row
+         * @param columnNameConverter a function to transform column names into map keys
+         * @param mapSupplier a function that provides a new map instance, given the column count
+         * @return a new stateful {@code BiRowMapper}.
          */
         @SequentialOnly
         @Stateful
@@ -3409,11 +3426,11 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiRowMapper that maps all columns to an Object array.
-         * Uses the provided ColumnGetter for all columns.
+         * Creates a {@code BiRowMapper} that maps all columns of a row to an {@code Object[]}.
+         * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
-         * @param columnGetterForAll the ColumnGetter to use for all columns
-         * @return a BiRowMapper that produces an Object array
+         * @param columnGetterForAll the {@code ColumnGetter} used for every column
+         * @return a {@code BiRowMapper} that produces an {@code Object[]}
          */
         @Beta
         static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
@@ -3430,11 +3447,11 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiRowMapper that maps all columns to a List.
-         * Uses the provided ColumnGetter for all columns.
+         * Creates a {@code BiRowMapper} that maps all columns of a row to a {@code List<Object>}.
+         * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
-         * @param columnGetterForAll the ColumnGetter to use for all columns
-         * @return a BiRowMapper that produces a List
+         * @param columnGetterForAll the {@code ColumnGetter} used for every column
+         * @return a {@code BiRowMapper} that produces a {@code List<Object>}
          */
         @Beta
         static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
@@ -3442,13 +3459,12 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiRowMapper that maps all columns to a Collection.
-         * Uses the provided ColumnGetter for all columns and the supplier to create the collection.
+         * Creates a {@code BiRowMapper} that maps all columns of a row to a {@code Collection}.
          *
          * @param <C> the collection type
-         * @param columnGetterForAll the ColumnGetter to use for all columns
-         * @param supplier the function to create the collection with the expected size
-         * @return a BiRowMapper that produces a Collection
+         * @param columnGetterForAll the {@code ColumnGetter} used for every column
+         * @param supplier a function that takes the column count and returns a new {@code Collection} instance
+         * @return a {@code BiRowMapper} that produces a {@code Collection}
          */
         @Beta
         static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
@@ -3466,12 +3482,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that maps all columns to a DisposableObjArray.
-         * This is useful for efficient row processing where the same array can be reused.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that maps a row to a reusable {@code DisposableObjArray}.
+         * This is an optimization to reduce garbage collection by reusing the same array for each row.
          *
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * <p>
+         * <b>Warning:</b> The returned mapper is highly stateful. The returned {@code DisposableObjArray}
+         * is a wrapper around an internal array that will be overwritten on the next call.
+         * You must process or copy its contents before the next row is mapped. Do not cache, share, or
+         * use this mapper in parallel streams.
+         * </p>
+         *
+         * @return a stateful {@code BiRowMapper} for high-performance, single-threaded row processing
          */
         @Beta
         @SequentialOnly
@@ -3500,13 +3521,18 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowMapper that maps columns to a DisposableObjArray using entity class metadata.
-         * The entity class is used to determine the appropriate type conversions for each column.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowMapper} that maps a row to a reusable {@code DisposableObjArray},
+         * using type information from an entity class to perform type conversions for each column.
          *
-         * @param entityClass used to fetch column/row value from ResultSet by the type of fields/columns defined in this class
-         * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+         * <p>
+         * <b>Warning:</b> The returned mapper is highly stateful. The returned {@code DisposableObjArray}
+         * is a wrapper around an internal array that will be overwritten on the next call.
+         * You must process or copy its contents before the next row is mapped. Do not cache, share, or
+         * use this mapper in parallel streams.
+         * </p>
+         *
+         * @param entityClass the class used to infer the data type for each column based on matching property names
+         * @return a stateful {@code BiRowMapper} for high-performance, type-aware, single-threaded row processing
          */
         @Beta
         @SequentialOnly
@@ -3568,29 +3594,43 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiRowMapperBuilder with default column getter for object values.
+         * Creates a new {@code BiRowMapperBuilder} with a default column getter of {@code ColumnGetter.GET_OBJECT}.
          *
-         * @return a new BiRowMapperBuilder
+         * @return a new {@code BiRowMapperBuilder}
          */
         static BiRowMapperBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
         }
 
         /**
-         * Creates a BiRowMapperBuilder with the specified default column getter.
-         * The builder allows for custom configuration of how each column is extracted by name.
+         * Creates a new {@code BiRowMapperBuilder} with the specified default column getter. This default
+         * will be used for any column whose type is not explicitly configured by name in the builder.
          *
-         * @param defaultColumnGetter the default ColumnGetter to use for columns not explicitly configured
-         * @return a new BiRowMapperBuilder
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns
+         * @return a new {@code BiRowMapperBuilder}
          */
         static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new BiRowMapperBuilder(defaultColumnGetter);
         }
 
         /**
-         * A builder class for creating customized BiRowMapper instances.
-         * This builder allows specifying different column getters for specific column names
-         * and provides various output formats.
+         * A fluent builder for creating customized, stateful {@code BiRowMapper} instances.
+         * This builder allows specifying different {@code ColumnGetter}s for specific column names
+         * and provides a terminal method to create a mapper for a target class.
+         *
+         * <p>
+         * <b>Warning:</b> All {@code BiRowMapper} instances created by this builder are stateful,
+         * as they cache metadata upon first execution. They should not be cached, shared, or used
+         * in parallel streams.
+         * </p>
+         *
+         * <p>Example usage:</p>
+         * <pre>{@code
+         * BiRowMapper<User> userMapper = BiRowMapper.builder()
+         * .getString("first_name")
+         * .getInt("user_age")
+         * .to(User.class); // Assumes User has properties 'firstName' and 'userAge'
+         * }</pre>
          */
         @SequentialOnly
         class BiRowMapperBuilder {
@@ -3604,131 +3644,131 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the builder to get a boolean value from the specified column.
+             * Configures the mapper to retrieve a {@code boolean} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getBoolean(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BOOLEAN);
             }
 
             /**
-             * Configures the builder to get a byte value from the specified column.
+             * Configures the mapper to retrieve a {@code byte} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getByte(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BYTE);
             }
 
             /**
-             * Configures the builder to get a short value from the specified column.
+             * Configures the mapper to retrieve a {@code short} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getShort(final String columnName) {
                 return get(columnName, ColumnGetter.GET_SHORT);
             }
 
             /**
-             * Configures the builder to get an int value from the specified column.
+             * Configures the mapper to retrieve an {@code int} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getInt(final String columnName) {
                 return get(columnName, ColumnGetter.GET_INT);
             }
 
             /**
-             * Configures the builder to get a long value from the specified column.
+             * Configures the mapper to retrieve a {@code long} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getLong(final String columnName) {
                 return get(columnName, ColumnGetter.GET_LONG);
             }
 
             /**
-             * Configures the builder to get a float value from the specified column.
+             * Configures the mapper to retrieve a {@code float} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getFloat(final String columnName) {
                 return get(columnName, ColumnGetter.GET_FLOAT);
             }
 
             /**
-             * Configures the builder to get a double value from the specified column.
+             * Configures the mapper to retrieve a {@code double} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getDouble(final String columnName) {
                 return get(columnName, ColumnGetter.GET_DOUBLE);
             }
 
             /**
-             * Configures the builder to get a BigDecimal value from the specified column.
+             * Configures the mapper to retrieve a {@code BigDecimal} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getBigDecimal(final String columnName) {
                 return get(columnName, ColumnGetter.GET_BIG_DECIMAL);
             }
 
             /**
-             * Configures the builder to get a String value from the specified column.
+             * Configures the mapper to retrieve a {@code String} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getString(final String columnName) {
                 return get(columnName, ColumnGetter.GET_STRING);
             }
 
             /**
-             * Configures the builder to get a Date value from the specified column.
+             * Configures the mapper to retrieve a {@code java.sql.Date} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getDate(final String columnName) {
                 return get(columnName, ColumnGetter.GET_DATE);
             }
 
             /**
-             * Configures the builder to get a Time value from the specified column.
+             * Configures the mapper to retrieve a {@code java.sql.Time} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getTime(final String columnName) {
                 return get(columnName, ColumnGetter.GET_TIME);
             }
 
             /**
-             * Configures the builder to get a Timestamp value from the specified column.
+             * Configures the mapper to retrieve a {@code java.sql.Timestamp} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getTimestamp(final String columnName) {
                 return get(columnName, ColumnGetter.GET_TIMESTAMP);
             }
 
             /**
-             * Configures the builder to get an Object value from the specified column.
+             * Configures the mapper to retrieve an {@code Object} value from the specified column.
              *
-             * @param columnName the column name
-             * @return this builder instance
-             * @deprecated default {@link #getObject(String)} if there is no {@code ColumnGetter} set for the target column
+             * @param columnName the name of the column
+             * @return this builder instance for method chaining
+             * @deprecated The default behavior already uses {@code ColumnGetter.GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
             public BiRowMapperBuilder getObject(final String columnName) {
@@ -3736,23 +3776,23 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the builder to get an Object of specific type from the specified column.
+             * Configures the mapper to retrieve an object of a specific type from the specified column.
              *
-             * @param columnName the column name
-             * @param type the class type to convert the column value to
-             * @return this builder instance
+             * @param columnName the name of the column
+             * @param type the target class type to convert the column value to
+             * @return this builder instance for method chaining
              */
             public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
                 return get(columnName, ColumnGetter.get(type));
             }
 
             /**
-             * Configures the builder to use a custom ColumnGetter for the specified column.
+             * Configures the mapper to use a custom {@code ColumnGetter} for the specified column name.
              *
-             * @param columnName the column name
-             * @param columnGetter the custom ColumnGetter to use
-             * @return this builder instance
-             * @throws IllegalArgumentException if columnName is null/empty or columnGetter is null
+             * @param columnName the name of the column
+             * @param columnGetter the custom {@code ColumnGetter} to use for this column
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is null/empty or {@code columnGetter} is null
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, cs.columnName);
@@ -3790,12 +3830,16 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful BiRowMapper that maps to an instance of the target class.
-             * Don't cache or reuse the returned BiRowMapper instance.
+             * Builds and returns a stateful {@code BiRowMapper} that maps each row to an instance of the specified {@code targetClass}.
+             * It uses the configured column getters for specific columns and the default getter for others.
+             *
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * </p>
              *
              * @param <T> the target type
              * @param targetClass the class to map rows to
-             * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * @return a new stateful {@code BiRowMapper<T>}
              */
             @SequentialOnly
             @Stateful
@@ -3804,13 +3848,17 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful BiRowMapper that maps to an instance of the target class with option to ignore non-matched columns.
-             * Don't cache or reuse the returned BiRowMapper instance.
+             * Builds and returns a stateful {@code BiRowMapper} that maps each row to an instance of the specified {@code targetClass},
+             * with an option to ignore columns that don't match any property.
+             *
+             * <p>
+             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * </p>
              *
              * @param <T> the target type
              * @param targetClass the class to map rows to
-             * @param ignoreNonMatchedColumns if true, columns without matching properties are ignored
-             * @return a stateful BiRowMapper. Don't save or cache for reuse or use it in parallel stream.
+             * @param ignoreNonMatchedColumns if {@code true}, columns without a corresponding property are ignored
+             * @return a new stateful {@code BiRowMapper<T>}
              */
             @SequentialOnly
             @Stateful
@@ -3977,47 +4025,40 @@ public final class Jdbc {
             }
         }
     }
-
+    
     /**
-     * A functional interface for consuming rows of a ResultSet without returning a value.
-     * This interface is typically used for side effects like logging or collecting data.
-     * 
-     * <p>Don't use RowConsumer in PreparedQuery.forEach() or any place where multiple records 
-     * will be consumed by it, if column labels/count are used in the accept() method.
-     * Consider using BiRowConsumer instead because it's more efficient for consuming multiple 
-     * records when column labels/count are needed.</p>
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * RowConsumer consumer = rs -> {
-     *     System.out.println("ID: " + rs.getInt("id") + ", Name: " + rs.getString("name"));
-     * };
-     * }</pre>
+     * A functional interface for consuming a single row of a {@code ResultSet} without returning a value.
+     * This is typically used for side effects, such as printing rows or adding them to a collection.
+     *
+     * <p><b>Note:</b> If you need to access column labels or count within the consumer, consider using
+     * {@link BiRowConsumer} for better performance when processing multiple rows, as it avoids
+     * repeatedly fetching metadata.</p>
      */
     @FunctionalInterface
     public interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
 
         /**
-         * A no-operation consumer that does nothing.
+         * A {@code RowConsumer} that performs no operation.
          */
         RowConsumer DO_NOTHING = rs -> {
         };
 
         /**
-         * Consumes a row from the ResultSet.
+         * Performs this operation on the given {@code ResultSet}.
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} positioned at the current row to be consumed.
+         * @throws SQLException if a database access error occurs.
          */
         @Override
         void accept(ResultSet rs) throws SQLException;
 
         /**
-         * Returns a composed RowConsumer that performs this operation followed by the after operation.
+         * Returns a composed {@code RowConsumer} that performs, in sequence, this
+         * operation followed by the {@code after} operation.
          *
-         * @param after the operation to perform after this operation
-         * @return a composed RowConsumer
-         * @throws IllegalArgumentException if after is null
+         * @param after the operation to perform after this operation.
+         * @return a composed {@code RowConsumer} that performs in sequence this operation followed by the {@code after} operation.
+         * @throws IllegalArgumentException if {@code after} is null.
          */
         default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) {
             N.checkArgNotNull(after);
@@ -4029,29 +4070,35 @@ public final class Jdbc {
         }
 
         /**
-         * Converts this RowConsumer to a BiRowConsumer.
-         * The resulting BiRowConsumer ignores the column labels parameter.
+         * Converts this {@code RowConsumer} to a {@link BiRowConsumer}, which also accepts a list of column labels.
+         * The resulting {@code BiRowConsumer} will ignore the column labels parameter.
          *
-         * @return a BiRowConsumer that delegates to this RowConsumer
+         * @return a {@code BiRowConsumer} that delegates to this consumer.
          */
         default BiRowConsumer toBiRowConsumer() {
             return (rs, columnLabels) -> accept(rs);
         }
 
         /**
-         * Creates a stateful RowConsumer that applies a consumer to all columns.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
-         * 
+         * Creates a stateful {@code RowConsumer} that iterates over all columns in each row and applies the specified action.
+         *
+         * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful. It determines the column count
+         * from the {@code ResultSet} on its first execution and reuses that count for all subsequent
+         * rows. Therefore, it should not be reused across different queries with varying column counts
+         * or used in parallel streams. A new instance should be created for each distinct query execution.</p>
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * RowConsumer consumer = RowConsumer.create((rs, colIndex) -> {
-         *     System.out.println("Column " + colIndex + ": " + rs.getObject(colIndex));
+         * // A consumer that prints the value of each column in a row.
+         * RowConsumer consumer = RowConsumer.create((rs, columnIndex) -> {
+         * System.out.println("Column " + columnIndex + ": " + rs.getObject(columnIndex));
          * });
+         * preparedQuery.forEach(consumer);
          * }</pre>
          *
-         * @param consumerForAll the consumer to apply to each column (ResultSet and column index)
-         * @return a stateful RowConsumer. Don't save or cache for reuse or use it in parallel stream.
+         * @param consumerForAll the action to be performed for each column. The first parameter is the
+         * {@code ResultSet}, and the second is the 1-based column index.
+         * @return a new stateful {@code RowConsumer}.
          */
         @Beta
         @SequentialOnly
@@ -4076,13 +4123,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowConsumer that converts rows to DisposableObjArray and processes them.
-         * This is useful for efficient row processing where the same array can be reused.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code RowConsumer} that converts each row into a reusable {@code DisposableObjArray}
+         * and passes it to the specified consumer. This is an efficient way to process rows without creating
+         * a new array for each row.
          *
-         * @param consumer the consumer to process the DisposableObjArray
-         * @return a stateful RowConsumer. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful and reuses an internal buffer.
+         * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
+         * Do not store references to it. This consumer should not be reused across different queries
+         * with varying column counts or used in parallel streams.</p>
+         *
+         * @param consumer the consumer to process the {@code DisposableObjArray} for each row.
+         * @return a new stateful {@code RowConsumer}.
          */
         @Beta
         @SequentialOnly
@@ -4113,14 +4164,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowConsumer that converts rows to DisposableObjArray using entity class metadata.
-         * The entity class is used to determine the appropriate type conversions for each column.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code RowConsumer} that converts each row into a reusable {@code DisposableObjArray}
+         * using type information from a specified entity class, then passes it to the consumer. This allows for
+         * more precise type mapping from SQL types to Java types based on the entity's field definitions.
          *
-         * @param entityClass used to fetch column/row value from ResultSet by the type of fields/columns defined in this class
-         * @param consumer the consumer to process the DisposableObjArray
-         * @return a stateful RowConsumer. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful and reuses an internal buffer.
+         * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
+         * This consumer should not be reused across different queries or used in parallel streams.</p>
+         *
+         * @param entityClass the class used to infer column types for fetching values from the {@code ResultSet}.
+         * @param consumer the consumer to process the typed {@code DisposableObjArray} for each row.
+         * @return a new stateful {@code RowConsumer}.
          */
         @Beta
         @SequentialOnly
@@ -4186,44 +4240,36 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for consuming rows of a ResultSet with access to column labels.
-     * This interface is more efficient than RowConsumer when processing multiple records
-     * that need column information.
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * BiRowConsumer consumer = (rs, columnLabels) -> {
-     *     for (int i = 0; i < columnLabels.size(); i++) {
-     *         System.out.println(columnLabels.get(i) + ": " + rs.getObject(i + 1));
-     *     }
-     * };
-     * }</pre>
+     * A functional interface for consuming a single row of a {@code ResultSet} along with its column labels.
+     * This is more efficient than {@link RowConsumer} when column metadata (like names or count) is needed
+     * for processing multiple rows, as the metadata is fetched only once.
      */
     @FunctionalInterface
     public interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
 
         /**
-         * A no-operation consumer that does nothing.
+         * A {@code BiRowConsumer} that performs no operation.
          */
         BiRowConsumer DO_NOTHING = (rs, cls) -> {
         };
 
         /**
-         * Consumes a row from the ResultSet with column label information.
+         * Performs this operation on the given {@code ResultSet} and column labels.
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @param columnLabels the list of column labels in the result set
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} positioned at the current row to be consumed.
+         * @param columnLabels the list of column labels from the result set metadata.
+         * @throws SQLException if a database access error occurs.
          */
         @Override
         void accept(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
-         * Returns a composed BiRowConsumer that performs this operation followed by the after operation.
+         * Returns a composed {@code BiRowConsumer} that performs, in sequence, this
+         * operation followed by the {@code after} operation.
          *
-         * @param after the operation to perform after this operation
-         * @return a composed BiRowConsumer
-         * @throws IllegalArgumentException if after is null
+         * @param after the operation to perform after this operation.
+         * @return a composed {@code BiRowConsumer} that performs in sequence this operation followed by the {@code after} operation.
+         * @throws IllegalArgumentException if {@code after} is null.
          */
         default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after) {
             N.checkArgNotNull(after);
@@ -4235,17 +4281,20 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a BiRowConsumer that applies a consumer to all columns.
-         * 
+         * Creates a {@code BiRowConsumer} that iterates over all columns in each row and applies the specified action.
+         *
          * <p>Example usage:</p>
          * <pre>{@code
-         * BiRowConsumer consumer = BiRowConsumer.create((rs, colIndex) -> {
-         *     System.out.println("Column " + colIndex + ": " + rs.getObject(colIndex));
+         * // A consumer that prints each column's name and value.
+         * BiRowConsumer consumer = BiRowConsumer.create((rs, columnIndex) -> {
+         * System.out.println("Column index " + columnIndex + ": " + rs.getObject(columnIndex));
          * });
+         * preparedQuery.forEach(consumer);
          * }</pre>
          *
-         * @param consumerForAll the consumer to apply to each column (ResultSet and column index)
-         * @return a BiRowConsumer
+         * @param consumerForAll the action to be performed for each column. The first parameter is the
+         * {@code ResultSet}, and the second is the 1-based column index.
+         * @return a new {@code BiRowConsumer}.
          */
         @Beta
         static BiRowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
@@ -4261,12 +4310,16 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowConsumer that converts rows to DisposableObjArray and processes them.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowConsumer} that converts each row into a reusable {@code DisposableObjArray}
+         * and passes it, along with column labels, to the specified consumer. This is an efficient way to
+         * process rows without creating a new array for each row.
          *
-         * @param consumer the bi-consumer to process column labels and DisposableObjArray
-         * @return a stateful RowConsumer. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
+         * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
+         * Do not store references to it. This consumer should not be reused in parallel streams.</p>
+         *
+         * @param consumer the consumer to process the column labels and {@code DisposableObjArray} for each row.
+         * @return a new stateful {@code BiRowConsumer}.
          */
         @Beta
         @SequentialOnly
@@ -4297,13 +4350,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful BiRowConsumer that converts rows to DisposableObjArray using entity class metadata.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code BiRowConsumer} that converts each row into a reusable {@code DisposableObjArray}
+         * using type information from a specified entity class. This allows for more precise type mapping from
+         * SQL types to Java types.
          *
-         * @param entityClass used to fetch column/row value from ResultSet by the type of fields/columns defined in this class
-         * @param consumer the bi-consumer to process column labels and DisposableObjArray
-         * @return a stateful RowConsumer. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
+         * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
+         * This consumer should not be reused across different queries or in parallel streams.</p>
+         *
+         * @param entityClass the class used to infer column types for fetching values from the {@code ResultSet}.
+         * @param consumer the consumer to process the column labels and typed {@code DisposableObjArray} for each row.
+         * @return a new stateful {@code BiRowConsumer}.
          */
         @Beta
         @SequentialOnly
@@ -4367,37 +4424,32 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for filtering rows of a ResultSet.
-     * Generally, results should be filtered in the database side by SQL scripts.
-     * Only use RowFilter/BiRowFilter if there is a specific reason or the filter can't be done by SQL scripts.
-     * 
-     * <p>Consider using BiRowFilter instead because it's more efficient to test multiple records 
-     * when column labels/count are used.</p>
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * RowFilter filter = rs -> rs.getInt("age") >= 18 && rs.getBoolean("active");
-     * }</pre>
+     * A functional interface that represents a predicate (boolean-valued function) of one {@code ResultSet} argument.
+     * Use this to filter rows after they have been fetched from the database.
+     *
+     * <p><b>Note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
+     * Use {@code RowFilter} only when the filtering logic cannot be expressed in SQL. For performance-sensitive
+     * filtering that requires column metadata, consider using {@link BiRowFilter}.</p>
      */
     @FunctionalInterface
     public interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
 
-        /** 
-         * A filter that always returns true.
+        /**
+         * A {@code RowFilter} that includes every row.
          */
         RowFilter ALWAYS_TRUE = rs -> true;
 
-        /** 
-         * A filter that always returns false.
+        /**
+         * A {@code RowFilter} that excludes every row.
          */
         RowFilter ALWAYS_FALSE = rs -> false;
 
         /**
-         * Tests whether the current row should be included.
+         * Evaluates this filter on the given {@code ResultSet}.
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @return true if the row should be included, false otherwise
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} positioned at the current row.
+         * @return {@code true} if the row should be included, {@code false} otherwise.
+         * @throws SQLException if a database access error occurs.
          */
         @Override
         boolean test(final ResultSet rs) throws SQLException;
@@ -4405,7 +4457,7 @@ public final class Jdbc {
         /**
          * Returns a filter that represents the logical negation of this filter.
          *
-         * @return a negated filter
+         * @return a new {@code RowFilter} that is the negation of this filter.
          */
         @Override
         default RowFilter negate() {
@@ -4413,11 +4465,12 @@ public final class Jdbc {
         }
 
         /**
-         * Returns a composed filter that represents a short-circuiting logical AND of this filter and another.
+         * Returns a composed filter that represents a short-circuiting logical AND of this
+         * filter and another.
          *
-         * @param other a filter that will be logically-ANDed with this filter
-         * @return a composed filter
-         * @throws IllegalArgumentException if other is null
+         * @param other a {@code RowFilter} that will be logically-ANDed with this filter.
+         * @return a new composed {@code RowFilter}.
+         * @throws IllegalArgumentException if {@code other} is null.
          */
         default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
             N.checkArgNotNull(other);
@@ -4426,10 +4479,10 @@ public final class Jdbc {
         }
 
         /**
-         * Converts this RowFilter to a BiRowFilter.
-         * The resulting BiRowFilter ignores the column labels parameter.
+         * Converts this {@code RowFilter} to a {@link BiRowFilter}, which also accepts a list of column labels.
+         * The resulting {@code BiRowFilter} will ignore the column labels parameter.
          *
-         * @return a BiRowFilter that delegates to this RowFilter
+         * @return a {@code BiRowFilter} that delegates to this filter.
          */
         default BiRowFilter toBiRowFilter() {
             return (rs, columnLabels) -> test(rs);
@@ -4437,37 +4490,33 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for filtering rows of a ResultSet with access to column labels.
-     * Generally, results should be filtered in the database side by SQL scripts.
-     * Only use RowFilter/BiRowFilter if there is a specific reason or the filter can't be done by SQL scripts.
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * BiRowFilter filter = (rs, columnLabels) -> {
-     *     return columnLabels.contains("status") && rs.getString("status").equals("ACTIVE");
-     * };
-     * }</pre>
+     * A functional interface that represents a predicate (boolean-valued function) of a {@code ResultSet}
+     * and its column labels. This is more efficient than {@link RowFilter} if your filtering logic needs
+     * to access column metadata, as the metadata is fetched only once per query.
+     *
+     * <p><b>Note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
+     * Use {@code BiRowFilter} only when the filtering logic cannot be expressed in SQL.</p>
      */
     @FunctionalInterface
     public interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
 
-        /** 
-         * A filter that always returns true.
+        /**
+         * A {@code BiRowFilter} that includes every row.
          */
         BiRowFilter ALWAYS_TRUE = (rs, columnLabels) -> true;
 
-        /** 
-         * A filter that always returns false.
+        /**
+         * A {@code BiRowFilter} that excludes every row.
          */
         BiRowFilter ALWAYS_FALSE = (rs, columnLabels) -> false;
 
         /**
-         * Tests whether the current row should be included.
+         * Evaluates this filter on the given {@code ResultSet} and column labels.
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @param columnLabels the list of column labels in the result set
-         * @return true if the row should be included, false otherwise
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} positioned at the current row.
+         * @param columnLabels the list of column labels from the result set metadata.
+         * @return {@code true} if the row should be included, {@code false} otherwise.
+         * @throws SQLException if a database access error occurs.
          */
         @Override
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
@@ -4475,18 +4524,19 @@ public final class Jdbc {
         /**
          * Returns a filter that represents the logical negation of this filter.
          *
-         * @return a negated filter
+         * @return a new {@code BiRowFilter} that is the negation of this filter.
          */
         default BiRowFilter negate() {
             return (rs, cls) -> !test(rs, cls);
         }
 
         /**
-         * Returns a composed filter that represents a short-circuiting logical AND of this filter and another.
+         * Returns a composed filter that represents a short-circuiting logical AND of this
+         * filter and another.
          *
-         * @param other a filter that will be logically-ANDed with this filter
-         * @return a composed filter
-         * @throws IllegalArgumentException if other is null
+         * @param other a {@code BiRowFilter} that will be logically-ANDed with this filter.
+         * @return a new composed {@code BiRowFilter}.
+         * @throws IllegalArgumentException if {@code other} is null.
          */
         default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
             N.checkArgNotNull(other);
@@ -4496,39 +4546,33 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for extracting row data from a ResultSet into an array.
-     * This interface provides efficient bulk extraction of row data with custom type handling.
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * RowExtractor extractor = (rs, outputRow) -> {
-     *     outputRow[0] = rs.getString(1);
-     *     outputRow[1] = rs.getInt(2);
-     *     outputRow[2] = rs.getDate(3);
-     * };
-     * }</pre>
+     * A functional interface for extracting data from the current row of a {@code ResultSet} into a
+     * target {@code Object} array. This is useful for efficiently processing rows in bulk.
      */
     @FunctionalInterface
     public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
 
         /**
-         * Extracts data from the current row of the ResultSet into the output array.
+         * Extracts data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
+         * The implementation is responsible for mapping columns to array indices.
          *
-         * @param rs the ResultSet positioned at a valid row
-         * @param outputRow the array to populate with row data
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} positioned at a valid row.
+         * @param outputRow the array to be populated with data from the current row.
+         * @throws SQLException if a database access error occurs.
          */
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
 
         /**
-         * Creates a stateful RowExtractor based on an entity class.
-         * The extractor uses the entity class metadata to determine appropriate type conversions.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code RowExtractor} that maps {@code ResultSet} columns to an {@code Object} array
+         * based on the properties of the given entity class.
          *
-         * @param entityClassForFetch the entity class to use for field/column mapping
-         * @return a stateful RowExtractor. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned extractor is stateful. It initializes its internal type mapping
+         * on the first execution. It should not be reused across queries with different column structures
+         * or in parallel streams.</p>
+         *
+         * @param entityClassForFetch the entity class whose properties guide the type mapping.
+         * @return a new stateful {@code RowExtractor}.
          */
         @SequentialOnly
         @Stateful
@@ -4537,13 +4581,15 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowExtractor with prefix and field name mapping.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code RowExtractor} based on an entity class, with custom mapping for
+         * column prefixes to field name prefixes. This is useful for handling flattened one-to-one relationships.
          *
-         * @param entityClassForFetch the entity class to use for field/column mapping
-         * @param prefixAndFieldNameMap map of column prefixes to field name prefixes
-         * @return a stateful RowExtractor. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned extractor is stateful and should not be reused across different
+         * queries or in parallel streams.</p>
+         *
+         * @param entityClassForFetch the entity class for type mapping.
+         * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding entity field prefixes.
+         * @return a new stateful {@code RowExtractor}.
          */
         @SequentialOnly
         @Stateful
@@ -4552,13 +4598,15 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowExtractor with specific column labels.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code RowExtractor} based on an entity class, using a predefined list of column labels.
+         * This can be more efficient than discovering labels from {@code ResultSetMetaData}.
          *
-         * @param entityClassForFetch the entity class to use for field/column mapping
-         * @param columnLabels the specific column labels to use
-         * @return a stateful RowExtractor. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned extractor is stateful and should not be reused across different
+         * queries or in parallel streams.</p>
+         *
+         * @param entityClassForFetch the entity class for type mapping.
+         * @param columnLabels the explicit list of column labels to use for mapping.
+         * @return a new stateful {@code RowExtractor}.
          */
         @SequentialOnly
         @Stateful
@@ -4567,14 +4615,17 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a stateful RowExtractor with full customization options.
-         * 
-         * <p>This method is marked as stateful and should not be cached or used in parallel streams.</p>
+         * Creates a stateful {@code RowExtractor} with comprehensive customization options, including an entity class
+         * for type mapping, an explicit list of column labels, and a prefix map for complex mappings.
          *
-         * @param entityClassForFetch the entity class to use for field/column mapping
-         * @param columnLabels the specific column labels to use (optional)
-         * @param prefixAndFieldNameMap map of column prefixes to field name prefixes (optional)
-         * @return a stateful RowExtractor. Don't save or cache for reuse or use it in parallel stream.
+         * <p><b>Warning:</b> The returned extractor is stateful. It initializes its internal type mapping
+         * on the first execution. It should not be reused across queries with different column structures
+         * or in parallel streams.</p>
+         *
+         * @param entityClassForFetch the entity class for type mapping.
+         * @param columnLabels an optional list of column labels to use for mapping. If null, they are discovered from the {@code ResultSet}.
+         * @param prefixAndFieldNameMap an optional map for mapping column prefixes to field name prefixes.
+         * @return a new stateful {@code RowExtractor}.
          */
         @SequentialOnly
         @Stateful
@@ -4653,37 +4704,41 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a RowExtractorBuilder with the specified default column getter.
+         * Creates a {@link RowExtractorBuilder} with a specified default {@code ColumnGetter}. This getter
+         * will be used for any column that does not have a specific getter configured in the builder.
          *
-         * @param defaultColumnGetter the default ColumnGetter to use for columns not explicitly configured
-         * @return a new RowExtractorBuilder
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use.
+         * @return a new {@code RowExtractorBuilder}.
          */
         static RowExtractorBuilder create(final ColumnGetter<?> defaultColumnGetter) {
             return new RowExtractorBuilder(defaultColumnGetter);
         }
 
         /**
-         * Creates a RowExtractorBuilder with default column getter for object values.
+         * Creates a {@link RowExtractorBuilder} with a default behavior of retrieving all column values
+         * as {@code Object} instances using {@code ColumnGetter.GET_OBJECT}.
          *
-         * @return a new RowExtractorBuilder
+         * @return a new {@code RowExtractorBuilder}.
          */
         static RowExtractorBuilder builder() {
             return builder(ColumnGetter.GET_OBJECT);
         }
 
         /**
-         * Creates a RowExtractorBuilder with the specified default column getter.
+         * Creates a {@link RowExtractorBuilder} with a specified default {@code ColumnGetter}. This provides
+         * a fluent API to construct a custom {@code RowExtractor}.
          *
-         * @param defaultColumnGetter the default ColumnGetter to use for columns not explicitly configured
-         * @return a new RowExtractorBuilder
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns.
+         * @return a new {@code RowExtractorBuilder}.
          */
         static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowExtractorBuilder(defaultColumnGetter);
         }
 
         /**
-         * A builder class for creating customized RowExtractor instances.
-         * This builder allows specifying different column getters for specific columns.
+         * A builder for creating customized {@link RowExtractor} instances. This allows for specifying
+         * different {@link ColumnGetter}s for individual columns, providing fine-grained control over
+         * how data is extracted from a {@code ResultSet}.
          */
         class RowExtractorBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
@@ -4696,131 +4751,131 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the builder to get a boolean value from the specified column.
+             * Configures the extractor to get a {@code boolean} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getBoolean(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
             }
 
             /**
-             * Configures the builder to get a byte value from the specified column.
+             * Configures the extractor to get a {@code byte} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getByte(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
             }
 
             /**
-             * Configures the builder to get a short value from the specified column.
+             * Configures the extractor to get a {@code short} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getShort(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
             }
 
             /**
-             * Configures the builder to get an int value from the specified column.
+             * Configures the extractor to get an {@code int} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getInt(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_INT);
             }
 
             /**
-             * Configures the builder to get a long value from the specified column.
+             * Configures the extractor to get a {@code long} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getLong(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_LONG);
             }
 
             /**
-             * Configures the builder to get a float value from the specified column.
+             * Configures the extractor to get a {@code float} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getFloat(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
             }
 
             /**
-             * Configures the builder to get a double value from the specified column.
+             * Configures the extractor to get a {@code double} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getDouble(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
             }
 
             /**
-             * Configures the builder to get a BigDecimal value from the specified column.
+             * Configures the extractor to get a {@code BigDecimal} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getBigDecimal(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
             }
 
             /**
-             * Configures the builder to get a String value from the specified column.
+             * Configures the extractor to get a {@code String} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getString(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_STRING);
             }
 
             /**
-             * Configures the builder to get a Date value from the specified column.
+             * Configures the extractor to get a {@code java.sql.Date} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getDate(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_DATE);
             }
 
             /**
-             * Configures the builder to get a Time value from the specified column.
+             * Configures the extractor to get a {@code java.sql.Time} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getTime(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIME);
             }
 
             /**
-             * Configures the builder to get a Timestamp value from the specified column.
+             * Configures the extractor to get a {@code java.sql.Timestamp} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getTimestamp(final int columnIndex) {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
             }
 
             /**
-             * Configures the builder to get an Object value from the specified column.
+             * Configures the extractor to get an {@code Object} value from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @return this builder instance
-             * @deprecated default {@link #getObject(int)} if there is no {@code ColumnGetter} set for the target column
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for fluent chaining.
+             * @deprecated The default behavior is {@link #getObject(int)} if no specific {@code ColumnGetter} is set for the column.
              */
             @Deprecated
             public RowExtractorBuilder getObject(final int columnIndex) {
@@ -4828,23 +4883,23 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the builder to get an Object of specific type from the specified column.
+             * Configures the extractor to get an {@code Object} of a specific type from the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @param type the class type to convert the column value to
-             * @return this builder instance
+             * @param columnIndex the 1-based index of the column.
+             * @param type the class type to which the column value should be converted.
+             * @return this builder instance for fluent chaining.
              */
             public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) {
                 return get(columnIndex, ColumnGetter.get(type));
             }
 
             /**
-             * Configures the builder to use a custom ColumnGetter for the specified column.
+             * Configures the extractor to use a custom {@code ColumnGetter} for the specified column.
              *
-             * @param columnIndex the column index (1-based)
-             * @param columnGetter the custom ColumnGetter to use
-             * @return this builder instance
-             * @throws IllegalArgumentException if columnIndex is not positive or columnGetter is null
+             * @param columnIndex the 1-based index of the column.
+             * @param columnGetter the custom {@code ColumnGetter} to use for this column.
+             * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive or {@code columnGetter} is null.
              */
             public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, cs.columnIndex);
@@ -4855,10 +4910,13 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful RowExtractor based on the configured column getters.
-             * Don't cache or reuse the returned RowExtractor instance.
+             * Builds a stateful {@code RowExtractor} based on the configured column getters.
              *
-             * @return a stateful RowExtractor. Don't save or cache for reuse or use it in parallel stream.
+             * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It initializes its internal array of
+             * column getters on the first execution. It should not be cached or reused across different queries
+             * or in parallel streams. A new instance should be built for each distinct query execution.</p>
+             *
+             * @return a new stateful {@code RowExtractor}.
              */
             @SequentialOnly
             @Stateful
@@ -4899,140 +4957,134 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for extracting column values from a ResultSet.
-     * This interface provides type-safe extraction of values from specific columns.
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * ColumnGetter<String> upperCaseGetter = (rs, columnIndex) -> 
-     *     rs.getString(columnIndex).toUpperCase();
-     * }</pre>
+     * A functional interface for extracting a typed value from a specified column of a {@code ResultSet}.
+     * This provides a type-safe and reusable way to retrieve column data.
      *
-     * @param <V> the type of value extracted from the column
+     * @param <V> the type of the value to be extracted.
      */
     @FunctionalInterface
     public interface ColumnGetter<V> {
 
         /**
-         * Pre-defined getter for boolean values.
+         * Predefined getter for {@code boolean} values.
          */
         ColumnGetter<Boolean> GET_BOOLEAN = ResultSet::getBoolean;
 
         /**
-         * Pre-defined getter for byte values.
+         * Predefined getter for {@code byte} values.
          */
         ColumnGetter<Byte> GET_BYTE = ResultSet::getByte;
 
         /**
-         * Pre-defined getter for short values.
+         * Predefined getter for {@code short} values.
          */
         ColumnGetter<Short> GET_SHORT = ResultSet::getShort;
 
         /**
-         * Pre-defined getter for int values.
+         * Predefined getter for {@code int} values.
          */
         ColumnGetter<Integer> GET_INT = ResultSet::getInt;
 
         /**
-         * Pre-defined getter for long values.
+         * Predefined getter for {@code long} values.
          */
         ColumnGetter<Long> GET_LONG = ResultSet::getLong;
 
         /**
-         * Pre-defined getter for float values.
+         * Predefined getter for {@code float} values.
          */
         ColumnGetter<Float> GET_FLOAT = ResultSet::getFloat;
 
         /**
-         * Pre-defined getter for double values.
+         * Predefined getter for {@code double} values.
          */
         ColumnGetter<Double> GET_DOUBLE = ResultSet::getDouble;
 
         /**
-         * Pre-defined getter for BigDecimal values.
+         * Predefined getter for {@code BigDecimal} values.
          */
         ColumnGetter<BigDecimal> GET_BIG_DECIMAL = ResultSet::getBigDecimal;
 
         /**
-         * Pre-defined getter for String values.
+         * Predefined getter for {@code String} values.
          */
         ColumnGetter<String> GET_STRING = ResultSet::getString;
 
         /**
-         * Pre-defined getter for Date values.
+         * Predefined getter for {@code java.sql.Date} values.
          */
         ColumnGetter<Date> GET_DATE = ResultSet::getDate;
 
         /**
-         * Pre-defined getter for Time values.
+         * Predefined getter for {@code java.sql.Time} values.
          */
         ColumnGetter<Time> GET_TIME = ResultSet::getTime;
 
         /**
-         * Pre-defined getter for Timestamp values.
+         * Predefined getter for {@code java.sql.Timestamp} values.
          */
         ColumnGetter<Timestamp> GET_TIMESTAMP = ResultSet::getTimestamp;
 
         /**
-         * Pre-defined getter for byte array values.
+         * Predefined getter for {@code byte[]} values.
          */
         ColumnGetter<byte[]> GET_BYTES = ResultSet::getBytes;
 
         /**
-         * Pre-defined getter for InputStream values.
+         * Predefined getter for {@code InputStream} values.
          */
         ColumnGetter<InputStream> GET_BINARY_STREAM = ResultSet::getBinaryStream;
 
         /**
-         * Pre-defined getter for Reader values.
+         * Predefined getter for {@code Reader} values.
          */
         ColumnGetter<Reader> GET_CHARACTER_STREAM = ResultSet::getCharacterStream;
 
         /**
-         * Pre-defined getter for Blob values.
+         * Predefined getter for {@code Blob} values.
          */
         ColumnGetter<Blob> GET_BLOB = ResultSet::getBlob;
 
         /**
-         * Pre-defined getter for Clob values.
+         * Predefined getter for {@code Clob} values.
          */
         ColumnGetter<Clob> GET_CLOB = ResultSet::getClob;
 
         /**
-         * Pre-defined getter for Object values using JdbcUtil.getColumnValue.
+         * Predefined getter for {@code Object} values, using {@code JdbcUtil.getColumnValue} for generic type handling.
          */
         @SuppressWarnings("rawtypes")
         ColumnGetter GET_OBJECT = JdbcUtil::getColumnValue;
 
         /**
-         * Extracts a value from the specified column of the ResultSet.
+         * Extracts a value from the specified column of the given {@code ResultSet}.
          *
-         * @param rs the ResultSet to extract from
-         * @param columnIndex the column index (1-based)
-         * @return the extracted value
-         * @throws SQLException if a database access error occurs
+         * @param rs the {@code ResultSet} to extract from.
+         * @param columnIndex the 1-based index of the column.
+         * @return the extracted value of type {@code V}.
+         * @throws SQLException if a database access error occurs.
          */
         V apply(ResultSet rs, int columnIndex) throws SQLException;
 
         /**
-         * Gets a ColumnGetter for the specified class type.
-         * Uses the Type system to determine appropriate extraction method.
+         * Retrieves a cached or creates a new {@code ColumnGetter} for the specified class type.
+         * It leverages Abacus-common's {@code Type} system to determine the appropriate extraction method.
          *
-         * @param <T> the target type
-         * @param cls the class to get a ColumnGetter for
-         * @return a ColumnGetter for the specified type
+         * @param <T> the target type.
+         * @param cls the class for which to get a {@code ColumnGetter}.
+         * @return a {@code ColumnGetter} for the specified type.
          */
         static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
             return get(N.typeOf(cls));
         }
 
         /**
-         * Gets a ColumnGetter for the specified Type.
-         * Caches ColumnGetters for efficient reuse.
+         * Retrieves a cached or creates a new {@code ColumnGetter} for the specified Abacus-common {@code Type}.
+         * Common types are cached for efficient reuse.
          *
-         * @param <T> the target type
-         * @param type the Type to get a ColumnGetter for
-         * @return a ColumnGetter for the specified type
+         * @param <T> the target type.
+         * @param type the {@code Type} for which to get a {@code ColumnGetter}.
+         * @return a {@code ColumnGetter} for the specified type.
          */
         static <T> ColumnGetter<T> get(final Type<? extends T> type) {
             final ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.computeIfAbsent(type, k -> type::get);
@@ -5042,8 +5094,8 @@ public final class Jdbc {
     }
 
     /**
-     * A utility class containing column-specific helper classes and methods.
-     * This class provides convenient access to single-column operations.
+     * A utility class containing helpers and constants for column-specific operations,
+     * primarily focused on single-column results.
      */
     public static final class Columns {
         private Columns() {
@@ -5051,222 +5103,222 @@ public final class Jdbc {
         }
 
         /**
-         * A utility class for operations on the first column of a ResultSet.
-         * Provides pre-defined getters and setters for common data types.
+         * A utility class providing predefined {@link RowMapper} and {@link BiParametersSetter} instances
+         * for operations on the first column of a {@code ResultSet} or the first parameter of a {@code PreparedStatement}.
          */
         public static final class ColumnOne {
             /**
-             * Pre-defined RowMapper for getting boolean values from the first column.
+             * A {@code RowMapper} for getting a {@code boolean} value from the first column.
              */
             public static final RowMapper<Boolean> GET_BOOLEAN = rs -> rs.getBoolean(1);
 
             /**
-             * Pre-defined RowMapper for getting byte values from the first column.
+             * A {@code RowMapper} for getting a {@code byte} value from the first column.
              */
             public static final RowMapper<Byte> GET_BYTE = rs -> rs.getByte(1);
 
             /**
-             * Pre-defined RowMapper for getting short values from the first column.
+             * A {@code RowMapper} for getting a {@code short} value from the first column.
              */
             public static final RowMapper<Short> GET_SHORT = rs -> rs.getShort(1);
 
             /**
-             * Pre-defined RowMapper for getting int values from the first column.
+             * A {@code RowMapper} for getting an {@code int} value from the first column.
              */
             public static final RowMapper<Integer> GET_INT = rs -> rs.getInt(1);
 
             /**
-             * Pre-defined RowMapper for getting long values from the first column.
+             * A {@code RowMapper} for getting a {@code long} value from the first column.
              */
             public static final RowMapper<Long> GET_LONG = rs -> rs.getLong(1);
 
             /**
-             * Pre-defined RowMapper for getting float values from the first column.
+             * A {@code RowMapper} for getting a {@code float} value from the first column.
              */
             public static final RowMapper<Float> GET_FLOAT = rs -> rs.getFloat(1);
 
             /**
-             * Pre-defined RowMapper for getting double values from the first column.
+             * A {@code RowMapper} for getting a {@code double} value from the first column.
              */
             public static final RowMapper<Double> GET_DOUBLE = rs -> rs.getDouble(1);
 
             /**
-             * Pre-defined RowMapper for getting BigDecimal values from the first column.
+             * A {@code RowMapper} for getting a {@code BigDecimal} value from the first column.
              */
             public static final RowMapper<BigDecimal> GET_BIG_DECIMAL = rs -> rs.getBigDecimal(1);
 
             /**
-             * Pre-defined RowMapper for getting String values from the first column.
+             * A {@code RowMapper} for getting a {@code String} value from the first column.
              */
             public static final RowMapper<String> GET_STRING = rs -> rs.getString(1);
 
             /**
-             * Pre-defined RowMapper for getting Date values from the first column.
+             * A {@code RowMapper} for getting a {@code java.sql.Date} value from the first column.
              */
             public static final RowMapper<Date> GET_DATE = rs -> rs.getDate(1);
 
             /**
-             * Pre-defined RowMapper for getting Time values from the first column.
+             * A {@code RowMapper} for getting a {@code java.sql.Time} value from the first column.
              */
             public static final RowMapper<Time> GET_TIME = rs -> rs.getTime(1);
 
             /**
-             * Pre-defined RowMapper for getting Timestamp values from the first column.
+             * A {@code RowMapper} for getting a {@code java.sql.Timestamp} value from the first column.
              */
             public static final RowMapper<Timestamp> GET_TIMESTAMP = rs -> rs.getTimestamp(1);
 
             /**
-             * Pre-defined RowMapper for getting byte array values from the first column.
+             * A {@code RowMapper} for getting a {@code byte[]} value from the first column.
              */
             public static final RowMapper<byte[]> GET_BYTES = rs -> rs.getBytes(1);
 
             /**
-             * Pre-defined RowMapper for getting InputStream values from the first column.
+             * A {@code RowMapper} for getting an {@code InputStream} from the first column.
              */
             public static final RowMapper<InputStream> GET_BINARY_STREAM = rs -> rs.getBinaryStream(1);
 
             /**
-             * Pre-defined RowMapper for getting Reader values from the first column.
+             * A {@code RowMapper} for getting a {@code Reader} from the first column.
              */
             public static final RowMapper<Reader> GET_CHARACTER_STREAM = rs -> rs.getCharacterStream(1);
 
             /**
-             * Pre-defined RowMapper for getting Blob values from the first column.
+             * A {@code RowMapper} for getting a {@code Blob} from the first column.
              */
             public static final RowMapper<Blob> GET_BLOB = rs -> rs.getBlob(1);
 
             /**
-             * Pre-defined RowMapper for getting Clob values from the first column.
+             * A {@code RowMapper} for getting a {@code Clob} from the first column.
              */
             public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(1);
 
             /**
-             * Pre-defined RowMapper for getting Object values from the first column.
+             * A {@code RowMapper} for getting an {@code Object} value from the first column.
              */
             public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 1);
 
             /**
-             * Pre-defined BiParametersSetter for setting boolean values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code boolean} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Boolean> SET_BOOLEAN = (preparedQuery, x) -> preparedQuery.setBoolean(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting byte values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code byte} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Byte> SET_BYTE = (preparedQuery, x) -> preparedQuery.setByte(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting short values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code short} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Short> SET_SHORT = (preparedQuery, x) -> preparedQuery.setShort(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting int values in the first parameter.
+             * A {@code BiParametersSetter} for setting an {@code int} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Integer> SET_INT = (preparedQuery, x) -> preparedQuery.setInt(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting long values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code long} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Long> SET_LONG = (preparedQuery, x) -> preparedQuery.setLong(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting float values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code float} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Float> SET_FLOAT = (preparedQuery, x) -> preparedQuery.setFloat(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting double values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code double} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Double> SET_DOUBLE = (preparedQuery, x) -> preparedQuery.setDouble(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting BigDecimal values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code BigDecimal} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, BigDecimal> SET_BIG_DECIMAL = (preparedQuery, x) -> preparedQuery.setBigDecimal(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting String values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code String} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, String> SET_STRING = (preparedQuery, x) -> preparedQuery.setString(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Date values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code java.sql.Date} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Date> SET_DATE = (preparedQuery, x) -> preparedQuery.setDate(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Time values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code java.sql.Time} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Time> SET_TIME = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Timestamp values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code java.sql.Timestamp} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Timestamp> SET_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting java.util.Date as SQL Date in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code java.util.Date} as a SQL DATE for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting java.util.Date as SQL Time in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code java.util.Date} as a SQL TIME for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting java.util.Date as SQL Timestamp in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code java.util.Date} as a SQL TIMESTAMP for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting byte array values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code byte[]} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, byte[]> SET_BYTES = (preparedQuery, x) -> preparedQuery.setBytes(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting InputStream values in the first parameter.
+             * A {@code BiParametersSetter} for setting an {@code InputStream} for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, InputStream> SET_BINARY_STREAM = (preparedQuery, x) -> preparedQuery.setBinaryStream(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Reader values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code Reader} for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Reader> SET_CHARACTER_STREAM = (preparedQuery, x) -> preparedQuery.setCharacterStream(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Blob values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code Blob} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Blob> SET_BLOB = (preparedQuery, x) -> preparedQuery.setBlob(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Clob values in the first parameter.
+             * A {@code BiParametersSetter} for setting a {@code Clob} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Clob> SET_CLOB = (preparedQuery, x) -> preparedQuery.setClob(1, x);
 
             /**
-             * Pre-defined BiParametersSetter for setting Object values in the first parameter.
+             * A {@code BiParametersSetter} for setting an {@code Object} value for the first parameter.
              */
             @SuppressWarnings("rawtypes")
             public static final BiParametersSetter<AbstractQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(1, x);
@@ -5279,38 +5331,42 @@ public final class Jdbc {
             static final Map<Type<?>, RowMapper> rowMapperPool = new ObjectPool<>(1024);
 
             /**
-             * Gets a RowMapper for Object values from the first column.
+             * Gets a generic {@code RowMapper} that extracts a value as an {@code Object} from the first column.
              *
-             * @param <T> the target type
-             * @return a RowMapper that extracts Object values from the first column
+             * @param <T> the target type (inferred).
+             * @return a {@code RowMapper} that extracts an {@code Object} from the first column.
              */
             public static <T> RowMapper<T> getObject() {
                 return (RowMapper<T>) GET_OBJECT;
             }
 
             /**
-             * Gets a RowMapper for values from the first column with the specified type.
-             * 
+             * Gets a {@code RowMapper} that extracts a value of the specified type from the first column.
+             * This method uses a cache for commonly used types to improve performance.
+             *
              * <p>Example usage:</p>
              * <pre>{@code
+             * // Returns a mapper that gets a String from column 1.
              * RowMapper<String> stringMapper = ColumnOne.get(String.class);
+             * // Returns a mapper that gets an Integer from column 1.
              * RowMapper<Integer> intMapper = ColumnOne.get(Integer.class);
              * }</pre>
              *
-             * @param <T> the target type
-             * @param firstColumnType the class of the first column type
-             * @return a RowMapper for the specified type
+             * @param <T> the target type.
+             * @param firstColumnType the class of the value in the first column.
+             * @return a {@code RowMapper} for the specified type.
              */
             public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
                 return get(N.typeOf(firstColumnType));
             }
 
             /**
-             * Gets a RowMapper for values from the first column with the specified Type.
+             * Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type} from the first column.
+             * This method uses a cache for commonly used types.
              *
-             * @param <T> the target type
-             * @param type the Type of the first column
-             * @return a RowMapper for the specified type
+             * @param <T> the target type.
+             * @param type the {@code Type} of the value in the first column.
+             * @return a {@code RowMapper} for the specified type.
              */
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
                 RowMapper<T> result = rowMapperPool.get(type);
@@ -5325,43 +5381,50 @@ public final class Jdbc {
             }
 
             /**
-             * Creates a RowMapper that converts JSON string from the first column to the target type.
-             * 
+             * Creates a {@code RowMapper} that reads a JSON string from the first column and deserializes it
+             * into an object of the specified target type.
+             *
              * <p>Example usage:</p>
              * <pre>{@code
-             * RowMapper<User> mapper = ColumnOne.readJson(User.class);
+             * // Assumes column 1 contains a JSON string like '{"id":1, "name":"John"}'
+             * RowMapper<User> userMapper = ColumnOne.readJson(User.class);
+             * User user = preparedQuery.queryForSingle(userMapper).get();
              * }</pre>
              *
-             * @param <T> the target type
-             * @param targetType the class to deserialize JSON to
-             * @return a RowMapper that deserializes JSON from the first column
+             * @param <T> the target type.
+             * @param targetType the class to deserialize the JSON string into.
+             * @return a {@code RowMapper} that performs JSON deserialization.
              */
             public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
                 return rs -> N.fromJson(rs.getString(1), targetType);
             }
 
             /**
-             * Creates a RowMapper that converts XML string from the first column to the target type.
-             * 
+             * Creates a {@code RowMapper} that reads an XML string from the first column and deserializes it
+             * into an object of the specified target type.
+             *
              * <p>Example usage:</p>
              * <pre>{@code
-             * RowMapper<User> mapper = ColumnOne.readXml(User.class);
+             * // Assumes column 1 contains an XML string like '<user><id>1</id><name>John</name></user>'
+             * RowMapper<User> userMapper = ColumnOne.readXml(User.class);
+             * User user = preparedQuery.queryForSingle(userMapper).get();
              * }</pre>
              *
-             * @param <T> the target type
-             * @param targetType the class to deserialize XML to
-             * @return a RowMapper that deserializes XML from the first column
+             * @param <T> the target type.
+             * @param targetType the class to deserialize the XML string into.
+             * @return a {@code RowMapper} that performs XML deserialization.
              */
             public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
                 return rs -> N.fromXml(rs.getString(1), targetType);
             }
 
             /**
-             * Creates a BiParametersSetter for setting values of the specified type in the first parameter.
+             * Creates a {@code BiParametersSetter} for setting a value of the specified type as the first parameter
+             * of a {@code PreparedStatement}.
              *
-             * @param <T> the parameter type
-             * @param type the class of the parameter type
-             * @return a BiParametersSetter for the specified type
+             * @param <T> the parameter type.
+             * @param type the class of the parameter.
+             * @return a {@code BiParametersSetter} for the specified type.
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
@@ -5369,11 +5432,12 @@ public final class Jdbc {
             }
 
             /**
-             * Creates a BiParametersSetter for setting values of the specified Type in the first parameter.
+             * Creates a {@code BiParametersSetter} for setting a value of the specified Abacus-common {@code Type}
+             * as the first parameter of a {@code PreparedStatement}.
              *
-             * @param <T> the parameter type
-             * @param type the Type of the parameter
-             * @return a BiParametersSetter for the specified type
+             * @param <T> the parameter type.
+             * @param type the {@code Type} of the parameter.
+             * @return a {@code BiParametersSetter} for the specified type.
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
@@ -5384,43 +5448,45 @@ public final class Jdbc {
     }
 
     /**
-     * Represents an output parameter for stored procedures.
-     * Contains information about parameter position, name, SQL type, and scale.
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * OutParam param = new OutParam(1, "result", Types.INTEGER, null, 0);
-     * }</pre>
+     * Represents an output parameter for a stored procedure call. This class encapsulates all
+     * necessary information to register an output parameter with a {@code CallableStatement}.
      */
     @NoArgsConstructor
     @AllArgsConstructor
     @Data
     public static final class OutParam {
         /**
-         * The parameter index (1-based).
+         * The 1-based index of the parameter in the stored procedure call.
          */
         private int parameterIndex;
 
         /**
-         * The parameter name (optional, can be null for positional parameters).
+         * The name of the parameter. This is optional and used for named parameter calls.
          */
         private String parameterName;
 
         /**
-         * The SQL type as defined in java.sql.Types.
+         * The SQL type of the parameter, as defined in {@code java.sql.Types}.
          */
         private int sqlType;
 
         /**
-         * The fully-qualified SQL type name (for SQL3 types).
+         * The database-specific type name. This is generally used for user-defined or complex types.
          */
         private String typeName;
 
         /**
-         * The desired number of digits to the right of the decimal point (for NUMERIC or DECIMAL types).
+         * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types.
          */
         private int scale;
 
+        /**
+         * A factory method to create an {@code OutParam} with the specified index and SQL type.
+         *
+         * @param parameterIndex the 1-based index of the parameter.
+         * @param sqlType the SQL type from {@code java.sql.Types}.
+         * @return a new {@code OutParam} instance.
+         */
         public static OutParam of(int parameterIndex, int sqlType) {
             final OutParam outParam = new OutParam();
             outParam.setParameterIndex(parameterIndex);
@@ -5430,15 +5496,8 @@ public final class Jdbc {
     }
 
     /**
-     * Represents the result of output parameters from a stored procedure call.
-     * Provides access to output parameter values by index or name.
-     * 
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * OutParamResult result = ...;
-     * Integer count = result.getOutParamValue(1);
-     * String message = result.getOutParamValue("message");
-     * }</pre>
+     * A container for the results of output parameters from a stored procedure execution.
+     * It provides methods to retrieve parameter values by their index or name.
      */
     @EqualsAndHashCode
     @ToString
@@ -5452,41 +5511,41 @@ public final class Jdbc {
         }
 
         /**
-         * Gets the value of an output parameter by its index.
+         * Retrieves the value of an output parameter by its 1-based index.
          *
-         * @param <T> the expected type of the parameter value
-         * @param parameterIndex the parameter index (1-based)
-         * @return the parameter value, or null if not set
+         * @param <T> the expected type of the parameter value.
+         * @param parameterIndex the 1-based index of the parameter.
+         * @return the parameter value, cast to type {@code T}. May be {@code null}.
          */
         public <T> T getOutParamValue(final int parameterIndex) {
             return (T) outParamValues.get(parameterIndex);
         }
 
         /**
-         * Gets the value of an output parameter by its name.
+         * Retrieves the value of an output parameter by its name.
          *
-         * @param <T> the expected type of the parameter value
-         * @param parameterName the parameter name
-         * @return the parameter value, or null if not set
+         * @param <T> the expected type of the parameter value.
+         * @param parameterName the name of the parameter.
+         * @return the parameter value, cast to type {@code T}. May be {@code null}.
          */
         public <T> T getOutParamValue(final String parameterName) {
             return (T) outParamValues.get(parameterName);
         }
 
         /**
-         * Gets all output parameter values as a map.
-         * Keys can be either parameter indices (Integer) or parameter names (String).
+         * Returns a map containing all output parameter values. The keys of the map are
+         * either the parameter index ({@code Integer}) or name ({@code String}).
          *
-         * @return an unmodifiable map of parameter values
+         * @return an unmodifiable map of all output parameter values.
          */
         public Map<Object, Object> getOutParamValues() {
             return outParamValues;
         }
 
         /**
-         * Gets the list of output parameter definitions.
+         * Returns the list of {@link OutParam} definitions that were used to register the output parameters.
          *
-         * @return an unmodifiable list of OutParam objects
+         * @return an unmodifiable list of {@code OutParam} objects.
          */
         public List<OutParam> getOutParams() {
             return outParams;
@@ -5494,37 +5553,32 @@ public final class Jdbc {
     }
 
     /**
-     * A handler interface for intercepting method calls on DAO proxies.
-     * This interface allows for pre- and post-processing of DAO method invocations.
-     * 
+     * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented
+     * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
-     * Handler<UserDao> handler = new Handler<UserDao>() {
-     *     @Override
-     *     public void beforeInvoke(UserDao proxy, Object[] args, 
-     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-     *         System.out.println("Before: " + methodSignature._1.getName());
-     *     }
-     *     
-     *     @Override
-     *     public void afterInvoke(Object result, UserDao proxy, Object[] args,
-     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-     *         System.out.println("After: " + methodSignature._1.getName() + " = " + result);
-     *     }
+     * Handler<UserDao> loggingHandler = new Handler<>() {
+     * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) {
+     * System.out.println("Calling method: " + sig._1.getName());
+     * }
+     * public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) {
+     * System.out.println("Method returned: " + result);
+     * }
      * };
      * }</pre>
      *
-     * @param <P> the type of the proxy object
+     * @param <P> the type of the DAO proxy.
      */
     @Beta
     public interface Handler<P> {
         /**
-         * Called before a method is invoked on the proxy.
-         * This method can be used for logging, validation, or modifying arguments.
+         * This method is invoked before the actual DAO method is called. It can be used for
+         * logging, argument validation, security checks, or transaction management.
          *
-         * @param proxy the proxy instance
-         * @param args the method arguments
-         * @param methodSignature a tuple containing: Method, parameter types (empty list if no parameters), and return type
+         * @param proxy the proxy instance on which the method was invoked.
+         * @param args the arguments passed to the method.
+         * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type.
          */
         @SuppressWarnings("unused")
         default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
@@ -5532,13 +5586,13 @@ public final class Jdbc {
         }
 
         /**
-         * Called after a method is invoked on the proxy.
-         * This method can be used for logging, result processing, or cleanup.
+         * This method is invoked after the DAO method completes, whether successfully or with an exception.
+         * It can be used for logging results, result transformation, or resource cleanup.
          *
-         * @param result the result returned by the method
-         * @param proxy the proxy instance
-         * @param args the method arguments
-         * @param methodSignature a tuple containing: Method, parameter types (empty list if no parameters), and return type
+         * @param result the value returned by the method. If the method's return type is void, this will be {@code null}.
+         * @param proxy the proxy instance on which the method was invoked.
+         * @param args the arguments passed to the method.
+         * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type.
          */
         @SuppressWarnings("unused")
         default void afterInvoke(final Object result, final P proxy, final Object[] args,
@@ -5548,8 +5602,8 @@ public final class Jdbc {
     }
 
     /**
-     * A factory class for creating and managing Handler instances.
-     * Provides registration, retrieval, and creation of handlers with Spring integration support.
+     * A factory for creating and managing {@link Handler} instances. It provides a central registry
+     * for handlers and supports integration with the Spring Framework's application context.
      */
     public static final class HandlerFactory {
 
@@ -5577,11 +5631,12 @@ public final class Jdbc {
         }
 
         /**
-         * Registers a handler class by creating a new instance.
+         * Registers a handler by creating a new instance of the specified handler class.
+         * The handler is registered using its canonical class name as the qualifier.
          *
-         * @param handlerClass the handler class to register
-         * @return true if registration was successful, false if a handler with the same name already exists
-         * @throws IllegalArgumentException if handlerClass is null
+         * @param handlerClass the handler class to instantiate and register.
+         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
+         * @throws IllegalArgumentException if {@code handlerClass} is null.
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -5590,11 +5645,11 @@ public final class Jdbc {
         }
 
         /**
-         * Registers a handler instance using its class name as the qualifier.
+         * Registers a handler instance. The handler is registered using its canonical class name as the qualifier.
          *
-         * @param handler the handler to register
-         * @return true if registration was successful, false if a handler with the same name already exists
-         * @throws IllegalArgumentException if handler is null
+         * @param handler the handler instance to register.
+         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
+         * @throws IllegalArgumentException if {@code handler} is null.
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, cs.handler);
@@ -5603,12 +5658,12 @@ public final class Jdbc {
         }
 
         /**
-         * Registers a handler instance with a specific qualifier.
+         * Registers a handler instance with a specific qualifier string.
          *
-         * @param qualifier the unique identifier for the handler
-         * @param handler the handler to register
-         * @return true if registration was successful, false if a handler with the same qualifier already exists
-         * @throws IllegalArgumentException if qualifier is empty or handler is null
+         * @param qualifier the unique identifier for the handler.
+         * @param handler the handler instance to register.
+         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
+         * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is null.
          */
         public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotEmpty(qualifier, cs.qualifier);
@@ -5624,11 +5679,11 @@ public final class Jdbc {
         }
 
         /**
-         * Gets a handler by its qualifier.
-         * Also checks Spring context if available and handler is not found in the pool.
+         * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found,
+         * it attempts to retrieve it from the Spring application context if available.
          *
-         * @param qualifier the unique identifier for the handler
-         * @return the handler instance, or null if not found
+         * @param qualifier the unique identifier for the handler.
+         * @return the handler instance, or {@code null} if not found.
          */
         public static Handler<?> get(final String qualifier) { //NOSONAR
             N.checkArgNotEmpty(qualifier, cs.qualifier);
@@ -5649,11 +5704,12 @@ public final class Jdbc {
         }
 
         /**
-         * Gets a handler by its class.
-         * Also checks Spring context if available and handler is not found in the pool.
+         * Retrieves a handler by its class. It first checks the internal registry using the class's
+         * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring
+         * application context.
          *
-         * @param handlerClass the handler class
-         * @return the handler instance, or null if not found
+         * @param handlerClass the class of the handler to retrieve.
+         * @return the handler instance, or {@code null} if not found.
          */
         public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -5682,10 +5738,11 @@ public final class Jdbc {
         }
 
         /**
-         * Gets a handler by its class, creating a new instance if not found.
+         * Retrieves a handler by its class. If the handler is not found in the registry or Spring context,
+         * a new instance is created, registered, and returned.
          *
-         * @param handlerClass the handler class
-         * @return the handler instance, never null
+         * @param handlerClass the class of the handler to retrieve or create.
+         * @return the existing or newly created handler instance.
          */
         public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -5708,13 +5765,13 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a handler with a before-invoke action.
+         * Creates a {@code Handler} with a custom action to be executed before method invocation.
          *
-         * @param <T> the proxy type
-         * @param <E> the exception type
-         * @param beforeInvokeAction the action to perform before method invocation
-         * @return a new Handler instance
-         * @throws IllegalArgumentException if beforeInvokeAction is null
+         * @param <T> the proxy type.
+         * @param <E> the exception type that the action can throw.
+         * @param beforeInvokeAction the action to perform before the method is called.
+         * @return a new {@code Handler} instance.
+         * @throws IllegalArgumentException if {@code beforeInvokeAction} is null.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction)
@@ -5730,13 +5787,13 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a handler with an after-invoke action.
+         * Creates a {@code Handler} with a custom action to be executed after method invocation.
          *
-         * @param <T> the proxy type
-         * @param <E> the exception type
-         * @param afterInvokeAction the action to perform after method invocation
-         * @return a new Handler instance
-         * @throws IllegalArgumentException if afterInvokeAction is null
+         * @param <T> the proxy type.
+         * @param <E> the exception type that the action can throw.
+         * @param afterInvokeAction the action to perform after the method returns.
+         * @return a new {@code Handler} instance.
+         * @throws IllegalArgumentException if {@code afterInvokeAction} is null.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
@@ -5754,14 +5811,14 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a handler with both before and after invoke actions.
+         * Creates a {@code Handler} with custom actions to be executed both before and after method invocation.
          *
-         * @param <T> the proxy type
-         * @param <E> the exception type
-         * @param beforeInvokeAction the action to perform before method invocation
-         * @param afterInvokeAction the action to perform after method invocation
-         * @return a new Handler instance
-         * @throws IllegalArgumentException if either action is null
+         * @param <T> the proxy type.
+         * @param <E> the exception type that the actions can throw.
+         * @param beforeInvokeAction the action to perform before the method is called.
+         * @param afterInvokeAction the action to perform after the method returns.
+         * @return a new {@code Handler} instance.
+         * @throws IllegalArgumentException if either action is null.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,
@@ -5791,121 +5848,119 @@ public final class Jdbc {
     }
 
     /**
-     * Interface for caching DAO method results.
-     * Implementations can provide custom caching strategies for database queries.
-     * 
-     * <p>The default cache key format is: fullMethodName#tableName#jsonArrayOfParameters</p>
-     * <p>Example: com.example.UserDao.findById#users#[{"id": 123}]</p>
+     * An interface for caching the results of DAO method calls. Implementations can provide
+     * various caching strategies (e.g., in-memory, distributed) to improve application performance.
+     *
+     * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p>
+     * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p>
      */
     public interface DaoCache {
 
         /**
-         * Creates a DaoCache with specified capacity and eviction delay.
+         * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@code LocalCache}.
          *
-         * @param capacity the maximum number of entries in the cache
-         * @param evictDelay the delay in milliseconds before entries are evicted
-         * @return a new DaoCache instance
+         * @param capacity the maximum number of entries in the cache.
+         * @param evictDelay the interval in milliseconds for the eviction scheduler to run.
+         * @return a new {@code DaoCache} instance.
          */
         static DaoCache create(final int capacity, final long evictDelay) {
             return new DefaultDaoCache(capacity, evictDelay);
         }
 
         /**
-         * Creates a DaoCache backed by a simple Map.
-         * No automatic eviction is performed.
+         * Creates a {@code DaoCache} backed by a simple {@code java.util.HashMap}. This cache does not
+         * perform automatic eviction.
          *
-         * @return a new DaoCache instance backed by a HashMap
+         * @return a new {@code DaoCache} instance backed by a {@code HashMap}.
          */
         static DaoCache createByMap() {
             return new DaoCacheByMap();
         }
 
         /**
-         * Creates a DaoCache backed by the provided Map.
-         * No automatic eviction is performed.
+         * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom
+         * map implementations (e.g., {@code ConcurrentHashMap}) for caching.
          *
-         * @param map the map to use for caching
-         * @return a new DaoCache instance backed by the provided map
+         * @param map the map to use for caching.
+         * @return a new {@code DaoCache} instance backed by the provided map.
          */
         static DaoCache createByMap(Map<String, Object> map) {
             return new DaoCacheByMap(map);
         }
 
         /**
-         * Retrieves a cached result.
-         * Implementations can customize the cache key based on the provided parameters.
-         * 
-         * <p>MUST NOT modify the input parameters.</p>
+         * Retrieves a cached result. The implementation can use the provided parameters to customize
+         * the cache key generation if needed.
          *
-         * @param defaultCacheKey the default cache key composed by: fullMethodName#tableName#jsonArrayOfParameters
-         * @param daoProxy the DAO proxy instance
-         * @param args the method arguments
-         * @param methodSignature tuple containing Method, parameter types, and return type
-         * @return the cached result, or null if not found
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         *
+         * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters).
+         * @param daoProxy the DAO proxy instance on which the method was called.
+         * @param args the arguments passed to the method.
+         * @param methodSignature a tuple containing method metadata.
+         * @return the cached result, or {@code null} if not found.
          */
         Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Caches a result with default TTL settings.
-         * Implementations can customize the cache key based on the provided parameters.
-         * 
-         * <p>MUST NOT modify the input parameters.</p>
+         * Caches a result with default time-to-live (TTL) settings.
          *
-         * @param defaultCacheKey the default cache key composed by: fullMethodName#tableName#jsonArrayOfParameters
-         * @param result the method result to cache
-         * @param daoProxy the DAO proxy instance
-         * @param args the method arguments
-         * @param methodSignature tuple containing Method, parameter types, and return type
-         * @return true if the result was cached successfully
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         *
+         * @param defaultCacheKey the default cache key.
+         * @param result the method result to cache.
+         * @param daoProxy the DAO proxy instance.
+         * @param args the method arguments.
+         * @param methodSignature a tuple containing method metadata.
+         * @return {@code true} if the result was cached successfully.
          */
         boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Caches a result with custom TTL settings.
-         * Implementations can customize the cache key based on the provided parameters.
-         * 
-         * <p>MUST NOT modify the input parameters.</p>
+         * Caches a result with custom time-to-live (TTL) and idle time settings.
          *
-         * @param defaultCacheKey the default cache key composed by: fullMethodName#tableName#jsonArrayOfParameters
-         * @param result the method result to cache
-         * @param liveTime the time in milliseconds that the entry should live
-         * @param maxIdleTime the maximum idle time in milliseconds before eviction
-         * @param daoProxy the DAO proxy instance
-         * @param args the method arguments
-         * @param methodSignature tuple containing Method, parameter types, and return type
-         * @return true if the result was cached successfully
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         *
+         * @param defaultCacheKey the default cache key.
+         * @param result the method result to cache.
+         * @param liveTime the maximum time in milliseconds the entry should live in the cache.
+         * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted.
+         * @param daoProxy the DAO proxy instance.
+         * @param args the method arguments.
+         * @param methodSignature a tuple containing method metadata.
+         * @return {@code true} if the result was cached successfully.
          */
         boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
         /**
-         * Updates the cache after a modification operation.
-         * Typically removes or refreshes entries that may have been affected by the operation.
-         * 
-         * <p>MUST NOT modify the input parameters.</p>
+         * Updates the cache after a data modification operation (e.g., insert, update, delete). This method
+         * is responsible for invalidating or clearing cache entries that may be affected by the operation.
          *
-         * @param defaultCacheKey the default cache key composed by: fullMethodName#tableName#jsonArrayOfParameters
-         * @param result the result of the modification operation
-         * @param daoProxy the DAO proxy instance
-         * @param args the method arguments
-         * @param methodSignature tuple containing Method, parameter types, and return type
+         * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p>
+         *
+         * @param defaultCacheKey the default cache key from the modification method.
+         * @param result the result of the modification operation (e.g., number of rows affected).
+         * @param daoProxy the DAO proxy instance.
+         * @param args the arguments of the modification method.
+         * @param methodSignature a tuple containing method metadata.
          */
         void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature);
 
     }
 
     /**
-     * Default implementation of DaoCache using a LocalCache with TTL support.
-     * Provides automatic eviction based on time-to-live and idle time settings.
+     * The default implementation of {@link DaoCache}, using a {@link LocalCache} for in-memory caching
+     * with support for time-to-live (TTL) and idle time-based eviction.
      */
     public static final class DefaultDaoCache implements DaoCache {
         protected final LocalCache<String, Object> cache;
 
         /**
-         * Creates a DefaultDaoCache with specified capacity and eviction delay.
+         * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay.
          *
-         * @param capacity the maximum number of entries in the cache
-         * @param evictDelay the delay in milliseconds for the eviction scheduler
+         * @param capacity the maximum number of entries the cache can hold.
+         * @param evictDelay the interval in milliseconds for the background eviction thread.
          */
         public DefaultDaoCache(final int capacity, final long evictDelay) {
             cache = CacheFactory.createLocalCache(capacity, evictDelay);
@@ -5931,6 +5986,11 @@ public final class Jdbc {
             return cache.put(defaultCacheKey, result, liveTime, maxIdleTime);
         }
 
+        /**
+         * Implements cache invalidation. If the table name can be determined from the cache key,
+         * it removes all cache entries associated with that table. Otherwise, it clears the entire cache.
+         * No action is taken for update operations that affect zero rows.
+         */
         @Override
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
@@ -5954,32 +6014,32 @@ public final class Jdbc {
     }
 
     /**
-     * Simple implementation of DaoCache using a plain Map.
-     * Does not provide automatic eviction or TTL support.
+     * A simple implementation of {@link DaoCache} that uses a standard {@code java.util.Map}
+     * as the backing cache. It does not support automatic eviction or TTL.
      */
     static final class DaoCacheByMap implements DaoCache {
         protected final Map<String, Object> cache;
 
         /**
-         * Creates a DaoCacheByMap with a new HashMap.
+         * Creates a {@code DaoCacheByMap} with a new {@code HashMap}.
          */
         public DaoCacheByMap() {
             cache = new HashMap<>();
         }
 
         /**
-         * Creates a DaoCacheByMap with a HashMap of specified initial capacity.
+         * Creates a {@code DaoCacheByMap} with a {@code HashMap} of a specified initial capacity.
          *
-         * @param capacity the initial capacity of the HashMap
+         * @param capacity the initial capacity for the backing {@code HashMap}.
          */
         public DaoCacheByMap(final int capacity) {
             this.cache = new HashMap<>(capacity);
         }
 
         /**
-         * Creates a DaoCacheByMap backed by the provided map.
+         * Creates a {@code DaoCacheByMap} backed by a provided map instance.
          *
-         * @param cache the map to use for caching
+         * @param cache the map to be used for caching.
          */
         public DaoCacheByMap(final Map<String, Object> cache) {
             this.cache = cache;
@@ -6009,6 +6069,11 @@ public final class Jdbc {
             return true;
         }
 
+        /**
+         * Implements cache invalidation. If the table name can be determined from the cache key,
+         * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache.
+         * No action is taken for update operations that affect zero rows.
+         */
         @Override
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
