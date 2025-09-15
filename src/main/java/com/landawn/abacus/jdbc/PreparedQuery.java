@@ -39,13 +39,13 @@ import java.sql.PreparedStatement;
  * <p><b>Usage Example:</b>
  * <pre>{@code
  * // Simple query execution
- * PreparedQuery query = new PreparedQuery(connection.prepareStatement("SELECT * FROM users WHERE id = ?"));
+ * PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?");
  * User user = query.setInt(1, 123)
  *                  .findFirst(User.class)
  *                  .orElse(null);
  * 
  * // Multiple executions with closeAfterExecution(false)
- * PreparedQuery reusableQuery = new PreparedQuery(connection.prepareStatement("SELECT * FROM users WHERE age > ?"))
+ * PreparedQuery reusableQuery = JdbcUtil.prepareQuery(connection, "SELECT * FROM users WHERE age > ?")
  *                                   .closeAfterExecution(false);
  * List<User> adults = reusableQuery.setInt(1, 18).list(User.class);
  * List<User> seniors = reusableQuery.setInt(1, 65).list(User.class);

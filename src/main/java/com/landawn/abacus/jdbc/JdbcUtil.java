@@ -7759,7 +7759,7 @@ public final class JdbcUtil {
      *     try (PreparedStatement ps = conn.prepareStatement("UPDATE users SET active = ? WHERE id = ?")) {
      *         ps.setBoolean(1, false);
      *         ps.setLong(2, userId);
-     *         ps.executeUpdate();
+     *         JdbcUtil.executeUpdate(ps);
      *     }
      * });
      * }</pre>
