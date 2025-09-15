@@ -4188,7 +4188,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * ).executeBatch();
      *
      * // Processing data in chunks to avoid memory issues
-     * try (ResultSet rs = largeDataQuery.executeQuery()) {
+     * try (ResultSet rs = JdbcUtil.executeQuery(largeDataQuery)) {
      *     DataIterator dataIterator = new DataIterator(rs);
      *     insertQuery.addBatchParameters(dataIterator)
      *               .executeBatch();

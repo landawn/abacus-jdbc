@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2025, Haiyang Li.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.landawn.abacus.jdbc;
 
 import java.io.InputStream;
@@ -20,14 +35,55 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Map;
 
-public class InternalResultSet implements ResultSet {
+import com.landawn.abacus.annotation.Internal;
+import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
+import com.landawn.abacus.util.Throwables;
 
+
+/**
+ * A proxy wrapper for {@link ResultSet} that provides optimized column value retrieval
+ * with intelligent type handling and caching.
+ * 
+ * <p>This class wraps a {@link ResultSet} and enhances performance by caching column getter
+ * strategies based on the actual data types encountered. It provides special handling for
+ * Oracle-specific data types (oracle.sql.TIMESTAMP, oracle.sql.DATE, etc.) and automatically
+ * converts them to standard Java SQL types.</p>
+ * 
+ * <p>The proxy uses two caching mechanisms:</p>
+ * <ul>
+ *   <li>Index-based caching: {@code columnGetters} array for column index access</li>
+ *   <li>Label-based caching: {@code columnGettersByLabel} map for column label access</li>
+ * </ul>
+ * 
+ * <p>Key features:</p>
+ * <ul>
+ *   <li>Automatic detection and conversion of Oracle SQL types to standard Java types</li>
+ *   <li>Performance optimization through getter strategy caching</li>
+ *   <li>Transparent delegation of all {@link ResultSet} operations</li>
+ *   <li>Special handling for DATE/TIMESTAMP type disambiguation</li>
+ * </ul>
+ * 
+ * <p>This class is marked as {@link Internal} and is intended for framework use only.</p>
+ * 
+ * @see ResultSet
+ * @see ColumnGetter 
+ */
+@Internal
+final class ResultSetProxy implements ResultSet {
+
+    private ColumnGetter<?>[] columnGetters;
+    private Map<String, Throwables.Function<ResultSet, Object, SQLException>> columnGettersByLabel;
     private final ResultSet delegate;
 
-    public InternalResultSet(ResultSet delegate) {
+    ResultSetProxy(ResultSet delegate) {
         this.delegate = delegate;
+    }
+
+    static ResultSetProxy wrap(ResultSet rs) {
+        return (rs == null) ? null : new ResultSetProxy(rs);
     }
 
     @Override
@@ -241,12 +297,133 @@ public class InternalResultSet implements ResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        return delegate.getObject(columnIndex);
+        ResultSetMetaData metadata = null;
+
+        if (columnGetters == null) {
+            metadata = delegate.getMetaData();
+            columnGetters = new ColumnGetter[metadata.getColumnCount() + 1];
+        }
+
+        if (columnGetters[columnIndex] == null) {
+            Object ret = delegate.getObject(columnIndex);
+
+            if (ret == null) {
+                return ret;
+            }
+
+            if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean || ret instanceof Blob
+                    || ret instanceof Clob) {
+                columnGetters[columnIndex] = ColumnGetter.GET_OBJECT;
+            } else {
+                if (metadata == null) {
+                    metadata = delegate.getMetaData();
+                }
+
+                final String className = ret.getClass().getName();
+
+                if ("oracle.sql.TIMESTAMP".equals(className)) {
+                    ret = ((oracle.sql.Datum) ret).timestampValue();
+                    columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
+                } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
+                    ret = ((oracle.sql.Datum) ret).timestampValue();
+                    columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
+                } else if (className.startsWith("oracle.sql.DATE")) {
+                    final String metaDataClassName = metadata.getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                        ret = delegate.getTimestamp(columnIndex);
+                        columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
+                    } else {
+                        ret = delegate.getDate(columnIndex);
+                        columnGetters[columnIndex] = ColumnGetter.GET_DATE;
+                    }
+
+                } else if (ret instanceof java.sql.Date) {
+                    final String metaDataClassName = metadata.getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                        ret = delegate.getTimestamp(columnIndex);
+                        columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
+                    } else {
+                        columnGetters[columnIndex] = ColumnGetter.GET_DATE;
+                    }
+                } else {
+                    columnGetters[columnIndex] = ColumnGetter.GET_OBJECT;
+                }
+            }
+
+            return ret;
+        } else {
+            return columnGetters[columnIndex].apply(delegate, columnIndex);
+        }
     }
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return delegate.getObject(columnLabel);
+        ResultSetMetaData metadata = null;
+        Throwables.Function<ResultSet, Object, SQLException> getter = null;
+
+        if (columnGettersByLabel == null) {
+            metadata = delegate.getMetaData();
+            columnGettersByLabel = new HashMap<>(metadata.getColumnCount() + 1);
+        } else {
+            getter = columnGettersByLabel.get(columnLabel);
+        }
+
+        if (getter == null) {
+            final int columnIndex = delegate.findColumn(columnLabel);
+            Object ret = delegate.getObject(columnIndex);
+
+            if (ret == null) {
+                return ret;
+            }
+
+            if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean || ret instanceof Blob
+                    || ret instanceof Clob) {
+                getter = rs -> rs.getObject(columnIndex);
+            } else {
+                if (metadata == null) {
+                    metadata = delegate.getMetaData();
+                }
+
+                final String className = ret.getClass().getName();
+
+                if ("oracle.sql.TIMESTAMP".equals(className)) {
+                    ret = ((oracle.sql.Datum) ret).timestampValue();
+                    getter = rs -> rs.getTimestamp(columnIndex);
+                } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
+                    ret = ((oracle.sql.Datum) ret).timestampValue();
+                    getter = rs -> rs.getTimestamp(columnIndex);
+                } else if (className.startsWith("oracle.sql.DATE")) {
+                    final String metaDataClassName = metadata.getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                        ret = delegate.getTimestamp(columnIndex);
+                        getter = rs -> rs.getTimestamp(columnIndex);
+                    } else {
+                        ret = delegate.getDate(columnIndex);
+                        getter = rs -> rs.getDate(columnIndex);
+                    }
+                } else if (ret instanceof java.sql.Date) {
+                    final String metaDataClassName = metadata.getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                        ret = delegate.getTimestamp(columnIndex);
+                        getter = rs -> rs.getTimestamp(columnIndex);
+                    } else {
+                        getter = rs -> rs.getDate(columnIndex);
+                    }
+                } else {
+                    getter = rs -> rs.getObject(columnIndex);
+                }
+            }
+
+            columnGettersByLabel.put(columnLabel, getter);
+
+            return ret;
+        } else {
+            return getter.apply(delegate);
+        }
     }
 
     @Override

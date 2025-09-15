@@ -1321,9 +1321,9 @@ public final class JdbcUtil {
      * @param resultSet The ResultSet to search in
      * @param columnName The name of the column to find
      * @return The column index (1-based), or -1 if the column is not found
-     * @throws UncheckedSQLException If a SQL exception occurs while searching for the column
+     * @throws SQLException If a SQL exception occurs while searching for the column
      */
-    public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws UncheckedSQLException {
+    public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws SQLException {
         try {
             return getColumnIndex(resultSet.getMetaData(), columnName);
         } catch (final SQLException e) {
@@ -1394,49 +1394,41 @@ public final class JdbcUtil {
                         (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue()); // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
             } else if (className.startsWith("oracle.sql.DATE")) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
-                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
-                    //    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
-                    //
-                    //    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                    //        return ((oracle.sql.Datum) val).timestampValue();
-                    //    } else {
-                    //        return ((oracle.sql.Datum) val).dateValue();
-                    //    }
+                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
 
-                    return ((oracle.sql.Datum) val).timestampValue();
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                        return rs.getTimestamp(columnIndex);
+                    } else {
+                        return rs.getDate(columnIndex);
+                    }
                 }, (rs, columnLabel, val) -> {
-                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
-                    //    final ResultSetMetaData metaData = rs.getMetaData();
-                    //    final int columnIndex = getColumnIndex(metaData, columnLabel);
-                    //    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
-                    //    
-                    //    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                    //        return ((oracle.sql.Datum) val).timestampValue();
-                    //    } else {
-                    //        return ((oracle.sql.Datum) val).dateValue();
-                    //    }
+                    final ResultSetMetaData metaData = rs.getMetaData();
+                    final int columnIndex = getColumnIndex(metaData, columnLabel);
+                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
-                    return ((oracle.sql.Datum) val).timestampValue();
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                        return rs.getTimestamp(columnIndex);
+                    } else {
+                        return rs.getDate(columnIndex);
+                    }
                 });
-            } else if ((ret instanceof java.sql.Date)) {
+            } else if (ret instanceof java.sql.Date) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
-                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
-                    //    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
-                    //
-                    //    if ("java.sql.Timestamp".equals(metaDataClassName)) {
-                    //        return rs.getTimestamp(columnIndex);
-                    //    }
+                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                        return rs.getTimestamp(columnIndex);
+                    }
 
                     return val;
                 }, (rs, columnLabel, val) -> {
-                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
-                    //    final ResultSetMetaData metaData = rs.getMetaData();
-                    //    final int columnIndex = getColumnIndex(metaData, columnLabel);
-                    //    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
-                    //
-                    //    if ("java.sql.Timestamp".equals(metaDataClassName)) {
-                    //        return rs.getTimestamp(columnIndex);
-                    //    }
+                    final ResultSetMetaData metaData = rs.getMetaData();
+                    final int columnIndex = getColumnIndex(metaData, columnLabel);
+                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+
+                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                        return rs.getTimestamp(columnIndex);
+                    }
 
                     return val;
                 });
@@ -1509,7 +1501,7 @@ public final class JdbcUtil {
             } finally {
                 clob.free();
             }
-        } else if (checkDateType) {
+        } else if (checkDateType && !(rs instanceof ResultSetProxy)) {
             ret = columnConverterByIndex.apply(rs, columnIndex, ret);
         }
 
@@ -1554,7 +1546,7 @@ public final class JdbcUtil {
             } finally {
                 clob.free();
             }
-        } else if (checkDateType) {
+        } else if (checkDateType && !(rs instanceof ResultSetProxy)) {
             ret = columnConverterByLabel.apply(rs, columnLabel, ret);
         }
 
@@ -1648,7 +1640,7 @@ public final class JdbcUtil {
                             result.add(rs.getDate(columnIndex));
                         } while (rs.next());
                     }
-                } else if ((val instanceof java.sql.Date)) {
+                } else if (val instanceof java.sql.Date) {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
@@ -3751,7 +3743,9 @@ public final class JdbcUtil {
             final long startTime = System.currentTimeMillis();
 
             try {
-                return stmt.executeQuery();
+                // return stmt.executeQuery();
+                // For better performance.
+                return ResultSetProxy.wrap(stmt.executeQuery());
             } finally {
                 JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
 
@@ -3759,7 +3753,9 @@ public final class JdbcUtil {
             }
         } else {
             try {
-                return stmt.executeQuery();
+                // return stmt.executeQuery();
+                // For better performance.
+                return ResultSetProxy.wrap(stmt.executeQuery());
             } finally {
                 clearParameters(stmt);
             }
@@ -7683,7 +7679,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * List<User> users = JdbcUtil.callInTransaction(dataSource, conn -> {
      *     try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM users")) {
-     *         ResultSet rs = ps.executeQuery();
+     *         ResultSet rs = JdbcUtil.executeQuery(ps);
      *         // Process results
      *         return users;
      *     }
