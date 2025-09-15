@@ -890,11 +890,43 @@ public final class JdbcUtil {
 
     /**
      * Closes the specified Connection.
+     * <p>
+     * <b>Note:</b> This method is deprecated because it directly closes the connection without considering
+     * connection pooling or transaction management. Use {@link #releaseConnection(Connection, javax.sql.DataSource)}
+     * instead to properly handle pooled connections and Spring transaction integration.
+     * <p>
+     * When using connection pools (HikariCP, C3P0, etc.) or Spring transaction management,
+     * directly closing connections can lead to resource leaks and transaction issues.
+     * The preferred approach is to return connections to the pool or let the transaction manager handle them.
      *
-     * @param conn The Connection to close
+     * <p><b>Example (deprecated usage):</b></p>
+     * <pre>{@code
+     * Connection conn = null;
+     * try {
+     *     conn = JdbcUtil.getConnection(dataSource);
+     *     // perform database operations
+     * } finally {
+     *     JdbcUtil.releaseConnection(conn); // Note recommended
+     * }
+     * }</pre>
+     *
+     * <p><b>Recommended alternative:</b></p>
+     * <pre>{@code
+     * Connection conn = null;
+     * try {
+     *     conn = JdbcUtil.getConnection(dataSource);
+     *     // perform database operations
+     * } finally {
+     *     JdbcUtil.releaseConnection(conn, dataSource); // Recommended
+     * }
+     * }</pre>
+     *
+     * @param conn The Connection to close. If {@code null}, no action is taken
      * @throws UncheckedSQLException If a SQL exception occurs while closing the Connection
-     * @deprecated Consider using {@link #releaseConnection(Connection, javax.sql.DataSource)} instead
+     * @deprecated Use {@link #releaseConnection(Connection, javax.sql.DataSource)} instead
      *             to properly handle connection pooling and transaction management
+     * @see #releaseConnection(Connection, javax.sql.DataSource)
+     * @see #getConnection(javax.sql.DataSource)
      */
     @Deprecated
     public static void close(final Connection conn) throws UncheckedSQLException {
@@ -1354,28 +1386,59 @@ public final class JdbcUtil {
             final Class<?> cls = ret.getClass();
             final String className = cls.getName();
 
-            if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
+            if ("oracle.sql.TIMESTAMP".equals(className)) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(),
                         (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());
+            } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
+                converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(), // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue(),
+                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue()); // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
             } else if (className.startsWith("oracle.sql.DATE")) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
-                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
+                    //    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+                    //
+                    //    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                    //        return ((oracle.sql.Datum) val).timestampValue();
+                    //    } else {
+                    //        return ((oracle.sql.Datum) val).dateValue();
+                    //    }
 
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        return ((oracle.sql.Datum) val).timestampValue();
-                    } else {
-                        return ((oracle.sql.Datum) val).dateValue();
-                    }
+                    return ((oracle.sql.Datum) val).timestampValue();
                 }, (rs, columnLabel, val) -> {
-                    final ResultSetMetaData metaData = rs.getMetaData();
-                    final int columnIndex = getColumnIndex(metaData, columnLabel);
-                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
+                    //    final ResultSetMetaData metaData = rs.getMetaData();
+                    //    final int columnIndex = getColumnIndex(metaData, columnLabel);
+                    //    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+                    //    
+                    //    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+                    //        return ((oracle.sql.Datum) val).timestampValue();
+                    //    } else {
+                    //        return ((oracle.sql.Datum) val).dateValue();
+                    //    }
 
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        return ((oracle.sql.Datum) val).timestampValue();
-                    } else {
-                        return ((oracle.sql.Datum) val).dateValue();
-                    }
+                    return ((oracle.sql.Datum) val).timestampValue();
+                });
+            } else if ((ret instanceof java.sql.Date)) {
+                converterTP = Tuple.of((rs, columnIndex, val) -> {
+                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
+                    //    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+                    //
+                    //    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                    //        return rs.getTimestamp(columnIndex);
+                    //    }
+
+                    return val;
+                }, (rs, columnLabel, val) -> {
+                    // The following code is commented out because it causes performance degradation in Oracle JDBC driver.
+                    //    final ResultSetMetaData metaData = rs.getMetaData();
+                    //    final int columnIndex = getColumnIndex(metaData, columnLabel);
+                    //    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+                    //
+                    //    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                    //        return rs.getTimestamp(columnIndex);
+                    //    }
+
+                    return val;
                 });
             } else {
                 converterTP = Tuple.of((rs, columnIndex, val) -> val, (rs, columnLabel, val) -> val);
@@ -1461,21 +1524,14 @@ public final class JdbcUtil {
      * @return The value of the specified column in the current row of the ResultSet
      * @throws SQLException If a SQL exception occurs while retrieving the column value
      * @deprecated Please consider using {@link #getColumnValue(ResultSet, int)} instead
+     *            to avoid the overhead of looking up column index by label each time.
+     * @see #getColumnValue(ResultSet, int)           
      */
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws SQLException {
         return getColumnValue(rs, columnLabel, true);
     }
 
-    /**
-     *
-     * @param rs
-     * @param columnLabel
-     * @param checkDateType
-     * @return
-     * @throws SQLException
-     * @deprecated use {@link #getColumnValue(ResultSet, int, boolean)}
-     */
     @Deprecated
     static Object getColumnValue(final ResultSet rs, final String columnLabel, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -1575,7 +1631,7 @@ public final class JdbcUtil {
             } else {
                 final String className = val.getClass().getName();
 
-                if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className)) {
+                if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
                     do {
                         result.add(rs.getTimestamp(columnIndex));
                     } while (rs.next());
