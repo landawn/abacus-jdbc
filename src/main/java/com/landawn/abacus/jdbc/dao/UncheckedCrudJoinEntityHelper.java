@@ -103,7 +103,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * }</pre>
      *
      * @param id the entity ID
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return an Optional containing the entity with loaded join entities, or empty if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
@@ -186,7 +186,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param selectPropNames the properties to select from the main entity, or null for all
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return an Optional containing the entity with selected properties and loaded join entities
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
@@ -243,7 +243,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * }</pre>
      *
      * @param id the entity ID
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return the entity with loaded join entities, or null if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
@@ -346,7 +346,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param selectPropNames the properties to select from the main entity, or null for all
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return the entity with selected properties and loaded join entities, or null if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
@@ -403,7 +403,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * }</pre>
      *
      * @param ids the collection of entity IDs
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return a list of entities with loaded join entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
@@ -486,7 +486,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, or null for all
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return a list of entities with selected properties and loaded join entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
@@ -602,7 +602,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, or null for all
      * @param batchSize the size of each batch for processing
-     * @param includeAllJoinEntities true to load all join entities, false to load none
+     * @param includeAllJoinEntities true to load all join entities, {@code false} to load none
      * @return a list of entities with selected properties and loaded join entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs

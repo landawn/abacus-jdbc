@@ -244,7 +244,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param query the SQL query string
-     * @param generateKeys true to return generated keys, false otherwise
+     * @param generateKeys true to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -808,7 +808,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the condition to check
-     * @return true if at least one matching record exists
+     * @return {@code true} if at least one matching record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      */
@@ -825,7 +825,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param cond the condition to check
-     * @return true if no matching records exist
+     * @return {@code true} if no matching records exist
      * @throws SQLException if a database access error occurs
      */
     @Beta

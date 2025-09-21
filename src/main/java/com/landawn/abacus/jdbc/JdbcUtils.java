@@ -1524,7 +1524,7 @@ public final class JdbcUtils {
      * This method allows selective import of CSV rows based on a filter predicate.
      *
      * <p>The filter predicate is applied to each CSV row (as a String array) before import.
-     * Only rows for which the filter returns true will be imported to the database.</p>
+     * Only rows for which the filter returns {@code true} will be imported to the database.</p>
      *
      * <p>Example usage:</p>
      * <pre>{@code

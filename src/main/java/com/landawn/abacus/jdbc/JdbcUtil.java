@@ -4461,7 +4461,7 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result extracted from the ResultSet
      * @param resultSet the ResultSet to create a stream from
-     * @param rowFilter the RowFilter to apply while filtering rows. Only rows for which this filter returns true will be included
+     * @param rowFilter the RowFilter to apply while filtering rows. Only rows for which this filter returns {@code true} will be included
      * @param rowMapper the RowMapper to apply while extracting data from filtered rows
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
@@ -6975,7 +6975,7 @@ public final class JdbcUtil {
 
     /**
      * Checks if the given value is null or equals the default value for its type.
-     * Default values are: 0 for numeric types, false for boolean, empty for collections/maps,
+     * Default values are: 0 for numeric types, {@code false} for boolean, empty for collections/maps,
      * and null for reference types.
      *
      * <h3>Example:</h3>

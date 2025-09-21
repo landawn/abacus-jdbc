@@ -7701,7 +7701,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * System.out.println("Premium users with positive balance: " + premiumCount);
      * }</pre>
      *
-     * @param rowFilter The filter to apply to each row. Only rows where this returns true are counted. Must not be null.
+     * @param rowFilter The filter to apply to each row. Only rows where this returns {@code true} are counted. Must not be null.
      * @return The count of rows that match the filter
      * @throws IllegalArgumentException If rowFilter is null
      * @throws IllegalStateException If this query is closed

@@ -311,8 +311,7 @@ final class ResultSetProxy implements ResultSet {
                 return ret;
             }
 
-            if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean || ret instanceof Blob
-                    || ret instanceof Clob) {
+            if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean) {
                 columnGetters[columnIndex] = ColumnGetter.GET_OBJECT;
             } else {
                 if (metadata == null) {
@@ -378,8 +377,7 @@ final class ResultSetProxy implements ResultSet {
                 return ret;
             }
 
-            if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean || ret instanceof Blob
-                    || ret instanceof Clob) {
+            if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean) {
                 getter = rs -> rs.getObject(columnIndex);
             } else {
                 if (metadata == null) {

@@ -2117,7 +2117,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <R> the type of the result returned by the function
      * @param getter the bi-function to apply. The first parameter is the executed CallableStatement,
-     *               the second parameter is true if the first result is a ResultSet, false otherwise
+     *               the second parameter is true if the first result is a ResultSet, {@code false} otherwise
      * @return the result of applying the bi-function
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
