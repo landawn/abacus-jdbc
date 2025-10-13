@@ -128,7 +128,7 @@ public final class DBLock {
 
     private final String refreshSQL;
 
-    private boolean isClosed = false;
+    private volatile boolean isClosed = false;
 
     /**
      * Constructs a new DBLock instance with the specified data source and table name.
@@ -183,12 +183,26 @@ public final class DBLock {
                     final Connection refreshConn = JdbcUtil.getConnection(ds);
                     try {
                         for (final Map.Entry<String, String> entry : m.entrySet()) {
-                            JdbcUtil.executeUpdate(refreshConn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), m.get(entry.getKey()));
+                            final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), entry.getValue());
+
+                            // Remove from pool if lock no longer exists in DB
+                            if (updated == 0) {
+                                targetCodePool.remove(entry.getKey(), entry.getValue());
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("Removed stale lock from pool: " + entry.getKey());
+                                }
+                            }
                         }
                     } catch (final SQLException e) {
-                        throw new UncheckedSQLException(e);
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("Failed to refresh locks", e);
+                        }
                     } finally {
                         JdbcUtil.releaseConnection(refreshConn, ds);
+                    }
+                } catch (final Exception e) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Error in refresh task", e);
                     }
                 } finally {
                     Objectory.recycle(m);
@@ -297,6 +311,9 @@ public final class DBLock {
 
         Timestamp now = DateUtil.currentTimestamp();
         final long endTime = now.getTime() + timeout;
+        int attempts = 0;
+        final int maxAttempts = (int) (timeout / Math.max(retryPeriod, 1)) + 1000; // Safeguard against infinite loop
+        Exception lastException = null;
 
         do {
             try {
@@ -307,7 +324,10 @@ public final class DBLock {
                     return code;
                 }
             } catch (final Exception e) {
-                // ignore;
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Failed to acquire lock for target: " + target, e);
+                }
+                lastException = e;
             }
 
             if (retryPeriod > 0) {
@@ -315,7 +335,12 @@ public final class DBLock {
             }
 
             now = DateUtil.currentTimestamp();
-        } while (endTime > now.getTime());
+            attempts++;
+        } while (endTime > now.getTime() && attempts < maxAttempts);
+
+        if (lastException != null && logger.isWarnEnabled()) {
+            logger.warn("Failed to acquire lock for target: " + target + " after timeout", lastException);
+        }
 
         return null;
     }

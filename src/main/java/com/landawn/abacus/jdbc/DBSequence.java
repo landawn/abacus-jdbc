@@ -128,7 +128,7 @@ public final class DBSequence {
         }
 
         if (seqBufferSize <= 0) {
-            throw new IllegalArgumentException("startVal must be greater than 0");
+            throw new IllegalArgumentException("seqBufferSize must be greater than 0");
         }
 
         querySQL = "SELECT next_val FROM " + tableName + " WHERE seq_name = ?"; //NOSONAR
@@ -261,12 +261,16 @@ public final class DBSequence {
      */
     @SuppressWarnings("hiding")
     public void reset(final long startVal, final int seqBufferSize) {
-        this.seqBufferSize = seqBufferSize;
+        synchronized (seqName) { //NOSONAR
+            this.seqBufferSize = seqBufferSize;
+            this.lowSeqId.set(startVal);
+            this.highSeqId.set(startVal);
 
-        try {
-            JdbcUtil.executeUpdate(ds, resetSQL, startVal, DateUtil.currentTimestamp(), seqName);
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
+            try {
+                JdbcUtil.executeUpdate(ds, resetSQL, startVal, DateUtil.currentTimestamp(), seqName);
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
         }
     }
 }

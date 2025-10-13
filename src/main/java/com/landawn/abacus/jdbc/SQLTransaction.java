@@ -16,9 +16,10 @@ package com.landawn.abacus.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Deque;
 import java.util.Map;
-import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -82,9 +83,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private final AtomicInteger _refCount = new AtomicInteger(); //NOSONAR
 
-    private final Stack<IsolationLevel> _isolationLevelStack = new Stack<>(); //NOSONAR
+    private final Deque<IsolationLevel> _isolationLevelStack = new ConcurrentLinkedDeque<>(); //NOSONAR
 
-    private final Stack<Boolean> _isForUpdateOnlyStack = new Stack<>(); //NOSONAR
+    private final Deque<Boolean> _isForUpdateOnlyStack = new ConcurrentLinkedDeque<>(); //NOSONAR
 
     private IsolationLevel _isolationLevel; //NOSONAR
 
@@ -501,8 +502,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
             logger.debug("Remaining active transactions: {}", threadTransactionMap.values());
         } else if (res > 0) {
-            _isolationLevel = _isolationLevelStack.pop();
-            _isForUpdateOnly = _isForUpdateOnlyStack.pop();
+            // Add safety checks to prevent NoSuchElementException
+            if (!_isolationLevelStack.isEmpty()) {
+                _isolationLevel = _isolationLevelStack.pop();
+            }
+            if (!_isForUpdateOnlyStack.isEmpty()) {
+                _isForUpdateOnly = _isForUpdateOnlyStack.pop();
+            }
 
             if (_conn != null) {
                 try {
