@@ -313,7 +313,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalBoolean containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -333,7 +333,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalChar containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -346,8 +346,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a byte value from a single property of the entity with the specified ID.
      * Returns an empty OptionalByte if no record is found.
      *
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalByte flags = entityDao.queryForByte("flags", entityId);
+     * byte flagValue = flags.orElse((byte) 0);
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalByte containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -360,8 +366,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a short value from a single property of the entity with the specified ID.
      * Returns an empty OptionalShort if no record is found.
      *
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalShort port = serverDao.queryForShort("port", serverId);
+     * short portNumber = port.orElse((short) 8080);
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalShort containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -381,7 +393,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalInt containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -401,7 +413,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalLong containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -414,8 +426,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a float value from a single property of the entity with the specified ID.
      * Returns an empty OptionalFloat if no record is found.
      *
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * OptionalFloat rating = productDao.queryForFloat("rating", productId);
+     * float productRating = rating.orElse(0.0f);
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalFloat containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -435,7 +453,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return an OptionalDouble containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -455,7 +473,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return a Nullable containing the String value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -475,7 +493,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return a Nullable containing the Date value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -489,7 +507,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Returns a Nullable containing the value, which can be null if the database value is null.
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return a Nullable containing the Time value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -509,7 +527,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return a Nullable containing the Timestamp value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -530,7 +548,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @return a Nullable containing the byte array value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -551,7 +569,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param <V> the type of the value to retrieve
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
@@ -573,7 +591,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param <V> the type of the value to retrieve
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
@@ -595,7 +613,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param <V> the type of the value to retrieve
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
@@ -620,7 +638,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param <V> the type of the value to retrieve
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the unique value if found, otherwise empty
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
@@ -639,7 +657,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param <V> the type of the value to retrieve
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the unique non-null value if found, otherwise empty
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
@@ -657,7 +675,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param <V> the type of the value to retrieve
      * @param singleSelectPropName the property name to select
-     * @param id the ID of the entity
+     * @param id the entity ID
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
@@ -680,7 +698,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * user.ifPresent(u -> System.out.println("Found user: " + u.getName()));
      * }</pre>
      *
-     * @param id the ID of the entity to retrieve
+     * @param id the entity ID to retrieve
      * @return an Optional containing the entity if found, otherwise empty
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -699,7 +717,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Optional<User> user = userDao.get(userId, Arrays.asList("id", "name", "email"));
      * }</pre>
      *
-     * @param id the ID of the entity to retrieve
+     * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities. 
      *                        All properties will be selected if null
      * @return an Optional containing the entity if found, otherwise empty
@@ -722,7 +740,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the ID of the entity to retrieve
+     * @param id the entity ID to retrieve
      * @return the entity if found, otherwise null
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
@@ -733,7 +751,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves an entity by its ID with only selected properties populated, returning null if not found.
      * This is useful for performance optimization when you only need specific fields.
      *
-     * @param id the ID of the entity to retrieve
+     * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities. 
      *                        All properties will be selected if null
      * @return the entity if found, otherwise null
@@ -823,7 +841,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the ID to check for existence
+     * @param id the entity ID to check for existence
      * @return {@code true} if an entity with the given ID exists, {@code false} otherwise
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#exists()
@@ -841,7 +859,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the ID to check for non-existence
+     * @param id the entity ID to check for non-existence
      * @return {@code true} if no entity with the given ID exists, {@code false} otherwise
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#notExists()
@@ -920,7 +938,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
-     * @param id the ID of the entity to update
+     * @param id the entity ID to update
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
      */
@@ -945,7 +963,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param updateProps a map of property names to their new values
-     * @param id the ID of the entity to update
+     * @param id the entity ID to update
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
      */
@@ -1445,7 +1463,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the ID of the entity to delete
+     * @param id the entity ID to delete
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws SQLException if a database access error occurs
      */

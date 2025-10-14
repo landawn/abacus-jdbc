@@ -113,7 +113,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param propName the name of the property to update
      * @param propValue the new value for the property
-     * @param id the ID of the entity to update
+     * @param id the entity ID to update
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -130,7 +130,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param updateProps a map of property names to their new values
-     * @param id the ID of the entity to update
+     * @param id the entity ID to update
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -352,7 +352,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param id the ID of the entity to delete
+     * @param id the entity ID to delete
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
