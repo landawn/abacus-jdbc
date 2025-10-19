@@ -24,9 +24,6 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.OP;
 import com.landawn.abacus.util.RegExUtil;
-import com.mysql.cj.x.protobuf.MysqlxCrud.Delete;
-import com.mysql.cj.x.protobuf.MysqlxCrud.Insert;
-import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
 
 /**
  * Defines a generic SQL query operation for a DAO method.
