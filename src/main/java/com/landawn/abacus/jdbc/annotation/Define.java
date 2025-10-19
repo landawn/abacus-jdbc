@@ -87,8 +87,7 @@ import java.lang.annotation.Target;
  * 
  * @see DefineList
  * @see Bind
- * @see Select#hasDefineWithNamedParameter()
- * @see Update#hasDefineWithNamedParameter()
+ * @see Query#hasDefineWithNamedParameter()
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })

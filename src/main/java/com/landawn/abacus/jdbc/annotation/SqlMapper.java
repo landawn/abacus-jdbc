@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  * inline annotations, promoting better separation of concerns and easier SQL maintenance.
  * 
  * <p>The SQL mapper XML file contains named SQL statements that can be referenced
- * by their IDs in DAO method annotations using {@link Select#id()}, {@link Update#id()}, etc.</p>
+ * by their IDs in DAO method annotations using {@link Query#id()}, {@link Query#id()}, etc.</p>
  * 
  * <p>Benefits of using external SQL mappers:</p>
  * <ul>
@@ -68,8 +68,7 @@ import java.lang.annotation.Target;
  * </sqlMapper>
  * }</pre>
  * 
- * @see Select#id()
- * @see Update#id()
+ * @see Query#id()
  * @see SqlField
  */
 @Retention(RetentionPolicy.RUNTIME)

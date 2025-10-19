@@ -5403,7 +5403,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException If a database access error occurs
      * @see #queryForUniqueResult(Class)
-     * @see #queryforUniqueNonNull(Class)
+     * @see #queryForUniqueNonNull(Class)
      */
     public Optional<Map<String, Object>> findOnlyOne() throws DuplicatedResultException, SQLException {
         return findOnlyOne(Jdbc.BiRowMapper.TO_MAP);
@@ -5431,7 +5431,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException If a database access error occurs
      * @see #queryForUniqueResult(Class)
-     * @see #queryforUniqueNonNull(Class)
+     * @see #queryForUniqueNonNull(Class)
      */
     public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(targetType));
@@ -5672,7 +5672,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return An {@code Optional} containing the first result as a map, or empty if no result is found
      * @throws SQLException If a database access error occurs
      * @see #queryForUniqueResult(Class)
-     * @see #queryforUniqueNonNull(Class)
+     * @see #queryForUniqueNonNull(Class)
      */
     public Optional<Map<String, Object>> findFirst() throws SQLException {
         return findFirst(Jdbc.BiRowMapper.TO_MAP);
@@ -5698,7 +5698,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws SQLException If a database access error occurs
      * @see #queryForUniqueResult(Class)
-     * @see #queryforUniqueNonNull(Class)
+     * @see #queryForUniqueNonNull(Class)
      */
     public <T> Optional<T> findFirst(final Class<? extends T> targetType) throws NullPointerException, SQLException {
         return Optional.ofNullable(findFirstOrNull(targetType));
