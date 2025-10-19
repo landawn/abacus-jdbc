@@ -82,7 +82,7 @@ import com.landawn.abacus.util.RegExUtil;
  *
  *     // Dynamic SQL with Define parameters
  *     @Query(value = "SELECT * FROM {table} WHERE {column} = :value",
- *            hasDefineWithNamedParameter = true)
+ *            defineIncludesNamedParams = true)
  *     List<Map<String, Object>> dynamicQuery(@Define("table") String table,
  *                                           @Define("column") String column,
  *                                           @Bind("value") Object value);
@@ -148,7 +148,7 @@ public @interface Query {
      * <p>The SQL can include:</p>
      * <ul>
      *   <li>Named parameters using {@code :paramName} syntax for value binding</li>
-     *   <li>Template variables using {@code {variableName}} syntax when {@link #hasDefineWithNamedParameter()} is {@code true}</li>
+     *   <li>Template variables using {@code {variableName}} syntax when {@link #defineIncludesNamedParams()} is {@code true}</li>
      *   <li>Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.</li>
      *   <li>Database-specific SQL extensions and functions</li>
      * </ul>
@@ -568,7 +568,7 @@ public @interface Query {
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding currently active records
-     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", hasDefineWithNamedParameter = true)
+     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", defineIncludesNamedParams = true)
      * List<Promotion> findActivePromotions(@Define("{whereCause}") String whereCause);
      * findsActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
@@ -579,7 +579,7 @@ public @interface Query {
      * @see DefineList
      */
     @Beta
-    boolean hasDefineWithNamedParameter() default false;
+    boolean defineIncludesNamedParams() default false;
 
     /**
      * Enables automatic timestamp parameter injection for the query.

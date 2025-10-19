@@ -256,7 +256,7 @@ final class DaoImpl {
             final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT") || Strings.startsWithIgnoreCase(sql.trim(), "INSERT");
 
             return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
-                    isInsert, isProcedure, tmp.hasDefineWithNamedParameter());
+                    isInsert, isProcedure, tmp.defineIncludesNamedParams());
         });
     }
 
@@ -6148,7 +6148,7 @@ final class DaoImpl {
 
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
                 final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
-                final boolean isProcedure, final boolean hasDefineWithNamedParameter) {
+                final boolean isProcedure, final boolean defineIncludesNamedParams) {
             this.sql = N.checkArgNotBlank(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
             this.parsedSql = parsedSql == null ? ParsedSql.parse(sql) : parsedSql;
             this.queryTimeout = queryTimeout;
@@ -6161,10 +6161,10 @@ final class DaoImpl {
             this.isSelect = isSelect;
             this.isInsert = isInsert;
             this.isProcedure = isProcedure;
-            isNamedQuery = N.notEmpty(this.parsedSql.getNamedParameters()) || hasDefineWithNamedParameter;
+            isNamedQuery = N.notEmpty(this.parsedSql.getNamedParameters()) || defineIncludesNamedParams;
 
-            if (hasDefineWithNamedParameter && (this.parsedSql.getParameterCount() > 0 && N.isEmpty(this.parsedSql.getNamedParameters()))) {
-                throw new IllegalArgumentException("'hasDefineWithNamedParameter' is set to true for Non-named sql: " + sql);
+            if (defineIncludesNamedParams && (this.parsedSql.getParameterCount() > 0 && N.isEmpty(this.parsedSql.getNamedParameters()))) {
+                throw new IllegalArgumentException("'defineIncludesNamedParams' is set to true for Non-named sql: " + sql);
             }
         }
     }
