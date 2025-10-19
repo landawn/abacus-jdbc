@@ -216,9 +216,8 @@ final class DaoImpl {
             }
 
             if (N.notEmpty(tmp.id()) && Stream.of(tmp.id()).anyMatch(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches())) {
-                throw new IllegalArgumentException(
-                        "Invalid query identifiers. Query ids don't match java identitfier spec: "
-                                + Stream.of(tmp.id()).filter(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches()).toList());
+                throw new IllegalArgumentException("Invalid query identifiers. Query ids don't match java identitfier specification: "
+                        + Stream.of(tmp.id()).filter(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches()).toList());
             }
 
             if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
@@ -252,8 +251,10 @@ final class DaoImpl {
                 }
             }
 
-            final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT") || Strings.startsWithIgnoreCase(sql.trim(), "SELECT");
-            final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT") || Strings.startsWithIgnoreCase(sql.trim(), "INSERT");
+            final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT ") || Strings.startsWithIgnoreCase(sql.trim(), "SELECT ");
+            final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT ") || Strings.startsWithIgnoreCase(sql.trim(), "INSERT ")
+                    || ((Strings.startsWithIgnoreCase(sql, "WITH ") || Strings.startsWithIgnoreCase(sql.trim(), "WITH "))
+                            && Strings.containsIgnoreCase(sql, " INSERT ") && Strings.containsIgnoreCase(sql, " INTO "));
 
             return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
                     isInsert, isProcedure, tmp.defineIncludesNamedParams());
@@ -1733,6 +1734,12 @@ final class DaoImpl {
             newSQLMapper.add(entry.getKey(), ParsedSql.parse(entry.getValue()));
         }
 
+        if (Stream.of(newSQLMapper.keySet()).anyMatch(key -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(key).matches())) {
+            throw new IllegalArgumentException(
+                    "Invalid query identifiers for Dao interface: " + daoClassName + ". Query ids don't match java identitfier specification: "
+                            + Stream.of(newSQLMapper.keySet()).filter(key -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(key).matches()).toList());
+        }
+
         final java.lang.reflect.Type[] typeArguments = Stream.of(allInterfaces)
                 .filter(it -> N.notEmpty(it.getGenericInterfaces()) && it.getGenericInterfaces()[0] instanceof ParameterizedType)
                 .map(it -> ((ParameterizedType) it.getGenericInterfaces()[0]).getActualTypeArguments())
@@ -2153,14 +2160,14 @@ final class DaoImpl {
             if (N.notEmpty(sqls)) {
                 if (Modifier.isAbstract(method.getModifiers())) {
                     throw new UnsupportedOperationException(
-                            "Annotation @Query with multiple values or ids is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+                            "Annotation @Query with multiple values or ids is only supported by interface methods with default implementation, not supported by abstract method: "
                                     + fullClassMethodName);
                 }
 
                 if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
                     throw new UnsupportedOperationException(
                             "To support multiple values or ids binding by @Query, the type of last parameter must be: String... sqls. It can't be : "
-                                    + paramTypes[paramLen - 1] + " on method: " + fullClassMethodName);
+                                    + paramTypes[paramLen - 1] + " in method: " + fullClassMethodName);
                 }
             }
 
