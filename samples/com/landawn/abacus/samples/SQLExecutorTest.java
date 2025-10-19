@@ -13,9 +13,6 @@
  */
 package com.landawn.abacus.samples;
 
-/**
- * All I want to do is: insert -> read -> update -> delete a record in DB table.
- */
 public class SQLExecutorTest {
 
     //    @Test

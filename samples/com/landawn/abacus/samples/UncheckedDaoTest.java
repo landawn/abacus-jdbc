@@ -322,11 +322,6 @@ public class UncheckedDaoTest {
 
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @SuppressWarnings("deprecation")
     @Test
     public void test_readOnlyDao() throws SQLException {
@@ -513,11 +508,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_stream() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -568,11 +558,6 @@ public class UncheckedDaoTest {
         assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user1 where id = ? ", 101));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     @SuppressWarnings("deprecation")
     public void crud_joinedBy() throws SQLException {
@@ -622,11 +607,6 @@ public class UncheckedDaoTest {
         uncheckedUserDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void crud_joinedBy_2() throws SQLException {
         final List<User> users = new ArrayList<>();
@@ -688,11 +668,6 @@ public class UncheckedDaoTest {
         SQLParser.parse(sql).forEach(Fn.println());
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void crud_many_to_many() throws SQLException {
 

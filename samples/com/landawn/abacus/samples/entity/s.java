@@ -2,9 +2,6 @@ package com.landawn.abacus.samples.entity;
 
 import java.util.List;
 
-/**
- * Auto-generated class for property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
- */
 public interface s { // NOSONAR
 
     /** Property(field) name {@code "address"} for classes: {@code [ImmutableUser, User]} */
@@ -91,9 +88,6 @@ public interface s { // NOSONAR
     /** Unmodifiable property(field) name list for class: {@code "EmployeeProject"}. */
     List<String> employeeProjectPropNameList = List.of(employeeId, projectId);
 
-    /**
-     * Auto-generated class for lower case property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
-     */
     public interface sl { // NOSONAR
 
         /** Property(field) name in lower case concatenated with underscore: {@code "address"} for classes: {@code [ImmutableUser, User]} */
@@ -182,9 +176,6 @@ public interface s { // NOSONAR
 
     }
 
-    /**
-     * Auto-generated class for upper case property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
-     */
     public interface su { // NOSONAR
 
         /** Property(field) name in upper case concatenated with underscore: {@code "ADDRESS"} for classes: {@code [ImmutableUser, User]} */
@@ -273,9 +264,6 @@ public interface s { // NOSONAR
 
     }
 
-    /**
-     * Auto-generated class for function property(field) name table for classes: {@code [Address, Device, Employee, EmployeeProject, ImmutableUser, Project, User]}
-     */
     public interface f { // NOSONAR
 
         /** Function property(field) name {@code "min(city)"} for classes: {@code [Address]} */

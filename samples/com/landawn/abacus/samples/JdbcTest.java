@@ -62,9 +62,6 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
 
-/**
- * CRUD: insert -> read -> update -> delete a record in DB table.
- */
 public class JdbcTest {
     static {
         HandlerFactory.register("handler1", HandlerFactory.create(
@@ -245,11 +242,6 @@ public class JdbcTest {
 
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_perf_log() throws SQLException {
         // JdbcUtil.setMinExecutionTimeForSqlPerfLog(1);
@@ -274,11 +266,6 @@ public class JdbcTest {
 
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void crud_by_Jdbc() throws SQLException {
         Connection conn = null;
@@ -359,11 +346,6 @@ public class JdbcTest {
         // A lot of efforts will have to be paid to write the codes and maintain (add/update/delete/rename/... tables/columns).
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     // A bit(lot of?) improvements:
     @Test
     public void crud_by_PreparedQuery() throws SQLException {
@@ -402,11 +384,6 @@ public class JdbcTest {
         // But still need to manually set parameters to Statement.
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void crud_by_Dao() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -428,11 +405,6 @@ public class JdbcTest {
         // See last sample.
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void crud_by_UsreDao12() throws SQLException {
         userDao12.delete(CF.alwaysTrue());
@@ -459,11 +431,6 @@ public class JdbcTest {
         // See last sample.
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_transaction() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -505,11 +472,6 @@ public class JdbcTest {
 
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_page() throws SQLException {
 

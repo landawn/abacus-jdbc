@@ -216,11 +216,6 @@ public class DaoTest {
     //        assertEquals(0, userDao.count(ids));
     //    }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_distinct() throws SQLException {
         final List<User> users = new ArrayList<>();
@@ -248,11 +243,6 @@ public class DaoTest {
         assertEquals(0, userDao.count(ids));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_count() throws SQLException {
         final List<User> users = new ArrayList<>();
@@ -529,11 +519,6 @@ public class DaoTest {
     //        assertEquals(N.asList(sql), userDao.getCachedSqls("selectById"));
     //    }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_orderBy() throws SQLException {
         JdbcUtil.enableSqlLog();
@@ -557,11 +542,6 @@ public class DaoTest {
         assertFalse(userDao.exists(id));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_cache() throws SQLException {
         final User user = User.builder().firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -584,11 +564,6 @@ public class DaoTest {
         userDao.delete(userFromDB);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_handler() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -611,11 +586,6 @@ public class DaoTest {
         assertFalse(userDao.exists(userFromDB.getId()));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_sql_log() throws SQLException {
 
@@ -645,11 +615,6 @@ public class DaoTest {
         });
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_operation_log() throws SQLException {
 
@@ -659,11 +624,6 @@ public class DaoTest {
         userDao.delete_propagation_SUPPORTS(100);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_propagation() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -711,11 +671,6 @@ public class DaoTest {
     //        assertFalse(userDao.exists(id));
     //    }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_batch() throws SQLException {
 
@@ -742,11 +697,6 @@ public class DaoTest {
         assertEquals(0, N.sum(userDao.batchDeleteByIds_2(ids)));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_save_insert() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -771,11 +721,6 @@ public class DaoTest {
         assertFalse(userDao.exists(id));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_save_insert_2() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -796,11 +741,6 @@ public class DaoTest {
         assertFalse(userDao2.exists(id));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @SuppressWarnings("deprecation")
     @Test
     public void test_readOnlyDao() throws SQLException {
@@ -857,11 +797,6 @@ public class DaoTest {
         userDao.delete(user);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_update() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -902,11 +837,6 @@ public class DaoTest {
         assertFalse(userDao.exists(id));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_queryForSingle() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -936,11 +866,6 @@ public class DaoTest {
         assertFalse(userDao.exists(id));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_batchGet() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -972,11 +897,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_batchDelete() throws SQLException {
         User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -1010,11 +930,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_findFirst() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -1049,11 +964,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_list() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -1113,11 +1023,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_stream() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -1169,11 +1074,6 @@ public class DaoTest {
         assertEquals(1, JdbcUtil.executeUpdate(dataSource, "delete from user1 where id = ? ", 101));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     @SuppressWarnings("deprecation")
     public void test_query_with_sub_entity_property() throws SQLException {
@@ -1209,11 +1109,6 @@ public class DaoTest {
         userDao.delete(user);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     @SuppressWarnings("deprecation")
     public void test_mergedBy() throws SQLException {
@@ -1254,11 +1149,6 @@ public class DaoTest {
         userDao.delete(user);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     @SuppressWarnings("deprecation")
     public void test_joinedBy() throws SQLException {
@@ -1311,11 +1201,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_joinedBy_2() throws SQLException {
         final List<User> users = new ArrayList<>();
@@ -1377,11 +1262,6 @@ public class DaoTest {
         SQLParser.parse(sql).forEach(Fn.println());
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_many_to_many() throws SQLException {
 
@@ -1477,11 +1357,6 @@ public class DaoTest {
         assertNull(employeeProjectDao.gett(entityId));
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_mergedEntity() throws SQLException {
         final Employee employee = Employee.builder().employeeId(100).firstName("Forrest").lastName("Gump").build();
@@ -1530,11 +1405,6 @@ public class DaoTest {
         employeeProjectDao.delete(CF.alwaysTrue());
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_innerHandler() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -1545,11 +1415,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_toDisposableObjArray() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
@@ -1570,11 +1435,6 @@ public class DaoTest {
         userDao.deleteById(100L);
     }
 
-    /**
-     *
-     *
-     * @throws SQLException
-     */
     @Test
     public void test_myUserDao() throws SQLException {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();

@@ -36,9 +36,6 @@ public class Account {
     @Column("CREATE_TIME")
     private java.sql.Timestamp createTime;
 
-    /**
-     * Auto-generated class for property(field) name table.
-     */
     public interface x { // NOSONAR
 
         /** Property(field) name {@code "id"} */
