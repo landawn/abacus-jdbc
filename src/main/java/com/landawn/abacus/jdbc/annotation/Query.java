@@ -33,10 +33,6 @@ import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
  * This annotation provides a flexible way to execute any type of SQL statement (SELECT, INSERT, UPDATE, DELETE, or stored procedure calls)
  * with comprehensive configuration options for execution parameters, batching, and result handling.
  *
- * <p>The {@code Query} annotation is a general-purpose alternative to specialized annotations like {@link Select}, {@link Insert},
- * {@link Update}, {@link Delete}, and {@link Call}. It offers the same capabilities but with a unified interface, making it ideal
- * for scenarios where you want consistent annotation usage across different operation types or when the SQL type might vary dynamically.</p>
- *
  * <p>Key features:</p>
  * <ul>
  *   <li>Support for all SQL statement types (SELECT, INSERT, UPDATE, DELETE)</li>
@@ -257,7 +253,7 @@ public @interface Query {
      * <p>Note: Either {@link #value()} or {@code id} should be specified, but not both.</p>
      *
      * @return the SQL statement ID from the SQL mapper, or empty string if using {@link #value()}
-     * @see RegExUtil.JAVA_IDENTIFIER_MATCHER
+     * @see RegExUtil#JAVA_IDENTIFIER_MATCHER
      */
     String[] id() default {}; // default ""; // id defined SqlMapper
 
@@ -571,6 +567,14 @@ public @interface Query {
     /**
      * Indicates whether the SQL statement contains template variables defined by the {@link Define} or {@link DefineList} annotations
      * that will be replaced with query fragments containing named parameters.
+     * 
+     * <p>Basic examples:</p>
+     * <pre>{@code
+     * // Finding currently active records
+     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", hasDefineWithNamedParameter = true)
+     * List<Promotion> findActivePromotions(@Define("{whereCause}") String whereCause);
+     * findsActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
+     * }</pre>
      *
      * @return {@code true} if template variables defined by {@link Define} or {@link DefineList} will be replaced with query fragments
      *         containing named parameters; {@code false} otherwise
