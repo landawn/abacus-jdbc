@@ -61,7 +61,7 @@ import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
  *     int insertUser(@Bind("name") String name, @Bind("email") String email);
  *
  *     // UPDATE operation
- *     @Query(value = "UPDATE users SET last_login = :now WHERE id = :id", timestamped = true)
+ *     @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id", autoSetSysTimeParam = true)
  *     int updateLastLogin(@Bind("id") Long id);
  *
  *     // DELETE operation
@@ -582,7 +582,7 @@ public @interface Query {
 
     /**
      * Enables automatic timestamp parameter injection for the query.
-     * When {@code true}, a named parameter {@code :now} is automatically set to the current system timestamp
+     * When {@code true}, named parameters {@code :sysTime} or {@code :now} are automatically set to the current system timestamp and named parameters {@code :sysDate} are automatically set to the current system date,
      * without requiring it to be passed as a method parameter.
      *
      * <p>This feature is useful for:</p>
@@ -600,20 +600,20 @@ public @interface Query {
      * <pre>{@code
      * // Finding currently active records
      * @Query(value = "SELECT * FROM promotions " +
-     *               "WHERE start_date <= :now AND end_date >= :now",
-     *        timestamped = true)
+     *               "WHERE start_date <= :sysTime AND end_date >= :sysDate",
+     *        autoSetSysTimeParam = true)
      * List<Promotion> findActivePromotions();
-     * // :now is automatically set to current timestamp
+     * // :sysTime is automatically set to current date
      *
      * // Audit logging
      * @Query(value = "INSERT INTO audit_log (action, user_id, timestamp) " +
-     *               "VALUES (:action, :userId, :now)",
-     *        timestamped = true)
+     *               "VALUES (:action, :userId, :sysTime)",
+     *        autoSetSysTimeParam = true)
      * int logAction(@Bind("action") String action, @Bind("userId") Long userId);
      *
      * // Updating with timestamp
-     * @Query(value = "UPDATE users SET last_login = :now WHERE id = :id",
-     *        timestamped = true)
+     * @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id",
+     *        autoSetSysTimeParam = true)
      * int updateLastLogin(@Bind("id") Long id);
      * }</pre>
      *
@@ -621,59 +621,59 @@ public @interface Query {
      * <pre>{@code
      * // Complex time-based filtering
      * @Query(value = "SELECT e.* FROM events e " +
-     *               "WHERE e.start_time <= :now " +
-     *               "  AND e.end_time >= :now " +
+     *               "WHERE e.start_time <= :sysTime " +
+     *               "  AND e.end_time >= :sysTime " +
      *               "  AND e.category = :category",
-     *        timestamped = true)
+     *        autoSetSysTimeParam = true)
      * List<Event> findCurrentEvents(@Bind("category") String category);
      *
      * // Combining with other parameters
      * @Query(value = "SELECT * FROM subscriptions " +
      *               "WHERE user_id = :userId " +
-     *               "  AND start_date <= :now " +
-     *               "  AND (end_date IS NULL OR end_date >= :now)",
-     *        timestamped = true)
+     *               "  AND start_date <= :sysTime " +
+     *               "  AND (end_date IS NULL OR end_date >= :sysTime)",
+     *        autoSetSysTimeParam = true)
      * List<Subscription> findActiveSubscriptions(@Bind("userId") Long userId);
      *
      * // Data archival based on current time
      * @Query(value = "INSERT INTO archive_logs " +
-     *               "SELECT *, :now as archived_at FROM logs " +
+     *               "SELECT *, :sysTime as archived_at FROM logs " +
      *               "WHERE created_date < :cutoffDate",
-     *        timestamped = true)
+     *        autoSetSysTimeParam = true)
      * int archiveOldLogs(@Bind("cutoffDate") Date cutoffDate);
      *
      * // Scheduled task execution tracking
      * @Query(value = "UPDATE scheduled_tasks " +
-     *               "SET last_run = :now, next_run = :now + INTERVAL :intervalMinutes MINUTE " +
+     *               "SET last_run = :sysTime, next_run = :sysTime + INTERVAL :intervalMinutes MINUTE " +
      *               "WHERE task_id = :taskId",
-     *        timestamped = true)
+     *        autoSetSysTimeParam = true)
      * int updateTaskExecution(@Bind("taskId") String taskId,
      *                        @Bind("intervalMinutes") int interval);
      * }</pre>
      *
      * <p>Multiple timestamp usage:</p>
      * <pre>{@code
-     * // Using :now multiple times in the same query
+     * // Using :sysTime multiple times in the same query
      * @Query(value = "INSERT INTO user_sessions (user_id, created_at, last_activity) " +
-     *               "VALUES (:userId, :now, :now)",
-     *        timestamped = true)
+     *               "VALUES (:userId, :sysTime, :sysTime)",
+     *        autoSetSysTimeParam = true)
      * int createSession(@Bind("userId") Long userId);
      *
      * // Combining automatic and manual timestamps
      * @Query(value = "SELECT * FROM bookings " +
      *               "WHERE booking_date >= :startDate " +
-     *               "  AND booking_date <= :now",
-     *        timestamped = true)
+     *               "  AND booking_date <= :sysDate",
+     *        autoSetSysTimeParam = true)
      * List<Booking> findBookingsSince(@Bind("startDate") Date startDate);
      * }</pre>
      *
      * <p>Important considerations:</p>
      * <ul>
-     *   <li>The {@code :now} parameter is set once when the query is executed, ensuring consistency across the query</li>
+     *   <li>The {@code :sysTime} parameter is set once when the query is executed, ensuring consistency across the query</li>
      *   <li>The timestamp is obtained from the application server's system time, not the database server</li>
      *   <li>For database server time, use SQL functions like {@code CURRENT_TIMESTAMP} or {@code NOW()} instead</li>
      *   <li>The timestamp format and precision depend on the database column type and JDBC driver</li>
-     *   <li>Cannot manually override the {@code :now} parameter when this is enabled</li>
+     *   <li>Cannot manually override the {@code :sysTime} parameter when this is enabled</li>
      * </ul>
      *
      * <p>When not to use this feature:</p>
@@ -684,11 +684,11 @@ public @interface Query {
      *   <li>When you need different timestamps for different parts of a complex operation</li>
      * </ul>
      *
-     * @return {@code true} to automatically inject current timestamp as {@code :now} parameter;
+     * @return {@code true} to automatically inject current timestamp/date as {@code :sysTime/sysDate} parameter;
      *         {@code false} (default) for no automatic timestamp injection
      */
     @Beta
-    boolean timestamped() default false;
+    boolean autoSetSysTimeParam() default false;
 
     /**
      * Specifies the query timeout in seconds.

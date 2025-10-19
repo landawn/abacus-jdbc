@@ -74,7 +74,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @param user
      * @throws SQLException
      */
-    @Query(value = "INSERT INTO `user1` (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :now)", timestamped = true)
+    @Query(value = "INSERT INTO `user1` (id, first_name, last_name, email, create_time) VALUES (:id, :firstName, :lastName, :email, :sysTime)", autoSetSysTimeParam = true)
     void insertWithId(User user) throws SQLException;
 
     /**
@@ -121,7 +121,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
      * @return
      * @throws SQLException
      */
-    @Query(value = "INSERT INTO user1 (first_name, last_name, email, create_time) VALUES (:firstName, :lastName, :email, :now)", isBatch = true, batchSize = 123, timestamped = true)
+    @Query(value = "INSERT INTO user1 (first_name, last_name, email, create_time) VALUES (:firstName, :lastName, :email, :sysTime)", isBatch = true, batchSize = 123, autoSetSysTimeParam = true)
     List<Long> batchInsertWithoutId(List<User> users) throws SQLException;
 
     /**

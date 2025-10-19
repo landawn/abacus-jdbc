@@ -182,6 +182,8 @@ final class DaoImpl {
     private static final String _1 = "1";
 
     private static final String PN_NOW = "now";
+    private static final String PN_SYS_TIME = "sysTime";
+    private static final String PN_SYS_DATE = "sysDate";
 
     private static final JSONParser jsonParser = ParserFactory.createJSONParser();
     private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
@@ -252,8 +254,8 @@ final class DaoImpl {
             final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT") || Strings.startsWithIgnoreCase(sql.trim(), "SELECT");
             final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT") || Strings.startsWithIgnoreCase(sql.trim(), "INSERT");
 
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.timestamped(), isSelect, isInsert,
-                    isProcedure, tmp.hasDefineWithNamedParameter());
+            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
+                    isInsert, isProcedure, tmp.hasDefineWithNamedParameter());
         });
     }
 
@@ -1244,7 +1246,7 @@ final class DaoImpl {
 
                 final List<String> diffParamNames = N.difference(queryInfo.parsedSql.getNamedParameters(), N.asList(paramNames));
 
-                if (N.notEmpty(diffParamNames) && (diffParamNames.size() > 1 || (diffParamNames.size() == 1 && !diffParamNames.contains(PN_NOW)))) {
+                if (N.notEmpty(diffParamNames) && !N.allMatch(diffParamNames, it -> Strings.equalsAny(it, PN_NOW, PN_SYS_TIME, PN_SYS_DATE))) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", The named parameters in sql are different from the names bound by method parameters: " + diffParamNames);
                 }
@@ -1299,16 +1301,47 @@ final class DaoImpl {
             }
         }
 
-        if (queryInfo.isNamedQuery && queryInfo.timestamped && queryInfo.parsedSql.getNamedParameters().contains(PN_NOW)) {
-            if (parametersSetter == null) {
-                parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(PN_NOW, Dates.currentTimestamp());
-            } else {
-                final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
+        if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
+            if (queryInfo.parsedSql.getNamedParameters().contains(PN_NOW)) {
+                if (parametersSetter == null) {
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                } else {
+                    final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
-                parametersSetter = (preparedQuery, args) -> {
-                    tmp.accept(preparedQuery, args);
-                    ((NamedQuery) preparedQuery).setTimestamp(PN_NOW, Dates.currentTimestamp());
-                };
+                    parametersSetter = (preparedQuery, args) -> {
+                        tmp.accept(preparedQuery, args);
+                        ((NamedQuery) preparedQuery).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                    };
+                }
+
+            }
+
+            if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_TIME)) {
+                if (parametersSetter == null) {
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                } else {
+                    final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
+
+                    parametersSetter = (preparedQuery, args) -> {
+                        tmp.accept(preparedQuery, args);
+                        ((NamedQuery) preparedQuery).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                    };
+                }
+
+            }
+
+            if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_DATE)) {
+                if (parametersSetter == null) {
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setDate(PN_SYS_DATE, Dates.currentDate());
+                } else {
+                    final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
+
+                    parametersSetter = (preparedQuery, args) -> {
+                        tmp.accept(preparedQuery, args);
+                        ((NamedQuery) preparedQuery).setDate(PN_SYS_DATE, Dates.currentDate());
+                    };
+                }
+
             }
         }
 
@@ -1385,11 +1418,25 @@ final class DaoImpl {
             }
 
             if (queryInfo.isBatch) {
-                if (queryInfo.isNamedQuery && queryInfo.timestamped && queryInfo.parsedSql.getNamedParameters().contains(PN_NOW)) {
-                    preparedQuery.configAddBatchAction((q, s) -> {
-                        ((NamedQuery) q).setTimestamp(PN_NOW, Dates.currentTimestamp());
-                        ((PreparedStatement) s).addBatch();
-                    });
+                if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
+                    if (queryInfo.parsedSql.getNamedParameters().contains(PN_NOW)) {
+                        preparedQuery.configAddBatchAction((q, s) -> {
+                            ((NamedQuery) q).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                            ((PreparedStatement) s).addBatch();
+                        });
+                    }
+                    if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_TIME)) {
+                        preparedQuery.configAddBatchAction((q, s) -> {
+                            ((NamedQuery) q).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                            ((PreparedStatement) s).addBatch();
+                        });
+                    }
+                    if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_DATE)) {
+                        preparedQuery.configAddBatchAction((q, s) -> {
+                            ((NamedQuery) q).setDate(PN_SYS_DATE, Dates.currentDate());
+                            ((PreparedStatement) s).addBatch();
+                        });
+                    }
                 }
             } else {
                 preparedQuery.settParameters(args, parametersSetter);
@@ -5118,8 +5165,7 @@ final class DaoImpl {
                                     || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
                             && !isNamedQuery) {
                         throw new UnsupportedOperationException(
-                                "Using @Query with named parameters when parameter type is Entity/Map/EntityId in method: "
-                                        + fullClassMethodName);
+                                "Using @Query with named parameters when parameter type is Entity/Map/EntityId in method: " + fullClassMethodName);
                     }
 
                     if (isSingleParameter && stmtParamLen != 1) {
@@ -6093,14 +6139,14 @@ final class DaoImpl {
         final int batchSize;
         final OP op;
         final boolean isSingleParameter;
-        final boolean timestamped;
+        final boolean autoSetSysTimeParam;
         final boolean isSelect;
         final boolean isInsert;
         final boolean isProcedure;
         final boolean isNamedQuery;
 
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
-                final OP op, final boolean isSingleParameter, final boolean timestamped, final boolean isSelect, final boolean isInsert,
+                final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
                 final boolean isProcedure, final boolean hasDefineWithNamedParameter) {
             this.sql = N.checkArgNotBlank(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
             this.parsedSql = parsedSql == null ? ParsedSql.parse(sql) : parsedSql;
@@ -6110,7 +6156,7 @@ final class DaoImpl {
             this.batchSize = batchSize;
             this.op = op;
             this.isSingleParameter = isSingleParameter;
-            this.timestamped = timestamped;
+            this.autoSetSysTimeParam = autoSetSysTimeParam;
             this.isSelect = isSelect;
             this.isInsert = isInsert;
             this.isProcedure = isProcedure;
