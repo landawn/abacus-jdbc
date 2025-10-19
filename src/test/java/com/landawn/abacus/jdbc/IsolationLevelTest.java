@@ -82,7 +82,7 @@ public class IsolationLevelTest extends TestBase {
     public void testAllEnumValues() {
         IsolationLevel[] values = IsolationLevel.values();
         assertEquals(6, values.length);
-        
+
         assertTrue(contains(values, IsolationLevel.DEFAULT));
         assertTrue(contains(values, IsolationLevel.NONE));
         assertTrue(contains(values, IsolationLevel.READ_UNCOMMITTED));

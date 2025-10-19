@@ -17,9 +17,9 @@ public class DBProductInfoTest extends TestBase {
         String productName = "MySQL";
         String productVersion = "8.0.33";
         DBVersion version = DBVersion.MySQL_8;
-        
+
         DBProductInfo dbInfo = new DBProductInfo(productName, productVersion, version);
-        
+
         assertEquals(productName, dbInfo.productName());
         assertEquals(productVersion, dbInfo.productVersion());
         assertEquals(version, dbInfo.version());
@@ -28,7 +28,7 @@ public class DBProductInfoTest extends TestBase {
     @Test
     public void testNoArgsConstructor() {
         DBProductInfo dbInfo = new DBProductInfo(null, null, null);
-        
+
         assertNull(dbInfo.productName());
         assertNull(dbInfo.productVersion());
         assertNull(dbInfo.version());
@@ -37,7 +37,7 @@ public class DBProductInfoTest extends TestBase {
     @Test
     public void testRecordComponents() {
         DBProductInfo dbInfo = new DBProductInfo("PostgreSQL", "15.3", DBVersion.PostgreSQL_OTHERS);
-        
+
         assertEquals("PostgreSQL", dbInfo.productName());
         assertEquals("15.3", dbInfo.productVersion());
         assertEquals(DBVersion.PostgreSQL_OTHERS, dbInfo.version());
@@ -48,7 +48,7 @@ public class DBProductInfoTest extends TestBase {
         DBProductInfo dbInfo1 = new DBProductInfo("Oracle", "19c", DBVersion.Oracle);
         DBProductInfo dbInfo2 = new DBProductInfo("Oracle", "19c", DBVersion.Oracle);
         DBProductInfo dbInfo3 = new DBProductInfo("MySQL", "8.0", DBVersion.MySQL_8);
-        
+
         assertEquals(dbInfo1, dbInfo2);
         assertNotEquals(dbInfo1, dbInfo3);
         assertEquals(dbInfo1.hashCode(), dbInfo2.hashCode());
@@ -59,7 +59,7 @@ public class DBProductInfoTest extends TestBase {
     public void testToString() {
         DBProductInfo dbInfo = new DBProductInfo("H2", "2.1.214", DBVersion.H2);
         String toString = dbInfo.toString();
-        
+
         assertNotNull(toString);
         assertTrue(toString.contains("H2"));
         assertTrue(toString.contains("2.1.214"));
@@ -69,7 +69,7 @@ public class DBProductInfoTest extends TestBase {
     @Test
     public void testNullValues() {
         DBProductInfo dbInfo = new DBProductInfo(null, null, null);
-        
+
         assertNull(dbInfo.productName());
         assertNull(dbInfo.productVersion());
         assertNull(dbInfo.version());

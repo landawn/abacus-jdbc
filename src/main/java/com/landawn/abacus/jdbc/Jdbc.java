@@ -4025,7 +4025,7 @@ public final class Jdbc {
             }
         }
     }
-    
+
     /**
      * A functional interface for consuming a single row of a {@code ResultSet} without returning a value.
      * This is typically used for side effects, such as printing rows or adding them to a collection.

@@ -42,7 +42,6 @@ import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.util.Throwables;
 
-
 /**
  * A proxy wrapper for {@link ResultSet} that provides optimized column value retrieval
  * with intelligent type handling and caching.

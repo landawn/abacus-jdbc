@@ -812,17 +812,18 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
-     * 
+     * Column names are properly escaped with backticks if they contain special characters.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "employee");
-    SELECT* // Returns: "select id, name, department, salary from employee"
+     * // Returns: "SELECT id, name, department, salary FROM employee"
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
      * @param tableName The name of the table for which to generate the SELECT statement
-     * @return A SELECT SQL statement string with all columns FROM the table
+     * @return A SELECT SQL statement string with all columns from the table
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException {
@@ -835,13 +836,15 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates a SELECT SQL statement for the specified table using an existing connection.
-     * Column names are properly escaped with backticks if they contain special characters.
+     * Column names containing special characters are properly escaped with backticks (MySQL/MariaDB)
+     * or double quotes (other databases).
      * 
      * <p>Example usage:</p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns: "SELECT user_id, first_name, last_name, `created-date` FROM user_profile"
+     *     // Returns (MySQL): "SELECT user_id, first_name, last_name, `created-date` FROM user_profile"
+     *     // Returns (PostgreSQL): "SELECT user_id, first_name, last_name, "created-date" FROM user_profile"
      * }
      * }</pre>
      *
@@ -940,7 +943,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
-     * 
+     * Column names are properly escaped with backticks if they contain special characters.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -998,7 +1002,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table, excluding certain columns.
      * The generated SQL uses positional parameters (?) for the included column values.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1009,9 +1013,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param dataSource The data source to connect to the database
      * @param tableName The name of the table for which to generate the INSERT statement
-     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement
-     * @return An INSERT SQL statement string with positional parameters for included columns
-     * @throws UncheckedSQLException if a database access error occurs
+     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @return An INSERT SQL statement string with positional parameters for all included columns
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames)
             throws UncheckedSQLException {
@@ -1026,7 +1030,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an INSERT SQL statement for the specified table, excluding certain columns.
      * The generated SQL uses positional parameters (?) for the included column values.
      *
-     * <p><b>Example:</b></p>
+     * <p>Example usage:</p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1068,7 +1072,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named INSERT SQL statement for the specified table.
      * The generated SQL uses named parameters (:paramName) based on camelCase column names.
-     * 
+     * Column names with underscores are converted to camelCase for parameter names.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1127,7 +1132,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named INSERT SQL statement for the specified table, excluding certain columns.
      * The generated SQL uses named parameters (:paramName) based on camelCase column names.
-     * 
+     * Column names with underscores are converted to camelCase for parameter names.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1138,9 +1144,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param dataSource The data source to connect to the database
      * @param tableName The name of the table for which to generate the named INSERT statement
-     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement
-     * @return An INSERT SQL statement string with named parameters for included columns
-     * @throws UncheckedSQLException if a database access error occurs
+     * @param excludedColumnNames A collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
+     * @return An INSERT SQL statement string with named parameters for all included columns
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames)
             throws UncheckedSQLException {
@@ -1196,13 +1202,15 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an UPDATE SQL statement for the specified table.
-     * The generated SQL uses positional parameters (?) for all column values and does not include a WHERE clause.
-     * 
+     * The generated SQL includes all columns in the SET clause with positional parameters.
+     * Note: Users should append an appropriate WHERE clause before executing.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
-     * // Returns: "UPDATE employee SET name = ?, department = ?, salary = ?, updated_date = ?"
+     * // Returns (example): "UPDATE employee SET id = ?, name = ?, department = ?, salary = ?, ... = ?"
+     * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
@@ -1227,7 +1235,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
-     *     // Returns: "UPDATE product SET name = ?, description = ?, price = ?, stock_quantity = ?"
+     *     // Returns (example): "UPDATE product SET id = ?, name = ?, description = ?, price = ?, ... = ?"
+     *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE id = ?";
      * }
      * }</pre>
@@ -1416,13 +1425,16 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a named UPDATE SQL statement for the specified table.
      * The generated SQL uses named parameters (:paramName) based on camelCase column names.
-     * 
+     * Column names with underscores are converted to camelCase for parameter names.
+     * Note: Users should append an appropriate WHERE clause before executing.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
-     * // Returns: "UPDATE user_profile SET first_name = :firstName, last_name = :lastName, 
-     * //           email = :email, phone_number = :phoneNumber"
+     * // Returns (example): "UPDATE user_profile SET user_id = :userId, first_name = :firstName,
+     * //           last_name = :lastName, email = :email, ... = :..."
+     * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
      * @param dataSource The data source to connect to the database
@@ -1447,8 +1459,9 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
-     *     // Returns: "UPDATE order_status SET status = :status, updated_by = :updatedBy, 
-     *     //           updated_date = :updatedDate"
+     *     // Returns (example): "UPDATE order_status SET order_id = :orderId, status = :status,
+     *     //           updated_by = :updatedBy, updated_date = :updatedDate, ... = :..."
+     *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE order_id = :orderId";
      * }
      * }</pre>
@@ -1546,7 +1559,7 @@ public final class JdbcCodeGenerationUtil {
      * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
      * and the key columns used in WHERE conditions), uses named parameters (:paramName) based on camelCase column names,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * DataSource ds = getDataSource();
@@ -1562,7 +1575,7 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames A collection of column names to use in the WHERE clause. Can be {@code null} or empty
      * @param whereClause An optional additional WHERE clause to append (without the "WHERE" keyword). Can be {@code null} or empty
      * @return An UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if a database access error occurs or the table cannot be queried
      */
     public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames,
             final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException {
@@ -1581,13 +1594,13 @@ public final class JdbcCodeGenerationUtil {
      * and the key columns used in WHERE conditions), uses named parameters (:paramName) based on camelCase column names,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
      *
-     * <p><b>Example:</b></p>
+     * <p>Example usage:</p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     List<String> keyColumnNames = Arrays.asList("id", "status");
      *     String customWhere = "version > 1";
-     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order", 
+     *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order",
      *                                                                      excludedColumns, keyColumnNames, customWhere);
      *     // Returns: "UPDATE order SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND version > 1"
      * }

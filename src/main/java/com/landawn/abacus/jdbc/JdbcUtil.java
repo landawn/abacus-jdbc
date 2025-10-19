@@ -700,8 +700,8 @@ public final class JdbcUtil {
     /**
      * Gets the driver classs by url.
      *
-     * @param url
-     * @return
+     * @param url the JDBC URL to analyze
+     * @return the driver class corresponding to the URL, or null if not found
      */
     private static Class<? extends Driver> getDriverClassByUrl(final String url) {
         N.checkArgNotEmpty(url, cs.url);
@@ -800,9 +800,9 @@ public final class JdbcUtil {
     /**
      * Creates the close handler.
      *
-     * @param conn
-     * @param ds
-     * @return
+     * @param conn the database connection to release
+     * @param ds the data source from which the connection was obtained
+     * @return a Runnable that releases the connection back to the data source
      */
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
         return () -> JdbcUtil.releaseConnection(conn, ds);

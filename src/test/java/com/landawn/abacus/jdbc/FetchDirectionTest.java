@@ -56,7 +56,7 @@ public class FetchDirectionTest extends TestBase {
     public void testAllEnumValues() {
         FetchDirection[] values = FetchDirection.values();
         assertEquals(3, values.length);
-        
+
         assertTrue(contains(values, FetchDirection.FORWARD));
         assertTrue(contains(values, FetchDirection.REVERSE));
         assertTrue(contains(values, FetchDirection.UNKNOWN));
@@ -88,7 +88,7 @@ public class FetchDirectionTest extends TestBase {
         assertEquals(FetchDirection.FORWARD, FetchDirection.valueOf("FORWARD"));
         assertEquals(FetchDirection.REVERSE, FetchDirection.valueOf("REVERSE"));
         assertEquals(FetchDirection.UNKNOWN, FetchDirection.valueOf("UNKNOWN"));
-        
+
         assertThrows(IllegalArgumentException.class, () -> FetchDirection.valueOf("INVALID"));
     }
 
