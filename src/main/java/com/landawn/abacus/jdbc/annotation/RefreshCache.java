@@ -44,10 +44,10 @@ import com.landawn.abacus.annotation.Beta;
  * @CacheResult
  * @RefreshCache
  * public interface UserDao extends CrudDao<User, Long> {
- *     @Select("SELECT * FROM users WHERE id = :id")
+ *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(long id); // Results are cached
  *     
- *     @Update("UPDATE users SET name = :name WHERE id = :id")
+ *     @Query("UPDATE users SET name = :name WHERE id = :id")
  *     int updateName(long id, String name); // Triggers cache refresh
  * }
  * 
@@ -90,11 +90,11 @@ public @interface RefreshCache {
      * <pre>{@code
      * @RefreshCache
      * public interface UserDao {
-     *     @Update("UPDATE users SET last_seen = NOW() WHERE id = :id")
+     *     @Query("UPDATE users SET last_seen = NOW() WHERE id = :id")
      *     @RefreshCache(disabled = true) // Don't refresh cache for this frequent update
      *     void updateLastSeen(long userId);
      *     
-     *     @Update("UPDATE users SET email = :email WHERE id = :id")
+     *     @Query("UPDATE users SET email = :email WHERE id = :id")
      *     void updateEmail(long userId, String email); // Will refresh cache
      * }
      * }</pre>

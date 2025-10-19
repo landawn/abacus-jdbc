@@ -24,10 +24,10 @@ package com.landawn.abacus.jdbc;
  * 
  * <p>Example usage:
  * <pre>{@code
- * @Select(sql = "SELECT * FROM users WHERE age > ?", op = OP.list)
+ * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.list)
  * List<User> findUsersByAge(int age);
  * 
- * @Select(sql = "SELECT COUNT(*) FROM users", op = OP.queryForSingle)
+ * @Query(value = "SELECT COUNT(*) FROM users", op = OP.queryForSingle)
  * int getUserCount();
  * }</pre></p>
  * 
@@ -44,7 +44,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT 1 FROM users WHERE email = ?", op = OP.exists)
+     * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = OP.exists)
      * boolean emailExists(String email);
      * }</pre></p>
      */
@@ -59,7 +59,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT * FROM users WHERE id = ?", op = OP.findOnlyOne)
+     * @Query(value = "SELECT * FROM users WHERE id = ?", op = OP.findOnlyOne)
      * User getUserById(long id);
      * }</pre></p>
      *
@@ -76,7 +76,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = OP.findFirst)
+     * @Query(value = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = OP.findFirst)
      * Optional<User> findYoungestAdult(int minAge);
      * }</pre></p>
      */
@@ -91,7 +91,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT * FROM users WHERE active = true", op = OP.list)
+     * @Query(value = "SELECT * FROM users WHERE active = true", op = OP.list)
      * List<User> getActiveUsers();
      * }</pre></p>
      */
@@ -103,7 +103,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT * FROM users WHERE age > ?", op = OP.query)
+     * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.query)
      * Dataset queryUsersByAge(int age);
      * }</pre></p>
      * 
@@ -120,7 +120,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT * FROM users", op = OP.stream)
+     * @Query(value = "SELECT * FROM users", op = OP.stream)
      * Stream<User> streamAllUsers();
      * }</pre></p>
      *
@@ -137,10 +137,10 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT MAX(salary) FROM employees", op = OP.queryForSingle)
+     * @Query(value = "SELECT MAX(salary) FROM employees", op = OP.queryForSingle)
      * Double getMaxSalary();
      * 
-     * @Select(sql = "SELECT name FROM users WHERE id = ?", op = OP.queryForSingle)
+     * @Query(value = "SELECT name FROM users WHERE id = ?", op = OP.queryForSingle)
      * String getUserName(long id);
      * }</pre></p>
      */
@@ -155,7 +155,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT email FROM users WHERE username = ?", op = OP.queryForUnique)
+     * @Query(value = "SELECT email FROM users WHERE username = ?", op = OP.queryForUnique)
      * String findEmailByUsername(String username);
      * }</pre></p>
      *
@@ -172,7 +172,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Call(sql = "{call getUsersAndOrders(?)}", op = OP.listAll)
+     * @Call(value = "{call getUsersAndOrders(?)}", op = OP.listAll)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre></p>
      * 
@@ -189,7 +189,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Call(sql = "{call getComplexReport(?, ?)}", op = OP.queryAll)
+     * @Call(value = "{call getComplexReport(?, ?)}", op = OP.queryAll)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre></p>
      * 
@@ -207,7 +207,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Call(sql = "{call streamLargeDatasets()}", op = OP.streamAll)
+     * @Call(value = "{call streamLargeDatasets()}", op = OP.streamAll)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre></p>
      * 
@@ -224,7 +224,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Call(sql = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters)
+     * @Call(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters)
      * Tuple2<Integer, Double> calculateStats(@Param("input") int input, 
      *                                       @OutParam("count") int count,
      *                                       @OutParam("average") double average);
@@ -243,10 +243,10 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Update(sql = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
+     * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
      * int deactivateInactiveUsers(Date threshold);
      * 
-     * @Insert(sql = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)
+     * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)
      * int createUser(String name, String email);
      * }</pre></p>
      */
@@ -261,7 +261,7 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Update(sql = "DELETE FROM audit_logs WHERE created_date < ?", op = OP.largeUpdate)
+     * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = OP.largeUpdate)
      * long purgeOldAuditLogs(Date cutoffDate);
      * }</pre></p>
      */
@@ -279,10 +279,10 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Select(sql = "SELECT * FROM users")  // op defaults to OP.DEFAULT
+     * @Query(value = "SELECT * FROM users")  // op defaults to OP.DEFAULT
      * List<User> getAllUsers();  // Framework infers OP.list
      * 
-     * @Update(sql = "DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
+     * @Query(value = "DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
      * int deleteUser(long id);  // Framework infers OP.update
      * }</pre></p>
      */

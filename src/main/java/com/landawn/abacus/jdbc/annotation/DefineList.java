@@ -38,7 +38,7 @@ import java.util.Collection;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Dynamic column selection
- *     @Select("SELECT {columns} FROM users WHERE id = :id")
+ *     @Query("SELECT {columns} FROM users WHERE id = :id")
  *     Map<String, Object> findColumnsById(
  *         @DefineList("columns") List<String> columns,
  *         @Bind("id") long id
@@ -48,7 +48,7 @@ import java.util.Collection;
  *     // Generates: SELECT id, name, email FROM users WHERE id = ?
  *     
  *     // Dynamic table names (be very careful with this!)
- *     @Select("SELECT * FROM {tables} WHERE status = :status")
+ *     @Query("SELECT * FROM {tables} WHERE status = :status")
  *     @HasDefineWithNamedParameter
  *     List<Map<String, Object>> findFromTables(
  *         @DefineList("tables") String[] tables,
@@ -86,11 +86,11 @@ public @interface DefineList {
      * <p>Example:</p>
      * <pre>{@code
      * // Explicit name
-     * @Select("SELECT {cols} FROM users")
+     * @Query("SELECT {cols} FROM users")
      * List<User> findWithColumns(@DefineList("cols") List<String> columnList);
      * 
      * // Using parameter name (when value is not specified)
-     * @Select("SELECT {columns} FROM users")
+     * @Query("SELECT {columns} FROM users")
      * List<User> findWithColumns(@DefineList List<String> columns);
      * }</pre>
      *

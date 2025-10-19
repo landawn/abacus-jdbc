@@ -43,7 +43,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * )
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Single query methods will automatically add LIMIT 1
- *     @Select("SELECT * FROM users WHERE email = :email")
+ *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);  // LIMIT 1 added automatically
  *     
  *     // ID generation will be called if user.id is null or 0
@@ -57,7 +57,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * @Config(allowJoiningByNullOrDefaultValue = true)
  * public interface OrderDao extends CrudDao<Order, Long> {
  *     // Allows joins even when foreign key might be null
- *     @Select("SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.id")
+ *     @Query("SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.id")
  *     List<Order> findAllOrdersWithCustomers();
  * }
  * }</pre>
@@ -88,7 +88,7 @@ public @interface Config {
      * <pre>{@code
      * @Config(addLimitForSingleQuery = true)
      * public interface ProductDao extends CrudDao<Product, Long> {
-     *     @Select("SELECT * FROM products WHERE code = :code")
+     *     @Query("SELECT * FROM products WHERE code = :code")
      *     Product findByCode(@Bind("code") String code);
      *     // Executed as: SELECT * FROM products WHERE code = ? LIMIT 1
      * }
@@ -162,7 +162,7 @@ public @interface Config {
      * @Config(allowJoiningByNullOrDefaultValue = true)
      * public interface CustomerDao extends CrudDao<Customer, Long> {
      *     // Allows join even if preferred_contact_id is null
-     *     @Select("SELECT c.*, p.* FROM customers c " +
+     *     @Query("SELECT c.*, p.* FROM customers c " +
      *             "LEFT JOIN contacts p ON c.preferred_contact_id = p.id")
      *     @MergedById
      *     List<Customer> findAllWithPreferredContacts();
@@ -186,7 +186,7 @@ public @interface Config {
      * @Config(fetchColumnByEntityClassForDatasetQuery = false)
      * public interface ReportDao extends CrudDao<Report, Long> {
      *     // Will fetch all columns including calculated ones
-     *     @Select("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
+     *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
      *             "GROUP BY r.id")
      *     Dataset getReportSummaries();

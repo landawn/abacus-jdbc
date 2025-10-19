@@ -36,7 +36,7 @@ import java.lang.annotation.Target;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     
- *     @Select("SELECT u.id, u.name, u.email, " +
+ *     @Query("SELECT u.id, u.name, u.email, " +
  *             "d.id as d_id, d.model as d_model, d.os as d_os, " +
  *             "c.id as c_id, c.phone as c_phone, c.address as c_address " +
  *             "FROM users u " +

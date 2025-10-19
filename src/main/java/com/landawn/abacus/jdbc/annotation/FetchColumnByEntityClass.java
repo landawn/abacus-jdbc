@@ -35,12 +35,12 @@ import java.lang.annotation.Target;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Only fetch columns that match User class properties
- *     @Select("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
+ *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(true)  // This is default, can be omitted
  *     Dataset queryUsersWithDepartment();
  *     
  *     // Fetch all columns from the query, including department_name
- *     @Select("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
+ *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(false)
  *     Dataset queryAllUserData();
  *     
@@ -95,7 +95,7 @@ public @interface FetchColumnByEntityClass {
      * }
      * 
      * // DAO method
-     * @Select("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
+     * @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
      * @FetchColumnByEntityClass(false)  // Need to fetch login_count
      * Dataset getUserLoginStats();
      * }</pre>

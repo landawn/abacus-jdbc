@@ -52,10 +52,10 @@ import com.landawn.abacus.query.SQLBuilder;
  * <pre>{@code
  * // Define a read-only DAO for viewing data
  * public interface CustomerViewDao extends ReadOnlyDao<Customer, SQLBuilder, CustomerViewDao> {
- *     @Select("SELECT * FROM customers WHERE status = ?")
+ *     @Query("SELECT * FROM customers WHERE status = ?")
  *     List<Customer> findByStatus(String status);
  *     
- *     @Select("SELECT COUNT(*) FROM customers")
+ *     @Query("SELECT COUNT(*) FROM customers")
  *     long countAll();
  * }
  * 

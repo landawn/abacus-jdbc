@@ -38,23 +38,23 @@ import java.lang.annotation.Target;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Simple parameter binding
- *     @Select("SELECT * FROM users WHERE email = :email")
+ *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);
  *     
  *     // Multiple parameters
- *     @Select("SELECT * FROM users WHERE status = :status AND age >= :minAge")
+ *     @Query("SELECT * FROM users WHERE status = :status AND age >= :minAge")
  *     List<User> findActiveAdults(@Bind("status") String status, @Bind("minAge") int minAge);
  *     
  *     // Binding entity properties
- *     @Select("SELECT * FROM users WHERE first_name = :user.firstName AND last_name = :user.lastName")
+ *     @Query("SELECT * FROM users WHERE first_name = :user.firstName AND last_name = :user.lastName")
  *     List<User> findByName(@Bind("user") User user);
  *     
  *     // Parameter name inference (when value is not specified)
- *     @Select("SELECT * FROM users WHERE department = :department")
+ *     @Query("SELECT * FROM users WHERE department = :department")
  *     List<User> findByDepartment(@Bind String department);
  *     
  *     // Nested property access
- *     @Update("UPDATE users SET address = :addr.street, city = :addr.city WHERE id = :userId")
+ *     @Query("UPDATE users SET address = :addr.street, city = :addr.city WHERE id = :userId")
  *     void updateAddress(@Bind("userId") Long userId, @Bind("addr") Address address);
  * }
  * }</pre>
@@ -62,10 +62,10 @@ import java.lang.annotation.Target;
  * <p>When binding entity objects, all accessible properties can be referenced
  * in the SQL using dot notation:</p>
  * <pre>{@code
- * @Insert("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
+ * @Query("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
  * void insertUser(User user);  // Properties bound automatically without @Bind
  * 
- * @Insert("INSERT INTO users (name, email, age) VALUES (:u.name, :u.email, :u.age)")
+ * @Query("INSERT INTO users (name, email, age) VALUES (:u.name, :u.email, :u.age)")
  * void insertUser(@Bind("u") User user);  // Explicit binding with prefix
  * }</pre>
  *
@@ -86,15 +86,15 @@ public @interface Bind {
      * <p>Examples:</p>
      * <pre>{@code
      * // Explicit parameter name
-     * @Select("SELECT * FROM users WHERE id = :userId")
+     * @Query("SELECT * FROM users WHERE id = :userId")
      * User findById(@Bind("userId") Long id);
      * 
      * // Using method parameter name (requires -parameters compiler flag)
-     * @Select("SELECT * FROM users WHERE email = :email")
+     * @Query("SELECT * FROM users WHERE email = :email")
      * User findByEmail(@Bind String email);
      * 
      * // Binding object with property access
-     * @Select("SELECT * FROM orders WHERE customer_id = :customer.id AND status = :orderStatus")
+     * @Query("SELECT * FROM orders WHERE customer_id = :customer.id AND status = :orderStatus")
      * List<Order> findOrders(@Bind("customer") Customer customer, @Bind("orderStatus") String status);
      * }</pre>
      * 

@@ -46,7 +46,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *     
  *     // Simple transaction with default settings
  *     @Transactional
- *     @Update("UPDATE users SET balance = balance - :amount WHERE id = :id")
+ *     @Query("UPDATE users SET balance = balance - :amount WHERE id = :id")
  *     void deductBalance(@Bind("id") long userId, @Bind("amount") BigDecimal amount);
  *     
  *     // Transaction with specific isolation level
@@ -58,12 +58,12 @@ import com.landawn.abacus.jdbc.Propagation;
  *     
  *     // Requires new transaction
  *     @Transactional(propagation = Propagation.REQUIRES_NEW)
- *     @Insert("INSERT INTO audit_log (user_id, action, timestamp) VALUES (:userId, :action, :timestamp)")
+ *     @Query("INSERT INTO audit_log (user_id, action, timestamp) VALUES (:userId, :action, :timestamp)")
  *     void logAudit(@Bind("userId") long userId, @Bind("action") String action, @Bind("timestamp") Date timestamp);
  *     
  *     // Supports existing transaction but doesn't require one
  *     @Transactional(propagation = Propagation.SUPPORTS)
- *     @Select("SELECT * FROM users WHERE id = :id")
+ *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(@Bind("id") long id);
  * }
  * }</pre>

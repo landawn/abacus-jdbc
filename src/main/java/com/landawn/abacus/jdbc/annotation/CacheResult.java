@@ -41,17 +41,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Cache individual user lookups for 30 minutes
  *     @CacheResult(liveTime = 1800000, maxIdleTime = 600000)
- *     @Select("SELECT * FROM users WHERE id = :id")
+ *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(@Bind("id") Long id);
  *     
  *     // Cache list results with size restrictions
  *     @CacheResult(liveTime = 300000, minSize = 1, maxSize = 100)
- *     @Select("SELECT * FROM users WHERE status = :status")
+ *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
  *     
  *     // Use Kryo serialization for complex objects
  *     @CacheResult(liveTime = 3600000, transfer = "kryo")
- *     @Select("SELECT * FROM user_profiles WHERE user_id = :userId")
+ *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
  *     UserProfile getProfile(@Bind("userId") Long userId);
  *     
  *     // Apply caching to all matching methods at type level
@@ -88,7 +88,7 @@ public @interface CacheResult {
      * <p>Example:</p>
      * <pre>{@code
      * @CacheResult(disabled = true)  // Temporarily disable for debugging
-     * @Select("SELECT * FROM users WHERE id = :id")
+     * @Query("SELECT * FROM users WHERE id = :id")
      * User findById(@Bind("id") Long id);
      * }</pre>
      *
@@ -113,7 +113,7 @@ public @interface CacheResult {
      * <pre>{@code
      * // Cache for 15 minutes
      * @CacheResult(liveTime = 900000)
-     * @Select("SELECT * FROM configurations WHERE key = :key")
+     * @Query("SELECT * FROM configurations WHERE key = :key")
      * Config getConfig(@Bind("key") String key);
      * }</pre>
      *
@@ -133,7 +133,7 @@ public @interface CacheResult {
      * <pre>{@code
      * // Expire if not accessed for 10 minutes
      * @CacheResult(liveTime = 3600000, maxIdleTime = 600000)
-     * @Select("SELECT * FROM user_sessions WHERE token = :token")
+     * @Query("SELECT * FROM user_sessions WHERE token = :token")
      * UserSession getSession(@Bind("token") String token);
      * }</pre>
      *
@@ -153,7 +153,7 @@ public @interface CacheResult {
      * <pre>{@code
      * // Only cache if result has at least 10 items
      * @CacheResult(minSize = 10)
-     * @Select("SELECT * FROM products WHERE category = :category")
+     * @Query("SELECT * FROM products WHERE category = :category")
      * List<Product> findByCategory(@Bind("category") String category);
      * }</pre>
      *
@@ -173,7 +173,7 @@ public @interface CacheResult {
      * <pre>{@code
      * // Don't cache if result has more than 1000 items
      * @CacheResult(maxSize = 1000)
-     * @Select("SELECT * FROM orders WHERE date >= :startDate")
+     * @Query("SELECT * FROM orders WHERE date >= :startDate")
      * List<Order> findOrdersSince(@Bind("startDate") Date date);
      * }</pre>
      *
@@ -199,12 +199,12 @@ public @interface CacheResult {
      * <pre>{@code
      * // Use Kryo for deep copying complex objects
      * @CacheResult(transfer = "kryo")
-     * @Select("SELECT * FROM user_profiles WHERE user_id = :userId")
+     * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
      * UserProfile getComplexProfile(@Bind("userId") Long userId);
      * 
      * // Use JSON for debugging/logging friendly format
      * @CacheResult(transfer = "json")
-     * @Select("SELECT * FROM audit_logs WHERE id = :id")
+     * @Query("SELECT * FROM audit_logs WHERE id = :id")
      * AuditLog getAuditLog(@Bind("id") Long id);
      * }</pre>
      *

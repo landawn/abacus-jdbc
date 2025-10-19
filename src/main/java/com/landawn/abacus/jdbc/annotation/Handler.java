@@ -65,7 +65,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * // Apply handler to specific method
  * public interface OrderDao extends CrudDao<Order, Long> {
  *     @Handler(type = PerformanceHandler.class)
- *     @Select("SELECT * FROM orders WHERE total > :amount")
+ *     @Query("SELECT * FROM orders WHERE total > :amount")
  *     List<Order> findLargeOrders(@Bind("amount") BigDecimal amount);
  * }
  * 
@@ -179,7 +179,7 @@ public @interface Handler {
      * <pre>{@code
      * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
      * public interface UserDao extends CrudDao<User, Long> {
-     *     @Select("SELECT * FROM users WHERE id = :id")
+     *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id);
      *     
      *     default User findActiveById(Long id) {

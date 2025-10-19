@@ -54,7 +54,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  * // DAO interface
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Query returns multiple rows per user (one per device)
- *     @Select("SELECT u.id, u.first_name as firstName, u.last_name as lastName, " +
+ *     @Query("SELECT u.id, u.first_name as firstName, u.last_name as lastName, " +
  *             "d.id as 'devices.id', d.model as 'devices.model' " +
  *             "FROM users u LEFT JOIN devices d ON u.id = d.user_id " +
  *             "WHERE u.id IN ({ids})")
@@ -108,7 +108,7 @@ public @interface MergedById {
      * 
      * <p>Example with composite key:</p>
      * <pre>{@code
-     * @Select("SELECT * FROM order_items WHERE order_date = :date")
+     * @Query("SELECT * FROM order_items WHERE order_date = :date")
      * @MergedById("orderId, productId")  // Composite key
      * List<OrderItem> findByDate(@Bind("date") Date date);
      * }</pre>

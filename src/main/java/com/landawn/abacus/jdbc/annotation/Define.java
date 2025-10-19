@@ -46,22 +46,22 @@ import java.lang.annotation.Target;
  * public interface UserDao extends CrudDao<User, Long> {
  *     
  *     // Dynamic table name
- *     @Select("SELECT * FROM {tableName} WHERE id = :id")
+ *     @Query("SELECT * FROM {tableName} WHERE id = :id")
  *     User findById(@Define("tableName") String table, @Bind("id") long id);
  *     
  *     // Dynamic column for ordering
- *     @Select("SELECT * FROM users ORDER BY {orderColumn} {orderDirection}")
+ *     @Query("SELECT * FROM users ORDER BY {orderColumn} {orderDirection}")
  *     List<User> findAllOrdered(
  *         @Define("orderColumn") String column,
  *         @Define("orderDirection") String direction
  *     );
  *     
  *     // Custom placeholder syntax
- *     @Select("SELECT * FROM products {where -> WHERE status = 'ACTIVE'} ORDER BY name")
+ *     @Query("SELECT * FROM products {where -> WHERE status = 'ACTIVE'} ORDER BY name")
  *     List<Product> findProducts(@Define("{where -> WHERE status = 'ACTIVE'}") String whereClause);
  *     
  *     // Combining with Bind for safe value binding
- *     @Update("UPDATE {table} SET {column} = :value WHERE id = :id")
+ *     @Query("UPDATE {table} SET {column} = :value WHERE id = :id")
  *     int updateDynamic(
  *         @Define("table") String tableName,
  *         @Define("column") String columnName,
@@ -70,7 +70,7 @@ import java.lang.annotation.Target;
  *     );
  *     
  *     // Conditional SQL fragments
- *     @Select("SELECT * FROM orders {statusFilter} ORDER BY created_date DESC")
+ *     @Query("SELECT * FROM orders {statusFilter} ORDER BY created_date DESC")
  *     List<Order> findOrders(@Define("statusFilter") String statusFilter);
  *     // Usage: findOrders("WHERE status IN ('PENDING', 'PROCESSING')")
  *     //     or: findOrders("") for all orders
@@ -106,7 +106,7 @@ public @interface Define {
      * 
      * <p>Simple placeholder example:</p>
      * <pre>{@code
-     * @Select("SELECT * FROM {schema}.{table} WHERE id = :id")
+     * @Query("SELECT * FROM {schema}.{table} WHERE id = :id")
      * User findById(
      *     @Define("schema") String schemaName,
      *     @Define("table") String tableName,
@@ -117,7 +117,7 @@ public @interface Define {
      * <p>Custom placeholder with default:</p>
      * <pre>{@code
      * // Custom syntax allows for more complex replacements
-     * @Select("SELECT * FROM users {filter -> WHERE active = true}")
+     * @Query("SELECT * FROM users {filter -> WHERE active = true}")
      * List<User> findUsers(@Define("{filter -> WHERE active = true}") String customFilter);
      * 
      * // Usage:
@@ -127,7 +127,7 @@ public @interface Define {
      * 
      * <p>Using parameter name when value is empty:</p>
      * <pre>{@code
-     * @Select("SELECT {columns} FROM users")
+     * @Query("SELECT {columns} FROM users")
      * List<Map<String, Object>> findWithColumns(@Define String columns);
      * // The parameter name "columns" is used as the placeholder name
      * }</pre>

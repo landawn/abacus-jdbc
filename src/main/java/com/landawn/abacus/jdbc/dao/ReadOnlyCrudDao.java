@@ -44,7 +44,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * // Define a read-only DAO for reporting
  * public interface ReportDao extends ReadOnlyCrudDao<Report, Long, SQLBuilder, ReportDao> {
  *     // Only read operations are available
- *     @Select("SELECT * FROM reports WHERE created_date >= ?")
+ *     @Query("SELECT * FROM reports WHERE created_date >= ?")
  *     List<Report> findRecentReports(Date since);
  * }
  * 

@@ -42,10 +42,10 @@ import java.lang.annotation.Target;
  * @SqlMapper("sql/UserDao.xml")
  * public interface UserDao extends CrudDao<User, Long> {
  *     
- *     @Select(id = "findActiveUsers")
+ *     @Query(id = "findActiveUsers")
  *     List<User> findActiveUsers();
  *     
- *     @Update(id = "updateLastLogin")
+ *     @Query(id = "updateLastLogin")
  *     int updateLastLogin(@Bind("userId") long userId, @Bind("loginTime") Date loginTime);
  * }
  * }</pre>

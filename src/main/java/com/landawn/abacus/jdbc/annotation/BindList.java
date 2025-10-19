@@ -34,7 +34,7 @@ import com.landawn.abacus.annotation.Beta;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Basic usage with IN clause
- *     @Select("SELECT * FROM users WHERE id IN ({ids})")
+ *     @Query("SELECT * FROM users WHERE id IN ({ids})")
  *     List<User> findByIds(@BindList("ids") List<Long> userIds);
  *     
  *     // Usage: dao.findByIds(Arrays.asList(1L, 2L, 3L))
@@ -42,11 +42,11 @@ import com.landawn.abacus.annotation.Beta;
  *     // With values: [1, 2, 3]
  *     
  *     // Using with array parameter
- *     @Select("SELECT * FROM users WHERE status IN ({statuses})")
+ *     @Query("SELECT * FROM users WHERE status IN ({statuses})")
  *     List<User> findByStatuses(@BindList("statuses") String[] statuses);
  *     
  *     // With prefix and suffix for conditional SQL
- *     @Select("SELECT * FROM users WHERE active = true {statusFilter}")
+ *     @Query("SELECT * FROM users WHERE active = true {statusFilter}")
  *     List<User> findActiveUsers(
  *         @BindList(value = "statuses", 
  *                   prefixForNonEmpty = "AND status IN (", 
@@ -84,11 +84,11 @@ public @interface BindList {
      * <p>Example:</p>
      * <pre>{@code
      * // Explicit name
-     * @Select("SELECT * FROM users WHERE id IN ({userIds})")
+     * @Query("SELECT * FROM users WHERE id IN ({userIds})")
      * List<User> find(@BindList("userIds") List<Long> ids);
      * 
      * // Using parameter name (when value is not specified)
-     * @Select("SELECT * FROM users WHERE id IN ({ids})")
+     * @Query("SELECT * FROM users WHERE id IN ({ids})")
      * List<User> find(@BindList List<Long> ids);
      * }</pre>
      *
@@ -105,7 +105,7 @@ public @interface BindList {
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * @Select("SELECT * FROM users WHERE active = true {statusFilter}")
+     * @Query("SELECT * FROM users WHERE active = true {statusFilter}")
      * List<User> findUsers(
      *     @BindList(value = "statuses",
      *               prefixForNonEmpty = "AND status IN (",
@@ -131,7 +131,7 @@ public @interface BindList {
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * @Select("SELECT * FROM products {categoryFilter} ORDER BY name")
+     * @Query("SELECT * FROM products {categoryFilter} ORDER BY name")
      * List<Product> findProducts(
      *     @BindList(value = "categories",
      *               prefixForNonEmpty = "WHERE category IN (",

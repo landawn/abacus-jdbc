@@ -43,7 +43,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @Cache(capacity = 1000, evictDelay = 3600000) // 1 hour eviction
  * public interface CountryDao extends CrudDao<Country, String> {
  *     // Results will be cached automatically
- *     @Select("SELECT * FROM countries WHERE continent = :continent")
+ *     @Query("SELECT * FROM countries WHERE continent = :continent")
  *     List<Country> findByContinent(@Bind("continent") String continent);
  * }
  * 

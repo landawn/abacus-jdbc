@@ -35,22 +35,22 @@ import java.util.Map;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Map users by their ID
- *     @Select("SELECT * FROM users WHERE status = :status")
+ *     @Query("SELECT * FROM users WHERE status = :status")
  *     @MappedByKey("id")
  *     Map<Long, User> findUsersByStatus(@Bind("status") String status);
  *     
  *     // Map users by email (assuming email is unique)
- *     @Select("SELECT * FROM users WHERE created_date > :date")
+ *     @Query("SELECT * FROM users WHERE created_date > :date")
  *     @MappedByKey(keyName = "email")
  *     Map<String, User> findRecentUsersByEmail(@Bind("date") Date date);
  *     
  *     // Using custom map implementation
- *     @Select("SELECT * FROM users WHERE department = :dept")
+ *     @Query("SELECT * FROM users WHERE department = :dept")
  *     @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
  *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept);
  *     
  *     // Map with composite objects
- *     @Select("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
+ *     @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
  *     @MappedByKey("id")
  *     Map<Long, Map<String, Object>> getUserLoginStats();
  * }
@@ -99,17 +99,17 @@ public @interface MappedByKey {
      * <p>Examples:</p>
      * <pre>{@code
      * // Using database column name
-     * @Select("SELECT user_id, user_name, email FROM users")
+     * @Query("SELECT user_id, user_name, email FROM users")
      * @MappedByKey(keyName = "user_id")
      * Map<Long, Map<String, Object>> getUsers();
      * 
      * // Using entity property name
-     * @Select("SELECT * FROM products WHERE category = :category")
+     * @Query("SELECT * FROM products WHERE category = :category")
      * @MappedByKey(keyName = "productCode")  // Maps to product_code column
      * Map<String, Product> getProductsByCategory(@Bind("category") String category);
      * 
      * // Using SQL alias
-     * @Select("SELECT id, name, price * 0.9 as discounted_price FROM products")
+     * @Query("SELECT id, name, price * 0.9 as discounted_price FROM products")
      * @MappedByKey(keyName = "discounted_price")
      * Map<BigDecimal, Product> getProductsByDiscountPrice();
      * }</pre>
@@ -133,17 +133,17 @@ public @interface MappedByKey {
      * <p>Examples:</p>
      * <pre>{@code
      * // Maintain insertion order
-     * @Select("SELECT * FROM users ORDER BY created_date")
+     * @Query("SELECT * FROM users ORDER BY created_date")
      * @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
      * LinkedHashMap<Long, User> getUsersInCreationOrder();
      * 
      * // Sorted by key
-     * @Select("SELECT * FROM products")
+     * @Query("SELECT * FROM products")
      * @MappedByKey(keyName = "productCode", mapClass = TreeMap.class)
      * TreeMap<String, Product> getProductsSortedByCode();
      * 
      * // Thread-safe map
-     * @Select("SELECT * FROM config")
+     * @Query("SELECT * FROM config")
      * @MappedByKey(keyName = "key", mapClass = ConcurrentHashMap.class)
      * ConcurrentHashMap<String, Config> getConfigMap();
      * }</pre>

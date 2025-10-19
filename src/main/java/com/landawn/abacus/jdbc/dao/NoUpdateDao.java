@@ -54,11 +54,11 @@ import com.landawn.abacus.util.Throwables;
  * <pre>{@code
  * public interface UserReadOnlyDao extends NoUpdateDao<User, SQLBuilder, UserReadOnlyDao> {
  *     // Custom read-only methods
- *     @Select("SELECT * FROM users WHERE status = ?")
+ *     @Query("SELECT * FROM users WHERE status = ?")
  *     List<User> findActiveUsers(String status);
  *     
  *     // Insert is still allowed
- *     @Insert("INSERT INTO users (name, email) VALUES (?, ?)")
+ *     @Query("INSERT INTO users (name, email) VALUES (?, ?)")
  *     void addUser(String name, String email);
  * }
  * }</pre>

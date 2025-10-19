@@ -51,15 +51,12 @@ import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
-import com.landawn.abacus.jdbc.annotation.Call;
 import com.landawn.abacus.jdbc.annotation.Config;
 import com.landawn.abacus.jdbc.annotation.Define;
 import com.landawn.abacus.jdbc.annotation.DefineList;
-import com.landawn.abacus.jdbc.annotation.Delete;
 import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.HandlerList;
-import com.landawn.abacus.jdbc.annotation.Insert;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
@@ -67,14 +64,12 @@ import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.OutParameterList;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
+import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
-import com.landawn.abacus.jdbc.annotation.Select;
 import com.landawn.abacus.jdbc.annotation.SqlField;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.SqlMapper;
-import com.landawn.abacus.jdbc.annotation.Sqls;
 import com.landawn.abacus.jdbc.annotation.Transactional;
-import com.landawn.abacus.jdbc.annotation.Update;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.CrudDaoL;
 import com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper;
@@ -134,6 +129,7 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Numbers;
 import com.landawn.abacus.util.Pair;
+import com.landawn.abacus.util.RegExUtil;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Splitter.MapSplitter;
@@ -200,31 +196,33 @@ final class DaoImpl {
     private static final Map<Class<? extends Annotation>, BiFunction<Annotation, SQLMapper, QueryInfo>> sqlAnnoMap = new HashMap<>();
 
     static {
-        sqlAnnoMap.put(Select.class, (final Annotation anno, final SQLMapper sqlMapper) -> {
-            final Select tmp = (Select) anno;
+        sqlAnnoMap.put(Query.class, (final Annotation anno, final SQLMapper sqlMapper) -> {
+            final Query tmp = (Query) anno;
             int queryTimeout = tmp.queryTimeout();
             int fetchSize = tmp.fetchSize();
-            final boolean isBatch = false;
-            final int batchSize = -1;
+            int batchSize = tmp.batchSize();
+            final boolean isBatch = tmp.isBatch();
             final OP op = tmp.op() == null ? OP.DEFAULT : tmp.op();
             final boolean isSingleParameter = tmp.isSingleParameter();
+            final boolean isProcedure = tmp.isProcedure();
 
             ParsedSql parsedSql = null;
-            String sql = Strings.stripToEmpty(tmp.sql());
+            String sql = N.notEmpty(tmp.value()) ? Strings.trim(tmp.value()[0]) : null;
 
-            if (Strings.isEmpty(sql)) {
-                sql = Strings.trim(tmp.value());
+            if (N.notEmpty(tmp.value()) == N.notEmpty(tmp.id())) {
+                throw new IllegalArgumentException("Sql script and id both are empty or both are not empty: " + Strings.concat(sql, ", ", tmp.id()));
             }
 
-            if (Strings.isNotEmpty(sql) == Strings.isNotEmpty(tmp.id())) {
-                throw new IllegalArgumentException("Sql script and id both are empty or both are not empty: " + Strings.concat(sql, ", ", tmp.id()));
+            if (N.notEmpty(tmp.id()) && Stream.of(tmp.id()).anyMatch(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches())) {
+                throw new IllegalArgumentException(
+                        "Invalid query ids: " + Stream.of(tmp.id()).filter(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches()).toList());
             }
 
             if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
                 sql = sqlMapper.get(sql).getParameterizedSql();
             }
 
-            final String id = Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : tmp.id();
+            final String id = N.notEmpty(tmp.id()) ? tmp.id()[0] : Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : null;
 
             if (Strings.isNotEmpty(id)) {
                 if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).getParameterizedSql())) {
@@ -244,53 +242,6 @@ final class DaoImpl {
                     if (attrs.containsKey(SQLMapper.FETCH_SIZE)) {
                         fetchSize = Numbers.toInt(attrs.get(SQLMapper.FETCH_SIZE));
                     }
-                }
-            }
-
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.timestamped(), true, false,
-                    tmp.hasDefineWithNamedParameter());
-        });
-
-        sqlAnnoMap.put(Insert.class, (final Annotation anno, final SQLMapper sqlMapper) -> {
-            final Insert tmp = (Insert) anno;
-            int queryTimeout = tmp.queryTimeout();
-            final int fetchSize = -1;
-            final boolean isBatch = tmp.isBatch();
-            int batchSize = tmp.batchSize();
-            final OP op = OP.DEFAULT;
-            final boolean isSingleParameter = tmp.isSingleParameter();
-
-            ParsedSql parsedSql = null;
-            String sql = Strings.stripToEmpty(tmp.sql());
-
-            if (Strings.isEmpty(sql)) {
-                sql = Strings.trim(tmp.value());
-            }
-
-            if (Strings.isNotEmpty(sql) == Strings.isNotEmpty(tmp.id())) {
-                throw new IllegalArgumentException("Sql script and id both are empty or both are not empty: " + Strings.concat(sql, ", ", tmp.id()));
-            }
-
-            if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
-                sql = sqlMapper.get(sql).getParameterizedSql();
-            }
-
-            final String id = Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : tmp.id();
-
-            if (Strings.isNotEmpty(id)) {
-                if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).getParameterizedSql())) {
-                    throw new IllegalArgumentException("No predefined sql found by id: " + id);
-                }
-
-                parsedSql = sqlMapper.get(id);
-                sql = parsedSql.getParameterizedSql();
-
-                final Map<String, String> attrs = sqlMapper.getAttrs(id);
-
-                if (N.notEmpty(attrs)) {
-                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
-                        queryTimeout = Numbers.toInt(attrs.get(SQLMapper.TIMEOUT));
-                    }
 
                     if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
                         batchSize = Numbers.toInt(attrs.get(SQLMapper.BATCH_SIZE));
@@ -298,154 +249,11 @@ final class DaoImpl {
                 }
             }
 
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.timestamped(), false, false,
-                    tmp.hasDefineWithNamedParameter());
-        });
+            final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT") || Strings.startsWithIgnoreCase(sql.trim(), "SELECT");
+            final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT") || Strings.startsWithIgnoreCase(sql.trim(), "INSERT");
 
-        sqlAnnoMap.put(Update.class, (final Annotation anno, final SQLMapper sqlMapper) -> {
-            final Update tmp = (Update) anno;
-            int queryTimeout = tmp.queryTimeout();
-            final int fetchSize = -1;
-            final boolean isBatch = tmp.isBatch();
-            int batchSize = tmp.batchSize();
-            final OP op = tmp.op() == null ? OP.update : tmp.op();
-            final boolean isSingleParameter = tmp.isSingleParameter();
-
-            ParsedSql parsedSql = null;
-            String sql = Strings.stripToEmpty(tmp.sql());
-
-            if (Strings.isEmpty(sql)) {
-                sql = Strings.trim(tmp.value());
-            }
-
-            if (Strings.isNotEmpty(sql) == Strings.isNotEmpty(tmp.id())) {
-                throw new IllegalArgumentException("Sql script and id both are empty or both are not empty: " + Strings.concat(sql, ", ", tmp.id()));
-            }
-
-            if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
-                sql = sqlMapper.get(sql).getParameterizedSql();
-            }
-
-            final String id = Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : tmp.id();
-
-            if (Strings.isNotEmpty(id)) {
-                if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).getParameterizedSql())) {
-                    throw new IllegalArgumentException("No predefined sql found by id: " + id);
-                }
-
-                parsedSql = sqlMapper.get(id);
-                sql = parsedSql.getParameterizedSql();
-
-                final Map<String, String> attrs = sqlMapper.getAttrs(id);
-
-                if (N.notEmpty(attrs)) {
-                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
-                        queryTimeout = Numbers.toInt(attrs.get(SQLMapper.TIMEOUT));
-                    }
-
-                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
-                        batchSize = Numbers.toInt(attrs.get(SQLMapper.BATCH_SIZE));
-                    }
-                }
-            }
-
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.timestamped(), false, false,
-                    tmp.hasDefineWithNamedParameter());
-        });
-
-        sqlAnnoMap.put(Delete.class, (final Annotation anno, final SQLMapper sqlMapper) -> {
-            final Delete tmp = (Delete) anno;
-            int queryTimeout = tmp.queryTimeout();
-            final int fetchSize = -1;
-            final boolean isBatch = tmp.isBatch();
-            int batchSize = tmp.batchSize();
-            final OP op = OP.DEFAULT;
-            final boolean isSingleParameter = tmp.isSingleParameter();
-
-            ParsedSql parsedSql = null;
-            String sql = Strings.stripToEmpty(tmp.sql());
-
-            if (Strings.isEmpty(sql)) {
-                sql = Strings.trim(tmp.value());
-            }
-
-            if (Strings.isNotEmpty(sql) == Strings.isNotEmpty(tmp.id())) {
-                throw new IllegalArgumentException("Sql script and id both are empty or both are not empty: " + Strings.concat(sql, ", ", tmp.id()));
-            }
-
-            if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
-                sql = sqlMapper.get(sql).getParameterizedSql();
-            }
-
-            final String id = Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : tmp.id();
-
-            if (Strings.isNotEmpty(id)) {
-                if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).getParameterizedSql())) {
-                    throw new IllegalArgumentException("No predefined sql found by id: " + id);
-                }
-
-                parsedSql = sqlMapper.get(id);
-                sql = parsedSql.getParameterizedSql();
-
-                final Map<String, String> attrs = sqlMapper.getAttrs(id);
-
-                if (N.notEmpty(attrs)) {
-                    if (attrs.containsKey(SQLMapper.TIMEOUT)) {
-                        queryTimeout = Numbers.toInt(attrs.get(SQLMapper.TIMEOUT));
-                    }
-
-                    if (attrs.containsKey(SQLMapper.BATCH_SIZE)) {
-                        batchSize = Numbers.toInt(attrs.get(SQLMapper.BATCH_SIZE));
-                    }
-                }
-            }
-
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.timestamped(), false, false,
-                    tmp.hasDefineWithNamedParameter());
-        });
-
-        sqlAnnoMap.put(Call.class, (final Annotation anno, final SQLMapper sqlMapper) -> {
-            final Call tmp = (Call) anno;
-            int queryTimeout = tmp.queryTimeout();
-            final int fetchSize = -1;
-            final boolean isBatch = false;
-            final int batchSize = -1;
-            final OP op = OP.DEFAULT;
-            final boolean isSingleParameter = tmp.isSingleParameter();
-
-            ParsedSql parsedSql = null;
-            String sql = Strings.stripToEmpty(tmp.sql());
-
-            if (Strings.isEmpty(sql)) {
-                sql = Strings.trim(tmp.value());
-            }
-
-            if (Strings.isNotEmpty(sql) == Strings.isNotEmpty(tmp.id())) {
-                throw new IllegalArgumentException("Sql script and id both are empty or both are not empty: " + Strings.concat(sql, ", ", tmp.id()));
-            }
-
-            if (!Strings.containsWhitespace(sql) && sqlMapper != null && sqlMapper.get(sql) != null) {
-                sql = sqlMapper.get(sql).getParameterizedSql();
-            }
-
-            final String id = Strings.isNotEmpty(sql) && sqlMapper != null && sqlMapper.get(sql) != null ? sql : tmp.id();
-
-            if (Strings.isNotEmpty(id)) {
-                if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).getParameterizedSql())) {
-                    throw new IllegalArgumentException("No predefined sql found by id: " + id);
-                }
-
-                parsedSql = sqlMapper.get(id);
-                sql = parsedSql.getParameterizedSql();
-
-                final Map<String, String> attrs = sqlMapper.getAttrs(id);
-
-                if (N.notEmpty(attrs) && attrs.containsKey(SQLMapper.TIMEOUT)) {
-                    queryTimeout = Numbers.toInt(attrs.get(SQLMapper.TIMEOUT));
-                }
-            }
-
-            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, false, true, true, false);
+            return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.timestamped(), isSelect, isInsert,
+                    isProcedure, tmp.hasDefineWithNamedParameter());
         });
     }
 
@@ -678,7 +486,7 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createQueryFunctionByMethod(final Class<?> entityClass,
             final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap,
-            final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isCall,
+            final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final OP op, final boolean isProcedure,
             final String fullClassMethodName) {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
@@ -725,7 +533,7 @@ final class DaoImpl {
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
 
-        if (isCall) {
+        if (isProcedure) {
             if (op == OP.executeAndGetOutParameters) {
                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).executeAndGetOutParameters();
             } else if (op == OP.listAll) {
@@ -1303,7 +1111,7 @@ final class DaoImpl {
         } else if (stmtParamLen == 1) {
             final Class<?> paramTypeOne = paramTypes[stmtParamIndexes[0]];
 
-            if (queryInfo.isCall) {
+            if (queryInfo.isProcedure) {
                 final String paramName = StreamEx.of(method.getParameterAnnotations()[stmtParamIndexes[0]])
                         .select(Bind.class)
                         .map(Bind::value)
@@ -1395,7 +1203,7 @@ final class DaoImpl {
                 }
             }
         } else {
-            if (queryInfo.isCall) {
+            if (queryInfo.isProcedure) {
                 @SuppressWarnings("resource")
                 final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
@@ -1531,12 +1339,12 @@ final class DaoImpl {
         boolean noException = false;
 
         try {
-            preparedQuery = queryInfo.isCall ? proxy.prepareCallableQuery(query)
+            preparedQuery = queryInfo.isProcedure ? proxy.prepareCallableQuery(query)
                     : (queryInfo.isNamedQuery
                             ? (returnGeneratedKeys ? proxy.prepareNamedQuery(parsedSql, returnColumnNames) : proxy.prepareNamedQuery(parsedSql))
                             : (returnGeneratedKeys ? proxy.prepareQuery(query, returnColumnNames) : proxy.prepareQuery(query)));
 
-            if (queryInfo.isCall && N.notEmpty(outParameterList)) {
+            if (queryInfo.isProcedure && N.notEmpty(outParameterList)) {
                 final CallableQuery callableQuery = ((CallableQuery) preparedQuery);
 
                 for (final OutParameter outParameter : outParameterList) {
@@ -2278,39 +2086,35 @@ final class DaoImpl {
                     .first()
                     .orElse(fetchColumnByEntityClassForDatasetQuery);
 
-            final Sqls sqlsAnno = StreamEx.of(method.getAnnotations()).select(Sqls.class).onlyOne().orElseNull();
+            final Query queryAnno = StreamEx.of(method.getAnnotations()).select(Query.class).onlyOne().orElseNull();
             List<String> sqlList = null;
 
-            if (sqlsAnno != null) {
+            if (queryAnno != null && ((N.len(queryAnno.value()) > 1 || N.len(queryAnno.id()) > 1)
+                    || (!Modifier.isAbstract(method.getModifiers()) && (paramLen > 0 && paramTypes[paramLen - 1].equals(String[].class))))) {
+                sqlList = Stream.of(queryAnno.value())
+                        .append(queryAnno.id())
+                        .map(Fn.strip())
+                        .filter(Fn.notEmpty())
+                        .map(it -> newSQLMapper.get(it) == null ? it : newSQLMapper.get(it).getParameterizedSql())
+                        .map(sql -> sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql)
+                        .toList();
+            }
+
+            final String[] sqls = N.isEmpty(sqlList) ? N.EMPTY_STRING_ARRAY : sqlList.toArray(new String[0]);
+
+            if (N.notEmpty(sqls)) {
                 if (Modifier.isAbstract(method.getModifiers())) {
                     throw new UnsupportedOperationException(
-                            "Annotation @Sqls is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
+                            "Annotation @Query with multiple values or ids is only supported by interface methods with default implementation: default xxx dbOperationABC(someParameters, String ... sqls), not supported by abstract method: "
                                     + fullClassMethodName);
                 }
 
                 if (paramLen == 0 || !paramTypes[paramLen - 1].equals(String[].class)) {
                     throw new UnsupportedOperationException(
-                            "To support sqls binding by @Sqls, the type of last parameter must be: String... sqls. It can't be : " + paramTypes[paramLen - 1]
-                                    + " on method: " + fullClassMethodName);
-                }
-
-                if (newSQLMapper.isEmpty()) {
-                    sqlList = Stream.of(sqlsAnno.value())
-                            .map(Fn.strip())
-                            .filter(Fn.notEmpty())
-                            .map(sql -> sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql)
-                            .toList();
-                } else {
-                    sqlList = Stream.of(sqlsAnno.value())
-                            .map(Fn.strip())
-                            .filter(Fn.notEmpty())
-                            .map(it -> newSQLMapper.get(it) == null ? it : newSQLMapper.get(it).getParameterizedSql())
-                            .map(sql -> sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql)
-                            .toList();
+                            "To support multiple values or ids binding by @Query, the type of last parameter must be: String... sqls. It can't be : "
+                                    + paramTypes[paramLen - 1] + " on method: " + fullClassMethodName);
                 }
             }
-
-            final String[] sqls = sqlList == null ? N.EMPTY_STRING_ARRAY : sqlList.toArray(new String[0]);
 
             Throwables.BiFunction<Dao, Object[], ?, Throwable> call = null;
 
@@ -2318,7 +2122,7 @@ final class DaoImpl {
                 final MethodHandle methodHandle = createMethodHandle(method);
 
                 call = (proxy, args) -> {
-                    if (sqlsAnno != null) {
+                    if (N.notEmpty(sqls)) {
                         if (N.notEmpty((String[]) args[paramLen - 1])) {
                             throw new IllegalArgumentException(
                                     "The last parameter(String[]) of method annotated by @Sqls must be empty, don't specify it. It will be auto-filled by sqls from annotation @Sqls on the method: "
@@ -5092,12 +4896,14 @@ final class DaoImpl {
                     final int tmpBatchSize = queryInfo.batchSize;
                     final OP op = queryInfo.op;
                     final boolean isSingleParameter = queryInfo.isSingleParameter;
-                    final boolean isCall = queryInfo.isCall;
+                    final boolean isProcedure = queryInfo.isProcedure;
+                    final boolean isUpdate = queryInfo.isSelect || queryInfo.isInsert ? false
+                            : (op == OP.update || op == OP.largeUpdate || (op == OP.DEFAULT && isUpdateReturnType));
 
-                    final boolean isQuery = sqlAnno.annotationType().equals(Select.class)
-                            || (isCall && !(op == OP.update || op == OP.largeUpdate) && (op != OP.DEFAULT || !isUpdateReturnType));
+                    final boolean isQuery = queryInfo.isSelect
+                            || (isProcedure && !(op == OP.update || op == OP.largeUpdate) && (op != OP.DEFAULT || !isUpdateReturnType));
 
-                    final boolean returnGeneratedKeys = !isNoId && sqlAnno.annotationType().equals(Insert.class);
+                    final boolean returnGeneratedKeys = !isNoId && queryInfo.isInsert;
 
                     final boolean isNamedQuery = queryInfo.isNamedQuery;
 
@@ -5109,7 +4915,7 @@ final class DaoImpl {
                             || Jdbc.BiResultExtractor.class.isAssignableFrom(it) || Jdbc.RowMapper.class.isAssignableFrom(it)
                             || Jdbc.BiRowMapper.class.isAssignableFrom(it);
 
-                    if (isNamedQuery || isCall) {
+                    if (isNamedQuery || isProcedure) {
                         // @Bind parameters are not always required for named query. It's not required if parameter is Entity/Map/EntityId/...
                         //    if (IntStreamEx.range(0, paramLen)
                         //            .noneMatch(i -> StreamEx.of(m.getParameterAnnotations()[i]).anyMatch(it -> it.annotationType().equals(Dao.Bind.class)))) {
@@ -5235,7 +5041,7 @@ final class DaoImpl {
                                     "Type of parameter annotated with @BindList(method: " + fullClassMethodName + ") must be Collection/Array.");
                         }
 
-                        if ((isNamedQuery || isCall) && IntStreamEx.of(defineParamIndexes)
+                        if ((isNamedQuery || isProcedure) && IntStreamEx.of(defineParamIndexes)
                                 .flatMapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]))
                                 .anyMatch(it -> BindList.class.isAssignableFrom(it.annotationType()))) {
                             throw new UnsupportedOperationException(
@@ -5327,7 +5133,7 @@ final class DaoImpl {
                             .toList();
 
                     if (N.notEmpty(outParameterList)) {
-                        if (!isCall) {
+                        if (!isProcedure) {
                             throw new UnsupportedOperationException(
                                     "@OutParameter annotations are only supported by method annotated by @Call, not supported in method: "
                                             + fullClassMethodName);
@@ -5339,7 +5145,7 @@ final class DaoImpl {
                         }
                     }
 
-                    if ((op == OP.listAll || op == OP.queryAll || op == OP.streamAll || op == OP.executeAndGetOutParameters) && !isCall) {
+                    if ((op == OP.listAll || op == OP.queryAll || op == OP.streamAll || op == OP.executeAndGetOutParameters) && !isProcedure) {
                         throw new UnsupportedOperationException(
                                 "Op.listAll/queryAll/streamAll/executeAndGetOutParameters are only supported by method annotated with @Call but method: "
                                         + fullClassMethodName + " is not annotated with @Call");
@@ -5464,8 +5270,8 @@ final class DaoImpl {
 
                     if (isQuery) {
                         final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunc = createQueryFunctionByMethod(entityClass, method,
-                                mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op, isCall,
-                                fullClassMethodName);
+                                mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, op,
+                                isProcedure, fullClassMethodName);
 
                         // Getting ClassCastException. Not sure why query result is being cast Dao. It seems there is a bug in JDk compiler.
                         //   call = (proxy, args) -> queryFunc.apply(JdbcUtil.prepareQuery(proxy, ds, query, isNamedQuery, fetchSize, queryTimeout, returnGeneratedKeys, args, paramSetter), args);
@@ -5486,7 +5292,7 @@ final class DaoImpl {
                         //            // skip.
                         //        } else if (Stream.class.isAssignableFrom(returnType) || Dataset.class.isAssignableFrom(returnType)) {
                         //            // skip.
-                        //        } else if (isCall) {
+                        //        } else if (isProcedure) {
                         //            // skip.
                         //        } else {
                         //            // skip.
@@ -5496,7 +5302,7 @@ final class DaoImpl {
                         call = (proxy, args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
                                 defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter),
                                 args);
-                    } else if (sqlAnno.annotationType().equals(Insert.class)) {
+                    } else if (queryInfo.isInsert) {
                         if (isNoId && !returnType.isAssignableFrom(void.class)) {
                             throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                     + ") for no id entities only can be: void. It can't be: " + returnType);
@@ -5628,8 +5434,7 @@ final class DaoImpl {
                                 return void.class.equals(returnType) ? null : ids;
                             };
                         }
-                    } else if (sqlAnno.annotationType().equals(Update.class) || sqlAnno.annotationType().equals(Delete.class)
-                            || (sqlAnno.annotationType().equals(Call.class) && isUpdateReturnType)) {
+                    } else if (isUpdate) {
                         if (!isUpdateReturnType) {
                             throw new UnsupportedOperationException("The return type of update/delete operations(" + fullClassMethodName
                                     + ") only can be: int/Integer/long/Long/boolean/Boolean/void. It can't be: " + returnType);
@@ -6290,12 +6095,13 @@ final class DaoImpl {
         final boolean isSingleParameter;
         final boolean timestamped;
         final boolean isSelect;
-        final boolean isCall;
+        final boolean isInsert;
+        final boolean isProcedure;
         final boolean isNamedQuery;
 
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
-                final OP op, final boolean isSingleParameter, final boolean timestamped, final boolean isSelect, final boolean isCall,
-                final boolean hasDefineWithNamedParameter) {
+                final OP op, final boolean isSingleParameter, final boolean timestamped, final boolean isSelect, final boolean isInsert,
+                final boolean isProcedure, final boolean hasDefineWithNamedParameter) {
             this.sql = N.checkArgNotBlank(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
             this.parsedSql = parsedSql == null ? ParsedSql.parse(sql) : parsedSql;
             this.queryTimeout = queryTimeout;
@@ -6306,7 +6112,8 @@ final class DaoImpl {
             this.isSingleParameter = isSingleParameter;
             this.timestamped = timestamped;
             this.isSelect = isSelect;
-            this.isCall = isCall;
+            this.isInsert = isInsert;
+            this.isProcedure = isProcedure;
             isNamedQuery = N.notEmpty(this.parsedSql.getNamedParameters()) || hasDefineWithNamedParameter;
 
             if (hasDefineWithNamedParameter && (this.parsedSql.getParameterCount() > 0 && N.isEmpty(this.parsedSql.getNamedParameters()))) {
