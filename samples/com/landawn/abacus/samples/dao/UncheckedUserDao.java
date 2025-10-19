@@ -215,7 +215,7 @@ public interface UncheckedUserDao
      * @param id
      * @return
      */
-    @Query(value = "DELETE FROM {tableName} where id = :id")
+    @Query("DELETE FROM {tableName} where id = :id")
     int deleteByIdWithDefine(@Define("tableName") String tableName, @Bind("id") long id);
 
     /**
@@ -236,7 +236,7 @@ public interface UncheckedUserDao
      * @param id
      * @return
      */
-    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
+    @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     User selectByIdWithDefine(@Define("tableName") String tableName, @DefineList("{{orderBy}}") List<String> orderByFields, @Bind("id") long id);
 
     /**
@@ -247,7 +247,7 @@ public interface UncheckedUserDao
      * @param id
      * @return
      */
-    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
+    @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     User selectByIdWithDefine2(@Define("tableName") String tableName, @DefineList("{{orderBy}}") String[] orderByFields, @Bind("id") long id);
 
     /**
@@ -258,7 +258,7 @@ public interface UncheckedUserDao
      * @param id
      * @return
      */
-    @Query(value = "SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
+    @Query("SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
     List<User> selectByIdWithDefine_2(@Define("tableName") String tableName, @Define("{whatever -> orderBy{{P}}") String orderBy, long id);
 
     /**
@@ -271,7 +271,7 @@ public interface UncheckedUserDao
      * @param firstName
      * @return
      */
-    @Query(value = "SELECT * FROM {tableName} where id >= ? AND first_name != ? ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
+    @Query("SELECT * FROM {tableName} where id >= ? AND first_name != ? ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
     List<User> selectByIdWithDefine_3(@Define("tableName") String tableName, long id, @Define("{whatever -> orderBy{{P}}") String orderBy,
             @Define("{count}") long count, String firstName);
 
@@ -285,7 +285,7 @@ public interface UncheckedUserDao
      * @param firstName
      * @return
      */
-    @Query(value = "SELECT * FROM {tableName} where id >= :id AND first_name != :firstName ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
+    @Query("SELECT * FROM {tableName} where id >= :id AND first_name != :firstName ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
     List<User> selectByIdWithDefine_4(@Define("tableName") String tableName, @Bind("id") long id, @Define("{whatever -> orderBy{{P}}") String orderBy,
             @Define("{count}") long count, @Bind("firstName") String firstName);
 
@@ -297,7 +297,7 @@ public interface UncheckedUserDao
      * @param id
      * @return
      */
-    @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
+    @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     boolean exists(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id);
 
     /**

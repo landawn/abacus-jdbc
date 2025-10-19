@@ -95,21 +95,21 @@ import com.landawn.abacus.util.stream.Stream;
  * <h2>Usage Example:</h2>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC> {
- *     @NamedInsert("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
+ *     @Query("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
- *     @NamedUpdate("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
- *     int updateFirstAndLastName(@Bind("firstName") String newFirstName, 
- *                                @Bind("lastName") String newLastName, 
+ *     @Query("UPDATE user SET first_name = :firstName, last_name = :lastName WHERE id = :id")
+ *     int updateFirstAndLastName(@Bind("firstName") String newFirstName,
+ *                                @Bind("lastName") String newLastName,
  *                                @Bind("id") long id) throws SQLException;
  *
- *     @NamedSelect("SELECT first_name, last_name FROM user WHERE id = :id")
+ *     @Query("SELECT first_name, last_name FROM user WHERE id = :id")
  *     User getFirstAndLastNameBy(@Bind("id") long id) throws SQLException;
  *
- *     @NamedSelect("SELECT id, first_name, last_name, email FROM user")
+ *     @Query("SELECT id, first_name, last_name, email FROM user")
  *     Stream<User> allUsers() throws SQLException;
  * }
- * 
+ *
  * // Usage
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = userDao.getFirstAndLastNameBy(123L);

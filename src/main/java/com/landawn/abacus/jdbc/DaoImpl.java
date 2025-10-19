@@ -160,11 +160,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 /**
  * Internal implementation class for DAO (Data Access Object) functionality.
  * This class provides the core implementation for dynamic proxy-based DAO interfaces
- * using annotations like @Select, @Insert, @Update, @Delete, and @Call.
- * 
+ * using the {@code @Query} annotation for defining SQL operations.
+ *
  * <p>This is an internal class and should not be used directly by application code.
  * Use the public DAO interfaces and JdbcUtil methods instead.</p>
- * 
+ *
  * @see Dao
  * @see CrudDao
  * @see JdbcUtil#createDao(Class, javax.sql.DataSource)
@@ -5118,7 +5118,7 @@ final class DaoImpl {
                                     || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
                             && !isNamedQuery) {
                         throw new UnsupportedOperationException(
-                                "Using named query: @NamedSelect/NamedUpdate/NamedInsert/NamedDelete when parameter type is Entity/Map/EntityId in method: "
+                                "Using @Query with named parameters when parameter type is Entity/Map/EntityId in method: "
                                         + fullClassMethodName);
                     }
 
@@ -5135,7 +5135,7 @@ final class DaoImpl {
                     if (N.notEmpty(outParameterList)) {
                         if (!isProcedure) {
                             throw new UnsupportedOperationException(
-                                    "@OutParameter annotations are only supported by method annotated by @Call, not supported in method: "
+                                    "@OutParameter annotations are only supported by @Query methods with isProcedure=true, not supported in method: "
                                             + fullClassMethodName);
                         }
 
@@ -5147,8 +5147,8 @@ final class DaoImpl {
 
                     if ((op == OP.listAll || op == OP.queryAll || op == OP.streamAll || op == OP.executeAndGetOutParameters) && !isProcedure) {
                         throw new UnsupportedOperationException(
-                                "Op.listAll/queryAll/streamAll/executeAndGetOutParameters are only supported by method annotated with @Call but method: "
-                                        + fullClassMethodName + " is not annotated with @Call");
+                                "Op.listAll/queryAll/streamAll/executeAndGetOutParameters are only supported by @Query methods with isProcedure=true but method: "
+                                        + fullClassMethodName + " does not have isProcedure=true");
                     }
 
                     if (isBatch && !((stmtParamLen == 1 && Collection.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])) || (stmtParamLen == 2

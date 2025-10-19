@@ -33,16 +33,16 @@ import java.lang.annotation.Target;
  * <p>Example usage:</p>
  * <pre>{@code
  * public interface EmployeeDao extends CrudDao<Employee, Long> {
- *     
+ *
  *     // Multiple output parameters using repeatable annotation
- *     @Call("{call calculate_salary_info(?, ?, ?, ?)}")
+ *     @Query(value = "{call calculate_salary_info(?, ?, ?, ?)}", isProcedure = true)
  *     @OutParameter(position = 2, sqlType = Types.DECIMAL)
  *     @OutParameter(position = 3, sqlType = Types.DECIMAL)
  *     @OutParameter(position = 4, sqlType = Types.VARCHAR)
  *     Map<String, Object> calculateSalaryInfo(@Bind("employeeId") long employeeId);
- *     
+ *
  *     // Equivalent using OutParameterList directly (not recommended)
- *     @Call("{call get_employee_stats(?, ?, ?, ?)}")
+ *     @Query(value = "{call get_employee_stats(?, ?, ?, ?)}", isProcedure = true)
  *     @OutParameterList({
  *         @OutParameter(name = "total_sales", position = 2, sqlType = Types.DECIMAL),
  *         @OutParameter(name = "avg_rating", position = 3, sqlType = Types.DECIMAL),
@@ -53,7 +53,7 @@ import java.lang.annotation.Target;
  * }</pre>
  * 
  * @see OutParameter
- * @see Call
+ * @see Query
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

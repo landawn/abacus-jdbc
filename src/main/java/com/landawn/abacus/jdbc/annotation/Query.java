@@ -25,6 +25,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.OP;
 import com.landawn.abacus.util.RegExUtil;
 import com.mysql.cj.x.protobuf.MysqlxCrud.Delete;
+import com.mysql.cj.x.protobuf.MysqlxCrud.Insert;
 import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
 
 /**
@@ -52,11 +53,11 @@ import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // SELECT operation
- *     @Query(value = "SELECT * FROM users WHERE status = :status")
+ *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
  *
  *     // INSERT operation
- *     @Query(value = "INSERT INTO users (name, email) VALUES (:name, :email)")
+ *     @Query("INSERT INTO users (name, email) VALUES (:name, :email)")
  *     int insertUser(@Bind("name") String name, @Bind("email") String email);
  *
  *     // UPDATE operation
@@ -64,7 +65,7 @@ import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
  *     int updateLastLogin(@Bind("id") Long id);
  *
  *     // DELETE operation
- *     @Query(value = "DELETE FROM users WHERE inactive_since < :date")
+ *     @Query("DELETE FROM users WHERE inactive_since < :date")
  *     int deleteInactiveUsers(@Bind("date") Date date);
  *
  *     // Using external SQL mapper
@@ -133,17 +134,14 @@ import com.mysql.cj.x.protobuf.MysqlxCrud.Update;
  *   <li>Custom types via {@link Handler} annotation</li>
  * </ul>
  *
- * @see Select
- * @see Insert
- * @see Update
- * @see Delete
- * @see Call
  * @see Bind
  * @see Define
  * @see DefineList
  * @see SqlMapper
  * @see Handler
  * @see OP
+ * @see OutParameter
+ * @see OutParameterList
  * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
  */
 @Retention(RetentionPolicy.RUNTIME)
@@ -165,26 +163,26 @@ public @interface Query {
      * <p>Named parameter examples:</p>
      * <pre>{@code
      * // Simple parameter binding
-     * @Query(value = "SELECT * FROM users WHERE age > :minAge")
+     * @Query("SELECT * FROM users WHERE age > :minAge")
      * List<User> findByAge(@Bind("minAge") int minAge);
      *
      * // Multiple parameters
-     * @Query(value = "SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge")
+     * @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge")
      * List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max);
      *
      * // Nested property access
-     * @Query(value = "SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
+     * @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
      * List<Order> findOrders(@Bind("user") User user, @Bind("status") String status);
      *
      * // IN clause with collection
-     * @Query(value = "SELECT * FROM users WHERE id IN (:ids)")
+     * @Query("SELECT * FROM users WHERE id IN (:ids)")
      * List<User> findByIds(@Bind("ids") List<Long> ids);
      * }</pre>
      *
      * <p>Complex SQL examples:</p>
      * <pre>{@code
      * // JOIN with aggregation
-     * @Query(value = "SELECT u.*, COUNT(o.id) as order_count " +
+     * @Query("SELECT u.*, COUNT(o.id) as order_count " +
      *               "FROM users u LEFT JOIN orders o ON u.id = o.user_id " +
      *               "WHERE u.created_date > :startDate " +
      *               "GROUP BY u.id HAVING COUNT(o.id) > :minOrders")
@@ -192,7 +190,7 @@ public @interface Query {
      *                               @Bind("minOrders") int minOrders);
      *
      * // Common Table Expression (CTE)
-     * @Query(value = "WITH recent_orders AS ( " +
+     * @Query("WITH recent_orders AS ( " +
      *               "  SELECT user_id, COUNT(*) as order_count " +
      *               "  FROM orders WHERE order_date > :since " +
      *               "  GROUP BY user_id " +
@@ -202,7 +200,7 @@ public @interface Query {
      * List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since);
      *
      * // Window function
-     * @Query(value = "SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " +
+     * @Query("SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " +
      *               "FROM employees WHERE department = :dept")
      * List<Employee> rankEmployeesByDepartment(@Bind("dept") String department);
      * }</pre>
@@ -332,6 +330,31 @@ public @interface Query {
      */
     OP op() default OP.DEFAULT;
 
+    /**
+     * Indicates whether the SQL statement is a stored procedure call.
+     * When {@code true}, the framework treats the SQL as a callable statement
+     * and handles input/output parameters accordingly.
+     *
+     * <p>Usage example:</p>
+     * <pre>{@code
+     * // Stored procedure call with output parameter
+     * @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true)
+     * @OutParameter(position = 3, sqlType = Types.DECIMAL)
+     * BigDecimal calculateBonus(@Bind("employeeId") long employeeId,
+     *                           @Bind("performanceScore") int score);
+     * }</pre>
+     *
+     * <p>When to use:</p>
+     * <ul>
+     *   <li>Calling stored procedures or functions in the database</li>
+     *   <li>When the SQL syntax follows the callable statement format (e.g., {@code {call procedure_name(?, ?)}})</li>
+     *   <li>When using output parameters that need to be registered and retrieved</li>
+     * </ul>
+     *
+     * @return {@code true} if the SQL is a stored procedure call; {@code false} (default) otherwise
+     * @see OutParameter
+     * @see OutParameterList
+     */
     boolean isProcedure() default false;
 
     /**
@@ -546,111 +569,11 @@ public @interface Query {
     boolean isSingleParameter() default false;
 
     /**
-     * Indicates whether the SQL contains template variables defined with {@link Define} or {@link DefineList} annotations
-     * that should be replaced before query execution.
+     * Indicates whether the SQL statement contains template variables defined by the {@link Define} or {@link DefineList} annotations
+     * that will be replaced with query fragments containing named parameters.
      *
-     * <p>When {@code true}, the framework preprocesses the SQL to replace template variables in curly braces
-     * {@code {variableName}} with actual values provided via {@link Define} annotation parameters.
-     * This enables dynamic SQL construction while maintaining type safety and SQL injection protection.</p>
-     *
-     * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may evolve in future versions.</p>
-     *
-     * <p>Template variables vs. named parameters:</p>
-     * <ul>
-     *   <li>Template variables {@code {name}} - Replaced during SQL preprocessing, used for dynamic SQL structure</li>
-     *   <li>Named parameters {@code :name} - Replaced during execution as prepared statement parameters, used for values</li>
-     * </ul>
-     *
-     * <p>Common use cases:</p>
-     * <ul>
-     *   <li>Dynamic table names</li>
-     *   <li>Dynamic column names or lists</li>
-     *   <li>Dynamic ORDER BY clauses</li>
-     *   <li>Dynamic WHERE clause conditions</li>
-     *   <li>Dynamic SQL fragments for complex queries</li>
-     * </ul>
-     *
-     * <p>Basic examples:</p>
-     * <pre>{@code
-     * // Dynamic table name
-     * @Query(value = "SELECT * FROM {tableName} WHERE status = :status",
-     *        hasDefineWithNamedParameter = true)
-     * List<Map<String, Object>> queryTable(@Define("tableName") String table,
-     *                                      @Bind("status") String status);
-     *
-     * // Dynamic column selection
-     * @Query(value = "SELECT {columns} FROM users WHERE id = :id",
-     *        hasDefineWithNamedParameter = true)
-     * Map<String, Object> getUserColumns(@Define("columns") String columns,
-     *                                    @Bind("id") Long id);
-     *
-     * // Dynamic ORDER BY
-     * @Query(value = "SELECT * FROM products ORDER BY {orderBy} {direction}",
-     *        hasDefineWithNamedParameter = true)
-     * List<Product> getSortedProducts(@Define("orderBy") String column,
-     *                                 @Define("direction") String direction);
-     * }</pre>
-     *
-     * <p>Advanced examples:</p>
-     * <pre>{@code
-     * // Dynamic WHERE conditions
-     * @Query(value = "SELECT * FROM users WHERE {condition} AND active = :active",
-     *        hasDefineWithNamedParameter = true)
-     * List<User> findByDynamicCondition(@Define("condition") String condition,
-     *                                   @Bind("active") boolean active);
-     * // Example call: findByDynamicCondition("age > 18", true)
-     *
-     * // Multiple dynamic parts
-     * @Query(value = "SELECT {selectColumns} FROM {table} " +
-     *               "WHERE {whereClause} ORDER BY {orderBy}",
-     *        hasDefineWithNamedParameter = true)
-     * List<Map<String, Object>> dynamicQuery(
-     *     @Define("selectColumns") String select,
-     *     @Define("table") String table,
-     *     @Define("whereClause") String where,
-     *     @Define("orderBy") String order
-     * );
-     *
-     * // Dynamic join
-     * @Query(value = "SELECT u.* FROM users u {join} WHERE u.active = :active",
-     *        hasDefineWithNamedParameter = true)
-     * List<User> queryWithDynamicJoin(@Define("join") String joinClause,
-     *                                 @Bind("active") boolean active);
-     * // Example: queryWithDynamicJoin("LEFT JOIN orders o ON u.id = o.user_id", true)
-     * }</pre>
-     *
-     * <p>Security considerations:</p>
-     * <ul>
-     *   <li><strong>IMPORTANT:</strong> Template variables are replaced as-is without SQL escaping</li>
-     *   <li>Never use user input directly in {@code @Define} parameters without validation</li>
-     *   <li>Use a whitelist approach for dynamic table/column names</li>
-     *   <li>Consider using enums or constants for dynamic SQL parts</li>
-     *   <li>For dynamic values, use {@code @Bind} with named parameters instead</li>
-     * </ul>
-     *
-     * <p>Best practices:</p>
-     * <pre>{@code
-     * // Good: Using enum for type safety
-     * public enum SortColumn {
-     *     NAME("name"), EMAIL("email"), CREATED_DATE("created_date");
-     *     final String column;
-     *     SortColumn(String column) { this.column = column; }
-     * }
-     *
-     * @Query(value = "SELECT * FROM users ORDER BY {sortCol}",
-     *        hasDefineWithNamedParameter = true)
-     * List<User> getSorted(@Define("sortCol") SortColumn sortBy);
-     *
-     * // Better: Validation in service layer
-     * public List<User> searchUsers(String tableName, String status) {
-     *     if (!ALLOWED_TABLES.contains(tableName)) {
-     *         throw new IllegalArgumentException("Invalid table: " + tableName);
-     *     }
-     *     return userDao.queryTable(tableName, status);
-     * }
-     * }</pre>
-     *
-     * @return {@code true} if the SQL uses {@link Define} template variables; {@code false} otherwise
+     * @return {@code true} if template variables defined by {@link Define} or {@link DefineList} will be replaced with query fragments
+     *         containing named parameters; {@code false} otherwise
      * @see Define
      * @see DefineList
      */

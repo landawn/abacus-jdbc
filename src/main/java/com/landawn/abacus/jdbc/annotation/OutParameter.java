@@ -37,29 +37,29 @@ import java.sql.Types;
  * <p>Example usage:</p>
  * <pre>{@code
  * public interface EmployeeDao extends CrudDao<Employee, Long> {
- *     
+ *
  *     // Single output parameter by position
- *     @Call("{call get_employee_count(?)}")
+ *     @Query(value = "{call get_employee_count(?)}", isProcedure = true)
  *     @OutParameter(position = 1, sqlType = Types.INTEGER)
  *     int getEmployeeCount();
- *     
+ *
  *     // Multiple output parameters by name
- *     @Call("{call calculate_bonus(:employeeId, :bonus, :tax)}")
+ *     @Query(value = "{call calculate_bonus(:employeeId, :bonus, :tax)}", isProcedure = true)
  *     @OutParameter(name = "bonus", sqlType = Types.DECIMAL)
  *     @OutParameter(name = "tax", sqlType = Types.DECIMAL)
  *     Map<String, Object> calculateBonus(@Bind("employeeId") long employeeId);
- *     
+ *
  *     // Mixed IN and OUT parameters
- *     @Call("{call update_salary(:employeeId, :increase, :newSalary, :effectiveDate)}")
+ *     @Query(value = "{call update_salary(:employeeId, :increase, :newSalary, :effectiveDate)}", isProcedure = true)
  *     @OutParameter(name = "newSalary", sqlType = Types.DECIMAL)
  *     @OutParameter(name = "effectiveDate", sqlType = Types.DATE)
  *     Map<String, Object> updateSalary(
  *         @Bind("employeeId") long employeeId,
  *         @Bind("increase") BigDecimal increase
  *     );
- *     
+ *
  *     // Using position-based parameters
- *     @Call("{call sp_get_stats(?, ?, ?, ?)}")
+ *     @Query(value = "{call sp_get_stats(?, ?, ?, ?)}", isProcedure = true)
  *     @OutParameter(position = 2, sqlType = Types.INTEGER) // total_count
  *     @OutParameter(position = 3, sqlType = Types.DECIMAL) // average_salary
  *     @OutParameter(position = 4, sqlType = Types.VARCHAR) // department_name
@@ -67,7 +67,7 @@ import java.sql.Types;
  * }
  * }</pre>
  * 
- * @see Call
+ * @see Query
  * @see OutParameterList
  * @see CallableStatement#registerOutParameter(String, int)
  * @see CallableStatement#registerOutParameter(int, int)
@@ -89,7 +89,7 @@ public @interface OutParameter {
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * @Call("{call calculate_discount(:price, :customerId, :discount, :finalPrice)}")
+     * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}", isProcedure = true)
      * @OutParameter(name = "discount", sqlType = Types.DECIMAL)
      * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
      * Map<String, Object> calculateDiscount(
@@ -119,7 +119,7 @@ public @interface OutParameter {
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * @Call("{call sp_analyze_customer(?, ?, ?, ?)}")
+     * @Query(value = "{call sp_analyze_customer(?, ?, ?, ?)}", isProcedure = true)
      * @OutParameter(position = 2, sqlType = Types.VARCHAR)  // status
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // credit_score
      * @OutParameter(position = 4, sqlType = Types.DATE)     // last_purchase

@@ -100,31 +100,31 @@ public enum OP {
     /**
      * General query operation that returns results based on the method return type.
      * The framework automatically determines the appropriate result handling.
-     * 
+     *
      * <p>Example:
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.query)
      * Dataset queryUsersByAge(int age);
      * }</pre></p>
-     * 
-     * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code Select/NamedSelect}.
+     *
+     * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code @Query}.
      */
     query,
 
     /**
      * Returns query results as a Stream for lazy evaluation and processing.
      * Useful for handling large result sets without loading all data into memory.
-     * 
+     *
      * <p>The stream should be properly closed after use, preferably in a try-with-resources block.
      * This operation enables processing of large datasets with minimal memory footprint.</p>
-     * 
+     *
      * <p>Example:
      * <pre>{@code
      * @Query(value = "SELECT * FROM users", op = OP.stream)
      * Stream<User> streamAllUsers();
      * }</pre></p>
      *
-     * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code Select/NamedSelect}.
+     * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code @Query}.
      */
     stream,
 
@@ -165,72 +165,72 @@ public enum OP {
     /**
      * Retrieves all ResultSets from a stored procedure call as Lists.
      * Each ResultSet is converted to a List of the specified type.
-     * 
-     * <p>This operation is primarily used with @Call annotation for stored procedures
+     *
+     * <p>This operation is primarily used with {@code @Query} annotation for stored procedures
      * that return multiple result sets. Each result set is processed and returned
      * in a collection.</p>
-     * 
+     *
      * <p>Example:
      * <pre>{@code
-     * @Call(value = "{call getUsersAndOrders(?)}", op = OP.listAll)
+     * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre></p>
-     * 
-     * <p>Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.</p>
+     *
+     * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.</p>
      */
     listAll,
 
     /**
      * Retrieves all ResultSets from a stored procedure call as Datasets.
      * Each ResultSet is converted to a Dataset for flexible data manipulation.
-     * 
+     *
      * <p>Similar to listAll but returns Dataset objects which provide more
      * flexibility for data processing and transformation compared to typed Lists.</p>
-     * 
+     *
      * <p>Example:
      * <pre>{@code
-     * @Call(value = "{call getComplexReport(?, ?)}", op = OP.queryAll)
+     * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre></p>
-     * 
-     * <p>Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>
+     *
+     * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>
      */
     queryAll,
 
     /**
      * Retrieves all ResultSets from a stored procedure call as Streams.
      * Enables lazy processing of multiple result sets with minimal memory usage.
-     * 
+     *
      * <p>This operation is ideal for stored procedures that return large result sets
      * where you want to process data in a streaming fashion rather than loading
      * everything into memory at once.</p>
-     * 
+     *
      * <p>Example:
      * <pre>{@code
-     * @Call(value = "{call streamLargeDatasets()}", op = OP.streamAll)
+     * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre></p>
-     * 
-     * <p>Mostly it's for {@code @Call} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.</p>
+     *
+     * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.</p>
      */
     streamAll,
 
     /**
      * Executes a stored procedure and retrieves OUT parameters.
      * Used when the primary goal is to get output parameters rather than result sets.
-     * 
+     *
      * <p>This operation is specifically designed for stored procedures with OUT or INOUT
      * parameters. The return type should match the structure of the output parameters.</p>
-     * 
+     *
      * <p>Example:
      * <pre>{@code
-     * @Call(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters)
-     * Tuple2<Integer, Double> calculateStats(@Param("input") int input, 
-     *                                       @OutParam("count") int count,
-     *                                       @OutParam("average") double average);
+     * @Query(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters, isProcedure = true)
+     * @OutParameter(position = 2, sqlType = Types.INTEGER)
+     * @OutParameter(position = 3, sqlType = Types.DECIMAL)
+     * Tuple2<Integer, Double> calculateStats(@Bind("input") int input);
      * }</pre></p>
-     * 
-     * <p>Mostly it's for {@code @Call} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.</p>
+     *
+     * <p>Mostly it's for {@code @Query} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.</p>
      */
     executeAndGetOutParameters,
 
@@ -279,10 +279,10 @@ public enum OP {
      * 
      * <p>Example:
      * <pre>{@code
-     * @Query(value = "SELECT * FROM users")  // op defaults to OP.DEFAULT
+     * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
      * List<User> getAllUsers();  // Framework infers OP.list
      * 
-     * @Query(value = "DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
+     * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
      * int deleteUser(long id);  // Framework infers OP.update
      * }</pre></p>
      */

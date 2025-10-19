@@ -59,21 +59,21 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
     // Methods defined in Dao interface don't require implementation. Of course, Customized implemnetation is also supported by default method.
-    @Select(sql = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
+    @Query("SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
     // Or id of the sql script defined in xml mapper file.
-    @Select(id = "selectUserByFirstName")
+    @Query(id = "selectUserByFirstName")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
 
     // Or id of the sql script defined in below nested static class.
     // Instead of writing sql scripts manually, you can also use SQLBuilder/DynamicSQLBuilder to write sql scripts.
-    @Select(id = "selectUserByFirstName")
+    @Query(id = "selectUserByFirstName")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     
     // Multiple updates within transaction.
     @Transactional
-    @Sqls({ "update user set first_name = ? where id = ?", 
+    @Query({ "update user set first_name = ? where id = ?", 
             "update user set last_name = ? where id = :id" })
     default void updateFirstNameLastNameByIds(long idForUpdateFirstName, long idForUpdateLastName, String... sqls) throws SQLException { // Last parameter must be String[]. It will be automatically filled with sqls in @Sql.
         prepareQuery(sqls[0]).setLong(1, idForUpdateFirstName).update();
@@ -81,7 +81,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     }
 
     // Refer classes in package com.landawn.abacus.jdbc.annotation for more supported annations
-    @Select(sql = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
+    @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     User selectByIdWithDefine(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id);
 
     static final class SqlTable {
