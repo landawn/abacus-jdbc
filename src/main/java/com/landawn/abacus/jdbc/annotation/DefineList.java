@@ -49,7 +49,6 @@ import java.util.Collection;
  *     
  *     // Dynamic table names (be very careful with this!)
  *     @Query("SELECT * FROM {tables} WHERE status = :status")
- *     @HasDefineWithNamedParameter
  *     List<Map<String, Object>> findFromTables(
  *         @DefineList("tables") String[] tables,
  *         @Bind("status") String status
