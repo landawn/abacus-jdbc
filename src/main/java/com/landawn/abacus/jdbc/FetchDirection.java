@@ -96,7 +96,7 @@ public enum FetchDirection {
     }
 
     /**
-     * Converts a JDBC fetch direction constant to its corresponding enum value.
+     * Returns the FetchDirection enum constant corresponding to the specified integer value.
      * 
      * <p>Example:
      * <pre>{@code

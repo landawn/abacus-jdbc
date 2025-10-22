@@ -80,10 +80,10 @@ import com.landawn.abacus.util.stream.Stream;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
-     * Retrieves the class type of the target DAO interface. This method is for internal use only.
+     * Retrieves the class type of the target DAO interface. This method is Internal use only.
      *
      * @return the class type of the target DAO interface
-     * @deprecated internal only - not intended for public use
+     * @deprecated Internal use only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -91,10 +91,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Class<TD> targetDaoInterface();
 
     /**
-     * Retrieves the class type of the target entity. This method is for internal use only.
+     * Retrieves the class type of the target entity. This method is Internal use only.
      *
      * @return the class type of the target entity
-     * @deprecated internal only - not intended for public use
+     * @deprecated Internal use only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -102,10 +102,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Class<T> targetEntityClass();
 
     /**
-     * Retrieves the name of the target table. This method is for internal use only.
+     * Retrieves the name of the target table. This method is Internal use only.
      *
      * @return the name of the target table
-     * @deprecated internal only - not intended for public use
+     * @deprecated Internal use only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -113,10 +113,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     String targetTableName();
 
     /**
-     * Retrieves the executor for executing tasks in parallel. This method is for internal use only.
+     * Retrieves the executor for executing tasks in parallel. This method is Internal use only.
      *
      * @return the executor for executing parallel tasks
-     * @deprecated internal only - not intended for public use
+     * @deprecated Internal use only - not intended for public use
      */
     @Deprecated
     @NonDBOperation
@@ -134,9 +134,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the class of the join entity to be loaded
+     * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
-     * @return an {@code Optional} containing the first matching entity with join entities loaded, or empty if no match
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException {
@@ -162,7 +162,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *                       All properties will be selected if {@code null}
      * @param joinEntitiesToLoad the collection of join entity classes to be loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the first matching entity with join entities loaded, or empty if no match
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
@@ -189,9 +189,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
-     * @return an {@code Optional} containing the first matching entity with join entities loaded, or empty if no match
+     * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws SQLException {
@@ -216,7 +217,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the class of the join entity to be loaded
+     * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicatedResultException if more than one record is found by the specified condition
@@ -276,7 +277,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicatedResultException if more than one record is found by the specified condition
@@ -305,7 +307,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the class of the join entity to be loaded
+     * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return a list of entities matching the condition with join entities loaded
      * @throws SQLException if a database access error occurs
@@ -375,7 +377,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return a list of entities matching the condition with join entities loaded
      * @throws SQLException if a database access error occurs
@@ -409,7 +412,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the class of the join entity to be loaded
+     * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
@@ -473,7 +476,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
      *                       All properties will be selected if {@code null}
-     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
@@ -1645,7 +1649,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1673,7 +1677,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Deprecated
     @Beta
@@ -1747,7 +1751,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1775,7 +1779,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Deprecated
     @Beta
@@ -1825,7 +1829,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1852,7 +1856,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Deprecated
     @Beta
@@ -1898,7 +1902,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation may not be completed in one transaction if {@code inParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Deprecated
     @Beta
@@ -1925,7 +1929,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
-     * @deprecated the operation cannot be completed in one transaction when executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Deprecated
     @Beta

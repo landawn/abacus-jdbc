@@ -316,9 +316,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a Boolean value.
-     * 
-     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
-     * Otherwise, it sets the parameter to the boolean value.
+     * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Example:</b>
      * <pre>{@code
@@ -406,9 +404,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a Byte value.
-     * 
-     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
-     * Otherwise, it sets the parameter to the byte value.
+     * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Example:</b>
      * <pre>{@code
@@ -496,9 +492,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a Short value.
-     * 
-     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
-     * Otherwise, it sets the parameter to the short value.
+     * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Example:</b>
      * <pre>{@code
@@ -730,9 +724,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a Long value.
-     * 
-     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
-     * Otherwise, it sets the parameter to the long value.
+     * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Example:</b>
      * <pre>{@code
@@ -851,9 +843,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a Float value.
-     * 
-     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
-     * Otherwise, it sets the parameter to the float value.
+     * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Example:</b>
      * <pre>{@code
@@ -941,9 +931,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a Double value.
-     * 
-     * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
-     * Otherwise, it sets the parameter to the double value.
+     * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Example:</b>
      * <pre>{@code

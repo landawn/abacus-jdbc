@@ -297,10 +297,13 @@ final class DaoImpl {
     private static final Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = NamedQuery::setParameters; // NOSONAR
 
     /**
-     * Creates the method handle.
+     * Creates a MethodHandle for invoking a default interface method.
+     * This method attempts multiple strategies to obtain a MethodHandle, handling different JDK versions
+     * and access control scenarios. It's used for invoking default methods from DAO interfaces.
      *
-     * @param method
-     * @return
+     * @param method the Method object representing the default interface method
+     * @return a MethodHandle that can be used to invoke the default method
+     * @throws UnsupportedOperationException if a MethodHandle cannot be created using any available strategy
      */
     private static MethodHandle createMethodHandle(final Method method) {
         final Class<?> declaringClass = method.getDeclaringClass();

@@ -77,9 +77,23 @@ public @interface MappedByKey {
 
     /**
      * Legacy attribute for specifying the key field name.
-     * 
+     *
+     * <p><strong>Deprecated:</strong> Use {@link #keyName()} instead for better clarity and consistency.
+     * This method is maintained for backward compatibility only.</p>
+     *
+     * <p>Example migration:</p>
+     * <pre>{@code
+     * // Old way (deprecated)
+     * @MappedByKey("id")
+     * Map<Long, User> getUserMap();
+     *
+     * // New way (recommended)
+     * @MappedByKey(keyName = "id")
+     * Map<Long, User> getUserMap();
+     * }</pre>
+     *
      * @return the field name to use as map key
-     * @deprecated Use {@code keyName="fieldName"} for explicit declaration
+     * @deprecated Use {@link #keyName()} for explicit and clear field name declaration
      */
     @Deprecated
     String value() default "";

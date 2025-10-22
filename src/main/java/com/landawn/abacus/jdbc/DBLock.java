@@ -228,7 +228,7 @@ public final class DBLock {
      * }</pre>
      *
      * @param target The target resource to lock (must be unique across all lock holders)
-     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the default timeout
+     * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the default timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
     public String lock(final String target) {
@@ -242,7 +242,7 @@ public final class DBLock {
      *
      * @param target The target resource to lock
      * @param timeout The maximum time to wait for the lock in milliseconds
-     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
+     * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
     public String lock(final String target, final long timeout) {
@@ -264,7 +264,7 @@ public final class DBLock {
      * @param target The target resource to lock
      * @param liveTime The duration for which the lock will be held in milliseconds
      * @param timeout The maximum time to wait for the lock in milliseconds
-     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
+     * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
     public String lock(final String target, final long liveTime, final long timeout) {
@@ -290,7 +290,7 @@ public final class DBLock {
      * @param liveTime The duration for which the lock will be held in milliseconds
      * @param timeout The maximum time to wait for the lock in milliseconds
      * @param retryPeriod The period in milliseconds to wait between retry attempts (0 for no delay)
-     * @return A unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
+     * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
     public String lock(final String target, final long liveTime, final long timeout, final long retryPeriod) throws IllegalStateException {

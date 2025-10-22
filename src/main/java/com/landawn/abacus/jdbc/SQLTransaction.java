@@ -119,7 +119,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the unique identifier of this transaction.
      * The ID includes timestamp information to ensure uniqueness across time.
      *
-     * @return the unique transaction identifier
+     * @return the unique transaction identifier, never {@code null}
      */
     @Override
     public String id() {
@@ -153,7 +153,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the current status of this transaction.
      * The status indicates whether the transaction is active, committed, rolled back, or marked for rollback.
      *
-     * @return the current transaction status
+     * @return the current transaction status, never {@code null}
      * 
      * @see Transaction.Status
      */

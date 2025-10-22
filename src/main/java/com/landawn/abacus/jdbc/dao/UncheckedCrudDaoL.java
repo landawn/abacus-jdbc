@@ -476,9 +476,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Gets the entity with the specified ID.
+     * Retrieves the entity with the specified ID.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * Optional<User> user = userDao.get(123L);
@@ -486,7 +486,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @return an Optional containing the entity, or empty if not found
+     * @return an Optional containing the entity if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -495,9 +495,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Gets the entity with the specified ID, selecting only the specified properties.
+     * Retrieves the entity with the specified ID, selecting only the specified properties.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name", "email"));
@@ -505,7 +505,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      *
      * @param id the entity ID as primitive long
      * @param selectPropNames the properties to select, or null to select all
-     * @return an Optional containing the entity with selected properties, or empty if not found
+     * @return an Optional containing the entity with selected properties if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -514,9 +514,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Gets the entity with the specified ID, returning it directly or null if not found.
+     * Retrieves the entity with the specified ID, returning it directly or null if not found.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = userDao.gett(123L);
@@ -526,7 +526,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @return the entity, or null if not found
+     * @return the entity if found, otherwise null
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -535,9 +535,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Gets the entity with the specified ID and selected properties, returning it directly or null if not found.
+     * Retrieves the entity with the specified ID and selected properties, returning it directly or null if not found.
      * This method accepts a primitive long ID for convenience.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = userDao.gett(123L, Arrays.asList("id", "email", "status"));
@@ -545,7 +545,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      *
      * @param id the entity ID as primitive long
      * @param selectPropNames the properties to select, or null to select all
-     * @return the entity with selected properties, or null if not found
+     * @return the entity with selected properties if found, otherwise null
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

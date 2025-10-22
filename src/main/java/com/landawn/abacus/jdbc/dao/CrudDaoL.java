@@ -214,7 +214,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the String value if found, otherwise empty
+     * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws SQLException {
@@ -233,7 +233,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the Date value if found, otherwise empty
+     * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws SQLException {
@@ -246,7 +246,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the Time value if found, otherwise empty
+     * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final long id) throws SQLException {
@@ -265,7 +265,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the Timestamp value if found, otherwise empty
+     * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws SQLException {
@@ -284,7 +284,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @return a Nullable containing the byte array value if found, otherwise empty
+     * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
     default Nullable<byte[]> queryForBytes(final String singleSelectPropName, final long id) throws SQLException {
@@ -305,7 +305,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the value if found, otherwise empty
+     * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
     default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
@@ -373,7 +373,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the unique value if found, otherwise empty
+     * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */

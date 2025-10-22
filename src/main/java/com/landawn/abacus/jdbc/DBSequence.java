@@ -208,7 +208,7 @@ public final class DBSequence {
      * }
      * }</pre>
      *
-     * @return The next value in the sequence
+     * @return the next value in the sequence
      * @throws UncheckedSQLException if a database access error occurs
      */
     public long nextVal() {

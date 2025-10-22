@@ -698,7 +698,8 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the driver classs by url.
+     * Returns the JDBC driver class corresponding to the provided database URL.
+     * This method analyzes the URL pattern to determine which JDBC driver should be used.
      *
      * @param url the JDBC URL to analyze
      * @return the driver class corresponding to the URL, or null if not found
@@ -1223,25 +1224,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the number of columns in the ResultSet.
+     * Returns the number of columns in the ResultSet.
      *
-     * @param rs The ResultSet to get column count from
-     * @return The number of columns in the ResultSet
-     * @throws SQLException If a SQL exception occurs while getting the column count
+     * @param rs the ResultSet to get column count from
+     * @return the number of columns in the ResultSet
+     * @throws SQLException if a SQL exception occurs while retrieving the column count
      */
     public static int getColumnCount(final ResultSet rs) throws SQLException {
         return rs.getMetaData().getColumnCount();
     }
 
     /**
-     * Gets the column name list for the specified table.
+     * Returns a list of column names for the specified table.
      * This method executes a query that returns no rows to retrieve metadata.
      *
-     * @param conn The database connection
-     * @param tableName The name of the table
-     * @return A list of column names in the order they appear in the table
-     * @throws SQLException If a SQL exception occurs while retrieving column names
-     * 
+     * @param conn the database connection
+     * @param tableName the name of the table
+     * @return a list of column names in the order they appear in the table
+     * @throws SQLException if a SQL exception occurs while retrieving column names
+     *
      * <h3>Example:</h3>
      * <pre>{@code
      * List<String> columns = JdbcUtil.getColumnNameList(connection, "users");
@@ -1272,10 +1273,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column label list from the ResultSet metadata.
+     * Returns a list of column labels from the ResultSet metadata.
      * Column labels are the names used for display, which may differ from actual column names
      * if aliases are used in the SQL query.
-     * 
+     *
      * <h3>Example:</h3>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT id AS user_id, name FROM users");
@@ -1283,8 +1284,8 @@ public final class JdbcUtil {
      * // Returns: ["user_id", "name"]
      * }</pre>
      *
-     * @param rs The ResultSet to get column labels from
-     * @return A list of column labels in the order they appear in the ResultSet
+     * @param rs the ResultSet to get column labels from
+     * @return a list of column labels in the order they appear in the ResultSet
      * @throws SQLException If a SQL exception occurs while retrieving column labels
      */
     public static List<String> getColumnLabelList(final ResultSet rs) throws SQLException {
@@ -1300,13 +1301,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the column label for the specified column index.
+     * Returns the column label for the specified column index.
      * Returns the column label if available, otherwise returns the column name.
      *
-     * @param rsmd The ResultSetMetaData to get the label from
-     * @param columnIndex The column index (1-based)
-     * @return The column label or column name if label is empty
-     * @throws SQLException If a SQL exception occurs while retrieving the column label
+     * @param rsmd the ResultSetMetaData to get the label from
+     * @param columnIndex the column index (1-based)
+     * @return the column label or column name if label is empty
+     * @throws SQLException if a SQL exception occurs while retrieving the column label
      */
     public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         final String result = rsmd.getColumnLabel(columnIndex);
@@ -1743,10 +1744,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the SQL operation.
+     * Determines the SQL operation type from the given SQL statement by analyzing its leading keyword.
+     * This method identifies common SQL operations (SELECT, UPDATE, INSERT, DELETE, MERGE) and others
+     * by examining the beginning of the SQL string.
      *
-     * @param sql
-     * @return
+     * @param sql the SQL statement to analyze
+     * @return the identified SQL operation type, or SQLOperation.UNKNOWN if the operation cannot be determined
      */
     static SQLOperation getSQLOperation(final String sql) {
         if (Strings.startsWithIgnoreCase(sql.trim(), "select ")) {
@@ -3067,12 +3070,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Prepares a PreparedStatement for the given SQL query and sets the provided parameters.
+     * The SQL string can contain either positional (?) or named parameters (:paramName).
      *
-     * @param conn
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param conn the database connection to use
+     * @param sql the SQL statement, which may contain positional or named parameters
+     * @param parameters the parameter values to set on the prepared statement
+     * @return a PreparedStatement with parameters set, ready for execution
+     * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -3089,12 +3094,14 @@ public final class JdbcUtil {
     }
 
     /**
+     * Prepares a CallableStatement for executing stored procedures or functions with the given SQL and parameters.
+     * The SQL string can contain either positional (?) or named parameters (:paramName).
      *
-     * @param conn
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws SQLException
+     * @param conn the database connection to use
+     * @param sql the SQL call statement, which may contain positional or named parameters
+     * @param parameters the parameter values to set on the callable statement
+     * @return a CallableStatement with parameters set, ready for execution
+     * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -3111,13 +3118,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Batch prepare statement.
+     * Prepares a PreparedStatement for batch execution with multiple sets of parameters.
+     * Each element in the parameters list represents one batch of parameters to be added to the statement.
+     * The SQL string can contain either positional (?) or named parameters (:paramName).
      *
-     * @param conn
-     * @param sql
-     * @param parametersList
-     * @return
-     * @throws SQLException
+     * @param conn the database connection to use
+     * @param sql the SQL statement, which may contain positional or named parameters
+     * @param parametersList a list where each element contains parameter values for one batch operation
+     * @return a PreparedStatement with all batches added, ready for batch execution via executeBatch()
+     * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static PreparedStatement prepareBatchStmt(final Connection conn, final String sql, final List<?> parametersList) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -3135,12 +3144,15 @@ public final class JdbcUtil {
     }
 
     /**
+     * Prepares a CallableStatement for batch execution of stored procedures or functions with multiple sets of parameters.
+     * Each element in the parameters list represents one batch of parameters to be added to the statement.
+     * The SQL string can contain either positional (?) or named parameters (:paramName).
      *
-     * @param conn
-     * @param sql
-     * @param parametersList
-     * @return
-     * @throws SQLException
+     * @param conn the database connection to use
+     * @param sql the SQL call statement, which may contain positional or named parameters
+     * @param parametersList a list where each element contains parameter values for one batch operation
+     * @return a CallableStatement with all batches added, ready for batch execution via executeBatch()
+     * @throws SQLException if a database access error occurs or the SQL is invalid
      */
     static CallableStatement prepareBatchCall(final Connection conn, final String sql, final List<?> parametersList) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -3158,10 +3170,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates the named SQL.
+     * Parses a named SQL statement into a ParsedSql object and validates that all parameters are named.
+     * Named SQL uses parameters in the format :paramName or #{paramName}.
      *
-     * @param namedSql
-     * @return
+     * @param namedSql the SQL statement containing named parameters
+     * @return a ParsedSql object representing the parsed and validated named SQL
+     * @throws IllegalArgumentException if the SQL is not a valid named SQL (contains positional parameters)
      */
     private static ParsedSql parseNamedSql(final String namedSql) {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
@@ -3995,11 +4009,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the parameter values.
+     * Extracts and returns parameter values from the provided parameters array.
+     * If a single parameter is provided and it's an array or collection with sufficient elements,
+     * this method unwraps it to use its contents as the actual parameter values.
      *
-     * @param parsedSql
-     * @param parameters
-     * @return
+     * @param parsedSql the parsed SQL statement containing parameter information
+     * @param parameters the parameters provided, which may be individual values or a single array/collection
+     * @return an array of parameter values ready to be set on a PreparedStatement
      */
     static Object[] getParameterValues(final ParsedSql parsedSql, final Object... parameters) {
         if ((parameters.length == 1) && (parameters[0] != null)) {
@@ -6667,7 +6683,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the property names suitable for INSERT operations for the given entity.
+     * Returns the property names suitable for INSERT operations for the given entity.
      * This method returns all property names that should be included in an INSERT statement,
      * excluding properties marked with annotations like @ReadOnly, @Id (for auto-generated IDs), etc.
      *
@@ -6686,7 +6702,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the property names suitable for INSERT operations for the given entity,
+     * Returns the property names suitable for INSERT operations for the given entity,
      * excluding the specified property names.
      *
      * <h3>Example:</h3>
@@ -6707,7 +6723,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the property names suitable for INSERT operations for the given entity class.
+     * Returns the property names suitable for INSERT operations for the given entity class.
      * This method analyzes the class structure to determine which properties should be
      * included in INSERT statements.
      *
@@ -6725,7 +6741,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Gets the property names suitable for INSERT operations for the given entity class,
+     * Returns the property names suitable for INSERT operations for the given entity class,
      * excluding the specified property names.
      *
      * <h3>Example:</h3>

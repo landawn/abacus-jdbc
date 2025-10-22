@@ -29,8 +29,14 @@ import java.lang.annotation.Target;
  * naming conflicts. This annotation helps map those prefixed columns to the appropriate
  * fields in your domain objects, including nested objects.</p>
  * 
- * <p><strong>Note:</strong> This annotation is deprecated. Consider using more modern
- * mapping approaches or explicit column mappings.</p>
+ * <p><strong>Deprecated:</strong> This annotation is deprecated and should not be used for new development.
+ * Consider using one of the following modern alternatives:</p>
+ * <ul>
+ *   <li>Use explicit column aliases with the {@link MergedById} annotation for nested object mapping</li>
+ *   <li>Define separate query methods for joined data and compose results in application code</li>
+ *   <li>Use proper JOIN syntax with nested property notation (e.g., {@code 'device.id'})</li>
+ *   <li>Leverage ORM frameworks with built-in association mapping capabilities</li>
+ * </ul>
  * 
  * <p>Example usage:</p>
  * <pre>{@code
@@ -104,8 +110,9 @@ public @interface PrefixFieldMapping {
      * // ship_street -> shipping.address.street
      * }</pre>
      * 
-     * @return the prefix-to-field mapping string
-     * @deprecated Use explicit column mapping or modern ORM features instead
+     * @return the prefix-to-field mapping string, or empty string if not specified
+     * @deprecated This entire annotation is deprecated. Use explicit column mapping with {@link MergedById}
+     *             or modern ORM features for nested object mapping instead.
      */
     @Deprecated
     String value() default "";

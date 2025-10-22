@@ -104,7 +104,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return the generated ID
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UnsupportedOperationException always thrown as this operation is not supported by default
-     * @deprecated unsupported Operation
+     * @deprecated This operation is not supported by default. ID generation should typically be handled by the database.
      */
     @Deprecated
     @NonDBOperation
@@ -115,7 +115,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Inserts the specified entity into the database and returns the generated ID.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User("John", "Doe");
@@ -124,7 +124,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * System.out.println("Created user with ID: " + id);
      * }</pre>
      *
-     * @param entityToInsert the entity to insert
+     * @param entityToInsert the entity to insert (must not be null)
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -134,7 +134,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Inserts the specified entity with only the specified properties.
      * Properties not included in {@code propNamesToInsert} will not be inserted.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User();
@@ -145,7 +145,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Long id = userDao.insert(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToInsert the entity to insert
+     * @param entityToInsert the entity to insert (must not be null)
      * @param propNamesToInsert the properties to insert, or null to insert all properties
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
@@ -156,7 +156,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Inserts the entity using a named insert SQL statement. The SQL statement should contain
      * named parameters that will be populated from the entity properties.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name, created_date) " +
@@ -166,7 +166,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param namedInsertSQL the named insert SQL statement
-     * @param entityToInsert the entity to insert
+     * @param entityToInsert the entity to insert (must not be null)
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -189,7 +189,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @return a list of generated IDs for the inserted entities
+     * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -210,7 +210,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param entities the collection of entities to insert
      * @param batchSize the size of each batch
-     * @return a list of generated IDs for the inserted entities
+     * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -228,7 +228,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the properties to insert for each entity
-     * @return a list of generated IDs for the inserted entities
+     * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -250,7 +250,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the properties to insert for each entity
      * @param batchSize the size of each batch
-     * @return a list of generated IDs for the inserted entities
+     * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -270,7 +270,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param namedInsertSQL the named insert SQL statement
      * @param entities the collection of entities to insert
-     * @return a list of generated IDs for the inserted entities
+     * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -294,7 +294,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param namedInsertSQL the named insert SQL statement
      * @param entities the collection of entities to insert
      * @param batchSize the size of each batch
-     * @return a list of generated IDs for the inserted entities
+     * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -490,7 +490,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the String value, or empty if no entity found
+     * @return a Nullable containing the String value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -512,7 +512,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Date value, or empty if no entity found
+     * @return a Nullable containing the Date value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -534,7 +534,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Time value, or empty if no entity found
+     * @return a Nullable containing the Time value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -556,7 +556,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Timestamp value, or empty if no entity found
+     * @return a Nullable containing the Timestamp value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -578,7 +578,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the byte array value, or empty if no entity found
+     * @return a Nullable containing the byte array value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -603,7 +603,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
-     * @return a Nullable containing the converted value, or empty if no entity found
+     * @return a Nullable containing the converted value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -745,8 +745,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * Gets the entity with the specified ID.
-     * 
+     * Retrieves the entity with the specified ID.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * Optional<User> user = userDao.get(userId);
@@ -754,7 +754,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param id the entity ID
-     * @return an Optional containing the entity, or empty if not found
+     * @return an Optional containing the entity if found, otherwise empty
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -764,8 +764,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Gets the entity with the specified ID, selecting only the specified properties.
-     * 
+     * Retrieves the entity with the specified ID, selecting only the specified properties.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * Optional<User> user = userDao.get(userId, Arrays.asList("id", "firstName", "email"));
@@ -774,7 +774,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param id the entity ID
      * @param selectPropNames the properties to select, or null to select all
-     * @return an Optional containing the entity with selected properties, or empty if not found
+     * @return an Optional containing the entity with selected properties if found, otherwise empty
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -784,9 +784,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Gets the entity with the specified ID. Returns the entity directly or null if not found.
+     * Retrieves the entity with the specified ID. Returns the entity directly or null if not found.
      * The 'gett' naming convention indicates this method returns T directly.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -796,7 +796,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param id the entity ID
-     * @return the entity, or null if not found
+     * @return the entity if found, otherwise null
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -804,9 +804,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     T gett(final ID id) throws DuplicatedResultException, UncheckedSQLException;
 
     /**
-     * Gets the entity with the specified ID, selecting only the specified properties.
+     * Retrieves the entity with the specified ID, selecting only the specified properties.
      * Returns the entity directly or null if not found.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = userDao.gett(userId, Arrays.asList("id", "email", "status"));
@@ -817,7 +817,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param id the entity ID
      * @param selectPropNames the properties to select, or null to select all
-     * @return the entity with selected properties, or null if not found
+     * @return the entity with selected properties if found, otherwise null
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -979,7 +979,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Updates the specified entity in the database. The entity must have its ID set.
      * All non-null properties will be updated.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -989,7 +989,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param entityToUpdate the entity to update
-     * @return the number of rows updated (typically 1)
+     * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1155,16 +1155,16 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Executes an upsert operation: inserts the entity if it doesn't exist (based on ID),
-     * otherwise updates the existing entity. The entity must have ID field(s) defined.
-     * 
+     * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
+     * The entity must have ID field(s) defined.
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User();
      * user.setId(123L);
      * user.setEmail("john@example.com");
      * user.setLastSeen(new Date());
-     * 
+     *
      * User result = userDao.upsert(user);
      * // Result will be either the newly inserted or updated user
      * }</pre>
@@ -1185,10 +1185,10 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Executes an upsert operation based on the specified unique properties.
+     * Performs an upsert operation: inserts the entity if it doesn't exist based on the specified unique properties, otherwise updates the existing entity.
      * If no record matches the unique properties, inserts the entity.
      * Otherwise, updates the existing record.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User();
@@ -1196,7 +1196,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * user.setFirstName("John");
      * user.setLastName("Doe");
      * user.setScore(100);
-     * 
+     *
      * // Upsert based on email being unique
      * User result = userDao.upsert(user, Arrays.asList("email"));
      * }</pre>

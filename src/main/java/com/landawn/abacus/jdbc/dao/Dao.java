@@ -172,7 +172,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * This is used internally for reflection-based operations.
      *
      * @return the class of the target entity type T
-     * @deprecated for internal use only
+     * @deprecated Internal use only
      */
     @Deprecated
     @NonDBOperation
@@ -184,7 +184,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * This is typically derived from the entity class name or specified via annotations.
      *
      * @return the name of the target table
-     * @deprecated for internal use only
+     * @deprecated Internal use only
      */
     @Deprecated
     @NonDBOperation
@@ -196,7 +196,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * This executor is used when async methods are called without specifying a custom executor.
      *
      * @return the default executor for asynchronous operations
-     * @deprecated for internal use only
+     * @deprecated Internal use only
      */
     @Deprecated
     @NonDBOperation
@@ -208,7 +208,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * This provides additional functionality over the standard Executor interface.
      *
      * @return the async executor instance
-     * @deprecated for internal use only
+     * @deprecated Internal use only
      */
     @Deprecated
     @NonDBOperation

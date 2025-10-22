@@ -142,9 +142,9 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Inserts a new entity into the database and returns the generated ID.
+     * Inserts the specified entity into the database and returns the generated ID.
      * All non-null properties of the entity will be included in the INSERT statement.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User("John", "Doe", "john@example.com");
@@ -152,16 +152,16 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * System.out.println("Created user with ID: " + userId);
      * }</pre>
      *
-     * @param entityToInsert the entity to insert, must not be null
+     * @param entityToInsert the entity to insert (must not be null)
      * @return the generated ID of the inserted entity
      * @throws SQLException if a database access error occurs or the entity is null
      */
     ID insert(final T entityToInsert) throws SQLException;
 
     /**
-     * Inserts a new entity with only the specified properties.
+     * Inserts the specified entity with only the specified properties.
      * This is useful when you want to insert an entity with only certain fields populated.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User();
@@ -170,8 +170,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Long userId = userDao.insert(user, Arrays.asList("email", "createdDate"));
      * }</pre>
      *
-     * @param entityToInsert the entity to insert
-     * @param propNamesToInsert the property names to include in the INSERT statement. 
+     * @param entityToInsert the entity to insert (must not be null)
+     * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If null or empty, all properties will be inserted
      * @return the generated ID of the inserted entity
      * @throws SQLException if a database access error occurs
@@ -474,7 +474,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the String value if found, otherwise empty
+     * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -494,7 +494,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Date value if found, otherwise empty
+     * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -508,7 +508,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Time value if found, otherwise empty
+     * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -528,7 +528,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the Timestamp value if found, otherwise empty
+     * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -549,7 +549,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @return a Nullable containing the byte array value if found, otherwise empty
+     * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -571,7 +571,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the value if found, otherwise empty
+     * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
      * @see ConditionFactory.CF
@@ -640,7 +640,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return a Nullable containing the unique value if found, otherwise empty
+     * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see ConditionFactory
@@ -1035,9 +1035,9 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 
     /**
-     * Inserts a new entity or updates an existing one based on its ID fields.
+     * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
      * If an entity with the same ID exists, it will be updated; otherwise, a new entity will be inserted.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User();
@@ -1062,9 +1062,9 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Inserts a new entity or updates an existing one based on a custom condition.
+     * Performs an upsert operation: inserts the entity if it doesn't exist based on the specified condition, otherwise updates the existing entity.
      * This allows for upsert logic based on any criteria, not just ID fields.
-     * 
+     *
      * <p>Example usage:</p>
      * <pre>{@code
      * User user = new User("john@example.com", "John Doe");

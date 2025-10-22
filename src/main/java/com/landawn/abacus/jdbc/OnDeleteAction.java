@@ -82,7 +82,7 @@ public enum OnDeleteAction {
     }
 
     /**
-     * Returns the OnDeleteAction enum constant for the specified string name.
+     * Returns the OnDeleteAction enum constant corresponding to the specified string value.
      * The lookup is case-insensitive.
      * 
      * @param name The string representation of the delete action ("noAction", "setNull", or "cascade")

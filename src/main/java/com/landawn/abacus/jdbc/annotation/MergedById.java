@@ -101,20 +101,34 @@ public @interface MergedById {
     /**
      * Specifies the ID field(s) to use for merging rows.
      * For composite keys, provide a comma-separated list of field names.
-     * 
-     * <p>This parameter is deprecated because the framework can typically
-     * determine the ID field(s) automatically from the entity class annotations
-     * or conventions.</p>
-     * 
-     * <p>Example with composite key:</p>
+     *
+     * <p><strong>Deprecated:</strong> This parameter is no longer needed in most cases.
+     * The framework automatically detects ID fields from entity class annotations
+     * (such as {@code @Id}) or standard naming conventions, making explicit specification unnecessary.</p>
+     *
+     * <p>The automatic ID detection works for:</p>
+     * <ul>
+     *   <li>Single ID fields annotated with {@code @Id}</li>
+     *   <li>Composite keys using {@code @Id} on multiple fields</li>
+     *   <li>Standard naming conventions (e.g., "id" field name)</li>
+     * </ul>
+     *
+     * <p>Example with composite key (legacy usage):</p>
      * <pre>{@code
+     * // Old way (deprecated) - manually specify composite key
      * @Query("SELECT * FROM order_items WHERE order_date = :date")
-     * @MergedById("orderId, productId")  // Composite key
+     * @MergedById("orderId, productId")
      * List<OrderItem> findByDate(@Bind("date") Date date);
+     *
+     * // New way (recommended) - let framework detect ID fields
+     * @Query("SELECT * FROM order_items WHERE order_date = :date")
+     * @MergedById
+     * List<OrderItem> findByDate(@Bind("date") Date date);
+     * // OrderItem class should have @Id annotations on orderId and productId fields
      * }</pre>
      *
-     * @return comma-separated list of ID field names
-     * @deprecated The framework automatically detects ID fields from entity metadata
+     * @return comma-separated list of ID field names, or empty string for automatic detection
+     * @deprecated The framework automatically detects ID fields from entity metadata. Use {@code @MergedById} without the value parameter.
      */
     @Deprecated
     String value() default "";
