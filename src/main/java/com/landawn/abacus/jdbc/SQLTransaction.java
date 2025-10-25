@@ -39,7 +39,7 @@ import com.landawn.abacus.util.Throwables;
  * <p><b>Important:</b> DO NOT CLOSE the connection manually. It will be automatically closed 
  * after the transaction is committed or rolled back.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED)) {
  *     // Execute database operations
@@ -214,7 +214,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * If the transaction is marked for rollback only, it will be rolled back instead.
      * The connection will be automatically closed after successful commit.
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
@@ -576,7 +576,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * <p>This is useful when you need to perform operations that should not be
      * part of the current transaction.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * transaction.runNotInMe(() -> {
      *     // This code runs outside the transaction
@@ -611,7 +611,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * <p>This is useful when you need to perform operations that should not be
      * part of the current transaction and return a result.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = transaction.callNotInMe(() -> {
      *     // This query runs outside the transaction
@@ -644,7 +644,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Closes this transaction by calling {@link #rollbackIfNotCommitted()}.
      * This method is provided to support try-with-resources statements.
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     // perform operations

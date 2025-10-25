@@ -219,7 +219,7 @@ public final class DBLock {
      * <p>This method uses {@link #DEFAULT_LOCK_LIVE_TIME} (3 minutes) for the lock duration
      * and {@link #DEFAULT_TIMEOUT} (3 seconds) for the acquisition timeout.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String lockCode = dbLock.lock("user-123");
      * if (lockCode != null) {
@@ -255,7 +255,7 @@ public final class DBLock {
      * <p>The lock will automatically expire after the specified live time to prevent deadlocks
      * in case the lock holder crashes or fails to release the lock.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Try to acquire lock for 5 minutes, wait up to 10 seconds
      * String lockCode = dbLock.lock("resource-xyz", 300000, 10000);
@@ -280,7 +280,7 @@ public final class DBLock {
      * 
      * <p>Before attempting to acquire the lock, this method removes any expired locks for the target.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Try to acquire lock for 1 minute, wait up to 5 seconds, retry every 100ms
      * String lockCode = dbLock.lock("critical-resource", 60000, 5000, 100);
@@ -351,7 +351,7 @@ public final class DBLock {
      * <p>This method verifies that the provided code matches the lock code to ensure that only
      * the lock holder can release the lock. If the codes don't match, the unlock operation fails.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String lockCode = dbLock.lock("resource-123");
      * if (lockCode != null) {
@@ -395,7 +395,7 @@ public final class DBLock {
      * 
      * <p>If the instance is already closed, this method does nothing.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBLock lock = new DBLock(dataSource, "locks");
      * try {

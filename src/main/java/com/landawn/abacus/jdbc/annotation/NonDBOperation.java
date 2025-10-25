@@ -44,7 +44,7 @@ import java.lang.annotation.Target;
  *   <li>{@code prepareCallableQuery()} - Creates a callable query builder</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // This method will be processed as a database operation

@@ -66,7 +66,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p>This interface throws {@code UncheckedSQLException} instead of {@code SQLException}, making it
  * easier to work with in functional programming contexts and reducing boilerplate exception handling.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends UncheckedCrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Custom query methods can be added here
@@ -116,7 +116,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Inserts the specified entity into the database and returns the generated ID.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("John", "Doe");
      * user.setEmail("john@example.com");
@@ -135,7 +135,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Inserts the specified entity with only the specified properties.
      * Properties not included in {@code propNamesToInsert} will not be inserted.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setFirstName("John");
@@ -157,7 +157,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Inserts the entity using a named insert SQL statement. The SQL statement should contain
      * named parameters that will be populated from the entity properties.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name, created_date) " +
      *              "VALUES (:firstName, :lastName, CURRENT_TIMESTAMP)";
@@ -177,7 +177,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch inserts the specified entities to the database using the default batch size.
      * Returns a list of generated IDs for the inserted entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
      *     new User("John", "Doe"),
@@ -201,7 +201,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch inserts the specified entities using the specified batch size.
      * The entities will be inserted in batches to improve performance.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = generateThousandsOfUsers();
      * // Insert in batches of 1000
@@ -219,7 +219,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Batch inserts entities with only the specified properties using the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getUsersToImport();
      * // Only insert essential fields
@@ -239,7 +239,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Batch inserts entities with only the specified properties using the specified batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getLargeUserList();
      * List<String> propsToInsert = Arrays.asList("firstName", "lastName", "email", "status");
@@ -260,7 +260,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch inserts entities using a named insert SQL statement with the default batch size.
      * This is a beta API for custom batch insert operations.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name, status) " +
      *              "VALUES (:firstName, :lastName, 'ACTIVE')";
@@ -283,7 +283,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch inserts entities using a named insert SQL statement with the specified batch size.
      * This is a beta API for custom batch insert operations.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (first_name, last_name, created_by) " +
      *              "VALUES (:firstName, :lastName, CURRENT_USER)";
@@ -304,7 +304,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalBoolean} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", userId);
      * if (isActive.isPresent() && isActive.getAsBoolean()) {
@@ -326,7 +326,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalChar} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = userDao.queryForChar("grade", studentId);
      * if (grade.isPresent()) {
@@ -348,7 +348,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalByte} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalByte level = userDao.queryForByte("accessLevel", userId);
      * if (level.isPresent() && level.getAsByte() > 5) {
@@ -370,7 +370,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalShort} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalShort age = userDao.queryForShort("age", userId);
      * if (age.isPresent()) {
@@ -392,7 +392,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalInt} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt loginCount = userDao.queryForInt("loginCount", userId);
      * if (loginCount.isPresent() && loginCount.getAsInt() > 100) {
@@ -414,7 +414,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalLong} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong totalBytes = userDao.queryForLong("storageUsed", userId);
      * if (totalBytes.isPresent()) {
@@ -436,7 +436,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalFloat} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat rating = userDao.queryForFloat("averageRating", productId);
      * if (rating.isPresent() && rating.getAsFloat() >= 4.5f) {
@@ -458,7 +458,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code OptionalDouble} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = userDao.queryForDouble("accountBalance", accountId);
      * if (balance.isPresent()) {
@@ -480,7 +480,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<String>} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", userId);
      * if (email.isPresent()) {
@@ -502,7 +502,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<java.sql.Date>} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", userId);
      * if (birthDate.isPresent()) {
@@ -524,7 +524,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<java.sql.Time>} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = userDao.queryForTime("workStartTime", employeeId);
      * if (startTime.isPresent()) {
@@ -546,7 +546,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<java.sql.Timestamp>} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Timestamp> lastLogin = userDao.queryForTimestamp("lastLoginTime", userId);
      * if (lastLogin.isPresent()) {
@@ -568,7 +568,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns a {@code Nullable<byte[]>} describing the value of a single property for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = userDao.queryForBytes("profileImage", userId);
      * if (avatar.isPresent()) {
@@ -591,7 +591,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Returns a {@code Nullable<V>} describing the value of a single property for the entity with the specified ID,
      * converted to the specified target type.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", productId, BigDecimal.class);
      * if (price.isPresent()) {
@@ -617,7 +617,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
      * Unlike queryForSingleResult, this method returns empty Optional for null values.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", userId, String.class);
      * nickname.ifPresent(name -> updateDisplayName(name));
@@ -640,7 +640,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Returns an {@code Optional} describing the non-null value mapped by the row mapper for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserStatus> status = userDao.queryForSingleNonNull(
      *     "statusCode",
@@ -667,7 +667,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
      * Throws {@code DuplicatedResultException} if more than one record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming email should be unique per user
      * Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class);
@@ -692,7 +692,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
      * Throws {@code DuplicatedResultException} if more than one record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Integer> accessLevel = userDao.queryForUniqueNonNull(
      *     "accessLevel",
@@ -720,7 +720,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.
      * Throws {@code DuplicatedResultException} if more than one record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Permission> permission = userDao.queryForUniqueNonNull(
      *     "permissionData",
@@ -747,7 +747,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Retrieves the entity with the specified ID.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.get(userId);
      * user.ifPresent(u -> System.out.println("Found user: " + u.getName()));
@@ -766,7 +766,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Retrieves the entity with the specified ID, selecting only the specified properties.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.get(userId, Arrays.asList("id", "firstName", "email"));
      * // Only id, firstName, and email will be populated in the returned user
@@ -787,7 +787,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Retrieves the entity with the specified ID. Returns the entity directly or null if not found.
      * The 'gett' naming convention indicates this method returns T directly.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * if (user != null) {
@@ -807,7 +807,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Retrieves the entity with the specified ID, selecting only the specified properties.
      * Returns the entity directly or null if not found.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId, Arrays.asList("id", "email", "status"));
      * if (user != null && "ACTIVE".equals(user.getStatus())) {
@@ -827,7 +827,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Gets multiple entities by their IDs in batch using the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);
      * List<User> users = userDao.batchGet(userIds);
@@ -846,7 +846,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Gets multiple entities by their IDs in batch using the specified batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<Long> userIds = getLargeUserIdSet();
      * // Fetch in batches of 1000 to avoid query size limits
@@ -868,7 +868,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Gets multiple entities by their IDs with only the specified properties selected.
      * Uses the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
      * List<User> users = userDao.batchGet(userIds, Arrays.asList("id", "email", "firstName"));
@@ -891,7 +891,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Gets multiple entities by their IDs with only the specified properties selected,
      * using the specified batch size for efficient querying.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<Long> userIds = getThousandsOfUserIds();
      * List<String> minimalProps = Arrays.asList("id", "email");
@@ -913,7 +913,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Checks if an entity with the specified ID exists in the database.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.exists(userId)) {
      *     // User exists, proceed with update
@@ -936,7 +936,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Checks if an entity with the specified ID does not exist in the database.
      * This is the logical opposite of {@link #exists(ID)}.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.notExists(userId)) {
      *     // User doesn't exist, safe to create
@@ -959,7 +959,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Counts the number of entities with the specified IDs.
      * This is a beta API that can be used to check how many of the given IDs actually exist.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> requestedIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);
      * int existingCount = userDao.count(requestedIds);
@@ -980,7 +980,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Updates the specified entity in the database. The entity must have its ID set.
      * All non-null properties will be updated.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * user.setEmail("newemail@example.com");
@@ -999,7 +999,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Updates only the specified properties of the entity in the database.
      * Properties not included in {@code propNamesToUpdate} will not be modified.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(userId);
@@ -1022,7 +1022,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Updates a single property value for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Update user's last login time
      * userDao.update("lastLoginTime", new Date(), userId);
@@ -1048,7 +1048,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Updates multiple properties for the entity with the specified ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("email", "newemail@example.com");
@@ -1070,7 +1070,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch updates multiple entities using the default batch size.
      * All non-null properties in each entity will be updated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.eq("needsUpdate", true));
      * users.forEach(user -> {
@@ -1093,7 +1093,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch updates multiple entities using the specified batch size.
      * All non-null properties in each entity will be updated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = getThousandsOfUsers();
      * // Update in batches of 500
@@ -1111,7 +1111,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Batch updates only the specified properties of multiple entities using the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getUsersToProcess();
      * users.forEach(user -> {
@@ -1135,7 +1135,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Batch updates only the specified properties of multiple entities using the specified batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getLargeUserList();
      * // Prepare updates
@@ -1158,7 +1158,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
      * The entity must have ID field(s) defined.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(123L);
@@ -1189,7 +1189,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * If no record matches the unique properties, inserts the entity.
      * Otherwise, updates the existing record.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
@@ -1221,7 +1221,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * If no record matches the condition, inserts the entity.
      * Otherwise, updates the existing record merging non-null values.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
@@ -1265,7 +1265,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch upserts multiple entities using the default batch size.
      * Entities are inserted if they don't exist (based on ID), otherwise updated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
      *     new User(1L, "John", "john@example.com"),
@@ -1289,7 +1289,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch upserts multiple entities using the specified batch size.
      * Entities are inserted if they don't exist (based on ID), otherwise updated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = getThousandsOfUsers();
      * // Upsert in batches of 500
@@ -1321,7 +1321,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch upserts multiple entities based on the specified unique properties.
      * Uses the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getUsersFromImport();
      * // Upsert based on email being unique
@@ -1345,7 +1345,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * 2. Separating entities into insert and update groups
      * 3. Performing batch insert and batch update operations
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> importedUsers = parseCSVFile();
      * // Upsert based on email, in batches of 1000
@@ -1450,7 +1450,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * The entity must have its ID set. After refresh, the entity will contain the
      * current values from the database.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(123L);
@@ -1480,7 +1480,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * The entity must have its ID set. Properties not in {@code propNamesToRefresh}
      * will retain their current values.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
      * // Only refresh email and status fields
@@ -1520,7 +1520,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch refreshes multiple entities from the database using the default batch size.
      * Each entity must have its ID set.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> cachedUsers = getCachedUsers();
      * int refreshedCount = userDao.batchRefresh(cachedUsers);
@@ -1540,7 +1540,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch refreshes multiple entities from the database using the specified batch size.
      * Each entity must have its ID set.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> thousandsOfUsers = getLargeUserCache();
      * // Refresh in batches of 500
@@ -1568,7 +1568,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Batch refreshes only the specified properties of multiple entities using the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Only refresh status and lastLogin fields
@@ -1592,7 +1592,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * 2. Fetching current values from database in batches
      * 3. Merging the specified properties back into the original entities
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> cachedUsers = getThousandsOfCachedUsers();
      * // Refresh only critical fields in batches of 1000
@@ -1652,7 +1652,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Deletes the specified entity from the database. The entity must have its ID set.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * int deletedRows = userDao.delete(user);
@@ -1671,7 +1671,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Deletes the entity with the specified ID from the database.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int deletedRows = userDao.deleteById(userId);
      * if (deletedRows == 0) {
@@ -1690,7 +1690,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch deletes multiple entities from the database using the default batch size.
      * Each entity must have its ID set.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> usersToDelete = getInactiveUsers();
      * int totalDeleted = userDao.batchDelete(usersToDelete);
@@ -1710,7 +1710,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch deletes multiple entities from the database using the specified batch size.
      * Each entity must have its ID set.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> thousandsToDelete = getObsoleteUsers();
      * // Delete in batches of 500
@@ -1728,7 +1728,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     /**
      * Batch deletes entities by their IDs using the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIdsToDelete = Arrays.asList(1L, 2L, 3L, 4L, 5L);
      * int totalDeleted = userDao.batchDeleteByIds(userIdsToDelete);
@@ -1747,7 +1747,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Batch deletes entities by their IDs using the specified batch size.
      * This is more efficient than deleting entities one by one, especially for large collections.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<Long> thousandsOfIds = getExpiredUserIds();
      * // Delete in batches of 1000 to avoid query size limits

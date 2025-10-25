@@ -27,7 +27,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * modify them. All delete operations for join entities are disabled and will
  * throw {@link UnsupportedOperationException}.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // For a User-Role many-to-many relationship
  * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder, UserDao> {

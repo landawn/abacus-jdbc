@@ -37,7 +37,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Historical data that must remain immutable</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface ReportDao extends UncheckedReadOnlyDao<Report, SQLBuilder.PSC, ReportDao> {
  *     // Only query methods are available

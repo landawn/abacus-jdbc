@@ -36,7 +36,7 @@ import com.landawn.abacus.query.condition.Condition;
  * <p>All methods in this interface throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
  * allowing for cleaner code without explicit exception handling.</p>
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * UncheckedNoUpdateCrudDao<User, Long, SQLBuilder, ?> userDao = daoFactory.createNoUpdateDao(User.class);
  * 
@@ -57,7 +57,7 @@ import com.landawn.abacus.query.condition.Condition;
  * 
  * // Delete operations work normally
  * userDao.deleteById(123L);
- * }</pre></p>
+ * }</pre>
  *
  * @param <T> The entity type that this DAO manages
  * @param <ID> The type of the entity's primary key (ID)
@@ -103,7 +103,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * user.setEmail("newemail@example.com");
      * // This will throw UnsupportedOperationException
      * dao.update(user, Arrays.asList("email"));
-     * }</pre></p>
+     * }</pre>
      * 
      * @param entityToUpdate The entity containing updated values (operation will fail)
      * @param propNamesToUpdate Collection of property names to update (operation will fail)
@@ -128,7 +128,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <pre>{@code
      * // This will throw UnsupportedOperationException
      * dao.update("status", "INACTIVE", 123L);
-     * }</pre></p>
+     * }</pre>
      *
      * @param propName The name of the property to update (operation will fail)
      * @param propValue The new value for the property (operation will fail)
@@ -157,7 +157,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * updates.put("status", "ACTIVE");
      * // This will throw UnsupportedOperationException
      * dao.update(updates, 123L);
-     * }</pre></p>
+     * }</pre>
      * 
      * @param updateProps Map of property names to their new values (operation will fail)
      * @param id The ID of the entity to update (operation will fail)
@@ -263,7 +263,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * user.setId(123L);
      * // This will throw UnsupportedOperationException
      * dao.upsert(user);
-     * }</pre></p>
+     * }</pre>
      * 
      * @param entity The entity to insert or update (operation will fail)
      * @return Never returns normally
@@ -403,7 +403,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <pre>{@code
      * // Instead of: dao.delete(entity);
      * // Use: dao.deleteById(entity.getId());
-     * }</pre></p>
+     * }</pre>
      * 
      * @param entity The entity to delete (operation will fail)
      * @return Never returns normally
@@ -430,7 +430,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * // Or delete by condition
      * int deletedCount = dao.deleteAll(CF.eq("status", "INACTIVE"));
-     * }</pre></p>
+     * }</pre>
      * 
      * @param id The ID of the entity to delete (operation will fail)
      * @return Never returns normally
@@ -491,7 +491,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <pre>{@code
      * // Instead of: dao.batchDeleteByIds(Arrays.asList(1L, 2L, 3L));
      * // Use: dao.deleteAll(CF.in("id", Arrays.asList(1L, 2L, 3L)));
-     * }</pre></p>
+     * }</pre>
      * 
      * @param ids Collection of IDs to delete (operation will fail)
      * @return Never returns normally

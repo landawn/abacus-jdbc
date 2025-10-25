@@ -86,7 +86,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID and loads the specified type of join entities.
      * Only the join entities of the specified class will be loaded.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // User has @JoinedBy orders, profile, and roles
      * // This will only load orders
@@ -113,7 +113,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID and optionally loads all join entities.
      * When includeAllJoinEntities is true, all fields annotated with @JoinedBy will be loaded.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load user with all related entities
      * Optional<User> user = userDao.get(userId, true);
@@ -144,7 +144,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID with only selected properties and loads the specified join entities.
      * This method allows for optimized queries by selecting only needed columns from the main entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load only id, name, and email from user, plus all orders
      * Optional<User> user = userDao.get(userId, 
@@ -170,7 +170,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities.
      * This method provides fine-grained control over what data is loaded from the database.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load user with minimal fields and specific relations
      * Optional<User> user = userDao.get(userId,
@@ -197,7 +197,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID with only selected properties and optionally loads all join entities.
      * Combines property selection with the option to load all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load user with only essential fields but all relationships
      * Optional<User> user = userDao.get(userId,
@@ -224,7 +224,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID and loads the specified type of join entities, returning null if not found.
      * This is the null-returning variant of {@link #get(Object, Class)}.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId, Order.class);
      * if (user != null) {
@@ -254,7 +254,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID and optionally loads all join entities, returning null if not found.
      * This is the null-returning variant of {@link #get(Object, boolean)}.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId, true);
      * if (user != null) {
@@ -358,7 +358,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs and loads the specified type of join entities.
      * Uses the default batch size for processing.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
      * List<User> users = userDao.batchGet(userIds, Order.class);
@@ -383,7 +383,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs and optionally loads all join entities.
      * Uses the default batch size for processing.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = getUserIdsToProcess();
      * // Get all users with all their relationships loaded
@@ -406,7 +406,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
      * Uses the default batch size for processing.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get users with only essential fields and their orders
      * List<User> users = userDao.batchGet(userIds, 
@@ -431,7 +431,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
      * Uses the default batch size for processing.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get users with orders and profiles loaded
      * List<User> users = userDao.batchGet(userIds,
@@ -474,7 +474,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process large number of users in batches of 100
      * List<User> users = userDao.batchGet(thousandsOfUserIds,
@@ -511,7 +511,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load users with multiple relationships in batches
      * List<User> users = userDao.batchGet(userIds,
@@ -554,7 +554,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
      * Processes the retrieval in batches of the specified size to handle large ID collections efficiently.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all users with complete data in optimized batches
      * List<User> users = userDao.batchGet(userIds,

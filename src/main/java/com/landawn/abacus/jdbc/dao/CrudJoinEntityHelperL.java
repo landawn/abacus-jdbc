@@ -70,7 +70,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID and loads the specified join entities.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders loaded
      * Optional<User> user = userDao.get(123L, Order.class);
@@ -95,7 +95,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID and optionally loads all join entities.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with all related entities loaded
      * Optional<User> user = userDao.get(123L, true);
@@ -122,7 +122,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID with selected properties and loads the specified join entities.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with only id and name fields, plus orders
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name"), Order.class);
@@ -146,7 +146,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID with selected properties and loads multiple join entity types.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses loaded
      * Optional<User> user = userDao.get(123L, null, Arrays.asList(Order.class, Address.class));
@@ -170,7 +170,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with only essential fields and all related entities
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name", "email"), true);
@@ -194,7 +194,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID and loads the specified join entities, returning null if not found.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(123L, Order.class);
      * if (user != null) {
@@ -224,7 +224,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID and optionally loads all join entities, returning null if not found.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(123L, true);
      * if (user != null) {
@@ -254,7 +254,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID with selected properties and loads the specified join entities, returning null if not found.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal fields plus orders
      * User user = userDao.gett(123L, Arrays.asList("id", "name"), Order.class);
@@ -286,7 +286,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning null if not found.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses
      * User user = userDao.gett(123L, null, Arrays.asList(Order.class, Address.class));
@@ -321,7 +321,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning null if not found.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with essential fields and all relations
      * User user = userDao.gett(123L, Arrays.asList("id", "name", "status"), true);

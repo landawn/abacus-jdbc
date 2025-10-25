@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * preventing any modifications to the relationships between entities while still allowing
  * read operations inherited from the parent interface.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public class UserReadOnlyDao implements ReadOnlyJoinEntityHelper<User, SQLBuilder, UserDao> {
  *     // All delete operations will throw UnsupportedOperationException

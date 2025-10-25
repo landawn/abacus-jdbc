@@ -38,7 +38,7 @@ import java.lang.annotation.Target;
  *   <li>Leverage ORM frameworks with built-in association mapping capabilities</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     

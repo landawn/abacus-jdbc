@@ -27,7 +27,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * cannot be modified through this DAO. It maintains data integrity by preventing cascading updates
  * or deletes on joined entities.</p>
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Assuming we have User and Order entities with a one-to-many relationship
  * UncheckedReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder, ?> userDao = daoFactory.createReadOnlyJoinDao(User.class);
@@ -47,7 +47,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *         // Expected behavior for read-only join operations
  *     }
  * }
- * }</pre></p>
+ * }</pre>
  * 
  * <p>This interface extends both {@link UncheckedReadOnlyJoinEntityHelper} and {@link UncheckedCrudJoinEntityHelper},
  * inheriting read operations from both while overriding modification operations to throw {@link UnsupportedOperationException}.</p>

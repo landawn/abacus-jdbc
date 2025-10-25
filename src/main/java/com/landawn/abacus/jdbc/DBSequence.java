@@ -95,7 +95,7 @@ public final class DBSequence {
      * with the specified starting value if it doesn't already exist. If the sequence
      * exists with a value lower than startVal, it will be updated to startVal.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Create a sequence starting at 1000 with a buffer of 50
      * DBSequence seq = new DBSequence(dataSource, "id_sequences", "user_id", 1000, 50);
@@ -197,7 +197,7 @@ public final class DBSequence {
      * application instances. If another instance has already claimed the next block,
      * this method will retry until it successfully reserves a block.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBSequence sequence = new DBSequence(ds, "sequences", "order_id", 1000, 100);
      * 
@@ -214,7 +214,15 @@ public final class DBSequence {
     public long nextVal() {
         synchronized (seqName) { //NOSONAR
             try {
+                int retryCount = 0;
+                final int maxRetries = 1000;
+
                 while (lowSeqId.get() >= highSeqId.get()) {
+                    if (++retryCount > maxRetries) {
+                        throw new SQLException(
+                                "Failed to acquire sequence '" + seqName + "' after " + maxRetries + " attempts. Possible high contention or database issue.");
+                    }
+
                     try (PreparedQuery query = JdbcUtil.prepareQuery(ds, querySQL)) {
                         lowSeqId.set(query.setString(1, seqName).queryForLong().orElse(0));
                     }
@@ -243,7 +251,7 @@ public final class DBSequence {
      * <p><strong>Warning:</strong> Resetting a sequence to a lower value than previously
      * generated values may cause duplicate IDs. Use with caution in production systems.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBSequence sequence = new DBSequence(ds, "sequences", "temp_id", 1, 10);
      * 

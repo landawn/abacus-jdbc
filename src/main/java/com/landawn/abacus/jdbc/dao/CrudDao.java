@@ -145,7 +145,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Inserts the specified entity into the database and returns the generated ID.
      * All non-null properties of the entity will be included in the INSERT statement.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("John", "Doe", "john@example.com");
      * Long userId = userDao.insert(user);
@@ -162,7 +162,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Inserts the specified entity with only the specified properties.
      * This is useful when you want to insert an entity with only certain fields populated.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
@@ -182,7 +182,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Inserts an entity using a custom named SQL insert statement.
      * The SQL should use named parameters that match the entity's property names.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (name, email, status) VALUES (:name, :email, 'ACTIVE')";
      * User user = new User("John", "john@example.com");
@@ -200,7 +200,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch insert of multiple entities using the default batch size.
      * This method is more efficient than inserting entities one by one.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
      *     new User("John", "john@example.com"),
@@ -221,7 +221,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch insert of multiple entities with a specified batch size.
      * Large collections will be processed in batches of the specified size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = loadUsers(); // 10000 users
      * List<Long> ids = userDao.batchInsert(largeUserList, 1000); // Process in batches of 1000
@@ -238,7 +238,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch insert with only specified properties for all entities.
      * Uses the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsers();
      * // Only insert email and createdDate for all users
@@ -270,7 +270,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch insert using a custom named SQL statement with default batch size.
      * This is useful for complex insert scenarios that require custom SQL.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (name, email, status) VALUES (:name, :email, 'PENDING')";
      * List<User> users = loadPendingUsers();
@@ -304,7 +304,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * Returns an empty OptionalBoolean if no record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", userId);
      * if (isActive.isPresent() && isActive.getAsBoolean()) {
@@ -326,7 +326,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a char value from a single property of the entity with the specified ID.
      * Returns an empty OptionalChar if no record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = studentDao.queryForChar("grade", studentId);
      * grade.ifPresent(g -> System.out.println("Student grade: " + g));
@@ -346,7 +346,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a byte value from a single property of the entity with the specified ID.
      * Returns an empty OptionalByte if no record is found.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalByte flags = entityDao.queryForByte("flags", entityId);
      * byte flagValue = flags.orElse((byte) 0);
@@ -366,7 +366,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a short value from a single property of the entity with the specified ID.
      * Returns an empty OptionalShort if no record is found.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalShort port = serverDao.queryForShort("port", serverId);
      * short portNumber = port.orElse((short) 8080);
@@ -386,7 +386,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for an integer value from a single property of the entity with the specified ID.
      * Returns an empty OptionalInt if no record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt age = userDao.queryForInt("age", userId);
      * int userAge = age.orElse(0);
@@ -406,7 +406,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a long value from a single property of the entity with the specified ID.
      * Returns an empty OptionalLong if no record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong lastLoginTime = userDao.queryForLong("lastLoginTimestamp", userId);
      * lastLoginTime.ifPresent(time -> System.out.println("Last login: " + new Date(time)));
@@ -426,7 +426,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a float value from a single property of the entity with the specified ID.
      * Returns an empty OptionalFloat if no record is found.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat rating = productDao.queryForFloat("rating", productId);
      * float productRating = rating.orElse(0.0f);
@@ -446,7 +446,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a double value from a single property of the entity with the specified ID.
      * Returns an empty OptionalDouble if no record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = accountDao.queryForDouble("balance", accountId);
      * double amount = balance.orElse(0.0);
@@ -466,7 +466,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a String value from a single property of the entity with the specified ID.
      * Returns a Nullable containing the value, which can be null if the database value is null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", userId);
      * String userEmail = email.orElse("no-email@example.com");
@@ -486,7 +486,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a Date value from a single property of the entity with the specified ID.
      * Returns a Nullable containing the value, which can be null if the database value is null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", userId);
      * birthDate.ifPresent(date -> System.out.println("Birth date: " + date));
@@ -520,7 +520,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
      * Returns a Nullable containing the value, which can be null if the database value is null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<Timestamp> lastModified = userDao.queryForTimestamp("lastModified", userId);
      * lastModified.ifPresent(ts -> System.out.println("Last modified: " + ts));
@@ -541,7 +541,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Returns a Nullable containing the value, which can be null if the database value is null.
      * This is typically used for BLOB data.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", userId);
      * avatar.ifPresent(bytes -> saveImageToFile(bytes));
@@ -561,7 +561,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
      * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> salary = userDao.queryForSingleResult("salary", userId, BigDecimal.class);
      * Nullable<UserStatus> status = userDao.queryForSingleResult("status", userId, UserStatus.class);
@@ -583,7 +583,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a single non-null value of the specified type from a property of the entity.
      * Returns an empty Optional if no record is found or if the value is null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> username = userDao.queryForSingleNonNull("username", userId, String.class);
      * username.ifPresent(name -> System.out.println("Username: " + name));
@@ -605,7 +605,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a single non-null value using a custom row mapper.
      * This allows for complex transformations of the result.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> fullName = userDao.queryForSingleNonNull("firstName", userId, 
      *     (rs, columnNames) -> rs.getString(1).toUpperCase());
@@ -630,7 +630,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * 
      * <p>This method ensures that at most one record matches the query.</p>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class);
      * // Throws DuplicatedResultException if multiple records found
@@ -692,7 +692,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves an entity by its ID.
      * Returns an Optional containing the entity if found, otherwise empty.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.get(userId);
      * user.ifPresent(u -> System.out.println("Found user: " + u.getName()));
@@ -711,7 +711,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves an entity by its ID with only selected properties populated.
      * Properties not in the select list will have their default values.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only load id, name, and email fields
      * Optional<User> user = userDao.get(userId, Arrays.asList("id", "name", "email"));
@@ -732,7 +732,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves an entity by its ID, returning null if not found.
      * This is a convenience method that returns the entity directly instead of wrapped in Optional.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * if (user != null) {
@@ -764,7 +764,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves multiple entities by their IDs using the default batch size.
      * The returned list may be smaller than the input ID collection if some entities are not found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
      * List<User> users = userDao.batchGet(userIds);
@@ -797,7 +797,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves multiple entities by their IDs with only selected properties populated.
      * Uses the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
      * List<User> users = userDao.batchGet(userIds, Arrays.asList("id", "name", "email"));
@@ -832,7 +832,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Checks if an entity with the specified ID exists in the database.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.exists(userId)) {
      *     System.out.println("User exists");
@@ -852,7 +852,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Checks if an entity with the specified ID does not exist in the database.
      * This is a convenience method that negates the result of exists().
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.notExists(userId)) {
      *     // Create new user
@@ -873,7 +873,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Counts how many of the specified IDs exist in the database.
      * This is useful for validating bulk operations.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);
      * int existingCount = userDao.count(userIds);
@@ -891,7 +891,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Updates an existing entity in the database.
      * All non-null properties of the entity will be updated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * user.setEmail("newemail@example.com");
@@ -909,7 +909,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Updates only specified properties of an existing entity.
      * This is useful when you want to update only certain fields.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(userId);
@@ -930,7 +930,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Updates a single property of an entity identified by ID.
      * This is a convenience method for updating one field.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.update("lastLoginTime", new Date(), userId);
      * userDao.update("failedLoginAttempts", 0, userId);
@@ -953,7 +953,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Updates multiple properties of an entity identified by ID.
      * This allows updating multiple fields without loading the entire entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("status", "ACTIVE");
@@ -973,7 +973,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch update of multiple entities using the default batch size.
      * All non-null properties of each entity will be updated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsersToUpdate();
      * users.forEach(u -> u.setLastModified(new Date()));
@@ -1003,7 +1003,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch update of multiple entities updating only specified properties.
      * Uses the default batch size.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsers();
      * users.forEach(u -> {
@@ -1038,7 +1038,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
      * If an entity with the same ID exists, it will be updated; otherwise, a new entity will be inserted.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(userId);
@@ -1065,7 +1065,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs an upsert operation: inserts the entity if it doesn't exist based on the specified condition, otherwise updates the existing entity.
      * This allows for upsert logic based on any criteria, not just ID fields.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("john@example.com", "John Doe");
      * // Upsert based on email instead of ID
@@ -1103,7 +1103,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch upsert of multiple entities using the default batch size.
      * Each entity will be inserted if new or updated if it already exists based on ID fields.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsersFromImport();
      * List<User> savedUsers = userDao.batchUpsert(users);
@@ -1145,7 +1145,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch upsert based on specified unique properties for matching.
      * This allows upsert logic based on properties other than the ID fields.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsers();
      * // Upsert based on email uniqueness
@@ -1262,7 +1262,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Refreshes an entity by reloading all its properties from the database.
      * This is useful when you want to ensure an entity has the latest values from the database.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
      * if (userDao.refresh(user)) {
@@ -1289,7 +1289,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Refreshes specific properties of an entity from the database.
      * Only the specified properties will be updated with database values.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getUser();
      * // Only refresh balance and status fields
@@ -1328,7 +1328,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Refreshes multiple entities from the database using the default batch size.
      * Returns the count of entities that were successfully refreshed.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * int refreshedCount = userDao.batchRefresh(users);
@@ -1368,7 +1368,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Refreshes specific properties of multiple entities using the default batch size.
      * Only the specified properties will be updated with database values.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Only refresh balance and lastModified for all users
@@ -1436,7 +1436,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Deletes an entity from the database.
      * The entity must have its ID field(s) populated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * int deletedRows = userDao.delete(user);
@@ -1455,7 +1455,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Deletes an entity by its ID.
      * This is more efficient than loading the entity first and then deleting it.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int deletedRows = userDao.deleteById(userId);
      * if (deletedRows == 0) {
@@ -1473,7 +1473,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch delete of multiple entities using the default batch size.
      * Each entity must have its ID field(s) populated.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> usersToDelete = getInactiveUsers();
      * int totalDeleted = userDao.batchDelete(usersToDelete);
@@ -1526,7 +1526,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Deletes multiple entities by their IDs using the default batch size.
      * This is more efficient than deleting entities one by one.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);
      * int deletedCount = userDao.batchDeleteByIds(userIds);

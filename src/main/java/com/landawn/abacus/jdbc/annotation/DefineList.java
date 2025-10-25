@@ -34,7 +34,7 @@ import java.util.Collection;
  * be extremely careful to validate and sanitize input to prevent SQL injection attacks.
  * Only use this with trusted input or when dynamic SQL structure is absolutely necessary.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Dynamic column selection
@@ -54,7 +54,7 @@ import java.util.Collection;
  *         @Bind("status") String status
  *     );
  *     
- *     // Usage: dao.findFromTables(new String[]{"users", "admins"}, "active")
+ *     // Usage: dao.findFromTables(new String[] {"users", "admins"}, "active")
  *     // Generates: SELECT * FROM users, admins WHERE status = ?
  * }
  * }</pre>
@@ -82,7 +82,7 @@ public @interface DefineList {
      * 
      * <p>The variable should be referenced in the SQL template using curly braces: {@code {variableName}}</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT {cols} FROM users")

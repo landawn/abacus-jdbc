@@ -3908,7 +3908,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setParameters(params);
      * 
      * // Using an array (parameters set by position)
-     * query.setParameters(new Object[]{"John", 30, "john@example.com"});
+     * query.setParameters(new Object[] {"John", 30, "john@example.com"});
      * 
      * // Using a single value (for queries with one parameter)
      * query.setParameters("John");

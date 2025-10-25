@@ -75,7 +75,7 @@ import lombok.experimental.Accessors;
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
  * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Generate entity class from a table
  * DataSource ds = getDataSource();
@@ -116,7 +116,7 @@ public final class JdbcCodeGenerationUtil {
      * This function takes entity class, property class, and property name as parameters
      * and returns a MIN SQL expression if the property class implements Comparable.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String minExpr = MIN_FUNC.apply(User.class, Integer.class, "age");
      * // Returns: "min(age)"
@@ -135,7 +135,7 @@ public final class JdbcCodeGenerationUtil {
      * This function takes entity class, property class, and property name as parameters
      * and returns a MAX SQL expression if the property class implements Comparable.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String maxExpr = MAX_FUNC.apply(User.class, BigDecimal.class, "salary");
      * // Returns: "max(salary)"
@@ -197,7 +197,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class for the specified table using default configuration.
      * The generated class includes Lombok annotations, field mappings, and JPA/Abacus annotations.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "user_table");
@@ -217,7 +217,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class for the specified table with custom configuration.
      * The configuration allows customization of field naming, type conversion, annotations, and more.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * EntityCodeConfig config = EntityCodeConfig.builder()
      *     .className("User")
@@ -241,7 +241,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class using a custom SQL query to determine the entity structure.
      * This method allows using complex queries (e.g., joins, views) to define the entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT u.id, u.name, p.profile_data FROM users u JOIN profiles p ON u.id = p.user_id";
      * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(ds, "UserProfile", query);
@@ -261,7 +261,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class using a custom SQL query and configuration.
      * This method provides maximum flexibility by allowing both custom queries and configuration.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM user_view WHERE 1=0";
      * EntityCodeConfig config = EntityCodeConfig.builder()
@@ -291,7 +291,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class for the specified table using an existing database connection.
      * This method is useful when you already have an open connection and want to avoid creating a new one.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "product_table");
@@ -311,7 +311,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class for the specified table using an existing connection and custom configuration.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * EntityCodeConfig config = EntityCodeConfig.builder()
      *     .generateBuilder(true)
@@ -333,7 +333,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an entity class using an existing connection and a custom SQL query.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT id, name, email FROM users WHERE 1=0";
      * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "SimpleUser", query);
@@ -353,7 +353,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class using an existing connection, custom SQL query, and configuration.
      * This is the most flexible method, allowing full control over all aspects of entity generation.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM complex_view WHERE 1=0";
      * EntityCodeConfig config = EntityCodeConfig.builder()
@@ -814,7 +814,7 @@ public final class JdbcCodeGenerationUtil {
      * The generated SQL includes all columns from the table.
      * Column names are properly escaped with backticks if they contain special characters.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "employee");
@@ -839,7 +839,7 @@ public final class JdbcCodeGenerationUtil {
      * Column names containing special characters are properly escaped with backticks (MySQL/MariaDB)
      * or double quotes (other databases).
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
@@ -872,7 +872,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table, excluding certain columns and applying a WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("password", "ssn");
@@ -901,7 +901,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a SELECT SQL statement for the specified table using an existing connection,
      * excluding certain columns and applying a WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("salary", "birth_date");
@@ -927,7 +927,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(c -> Strings.toCamelCase(c)).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
@@ -945,7 +945,7 @@ public final class JdbcCodeGenerationUtil {
      * The generated SQL uses positional parameters (?) for all column values.
      * Column names are properly escaped with backticks if they contain special characters.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "product");
@@ -969,7 +969,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an INSERT SQL statement for the specified table using an existing connection.
      * Column names are properly escaped with backticks if they contain special characters.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order_items");
@@ -1003,7 +1003,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an INSERT SQL statement for the specified table, excluding certain columns.
      * The generated SQL uses positional parameters (?) for the included column values.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1030,7 +1030,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an INSERT SQL statement for the specified table, excluding certain columns.
      * The generated SQL uses positional parameters (?) for the included column values.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1056,7 +1056,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(c -> Strings.toCamelCase(c)).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
@@ -1074,7 +1074,7 @@ public final class JdbcCodeGenerationUtil {
      * The generated SQL uses named parameters (:paramName) based on camelCase column names.
      * Column names with underscores are converted to camelCase for parameter names.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "customer");
@@ -1098,7 +1098,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a named INSERT SQL statement for the specified table using an existing connection.
      * Column names with underscores are converted to camelCase for parameter names.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "user_settings");
@@ -1134,7 +1134,7 @@ public final class JdbcCodeGenerationUtil {
      * The generated SQL uses named parameters (:paramName) based on camelCase column names.
      * Column names with underscores are converted to camelCase for parameter names.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1161,7 +1161,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a named INSERT SQL statement for the specified table using an existing connection,
      * excluding certain columns. Column names with underscores are converted to camelCase for parameter names.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1187,7 +1187,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
                 final ResultSet rs = stmt.executeQuery()) {
 
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(c -> Strings.toCamelCase(c)).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
@@ -1205,7 +1205,7 @@ public final class JdbcCodeGenerationUtil {
      * The generated SQL includes all columns in the SET clause with positional parameters.
      * Note: Users should append an appropriate WHERE clause before executing.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
@@ -1231,7 +1231,7 @@ public final class JdbcCodeGenerationUtil {
      * The generated SQL includes all columns in the SET clause with positional parameters.
      * Note: Users should append an appropriate WHERE clause before executing.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
@@ -1266,7 +1266,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee", "id");
@@ -1291,7 +1291,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "employee", "id");
@@ -1332,7 +1332,7 @@ public final class JdbcCodeGenerationUtil {
      * and those used in WHERE conditions), uses positional parameters (?) for all values,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1371,7 +1371,7 @@ public final class JdbcCodeGenerationUtil {
      * and those used in WHERE conditions), uses positional parameters (?) for all values,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
      *
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1405,7 +1405,7 @@ public final class JdbcCodeGenerationUtil {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
                     .append(keyColumnNames)
-                    .map(c -> Strings.toCamelCase(c))
+                    .map(Strings::toCamelCase)
                     .collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
@@ -1428,7 +1428,7 @@ public final class JdbcCodeGenerationUtil {
      * Column names with underscores are converted to camelCase for parameter names.
      * Note: Users should append an appropriate WHERE clause before executing.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
@@ -1455,7 +1455,7 @@ public final class JdbcCodeGenerationUtil {
      * Column names with underscores are converted to camelCase for parameter names.
      * Note: Users should append an appropriate WHERE clause before executing.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
@@ -1494,7 +1494,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "customer", "customer_id");
@@ -1519,7 +1519,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
      * The generated SQL includes all columns in the SET clause except the one used in the WHERE clause.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "customer", "customer_id");
@@ -1560,7 +1560,7 @@ public final class JdbcCodeGenerationUtil {
      * and the key columns used in WHERE conditions), uses named parameters (:paramName) based on camelCase column names,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1594,7 +1594,7 @@ public final class JdbcCodeGenerationUtil {
      * and the key columns used in WHERE conditions), uses named parameters (:paramName) based on camelCase column names,
      * and constructs a WHERE clause from the specified key columns plus an optional custom WHERE clause.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
@@ -1628,7 +1628,7 @@ public final class JdbcCodeGenerationUtil {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
                     .append(keyColumnNames)
-                    .map(c -> Strings.toCamelCase(c))
+                    .map(Strings::toCamelCase)
                     .collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
@@ -1651,7 +1651,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Converts an INSERT SQL statement to an UPDATE SQL statement.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String insertSql = "INSERT INTO users(name, email) VALUES ('John', 'john@example.com')";
      * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, insertSql);
@@ -1672,7 +1672,7 @@ public final class JdbcCodeGenerationUtil {
      * Converts an INSERT SQL statement to an UPDATE SQL statement with a specified WHERE clause.
      * The method parses the INSERT statement and reconstructs it as an UPDATE statement.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String insertSql = "INSERT INTO products(name, price, stock) VALUES ('Widget', 19.99, 100)";
      * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, insertSql, "id = 123");
@@ -1705,6 +1705,11 @@ public final class JdbcCodeGenerationUtil {
             int idx4 = insertSql.indexOf('(', idx3 + 1);
             int idx5 = insertSql.lastIndexOf(')');
             List<Object> values = N.fromJson(insertSql.substring(idx4 + 1, idx5), List.class);
+
+            if (columnNames.length != values.size()) {
+                throw new IllegalArgumentException(
+                        "Column count (" + columnNames.length + ") does not match value count (" + values.size() + ") in SQL: " + insertSql);
+            }
 
             sb.append("UPDATE ").append(tableName).append(" SET ");
 

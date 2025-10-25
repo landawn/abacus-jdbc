@@ -40,7 +40,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *   <li>Automatic rollback on exceptions</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     

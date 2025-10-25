@@ -38,7 +38,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *   <li>Troubleshooting performance issues</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Enable logging for entire DAO
  * @SqlLogEnabled
@@ -83,7 +83,7 @@ public @interface SqlLogEnabled {
      *   <li>Reducing log volume for high-frequency operations</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @SqlLogEnabled(true)  // Explicitly enable logging
      * List<User> findAll();
@@ -108,7 +108,7 @@ public @interface SqlLogEnabled {
      *   <li>Statements with embedded large text or binary data</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @SqlLogEnabled(maxSqlLogLength = 500)
      * void insertBatchData(List<Data> largeDataset);
@@ -142,7 +142,7 @@ public @interface SqlLogEnabled {
      *   <li>{@code "^(?!insert).*"} - Log everything except methods starting with "insert"</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @SqlLogEnabled(filter = {"find.*", "get.*", "search.*"})
      * public interface UserDao {

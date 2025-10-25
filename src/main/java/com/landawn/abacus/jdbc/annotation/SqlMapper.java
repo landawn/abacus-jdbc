@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
  *   <li>Separation of SQL from Java code</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @SqlMapper("sql/UserDao.xml")
  * public interface UserDao extends CrudDao<User, Long> {

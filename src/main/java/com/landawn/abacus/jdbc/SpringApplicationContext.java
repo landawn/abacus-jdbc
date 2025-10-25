@@ -42,7 +42,7 @@ final class SpringApplicationContext {
     /**
      * Retrieves a bean from the Spring ApplicationContext by its name.
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Object dataSource = springAppContext.getBean("myDataSource");
      * }</pre>
@@ -60,7 +60,7 @@ final class SpringApplicationContext {
      * Retrieves a bean from the Spring ApplicationContext by its type.
      * This method returns a single bean of the specified type if exactly one exists in the context.
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource dataSource = springAppContext.getBean(DataSource.class);
      * }</pre>

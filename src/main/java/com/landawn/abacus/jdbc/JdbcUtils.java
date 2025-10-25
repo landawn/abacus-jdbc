@@ -69,7 +69,7 @@ import com.landawn.abacus.util.WD;
  *   <li>Large result set handling with optimized fetch sizes</li>
  * </ul>
  *
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Import data from a Dataset to a database table
  * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
@@ -113,7 +113,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided DataSource and insert SQL statement.
      * The column order in the SQL statement must be consistent with the column order in the Dataset.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSQL = "INSERT INTO users (name, age) VALUES (?, ?)";
@@ -147,7 +147,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided Connection and insert SQL statement.
      * The column order in the SQL statement must be consistent with the column order in the Dataset.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSQL = "INSERT INTO users (name, age) VALUES (?, ?)";
@@ -175,7 +175,7 @@ public final class JdbcUtils {
      * Imports selected columns from a Dataset to a database table using the provided Connection and insert SQL statement.
      * Only the specified columns will be imported, and their order in the SQL must match the Dataset column order.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("id", "name", "age", "email").addRow(1, "John", 25, "john@email.com");
      * List<String> selectColumns = Arrays.asList("name", "age");
@@ -206,7 +206,7 @@ public final class JdbcUtils {
      * Imports selected columns from a Dataset to a database table with configurable batch processing.
      * This method allows fine control over the import process with batch size and interval settings.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * List<String> columns = Arrays.asList("name", "age");
@@ -239,7 +239,7 @@ public final class JdbcUtils {
      * Imports filtered data from a Dataset to a database table with configurable batch processing.
      * Only rows that pass the filter predicate will be imported.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30).addRow("Bob", 15);
      * List<String> columns = Arrays.asList("name", "age");
@@ -281,7 +281,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table with custom column type mapping.
      * This method allows specifying the type for each column, enabling custom type conversions during import.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "birthdate").addRow("John", "1990-01-15");
      * Map<String, Type> columnTypes = new HashMap<>();
@@ -315,7 +315,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table with custom column type mapping and batch processing.
      * This method combines type mapping with configurable batch processing for optimal performance.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "birthdate", "score")
      *     .addRow("John", "1990-01-15", "95.5")
@@ -354,7 +354,7 @@ public final class JdbcUtils {
      * Imports filtered data from a Dataset to a database table with custom column type mapping and batch processing.
      * This method provides maximum control over the import process with filtering, type mapping, and batch configuration.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age", "status")
      *     .addRow("John", "25", "active")
@@ -401,7 +401,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table with a custom statement setter.
      * This method provides complete control over how values are set on the PreparedStatement.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSQL = "INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)";
@@ -429,7 +429,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table with a custom statement setter and batch processing.
      * This method combines custom parameter setting with configurable batch processing.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSQL = "INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)";
@@ -459,7 +459,7 @@ public final class JdbcUtils {
      * Imports filtered data from a Dataset to a database table with a custom statement setter and batch processing.
      * This method provides maximum flexibility with filtering, custom parameter setting, and batch configuration.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age", "status")
      *     .addRow("John", 25, "active")
@@ -499,7 +499,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided PreparedStatement.
      * All columns from the Dataset will be imported in their original order.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
@@ -519,7 +519,7 @@ public final class JdbcUtils {
      * Imports selected columns from a Dataset to a database table using the provided PreparedStatement.
      * Only the specified columns will be imported, and their order must match the PreparedStatement parameters.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("id", "name", "age", "email").addRow(1, "John", 25, "john@email.com");
      * List<String> selectColumns = Arrays.asList("name", "age");
@@ -548,7 +548,7 @@ public final class JdbcUtils {
      * Imports selected columns from a Dataset to a database table using the provided PreparedStatement with batch processing.
      * This method allows control over the batch size and interval for optimal performance.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * List<String> columns = Arrays.asList("name", "age");
@@ -580,7 +580,7 @@ public final class JdbcUtils {
      * Imports filtered data from selected columns of a Dataset to a database table using the provided PreparedStatement.
      * This method provides filtering capability with batch processing for selective data import.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age", "status")
      *     .addRow("John", 25, "active")
@@ -627,7 +627,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping.
      * This method allows specifying the type for each column for proper type conversion during import.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "birthdate").addRow("John", "1990-01-15");
      * Map<String, Type> columnTypes = new HashMap<>();
@@ -652,7 +652,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping and batch processing.
      * This method combines type mapping with configurable batch processing for optimal performance.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "birthdate", "score")
      *     .addRow("John", "1990-01-15", "95.5")
@@ -683,7 +683,7 @@ public final class JdbcUtils {
      * Imports filtered data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping and batch processing.
      * This method provides maximum control over the import process with filtering, type mapping, and batch configuration.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age", "status")
      *     .addRow("John", "25", "active")
@@ -772,7 +772,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter.
      * This method provides complete control over how values are set on the PreparedStatement.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)");
@@ -799,7 +799,7 @@ public final class JdbcUtils {
      * Imports data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter and batch processing.
      * This method combines custom parameter setting with configurable batch processing for optimal performance.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)");
@@ -828,7 +828,7 @@ public final class JdbcUtils {
      * Imports filtered data from a Dataset to a database table using the provided PreparedStatement with a custom statement setter and batch processing.
      * This method provides maximum flexibility with filtering, custom parameter setting, and batch configuration.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age", "status")
      *     .addRow("John", 25, "active")
@@ -904,7 +904,7 @@ public final class JdbcUtils {
      * Imports data from a file to a database table using the provided DataSource and a line parser function.
      * Each line from the file is processed by the function to create parameter arrays for insertion.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File csvFile = new File("users.csv");
      * String insertSQL = "INSERT INTO users (name, age) VALUES (?, ?)";
@@ -940,7 +940,7 @@ public final class JdbcUtils {
      * Imports data from a file to a database table using the provided Connection with batch processing and a line parser function.
      * This method provides control over batch size and interval for optimal performance when importing large files.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File csvFile = new File("large_users.csv");
      * String insertSQL = "INSERT INTO users (name, age, email) VALUES (?, ?, ?)";
@@ -975,7 +975,7 @@ public final class JdbcUtils {
      * Imports data from a file to a database table using the provided PreparedStatement with batch processing and a line parser function.
      * This method provides direct control over the PreparedStatement and batch processing parameters.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File dataFile = new File("products.txt");
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO products (name, price) VALUES (?, ?)");
@@ -1008,7 +1008,7 @@ public final class JdbcUtils {
      * Imports data from a Reader to a database table using the provided DataSource and a line parser function.
      * Each line from the Reader is processed by the function to create parameter arrays for insertion.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("John,25\nJane,30\nBob,35");
      * String insertSQL = "INSERT INTO users (name, age) VALUES (?, ?)";
@@ -1044,7 +1044,7 @@ public final class JdbcUtils {
      * Imports data from a Reader to a database table using the provided Connection with batch processing and a line parser function.
      * This method provides control over batch size and interval for optimal performance when importing large data streams.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new FileReader("large_data.txt");
      * String insertSQL = "INSERT INTO transactions (account, amount, date) VALUES (?, ?, ?)";
@@ -1082,7 +1082,7 @@ public final class JdbcUtils {
      * Imports data from a Reader to a database table using the provided PreparedStatement with batch processing and a line parser function.
      * This method provides direct control over the PreparedStatement and batch processing parameters for streaming data import.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new InputStreamReader(inputStream);
      * PreparedStatement stmt = connection.prepareStatement("INSERT INTO logs (level, message, timestamp) VALUES (?, ?, ?)");
@@ -1164,7 +1164,7 @@ public final class JdbcUtils {
      * <p>This method is ideal for importing data from collections, streams, or any other iterable source.
      * The statement setter is responsible for mapping each element from the iterator to the PreparedStatement parameters.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import user data from a list
      * List<User> users = loadUsersFromFile();
@@ -1207,7 +1207,7 @@ public final class JdbcUtils {
      * <p>This method allows fine-tuning of batch processing parameters for optimal performance based on
      * the specific use case and data volume.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import large dataset with custom batch settings
      * Iterator<Product> products = loadProductsIterator();
@@ -1262,7 +1262,7 @@ public final class JdbcUtils {
      *   <li>Consider the database's maximum packet size when setting batch size</li>
      * </ul>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import with transaction control and prepared statement reuse
      * Connection conn = dataSource.getConnection();
@@ -1351,7 +1351,7 @@ public final class JdbcUtils {
      * <p>The first line of the CSV file is treated as headers and will be skipped during import.
      * The statement setter is responsible for parsing and setting each CSV row value to the appropriate PreparedStatement parameter.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import customer data from CSV
      * File csvFile = new File("customers.csv");
@@ -1394,7 +1394,7 @@ public final class JdbcUtils {
      * <p>This method is useful for importing large CSV files where you need to control memory usage
      * and database load through batch processing parameters.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import large product catalog with optimized batch settings
      * File csvFile = new File("product_catalog.csv");
@@ -1442,7 +1442,7 @@ public final class JdbcUtils {
      * <p>The PreparedStatement will not be closed by this method, allowing for reuse in subsequent operations.
      * The first line of the CSV file is treated as headers and will be skipped.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import with custom prepared statement configuration
      * File csvFile = new File("transactions.csv");
@@ -1481,7 +1481,7 @@ public final class JdbcUtils {
      * <p>This is useful for importing large CSV files where you need fine-grained control over
      * memory usage and database load through batch processing parameters.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import large dataset with progress tracking
      * File csvFile = new File("large_dataset.csv");
@@ -1526,7 +1526,7 @@ public final class JdbcUtils {
      * <p>The filter predicate is applied to each CSV row (as a String array) before import.
      * Only rows for which the filter returns {@code true} will be imported to the database.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import only active users from CSV
      * File csvFile = new File("all_users.csv");
@@ -1574,7 +1574,7 @@ public final class JdbcUtils {
      * <p>The Reader can be from any source such as a network stream, string, or in-memory data.
      * The first line is treated as headers and will be skipped during import.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import CSV data from a string
      * String csvData = "name,age,city\nJohn,25,NYC\nJane,30,LA\nBob,35,Chicago";
@@ -1618,7 +1618,7 @@ public final class JdbcUtils {
      * <p>The PreparedStatement will not be closed by this method, allowing for reuse.
      * The Reader will be wrapped in a BufferedReader for optimal performance if not already buffered.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import CSV data from an HTTP response
      * URL url = new URL("https://example.com/data.csv");
@@ -1655,7 +1655,7 @@ public final class JdbcUtils {
      * <p>This method is useful for importing CSV data from various sources with optimized batch processing
      * for better performance and resource management.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import large CSV data with batch optimization
      * Reader reader = new InputStreamReader(largeInputStream);
@@ -1700,7 +1700,7 @@ public final class JdbcUtils {
      *   <li>Custom value mapping</li>
      * </ul>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Import CSV data with complex filtering and validation
      * Reader reader = new FileReader("user_data.csv");
@@ -1809,7 +1809,7 @@ public final class JdbcUtils {
      * <p>The output CSV file will include a header row with column names from the query result.
      * Each value in the CSV will be properly quoted and escaped according to CSV standards.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export all active users to CSV
      * DataSource dataSource = getDataSource();
@@ -1844,7 +1844,7 @@ public final class JdbcUtils {
      * <p>The query is executed with optimal settings for large result sets, including
      * forward-only, read-only cursor and appropriate fetch size for better performance.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export data with transaction isolation
      * Connection conn = dataSource.getConnection();
@@ -1879,7 +1879,7 @@ public final class JdbcUtils {
      * <p>Only the specified columns will be written to the CSV file, in the order they appear in the result set.
      * This is useful when you want to exclude sensitive or unnecessary columns from the export.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export only specific columns from a query result
      * Connection conn = dataSource.getConnection();
@@ -1924,7 +1924,7 @@ public final class JdbcUtils {
      * <p>This method is useful when you need to set parameters on the statement before execution
      * or when you want to reuse a prepared statement for multiple exports.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export data with parameterized query
      * PreparedStatement stmt = conn.prepareStatement(
@@ -1956,7 +1956,7 @@ public final class JdbcUtils {
      * <p>This method combines the flexibility of prepared statements with column filtering,
      * allowing precise control over what data is exported.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export filtered data with specific columns
      * PreparedStatement stmt = conn.prepareStatement(
@@ -1997,7 +1997,7 @@ public final class JdbcUtils {
      * <p>This is the lowest-level export method, useful when you already have a ResultSet
      * from a complex operation or need maximum control over the export process.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export from a scrollable ResultSet with preprocessing
      * Statement stmt = conn.createStatement(
@@ -2031,7 +2031,7 @@ public final class JdbcUtils {
      * <p>Column names are case-sensitive and must match exactly with the column labels in the ResultSet.
      * If a specified column is not found in the ResultSet, an IllegalArgumentException will be thrown.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export specific columns from a complex join result
      * Statement stmt = conn.createStatement();
@@ -2073,7 +2073,7 @@ public final class JdbcUtils {
      * <p>The Writer can be any implementation such as StringWriter for in-memory CSV generation,
      * OutputStreamWriter for network transmission, or any custom Writer implementation.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export to HTTP response
      * DataSource dataSource = getDataSource();
@@ -2114,7 +2114,7 @@ public final class JdbcUtils {
      * <p>This method is optimized for large result sets with appropriate cursor and fetch size settings.
      * The Writer should be flushed after this method returns to ensure all data is written.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export to string for further processing
      * Connection conn = dataSource.getConnection();
@@ -2159,7 +2159,7 @@ public final class JdbcUtils {
      * <p>This is useful for streaming CSV data or writing to custom destinations.
      * The Writer will be flushed but not closed by this method.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream large result set to compressed file
      * ResultSet rs = stmt.executeQuery("SELECT * FROM large_table");
@@ -2196,7 +2196,7 @@ public final class JdbcUtils {
      *   <li>Type-aware value conversion</li>
      * </ul>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Export only specific columns to CSV
      * Set<String> columns = Set.of("name", "email", "created_date");
@@ -2331,7 +2331,7 @@ public final class JdbcUtils {
      * <p>The method automatically generates appropriate SELECT and INSERT statements based on the table schema.
      * All columns from the source table are copied to the target table.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy entire table between databases
      * long rowsCopied = JdbcUtils.copy(sourceDataSource, targetDataSource, "customers");
@@ -2356,7 +2356,7 @@ public final class JdbcUtils {
      * <p>This method is useful for copying data between tables with different names or
      * for creating backup tables with a different naming convention.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy table to a backup table with different name
      * long rowsCopied = JdbcUtils.copy(sourceDS, targetDS, "customers", "customers_backup");
@@ -2382,7 +2382,7 @@ public final class JdbcUtils {
      * <p>The batch size controls how many rows are accumulated before executing a batch insert.
      * Larger batch sizes can improve performance for large data transfers but require more memory.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy large table with custom batch size
      * long rowsCopied = JdbcUtils.copy(sourceDS, targetDS, "large_table", "large_table", 5000);
@@ -2426,7 +2426,7 @@ public final class JdbcUtils {
      * <p>This method is useful when you need to copy only a subset of columns or when the
      * target table has a different structure than the source table.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy only specific columns
      * Set<String> columns = Set.of("id", "name", "email", "status");
@@ -2454,7 +2454,7 @@ public final class JdbcUtils {
      * <p>This method combines column selection with batch size control for optimized copying
      * of partial table data.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy specific columns with large batch size for performance
      * List<String> columns = Arrays.asList("customer_id", "order_date", "total_amount");
@@ -2500,7 +2500,7 @@ public final class JdbcUtils {
      *
      * <p>The method uses default fetch and batch sizes for optimal performance with large result sets.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy with custom WHERE clause
      * String selectSql = "SELECT id, name, status FROM users WHERE status = 'ACTIVE'";
@@ -2530,7 +2530,7 @@ public final class JdbcUtils {
      * while the batch size controls how many rows are inserted at once. For optimal performance,
      * fetch size should be larger than batch size.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy large dataset with optimized settings
      * String selectSql = "SELECT * FROM transactions WHERE year = 2023";
@@ -2561,7 +2561,7 @@ public final class JdbcUtils {
      * <p>This method provides maximum flexibility by allowing custom parameter setting logic
      * through the statement setter BiConsumer.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy with data transformation
      * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
@@ -2600,7 +2600,7 @@ public final class JdbcUtils {
      *   <li>Custom parameter setter for data transformation</li>
      * </ul>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex copy with throttling and transformation
      * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
@@ -2655,7 +2655,7 @@ public final class JdbcUtils {
      * This is a convenience method for copying entire tables within the same database
      * or between different databases using existing connections.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2682,7 +2682,7 @@ public final class JdbcUtils {
      * <p>This method automatically generates the appropriate SELECT and INSERT statements
      * based on the source table's schema.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2711,7 +2711,7 @@ public final class JdbcUtils {
      * <p>The batch size determines how many rows are accumulated before executing a batch insert.
      * Larger batch sizes can improve performance but require more memory.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2750,7 +2750,7 @@ public final class JdbcUtils {
      * <p>This method is useful when copying a subset of columns or when the target table
      * has a different structure than the source table.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2782,7 +2782,7 @@ public final class JdbcUtils {
      * <p>This method combines selective column copying with batch processing control,
      * allowing fine-tuned performance for partial table copies.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2871,7 +2871,7 @@ public final class JdbcUtils {
      *
      * <p>Uses default fetch and batch sizes optimized for large result sets.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2903,7 +2903,7 @@ public final class JdbcUtils {
      * while the batch size controls how many rows are inserted at once. For optimal performance,
      * fetch size should be larger than batch size.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection sourceConn = sourceDS.getConnection();
      *      Connection targetConn = targetDS.getConnection()) {
@@ -2939,7 +2939,7 @@ public final class JdbcUtils {
      * <p>The statement setter provides complete control over how data is mapped from
      * the source ResultSet to the target PreparedStatement parameters.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy with data transformation and type conversion
      * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
@@ -2978,7 +2978,7 @@ public final class JdbcUtils {
      *   <li>Custom statement setter for data transformation</li>
      * </ul>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex copy with rate limiting and transformation
      * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
@@ -3040,7 +3040,7 @@ public final class JdbcUtils {
      * statement setter to map data to the insert statement parameters. Data is inserted in
      * batches with optional delays between batches.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedStatement selectStmt = sourceConn.prepareStatement(
      *     "SELECT * FROM source_table WHERE created > ?");
@@ -3692,7 +3692,7 @@ public final class JdbcUtils {
      * count after first use. It should not be reused across different ResultSets with different
      * column counts or used in parallel operations.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Create a setter that converts all nulls to empty strings
      * ColumnGetter<Object> getter = (rs, columnIndex) -> {

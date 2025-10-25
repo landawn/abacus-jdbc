@@ -38,7 +38,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * according to the specified configuration. The cache key is automatically generated based on
  * the method name and parameters.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Cache(capacity = 1000, evictDelay = 3600000) // 1 hour eviction
  * public interface CountryDao extends CrudDao<Country, String> {
@@ -73,7 +73,7 @@ public @interface Cache {
      * typically suitable for most use cases. For DAOs handling large amounts
      * of frequently accessed data, consider increasing this value.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(capacity = 5000) // Large cache for frequently accessed data
      * public interface ProductDao extends CrudDao<Product, Long> {
@@ -102,7 +102,7 @@ public @interface Cache {
      *   <li>24 hours: {@code 86400000}</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(evictDelay = 86400000) // 24-hour cache for static data
      * public interface CurrencyDao extends CrudDao<Currency, String> {

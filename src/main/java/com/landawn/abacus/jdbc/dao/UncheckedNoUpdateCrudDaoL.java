@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * but disables all update and delete operations. It's useful for append-only data stores
  * where records can be added but never modified or removed.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, SQLBuilder.PSC, EventLogDao> {
  *     // Can insert and query, but not update or delete

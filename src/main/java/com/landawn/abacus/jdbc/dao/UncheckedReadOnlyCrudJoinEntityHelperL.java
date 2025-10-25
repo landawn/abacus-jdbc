@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Performance is critical (avoiding ID boxing/unboxing)</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, SQLBuilder.PSC, ReadOnlyUserDao> {
  *     // Inherits read-only operations with join loading and primitive long ID support

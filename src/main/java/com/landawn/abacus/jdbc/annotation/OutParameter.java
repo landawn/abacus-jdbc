@@ -34,7 +34,7 @@ import java.sql.Types;
  * <p>The registered output parameters are typically returned in a Map where keys are either
  * the parameter names or positions (as strings).</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EmployeeDao extends CrudDao<Employee, Long> {
  *
@@ -87,7 +87,7 @@ public @interface OutParameter {
      * 
      * <p>The parameter name should match the name used in the stored procedure call syntax.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}", isProcedure = true)
      * @OutParameter(name = "discount", sqlType = Types.DECIMAL)
@@ -117,7 +117,7 @@ public @interface OutParameter {
      *   <li>The database doesn't support named parameters</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call sp_analyze_customer(?, ?, ?, ?)}", isProcedure = true)
      * @OutParameter(position = 2, sqlType = Types.VARCHAR)  // status
@@ -148,7 +148,7 @@ public @interface OutParameter {
      * 
      * <p>The SQL type must match the actual type of the output parameter in the stored procedure.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @OutParameter(name = "message", sqlType = Types.VARCHAR)
      * @OutParameter(name = "count", sqlType = Types.INTEGER)

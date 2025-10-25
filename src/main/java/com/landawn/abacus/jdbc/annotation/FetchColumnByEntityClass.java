@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
  * <p>When disabled, all columns from the query result will be fetched, regardless of whether
  * they have corresponding properties in the entity class.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Only fetch columns that match User class properties
@@ -84,7 +84,7 @@ public @interface FetchColumnByEntityClass {
      *   <li>May include columns that don't map to entity properties</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Entity class
      * public class User {

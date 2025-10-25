@@ -41,7 +41,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  *   <li><strong>Type level:</strong> Applies to all methods in the DAO interface (with filtering options)</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Custom handler implementation
  * public class LoggingHandler extends Jdbc.Handler<UserDao> {
@@ -92,7 +92,7 @@ public @interface Handler {
      * Specifies a qualifier to distinguish between multiple handlers of the same type.
      * This is useful when you need different configurations of the same handler class.
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = CacheHandler.class, qualifier = "shortTerm")
      * @Handler(type = CacheHandler.class, qualifier = "longTerm")
@@ -154,7 +154,7 @@ public @interface Handler {
      * 
      * <p>Multiple filters are joined with OR logic - a method matches if it matches ANY filter.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = ReadOnlyHandler.class, filter = {"find.*", "get.*", "query.*"})
      * @Handler(type = AuditHandler.class, filter = {"save.*", "update.*", "delete.*"})
@@ -175,7 +175,7 @@ public @interface Handler {
      * <p>This is useful for handlers that should only apply when the DAO is called from
      * outside code, not when DAO methods call each other internally.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
      * public interface UserDao extends CrudDao<User, Long> {

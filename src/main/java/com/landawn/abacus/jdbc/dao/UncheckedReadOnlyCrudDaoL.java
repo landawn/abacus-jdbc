@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p>All mutation operations (insert, update, delete) inherited from parent interfaces will throw 
  * {@link UnsupportedOperationException}, while read operations (select, exists, count) remain fully functional.</p>
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Dao
  * public interface UserDao extends UncheckedReadOnlyCrudDaoL<User, SQLBuilder, UserDao> {
@@ -49,7 +49,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * // Write operations will throw UnsupportedOperationException
  * // userDao.insert(newUser); // This will fail
  * // userDao.deleteById(123L); // This will fail
- * }</pre></p>
+ * }</pre>
  * 
  * <p>This interface is particularly useful when you want to:
  * <ul>

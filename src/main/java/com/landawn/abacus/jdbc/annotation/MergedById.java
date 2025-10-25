@@ -34,7 +34,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <p>The merging is performed based on the entity's ID field(s). Rows with the
  * same ID are combined, with collection properties populated from the multiple rows.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Entity classes
  * public class User {

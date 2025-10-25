@@ -30,7 +30,7 @@ import com.landawn.abacus.annotation.Beta;
  * bind a variable number of values. The framework automatically handles the expansion
  * of the collection into individual parameter bindings.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Basic usage with IN clause
@@ -81,7 +81,7 @@ public @interface BindList {
      * 
      * <p>The parameter should be referenced in the SQL using curly braces: {@code {paramName}}</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT * FROM users WHERE id IN ({userIds})")
@@ -103,7 +103,7 @@ public @interface BindList {
      * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.
      * Consider using {@link Define} annotation for complex dynamic SQL construction.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users WHERE active = true {statusFilter}")
      * List<User> findUsers(
@@ -129,7 +129,7 @@ public @interface BindList {
      * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.
      * Consider using {@link Define} annotation for complex dynamic SQL construction.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM products {categoryFilter} ORDER BY name")
      * List<Product> findProducts(

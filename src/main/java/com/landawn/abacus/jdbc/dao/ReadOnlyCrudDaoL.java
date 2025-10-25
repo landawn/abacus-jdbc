@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p>All mutation operations (insert, update, delete) inherited from the parent interfaces
  * will throw {@link UnsupportedOperationException}, while read operations remain functional.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends ReadOnlyCrudDaoL<User, SQLBuilder, UserDao> {
  *     // Inherits read-only operations with Long ID type

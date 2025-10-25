@@ -24,7 +24,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * <p>A transaction follows the ACID properties (Atomicity, Consistency, Isolation, Durability)
  * and provides methods to commit or rollback changes made within the transaction scope.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * Transaction txn = dataSource.beginTransaction();
  * try {
@@ -49,7 +49,7 @@ public interface Transaction {
      * <p>This ID can be useful for logging, debugging, and tracking transaction flow
      * in distributed systems.</p>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String transactionId = transaction.id();
      * logger.info("Starting transaction: " + transactionId);
@@ -72,7 +72,7 @@ public interface Transaction {
      *   <li>SERIALIZABLE - Prevents all phenomena</li>
      * </ul>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * IsolationLevel level = transaction.isolationLevel();
      * if (level == IsolationLevel.SERIALIZABLE) {
@@ -89,7 +89,7 @@ public interface Transaction {
      * The status indicates the current state in the transaction lifecycle,
      * such as whether it's active, committed, or rolled back.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Status status = transaction.status();
      * if (status == Status.ACTIVE) {
@@ -110,7 +110,7 @@ public interface Transaction {
      * <p>This is a convenience method equivalent to checking if the status
      * equals {@link Status#ACTIVE}.</p>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (transaction.isActive()) {
      *     // Safe to perform operations within this transaction
@@ -130,7 +130,7 @@ public interface Transaction {
      * <p>If the commit fails, the transaction status will be set to
      * {@link Status#FAILED_COMMIT} and an exception will be thrown.</p>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try {
      *     // Perform database operations
@@ -157,7 +157,7 @@ public interface Transaction {
      * <p>If the rollback fails, the transaction status will be set to
      * {@link Status#FAILED_ROLLBACK} and an exception will be thrown.</p>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try {
      *     performRiskyOperation();
@@ -188,7 +188,7 @@ public interface Transaction {
      *   <li>{@link Status#FAILED_COMMIT} - Attempts to rollback after failed commit</li>
      * </ul>
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Transaction txn = dataSource.beginTransaction();
      * try {
@@ -270,7 +270,7 @@ public interface Transaction {
      * This enum is typically used in transaction management frameworks to specify
      * the desired outcome of a transactional operation.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Action action = shouldCommit ? Action.COMMIT : Action.ROLLBACK;
      * transactionManager.completeTransaction(transaction, action);

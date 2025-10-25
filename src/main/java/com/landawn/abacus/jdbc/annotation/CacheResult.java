@@ -36,7 +36,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Cache individual user lookups for 30 minutes
@@ -85,7 +85,7 @@ public @interface CacheResult {
      * This allows temporarily disabling cache without removing the annotation,
      * useful for debugging or testing.
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @CacheResult(disabled = true)  // Temporarily disable for debugging
      * @Query("SELECT * FROM users WHERE id = :id")
@@ -109,7 +109,7 @@ public @interface CacheResult {
      *   <li>24 hours: {@code 86400000}</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Cache for 15 minutes
      * @CacheResult(liveTime = 900000)
@@ -129,7 +129,7 @@ public @interface CacheResult {
      * <p>The entry expires when either {@code liveTime} or {@code maxIdleTime}
      * is exceeded, whichever comes first.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Expire if not accessed for 10 minutes
      * @CacheResult(liveTime = 3600000, maxIdleTime = 600000)
@@ -149,7 +149,7 @@ public @interface CacheResult {
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only cache if result has at least 10 items
      * @CacheResult(minSize = 10)
@@ -169,7 +169,7 @@ public @interface CacheResult {
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Don't cache if result has more than 1000 items
      * @CacheResult(maxSize = 1000)
@@ -195,7 +195,7 @@ public @interface CacheResult {
      * <p>Serialization provides isolation between cached objects and application code,
      * preventing unintended modifications to cached data.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use Kryo for deep copying complex objects
      * @CacheResult(transfer = "kryo")
@@ -226,7 +226,7 @@ public @interface CacheResult {
      * 
      * <p>This attribute is ignored when the annotation is applied at method level.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @CacheResult(liveTime = 600000, 
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})

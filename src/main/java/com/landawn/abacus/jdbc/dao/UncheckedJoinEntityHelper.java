@@ -53,7 +53,7 @@ import com.landawn.abacus.util.stream.Stream;
  *   <li>Cascade delete operations for related entities</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public class User {
  *     @Id
@@ -96,7 +96,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Finds the first entity matching the condition and loads the specified join entity class.
      * This is a convenience method that combines finding and join loading in one operation.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find user and load their orders
      * Optional<User> user = userDao.findFirst(
@@ -129,7 +129,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Finds the first entity matching the condition and loads multiple join entity classes.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find user and load both orders and profile
      * Optional<User> user = userDao.findFirst(
@@ -164,7 +164,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Finds the first entity matching the condition and optionally loads all join entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find user and load all related entities
      * Optional<User> user = userDao.findFirst(
@@ -199,7 +199,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Finds exactly one entity matching the condition and loads the specified join entity class.
      * Throws an exception if multiple entities are found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find unique user by email and load profile
      * Optional<User> user = userDao.findOnlyOne(
@@ -234,7 +234,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Finds exactly one entity matching the condition and loads multiple join entity classes.
      * Throws an exception if multiple entities are found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "name"),
@@ -270,7 +270,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Finds exactly one entity matching the condition and optionally loads all join entities.
      * Throws an exception if multiple entities are found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "name", "email"),
@@ -305,7 +305,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Lists all entities matching the condition and loads the specified join entity class for each.
      * This is a beta API that provides batch loading of join entities for better performance.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all active users with their orders loaded
      * List<User> users = userDao.list(
@@ -343,7 +343,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Lists all entities matching the condition and loads multiple join entity classes for each.
      * This is a beta API that efficiently loads multiple relationships in batches.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get users with orders, profiles, and addresses loaded
      * List<User> users = userDao.list(
@@ -388,7 +388,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Lists all entities matching the condition and optionally loads all join entities for each.
      * This is a beta API that provides automatic loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all premium users with all relationships loaded
      * List<User> users = userDao.list(
@@ -427,7 +427,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities of the specified class for a single entity.
      * The join entities are determined by the relationship annotations in the entity class.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load all orders for this user
@@ -447,7 +447,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities of the specified class with selected properties for a single entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load orders but only fetch id, orderDate, and total
@@ -480,7 +480,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities of the specified class for multiple entities in batch.
      * This is more efficient than loading join entities one by one.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
      * // Load orders for all users in batch
@@ -499,7 +499,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities of the specified class with selected properties for multiple entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.gt("createdDate", lastMonth));
      * // Load minimal order info for all users
@@ -537,7 +537,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities for a specific property name of a single entity.
      * This method provides fine-grained control over which join property to load.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Specifically load the "orders" property
@@ -558,7 +558,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property name with selected properties for a single entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load orders property with only specific fields
@@ -580,7 +580,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property name for multiple entities in batch.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.eq("department", "Sales"));
      * // Load orders for all users
@@ -599,7 +599,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property name with selected properties for multiple entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.batchGet(userIds);
      * // Load address property with selected fields for all users
@@ -621,7 +621,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for multiple property names of a single entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load specific join properties
@@ -650,7 +650,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities for multiple property names of a single entity, optionally in parallel.
      * This is a beta API that can improve performance for loading multiple unrelated join entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load multiple properties in parallel
@@ -681,7 +681,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities for multiple property names using a custom executor for parallel execution.
      * This is a beta API for advanced parallel loading scenarios.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
      * User user = userDao.gett(userId);
@@ -715,7 +715,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for multiple property names for multiple entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
      * // Load multiple properties for all users
@@ -744,7 +744,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities for multiple property names for multiple entities, optionally in parallel.
      * This is a beta API for batch parallel loading.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.batchGet(userIds);
      * // Load multiple properties in parallel for better performance
@@ -776,7 +776,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities for multiple property names for multiple entities using a custom executor.
      * This is a beta API for advanced batch parallel loading scenarios.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchExecutor = Executors.newCachedThreadPool();
      * List<User> users = userDao.list(CF.isNotNull("premiumAccount"));
@@ -812,7 +812,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities defined in the entity class for a single entity.
      * This loads all properties annotated with relationship annotations like @JoinedBy.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load all related entities (orders, profile, addresses, etc.)
@@ -832,7 +832,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities for a single entity, optionally in parallel.
      * This is a beta API for loading all relationships with parallel execution option.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Load all join entities in parallel for better performance
@@ -858,7 +858,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities for a single entity using a custom executor.
      * This is a beta API for advanced parallel loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool customPool = new ForkJoinPool(8);
      * User user = userDao.gett(userId);
@@ -881,7 +881,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads all join entities for multiple entities in batch.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.eq("accountType", "PREMIUM"));
      * // Load all relationships for all users
@@ -905,7 +905,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities for multiple entities, optionally in parallel.
      * This is a beta API for batch loading all relationships with parallel execution option.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.batchGet(userIds);
      * // Load all join entities in parallel for better performance
@@ -931,7 +931,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities for multiple entities using a custom executor.
      * This is a beta API for advanced batch parallel loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService loadingPool = Executors.newWorkStealingPool();
      * List<User> users = userDao.list(CF.isNotNull("vipStatus"));
@@ -959,7 +959,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads join entities of the specified class only if they are currently null.
      * This is useful for lazy loading scenarios.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
      * // Only load orders if not already loaded
@@ -978,7 +978,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities of the specified class with selected properties only if they are currently null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartiallyLoadedUser();
      * // Load profile with specific fields if not already loaded
@@ -1010,7 +1010,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities of the specified class for multiple entities only where they are null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Only load orders for users that don't have them loaded
@@ -1029,7 +1029,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities of the specified class with selected properties for multiple entities only where they are null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyCachedUsers();
      * // Load minimal address info only for users without addresses
@@ -1070,7 +1070,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property only if it is currently null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getUser();
      * // Only load profile if user.getProfile() is null
@@ -1089,7 +1089,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property with selected fields only if the property is null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getUser();
      * // Load addresses with specific fields if not already loaded
@@ -1119,7 +1119,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property for multiple entities only where the property is null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getMixedUsers();
      * // Only load orders for users that don't have them
@@ -1138,7 +1138,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads join entities for a specific property with selected fields for multiple entities only where null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Load payment methods with minimal info for users without them
@@ -1173,7 +1173,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads multiple join properties only if they are null for a single entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartialUser();
      * // Load multiple properties if not already loaded
@@ -1202,7 +1202,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads multiple join properties only if they are null, optionally in parallel.
      * This is a beta API for conditional parallel loading.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
      * // Load missing properties in parallel
@@ -1233,7 +1233,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads multiple join properties only if they are null using a custom executor.
      * This is a beta API for advanced conditional parallel loading.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService lazyLoader = Executors.newCachedThreadPool();
      * User user = getUser();
@@ -1268,7 +1268,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads multiple join properties for multiple entities only where they are null.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getMixedCacheUsers();
      * // Load missing properties for all users
@@ -1297,7 +1297,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads multiple join properties for multiple entities only where null, optionally in parallel.
      * This is a beta API for batch conditional parallel loading.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getLargeUserList();
      * // Efficiently load missing data in parallel
@@ -1329,7 +1329,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads multiple join properties for multiple entities only where null using a custom executor.
      * This is a beta API for advanced batch conditional parallel loading.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool fjPool = new ForkJoinPool(16);
      * List<User> users = getThousandsOfUsers();
@@ -1364,7 +1364,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads all join entities only if they are null for a single entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
      * // Load all missing relationships
@@ -1384,7 +1384,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities only if they are null, optionally in parallel.
      * This is a beta API for conditional loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getPartialUser();
      * // Load all missing relationships in parallel
@@ -1410,7 +1410,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities only if they are null using a custom executor.
      * This is a beta API for advanced conditional loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
      * User user = getUser();
@@ -1432,7 +1432,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Loads all join entities only if they are null for multiple entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
      * // Load all missing relationships for all users
@@ -1456,7 +1456,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities only if they are null for multiple entities, optionally in parallel.
      * This is a beta API for batch conditional loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getPartiallyLoadedUsers();
      * // Load all missing relationships in parallel
@@ -1482,7 +1482,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Loads all join entities only if they are null for multiple entities using a custom executor.
      * This is a beta API for advanced batch conditional loading of all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchLoader = Executors.newWorkStealingPool();
      * List<User> users = getLargeUserCollection();
@@ -1509,7 +1509,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities of the specified class related to the given entity.
      * This performs a cascade delete operation for the specified relationship type.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete all orders for this user
@@ -1553,7 +1553,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities of the specified class for multiple entities.
      * This performs a batch cascade delete operation.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> usersToClean = getInactiveUsers();
      * // Delete all orders for these users
@@ -1600,7 +1600,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Deletes join entities for a specific property name of a single entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete all addresses for this user
@@ -1618,7 +1618,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     /**
      * Deletes join entities for a specific property name for multiple entities.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getDeactivatedUsers();
      * // Delete all payment methods for these users
@@ -1637,7 +1637,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes join entities for multiple property names of a single entity.
      * The deletions are performed in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete all orders and reviews for this user
@@ -1682,7 +1682,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes join entities for multiple property names of a single entity.
      * Note: Operations executed in multiple threads won't be completed in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete multiple related entities
@@ -1718,7 +1718,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes join entities for multiple property names of a single entity in parallel (deprecated).
      * Note: Parallel deletion may not complete in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete multiple relationships in parallel
@@ -1751,7 +1751,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes join entities for multiple property names for multiple entities.
      * The deletions are performed in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getDeletedUsers();
      * // Clean up multiple relationships
@@ -1796,7 +1796,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes join entities for multiple property names for multiple entities in parallel (deprecated).
      * Note: Parallel deletion may not complete in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getObsoleteUsers();
      * int deleted = userDao.deleteJoinEntities(
@@ -1829,7 +1829,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes join entities for multiple property names for multiple entities using a custom executor (deprecated).
      * Note: Operations executed in multiple threads won't be completed in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool cleanupPool = new ForkJoinPool(8);
      * List<User> users = getUsersToCleanup();
@@ -1868,7 +1868,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities for a single entity.
      * This performs a cascade delete for all relationships defined in the entity.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete all related entities (orders, addresses, profile, etc.)
@@ -1889,7 +1889,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities for a single entity, optionally in parallel (deprecated).
      * Note: Parallel deletion may not complete in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete all relationships in parallel
@@ -1917,7 +1917,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities for a single entity using a custom executor (deprecated).
      * Note: Operations executed in multiple threads won't be completed in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService cleanupService = Executors.newCachedThreadPool();
      * User user = userDao.gett(userId);
@@ -1942,7 +1942,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities for multiple entities.
      * This performs a batch cascade delete for all relationships.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> usersToDelete = getTerminatedUsers();
      * // Clean up all related data
@@ -1967,7 +1967,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities for multiple entities, optionally in parallel (deprecated).
      * Note: Parallel deletion may not complete in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getExpiredUsers();
      * // Delete all relationships in parallel
@@ -1995,7 +1995,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Deletes all join entities for multiple entities using a custom executor (deprecated).
      * Note: Operations executed in multiple threads won't be completed in a single transaction.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ThreadPoolExecutor massDeleteExecutor = new ThreadPoolExecutor(...);
      * List<User> users = getUsersForMassCleanup();

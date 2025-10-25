@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
  *   <li>Complex nested objects</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Simple parameter binding

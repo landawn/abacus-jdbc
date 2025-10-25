@@ -139,7 +139,7 @@ public final class Jdbc {
      * A functional interface for setting parameters on a prepared query, such as
      * a {@code PreparedStatement} or {@code CallableStatement}.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ParametersSetter<PreparedStatement> setter = ps -> {
      * ps.setString(1, "John Doe");
@@ -175,7 +175,7 @@ public final class Jdbc {
      * A functional interface for setting parameters on a prepared query using a parameter object.
      * This is useful for mapping an object's properties to the parameters of a statement.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming a User class with getName() and getAge()
      * BiParametersSetter<PreparedStatement, User> setter = (ps, user) -> {
@@ -220,14 +220,14 @@ public final class Jdbc {
          * A new instance should be created for each use.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * List<String> fields = List.of("firstName", "age");
          * BiParametersSetter<PreparedStatement, Object[]> setter =
          * BiParametersSetter.createForArray(fields, User.class);
          *
          * // In an execution context:
-         * // setter.accept(preparedStatement, new Object[]{"John", 30});
+         * // setter.accept(preparedStatement, new Object[] {"John", 30});
          * }</pre>
          *
          * @param <T> the component type of the array
@@ -281,7 +281,7 @@ public final class Jdbc {
          * A new instance should be created for each use.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * List<String> fields = List.of("firstName", "age");
          * BiParametersSetter<PreparedStatement, List<Object>> setter =
@@ -337,7 +337,7 @@ public final class Jdbc {
      * to the parsed SQL structure. This allows for more advanced parameter setting logic
      * that may depend on the details of the SQL statement itself.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming a User class and a ParsedSql object
      * TriParametersSetter<PreparedStatement, User> setter = (parsedSql, ps, user) -> {
@@ -385,7 +385,7 @@ public final class Jdbc {
      * after the method returns. Therefore, you should process all required data within
      * the method and not attempt to return or store the {@code ResultSet} itself.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultExtractor<List<String>> extractor = rs -> {
      * List<String> names = new ArrayList<>();
@@ -433,7 +433,7 @@ public final class Jdbc {
          * Returns a composed {@code ResultExtractor} that first applies this extractor to
          * the {@code ResultSet} and then applies the {@code after} function to the result.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<List<User>> userListExtractor = ...;
          * // Creates an extractor that returns the count of users.
@@ -466,7 +466,7 @@ public final class Jdbc {
          * Each row is mapped to a key-value pair. If duplicate keys are encountered, an
          * {@code IllegalStateException} will be thrown.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<Map<Integer, String>> idToNameMapExtractor = ResultExtractor.toMap(
          * rs -> rs.getInt("id"),
@@ -490,7 +490,7 @@ public final class Jdbc {
          * Each row is mapped to a key-value pair. If duplicate keys are encountered, an
          * {@code IllegalStateException} will be thrown.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<LinkedHashMap<Integer, String>> extractor = ResultExtractor.toMap(
          * rs -> rs.getInt("id"),
@@ -516,7 +516,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that processes a {@code ResultSet} into a {@code Map},
          * with a specified function to merge values of duplicate keys.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Sums values for the same category key.
          * ResultExtractor<Map<String, Integer>> categorySumExtractor = ResultExtractor.toMap(
@@ -545,7 +545,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that processes a {@code ResultSet} into a custom {@code Map},
          * with a specified function to merge values of duplicate keys.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Groups numbers by their parity, collecting them into lists.
          * ResultExtractor<TreeMap<String, List<Integer>>> parityGroupExtractor = ResultExtractor.toMap(
@@ -633,7 +633,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a {@code ListMultimap}, where
          * each key can be associated with multiple values.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Groups users by their department.
          * ResultExtractor<ListMultimap<String, User>> extractor = ResultExtractor.toMultimap(
@@ -656,7 +656,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a custom {@code Multimap}.
          * This allows using different collection types for values, such as a {@code Set}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Groups unique user IDs by department.
          * ResultExtractor<SetMultimap<String, Integer>> extractor = ResultExtractor.toMultimap(
@@ -696,7 +696,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a {@code Map} where each key is
          * associated with a {@code List} of values. This is a common grouping operation.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<Map<String, List<User>>> extractor = ResultExtractor.groupTo(
          * rs -> rs.getString("department"),
@@ -752,7 +752,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Calculates the average amount per category.
          * ResultExtractor<Map<String, Double>> extractor = ResultExtractor.groupTo(
@@ -779,7 +779,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a custom {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Counts the number of items per category, storing results in a TreeMap.
          * ResultExtractor<TreeMap<String, Long>> extractor = ResultExtractor.groupTo(
@@ -841,7 +841,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List}
          * of objects, where each object is created by applying the given {@code rowMapper} to each row.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<List<String>> nameListExtractor = ResultExtractor.toList(
          * rs -> rs.getString("name")
@@ -860,7 +860,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List}
          * of objects, including only the rows that satisfy the {@code rowFilter}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Extracts a list of users who are 18 or older.
          * ResultExtractor<List<User>> adultUserExtractor = ResultExtractor.toList(
@@ -896,7 +896,7 @@ public final class Jdbc {
          * The mapping from columns to entity properties is done automatically based on column names
          * and property names in the {@code targetClass}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Assumes User class has properties matching column names (e.g., 'id', 'name').
          * ResultExtractor<List<User>> userListExtractor = ResultExtractor.toList(User.class);
@@ -933,7 +933,7 @@ public final class Jdbc {
          * <p>This method assumes the {@code targetClass} has identifiable ID properties (e.g., annotated
          * with {@code @Id}).</p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // For a query like "SELECT u.*, o.* FROM users u JOIN orders o ON u.id = o.user_id"
          * // where User has a List<Order> property.
@@ -960,7 +960,7 @@ public final class Jdbc {
          * merged entities, using a specific property to identify unique entities for merging.
          * This is useful when the default ID detection is not sufficient.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Merge User entities based on the 'email' property instead of 'id'.
          * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class, "email");
@@ -986,7 +986,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List} of
          * merged entities, using a composite key (multiple properties) to identify unique entities for merging.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Merge Order entities based on a composite key of 'customerId' and 'orderDate'.
          * ResultExtractor<List<Order>> extractor = ResultExtractor.toMergedList(
@@ -1015,7 +1015,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}.
          * Column types within the {@code Dataset} are inferred from the properties of the provided {@code entityClassForExtractor}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // The resulting Dataset will have columns with types matching User properties.
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class);
@@ -1033,7 +1033,7 @@ public final class Jdbc {
          * with custom field name mapping for nested objects. This is useful for JOIN queries
          * where column names might have prefixes.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Maps 'u_id' to 'user.id', 'u_name' to 'user.name', etc.
          * Map<String, String> prefixMap = Map.of("u_", "user.");
@@ -1052,7 +1052,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset},
          * including only the rows that satisfy the specified filter.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Creates a Dataset containing only active records.
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
@@ -1082,7 +1082,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
          * using both a filter and a custom row extractor.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
          * rs -> rs.getInt("status") > 0,      // Filter for positive status
@@ -1102,7 +1102,7 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that first converts the {@code ResultSet} to a {@code Dataset}
          * and then applies a transformation function to it.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Converts the ResultSet to a Dataset, then to a List of Users.
          * ResultExtractor<List<User>> extractor = ResultExtractor.to(
@@ -1179,7 +1179,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a {@code Map}.
          * Each row is mapped to a key-value pair. Throws an {@code IllegalStateException} on duplicate keys.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<Map<Integer, String>> extractor = BiResultExtractor.toMap(
          * (rs, cols) -> rs.getInt("id"),
@@ -1218,7 +1218,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a {@code Map},
          * with a specified function to merge values of duplicate keys.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<Map<String, Integer>> extractor = BiResultExtractor.toMap(
          * (rs, cols) -> rs.getString("category"),
@@ -1322,7 +1322,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a {@code ListMultimap}, where
          * each key can be associated with multiple values.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<ListMultimap<String, Integer>> extractor = BiResultExtractor.toMultimap(
          * (rs, cols) -> rs.getString("category"),
@@ -1422,7 +1422,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<Map<String, Double>> extractor = BiResultExtractor.groupTo(
          * (rs, cols) -> rs.getString("category"),
@@ -1448,7 +1448,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<TreeMap<String, Long>> extractor = BiResultExtractor.groupTo(
          * (rs, cols) -> rs.getString("category"),
@@ -1510,7 +1510,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that converts a {@code ResultSet} into a {@code List}
          * of objects, where each object is created by applying the given {@code rowMapper} to each row.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<List<String>> extractor = BiResultExtractor.toList(
          * (rs, cols) -> rs.getString("name")
@@ -1529,7 +1529,7 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that converts a {@code ResultSet} into a {@code List}
          * of objects, including only the rows that satisfy the {@code rowFilter}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(
          * (rs, cols) -> rs.getInt("age") >= 18,  // Filter for adults
@@ -1570,7 +1570,7 @@ public final class Jdbc {
          * result set structure is consistent.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(User.class);
          * }</pre>
@@ -1604,7 +1604,7 @@ public final class Jdbc {
      * <p>For better performance when processing multiple records where column metadata is needed repeatedly,
      * consider using {@link BiRowMapper}, as it provides column labels and avoids repeated metadata lookups.</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowMapper<User> userMapper = rs -> new User(
      * rs.getInt("id"),
@@ -1634,7 +1634,7 @@ public final class Jdbc {
          * Returns a composed {@code RowMapper} that first applies this mapper to the row and then
          * applies the {@code after} function to the result. This allows for chaining transformations.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<User> userMapper = rs -> new User(rs.getString("name"));
          * // Creates a mapper that extracts just the user's name as a String.
@@ -1667,7 +1667,7 @@ public final class Jdbc {
          * Combines two {@code RowMapper} instances into a single mapper that returns a {@code Tuple2}
          * containing the results of both. Both mappers are applied to the same row of the {@code ResultSet}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<Integer> idMapper = rs -> rs.getInt("id");
          * RowMapper<String> nameMapper = rs -> rs.getString("name");
@@ -1693,7 +1693,7 @@ public final class Jdbc {
          * Combines three {@code RowMapper} instances into a single mapper that returns a {@code Tuple3}
          * containing the results of all three. All mappers are applied to the same row of the {@code ResultSet}.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<Integer> idMapper = rs -> rs.getInt("id");
          * RowMapper<String> nameMapper = rs -> rs.getString("name");
@@ -1933,7 +1933,7 @@ public final class Jdbc {
          * Creates a new {@code RowMapperBuilder} with a default column getter of {@code ColumnGetter.GET_OBJECT}.
          * This builder provides a fluent API for constructing complex {@code RowMapper} instances.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<Object[]> mapper = RowMapper.builder()
          * .getInt(1)
@@ -1951,7 +1951,7 @@ public final class Jdbc {
          * Creates a new {@code RowMapperBuilder} with the specified default column getter.
          * This default getter will be used for any column whose type is not explicitly configured in the builder.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Default to String, but override column 1 to be an Integer.
          * RowMapper<Object[]> mapper = RowMapper.builder(ColumnGetter.GET_STRING)
@@ -1979,7 +1979,7 @@ public final class Jdbc {
          * They should not be cached, shared, or used in parallel streams.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<Map<String, Object>> mapper = RowMapper.builder()
          * .getInt(1)        // Column 1 as int
@@ -2166,7 +2166,7 @@ public final class Jdbc {
             /**
              * Configures the mapper to use a custom {@code ColumnGetter} for the specified column index.
              *
-             * <p>Example usage:</p>
+             * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Get a string from column 1 and convert it to uppercase.
              * builder.get(1, (rs, idx) -> rs.getString(idx).toUpperCase());
@@ -2343,7 +2343,7 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
              *
-             * <p>Example usage:</p>
+             * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * RowMapper<User> userMapper = RowMapper.builder()
              * .getString(1)
@@ -2433,7 +2433,7 @@ public final class Jdbc {
      *
      * <p>The mapper should only read from the current row and should not advance the cursor (e.g., by calling {@code rs.next()}).</p>
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiRowMapper<Map<String, Object>> dynamicMapper = (rs, columnLabels) -> {
      * Map<String, Object> rowMap = new LinkedHashMap<>();
@@ -2633,7 +2633,7 @@ public final class Jdbc {
          * Create a new instance for each distinct query structure.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Assumes User class has properties matching column names like 'id', 'name'.
          * BiRowMapper<User> userMapper = BiRowMapper.to(User.class);
@@ -2679,7 +2679,7 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiRowMapper<User> mapper = BiRowMapper.to(
          * User.class,
@@ -3015,7 +3015,7 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Maps "u_id" to user.id, "a_street" to user.address.street
          * Map<String, String> prefixMap = Map.of("u_", "user.", "a_", "user.address.");
@@ -3155,7 +3155,7 @@ public final class Jdbc {
         //     * Creates a BiRowMapper that converts rows to a Map with value filtering.
         //     * Only values that pass the filter predicate are included in the map.
         //     *
-        //     * <p>Example usage:</p>
+        //     * <p><b>Usage Examples:</b></p>
         //     * <pre>{@code
         //     * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
         //     * value -> value != null  // Exclude null values
@@ -3188,7 +3188,7 @@ public final class Jdbc {
          * Creates a {@code BiRowMapper} that converts a row to a {@code Map}, including only the
          * entries that satisfy the given key-value filter.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Creates a TreeMap excluding internal columns and null values.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
@@ -3280,7 +3280,7 @@ public final class Jdbc {
          * It should not be cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Converts "FIRST_NAME" to "firstName" for map keys.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
@@ -3624,7 +3624,7 @@ public final class Jdbc {
          * in parallel streams.
          * </p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiRowMapper<User> userMapper = BiRowMapper.builder()
          * .getString("first_name")
@@ -4087,7 +4087,7 @@ public final class Jdbc {
          * rows. Therefore, it should not be reused across different queries with varying column counts
          * or used in parallel streams. A new instance should be created for each distinct query execution.</p>
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // A consumer that prints the value of each column in a row.
          * RowConsumer consumer = RowConsumer.create((rs, columnIndex) -> {
@@ -4283,7 +4283,7 @@ public final class Jdbc {
         /**
          * Creates a {@code BiRowConsumer} that iterates over all columns in each row and applies the specified action.
          *
-         * <p>Example usage:</p>
+         * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // A consumer that prints each column's name and value.
          * BiRowConsumer consumer = BiRowConsumer.create((rs, columnIndex) -> {
@@ -5344,7 +5344,7 @@ public final class Jdbc {
              * Gets a {@code RowMapper} that extracts a value of the specified type from the first column.
              * This method uses a cache for commonly used types to improve performance.
              *
-             * <p>Example usage:</p>
+             * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Returns a mapper that gets a String from column 1.
              * RowMapper<String> stringMapper = ColumnOne.get(String.class);
@@ -5384,7 +5384,7 @@ public final class Jdbc {
              * Creates a {@code RowMapper} that reads a JSON string from the first column and deserializes it
              * into an object of the specified target type.
              *
-             * <p>Example usage:</p>
+             * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Assumes column 1 contains a JSON string like '{"id":1, "name":"John"}'
              * RowMapper<User> userMapper = ColumnOne.readJson(User.class);
@@ -5403,7 +5403,7 @@ public final class Jdbc {
              * Creates a {@code RowMapper} that reads an XML string from the first column and deserializes it
              * into an object of the specified target type.
              *
-             * <p>Example usage:</p>
+             * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Assumes column 1 contains an XML string like '<user><id>1</id><name>John</name></user>'
              * RowMapper<User> userMapper = ColumnOne.readXml(User.class);
@@ -5556,7 +5556,7 @@ public final class Jdbc {
      * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented
      * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called.
      *
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Handler<UserDao> loggingHandler = new Handler<>() {
      * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) {

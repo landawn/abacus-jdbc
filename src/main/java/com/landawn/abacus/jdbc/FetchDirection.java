@@ -98,7 +98,7 @@ public enum FetchDirection {
     /**
      * Returns the FetchDirection enum constant corresponding to the specified integer value.
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
      * int direction = rs.getFetchDirection();
@@ -130,7 +130,7 @@ public enum FetchDirection {
     /**
      * Returns the integer value of this fetch direction as defined in {@link ResultSet}.
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Statement stmt = connection.createStatement(
      *     ResultSet.TYPE_SCROLL_SENSITIVE,

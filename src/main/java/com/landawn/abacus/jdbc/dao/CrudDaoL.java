@@ -70,7 +70,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", 123L);
      * if (isActive.isPresent() && isActive.getAsBoolean()) {
@@ -91,7 +91,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a char value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = studentDao.queryForChar("grade", 123L);
      * grade.ifPresent(g -> System.out.println("Student grade: " + g));
@@ -136,7 +136,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for an integer value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt age = userDao.queryForInt("age", 123L);
      * int userAge = age.orElse(0);
@@ -155,7 +155,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a long value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong lastLoginTime = userDao.queryForLong("lastLoginTimestamp", 123L);
      * lastLoginTime.ifPresent(time -> System.out.println("Last login: " + new Date(time)));
@@ -187,7 +187,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a double value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble balance = accountDao.queryForDouble("balance", 123L);
      * double amount = balance.orElse(0.0);
@@ -206,7 +206,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a String value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForString("email", 123L);
      * String userEmail = email.orElse("no-email@example.com");
@@ -225,7 +225,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a Date value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", 123L);
      * birthDate.ifPresent(date -> System.out.println("Birth date: " + date));
@@ -257,7 +257,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<Timestamp> lastModified = userDao.queryForTimestamp("lastModified", 123L);
      * lastModified.ifPresent(ts -> System.out.println("Last modified: " + ts));
@@ -276,7 +276,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a byte array value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", 123L);
      * avatar.ifPresent(bytes -> saveImageToFile(bytes));
@@ -295,7 +295,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> salary = userDao.queryForSingleResult("salary", 123L, BigDecimal.class);
      * Nullable<UserStatus> status = userDao.queryForSingleResult("status", 123L, UserStatus.class);
@@ -317,7 +317,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a single non-null value of the specified type from a property of the entity.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> username = userDao.queryForSingleNonNull("username", 123L, String.class);
      * username.ifPresent(name -> System.out.println("Username: " + name));
@@ -339,7 +339,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a single non-null value using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> fullName = userDao.queryForSingleNonNull("firstName", 123L, 
      *     (rs, columnNames) -> rs.getString(1).toUpperCase());
@@ -363,7 +363,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * This is a convenience method that accepts a primitive long ID.
      * Throws DuplicatedResultException if more than one record is found.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class);
      * // Throws DuplicatedResultException if multiple records found
@@ -423,7 +423,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Retrieves an entity by its ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.get(123L);
      * user.ifPresent(u -> System.out.println("Found user: " + u.getName()));
@@ -441,7 +441,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Retrieves an entity by its ID with only selected properties populated.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only load id, name, and email fields
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name", "email"));
@@ -461,7 +461,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Retrieves an entity by its ID, returning null if not found.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(123L);
      * if (user != null) {
@@ -495,7 +495,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Checks if an entity with the specified ID exists in the database.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.exists(123L)) {
      *     System.out.println("User exists");
@@ -514,7 +514,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Checks if an entity with the specified ID does not exist in the database.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.notExists(123L)) {
      *     // Create new user with this ID
@@ -534,7 +534,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Updates a single property of an entity identified by ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.update("lastLoginTime", new Date(), 123L);
      * userDao.update("failedLoginAttempts", 0, 123L);
@@ -554,7 +554,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Updates multiple properties of an entity identified by ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("status", "ACTIVE");
@@ -575,7 +575,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Deletes an entity by its ID.
      * This is a convenience method that accepts a primitive long ID.
      * 
-     * <p>Example usage:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int deletedRows = userDao.deleteById(123L);
      * if (deletedRows == 0) {

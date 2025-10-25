@@ -1948,7 +1948,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Usage Example:</p>
      * <pre>{@code
-     * Array array = connection.createArrayOf("VARCHAR", new String[]{"A", "B", "C"});
+     * Array array = connection.createArrayOf("VARCHAR", new String[] {"A", "B", "C"});
      * query.setArray(1, array);
      * }</pre>
      *
@@ -2563,7 +2563,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Usage Example:</p>
      * <pre>{@code
-     * query.setParameters(new int[]{10, 20, 30})
+     * query.setParameters(new int[] {10, 20, 30})
      *      .list();  // SELECT * FROM table WHERE col1 = ? AND col2 = ? AND col3 = ?
      * }</pre>
      *
@@ -2581,7 +2581,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Usage Example:</p>
      * <pre>{@code
-     * query.setParameters(new long[]{1000L, 2000L, 3000L})
+     * query.setParameters(new long[] {1000L, 2000L, 3000L})
      *      .list();
      * }</pre>
      *
@@ -2599,7 +2599,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Usage Example:</p>
      * <pre>{@code
-     * query.setParameters(new String[]{"John", "Doe", "USA"})
+     * query.setParameters(new String[] {"John", "Doe", "USA"})
      *      .insert();
      * }</pre>
      *
@@ -2783,7 +2783,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Usage Example:</p>
      * <pre>{@code
      * query.setString(1, "Active")
-     *      .settParameters(2, new int[]{10, 20, 30})
+     *      .settParameters(2, new int[] {10, 20, 30})
      *      .list();  // WHERE status = ? AND id IN (?, ?, ?)
      * }</pre>
      *
@@ -2809,7 +2809,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Usage Example:</p>
      * <pre>{@code
      * query.setString(1, "Premium")
-     *      .settParameters(2, new long[]{1000L, 2000L, 3000L})
+     *      .settParameters(2, new long[] {1000L, 2000L, 3000L})
      *      .list();
      * }</pre>
      *
@@ -2835,7 +2835,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Usage Example:</p>
      * <pre>{@code
      * query.setInt(1, 2023)
-     *      .settParameters(2, new String[]{"Q1", "Q2", "Q3", "Q4"})
+     *      .settParameters(2, new String[] {"Q1", "Q2", "Q3", "Q4"})
      *      .list();
      * }</pre>
      *
@@ -9419,13 +9419,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     protected void checkArgNotNull(final Object arg, final String argName) {
         if (arg == null) {
+            final IllegalArgumentException iae = new IllegalArgumentException("'" + argName + "' can't be null");
+
             try {
                 close();
             } catch (final Exception e) {
                 JdbcUtil.logger.error("Failed to close PreparedQuery", e);
+                iae.addSuppressed(e);
             }
 
-            throw new IllegalArgumentException("'" + argName + "' can't be null");
+            throw iae;
         }
     }
 
@@ -9441,13 +9444,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     protected void checkArg(final boolean b, final String errorMsg) {
         if (!b) {
+            final IllegalArgumentException iae = new IllegalArgumentException(errorMsg);
+
             try {
                 close();
             } catch (final Exception e) {
                 JdbcUtil.logger.error("Failed to close PreparedQuery", e);
+                iae.addSuppressed(e);
             }
 
-            throw new IllegalArgumentException(errorMsg);
+            throw iae;
         }
     }
 
@@ -9491,21 +9497,24 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Override
     public void close() {
+        final Runnable localCloseHandler;
+
         synchronized (this) {
             if (isClosed) {
                 return;
             }
 
             isClosed = true;
+            localCloseHandler = closeHandler;
         }
 
-        if (closeHandler == null) {
+        if (localCloseHandler == null) {
             closeStatement();
         } else {
             try {
                 closeStatement();
             } finally {
-                closeHandler.run();
+                localCloseHandler.run();
             }
         }
     }
@@ -9525,6 +9534,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     protected void closeStatement() {
         try {
             // stmt.clearParameters(); // cleared by JdbcUtil.clearParameters(stmt) after stmt.execute/executeQuery/executeUpdate.
+
+            // Reset batch action to default to prevent memory leaks
+            addBatchAction = defaultAddBatchAction;
 
             if (defaultFetchDirection >= 0) {
                 stmt.setFetchDirection(defaultFetchDirection);

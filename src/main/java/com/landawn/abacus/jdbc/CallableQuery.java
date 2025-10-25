@@ -2580,7 +2580,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * which has access to both the {@code ResultSet} and column labels. The result sets are
      * automatically closed after extraction.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stored procedure that returns customer orders and order items as separate result sets
      * try (CallableQuery query = preparedQuery("{call get_customer_order_details(?, ?)}")) {
@@ -2653,7 +2653,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * result values will be {@code null}. If more than two result sets are returned,
      * only the first two are processed.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Procedure returns summary and detail records as separate result sets
      * try (CallableQuery query = preparedQuery("{call get_sales_report(?, ?, ?)}")) {
@@ -2735,7 +2735,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * result values will be {@code null}. If more than three result sets are returned,
      * only the first three are processed.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex report procedure with multiple result sets
      * try (CallableQuery query = preparedQuery("{call generate_quarterly_report(?, ?)}")) {
@@ -2832,7 +2832,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *   <li>Column name mapping can be customized using {@code @Column} annotation</li>
      * </ul>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Simple stored procedure returning employees
      * try (CallableQuery query = preparedQuery("{call find_employees_by_dept(?, ?)}")) {
@@ -2879,7 +2879,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * should extract the data to create an instance of type T. This method is useful when
      * you need custom mapping logic that cannot be achieved with automatic mapping.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for complex types
      * try (CallableQuery query = preparedQuery("{call get_product_inventory(?, ?)}")) {
@@ -2945,7 +2945,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The {@code RowFilter} is applied before the {@code RowMapper}, so rows that don't
      * match the filter criteria are skipped entirely, avoiding unnecessary object creation.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter and map only active accounts with balance > 1000
      * try (CallableQuery query = preparedQuery("{call get_all_accounts(?)}")) {
@@ -3010,7 +3010,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The column labels list is retrieved once and reused for all rows, making this method
      * efficient when you need column metadata for mapping decisions.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Dynamic mapping based on column presence
      * try (CallableQuery query = preparedQuery("{call get_customer_data(?, ?)}")) {
@@ -3075,7 +3075,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method is ideal for complex scenarios where both filtering and mapping decisions
      * depend on column metadata or when you need to handle dynamic result set structures.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter based on dynamic columns and map accordingly
      * try (CallableQuery query = preparedQuery("{call search_products(?, ?, ?)}")) {
@@ -3156,7 +3156,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>Each result set is processed independently and added to the returned list in the order
      * they are returned by the stored procedure. Empty result sets will result in empty lists.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stored procedure that returns multiple employee groups
      * try (CallableQuery query = preparedQuery("{call get_employees_by_categories(?)}")) {
@@ -3212,7 +3212,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The same {@code RowMapper} is applied to all result sets, so this method is best used
      * when all result sets have the same structure or when the mapper can handle variations.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process multiple result sets with custom mapping
      * try (CallableQuery query = preparedQuery("{call generate_reports(?, ?)}")) {
@@ -3273,7 +3273,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The same filter and mapper are applied to all result sets. Rows that don't pass the filter
      * are skipped entirely, which can significantly improve performance when processing large result sets.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter and process only significant transactions across multiple accounts
      * try (CallableQuery query = preparedQuery("{call get_all_transactions(?, ?)}")) {
@@ -3337,7 +3337,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method is particularly useful when different result sets have different structures
      * but can be mapped to the same target type, or when mapping logic depends on column metadata.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Handle result sets with varying columns
      * try (CallableQuery query = preparedQuery("{call get_hierarchical_data(?)}")) {
@@ -3407,7 +3407,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * each result set may have different columns and require different filtering/mapping logic
      * based on those columns.</p>
      * 
-     * <p><b>Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex filtering and mapping across heterogeneous result sets
      * try (CallableQuery query = preparedQuery("{call analyze_customer_360(?)}")) {

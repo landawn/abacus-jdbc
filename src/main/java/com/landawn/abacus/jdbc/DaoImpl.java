@@ -1985,8 +1985,12 @@ final class DaoImpl {
 
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
                 : (isOneId ? JdbcUtil::isDefaultIdPropValue
-                        : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
-                                : id -> Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idBeanInfo.getPropValue(id, idName)))));
+                        : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue())) : id -> {
+                            if (idBeanInfo == null) {
+                                throw new IllegalStateException("ID class " + idClass + " is not a bean class and cannot be used for composite ID");
+                            }
+                            return Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idBeanInfo.getPropValue(id, idName)));
+                        }));
 
         final Jdbc.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
                 : (isEntityId ? (pq, id) -> {
@@ -1998,6 +2002,10 @@ final class DaoImpl {
                         pq.setObject(idName, entityId.get(idName), propInfo.dbType);
                     }
                 } : (pq, id) -> {
+                    if (idBeanInfo == null) {
+                        throw new IllegalStateException("ID class " + idClass + " is not a bean class and cannot be used for composite ID");
+                    }
+
                     PropInfo propInfo = null;
 
                     for (final String idName : idPropNameList) {
@@ -3853,7 +3861,7 @@ final class DaoImpl {
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotEmpty(propNamesToInsert, "propNamesToInsert");
 
-                            final int batchSize = (Integer) args[1];
+                            final int batchSize = (Integer) args[2];
                             N.checkArgPositive(batchSize, "batchSize");
 
                             if (N.isEmpty(entities)) {

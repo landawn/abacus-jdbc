@@ -35,7 +35,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *   <li>Column fetching strategies for Dataset queries</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Config(
  *     addLimitForSingleQuery = true,
@@ -84,7 +84,7 @@ public @interface Config {
      *   <li>{@code count()} (when not using COUNT in SQL)</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Config(addLimitForSingleQuery = true)
      * public interface ProductDao extends CrudDao<Product, Long> {
@@ -106,7 +106,7 @@ public @interface Config {
      * methods. The ID is considered "not set" when it's null or has the default value for its type
      * (0 for numeric types, null for objects).</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Config(callGenerateIdForInsertIfIdNotSet = true)
      * public interface UserDao extends CrudDao<User, Long> {
@@ -134,7 +134,7 @@ public @interface Config {
      * {@code CrudDao.batchInsert(String sql, Collection<T> entities)} methods.
      * Similar to {@link #callGenerateIdForInsertIfIdNotSet()} but for custom SQL inserts.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Config(callGenerateIdForInsertWithSqlIfIdNotSet = true)
      * public interface OrderDao extends CrudDao<Order, Long> {
@@ -157,7 +157,7 @@ public @interface Config {
      * 
      * <p>This is useful for outer joins where null values are expected and valid.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Config(allowJoiningByNullOrDefaultValue = true)
      * public interface CustomerDao extends CrudDao<Customer, Long> {
@@ -181,7 +181,7 @@ public @interface Config {
      * <p>This provides consistency between entity queries and Dataset queries,
      * and can improve performance by reducing unnecessary data transfer.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Config(fetchColumnByEntityClassForDatasetQuery = false)
      * public interface ReportDao extends CrudDao<Report, Long> {

@@ -69,6 +69,8 @@ final class DaoUtil {
 
     @SuppressWarnings("deprecation")
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
+        N.checkArgNotNull(entity, "entity");
+
         if (idPropNameList.size() == 1) {
             return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);
         } else {

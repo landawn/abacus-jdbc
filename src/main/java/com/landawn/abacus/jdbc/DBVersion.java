@@ -187,7 +187,7 @@ public enum DBVersion {
      * enum constant's name starts with "MySQL", which includes all MySQL
      * versions and MySQL_OTHERS.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBVersion version = DBVersion.MySQL_8;
      * if (version.isMySQL()) {
@@ -208,7 +208,7 @@ public enum DBVersion {
      * enum constant's name starts with "postgresql", which includes all PostgreSQL
      * versions and PostgreSQL_OTHERS.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBVersion version = DBVersion.PostgreSQL_12;
      * if (version.isPostgreSQL()) {

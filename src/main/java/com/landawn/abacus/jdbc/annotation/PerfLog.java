@@ -33,7 +33,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Performance logging helps identify slow queries and operations that may need optimization.
  * The logging includes execution time, SQL statements (truncated based on maxSqlLogLength), and method names.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Class-level: Monitor all methods matching the filter
  * @PerfLog(minExecutionTimeForSql = 500, filter = {"find.*", "search.*"})
@@ -63,7 +63,7 @@ public @interface PerfLog {
      * <p>This helps filter out fast queries and focus on potentially problematic slow queries.
      * Set a lower value to capture more queries or a higher value to only log the slowest ones.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(minExecutionTimeForSql = 200) // Log SQLs taking 200ms or more
      * List<User> findActiveUsers();
@@ -80,7 +80,7 @@ public @interface PerfLog {
      * <p>This is useful for maintaining readable logs when dealing with complex queries
      * or queries with large parameter lists.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(maxSqlLogLength = 500) // Truncate SQL to 500 characters
      * void executeLargeQuery(String complexQuery);
@@ -97,7 +97,7 @@ public @interface PerfLog {
      * <p>This threshold is typically set higher than minExecutionTimeForSql since DAO operations
      * may include multiple SQL executions, result processing, and business logic.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(minExecutionTimeForOperation = 5000) // Log operations taking 5 seconds or more
      * void processLargeBatchUpdate(List<Order> orders);
@@ -120,7 +120,7 @@ public @interface PerfLog {
      * <p>Multiple patterns are combined with OR logic - a method needs to match only one pattern.
      * This filter is ignored when the annotation is applied at the method level.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @PerfLog(filter = {"find.*", "search.*", ".*Complex.*"})
      * public interface UserDao {

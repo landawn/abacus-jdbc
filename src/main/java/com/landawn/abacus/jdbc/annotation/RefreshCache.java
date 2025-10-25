@@ -38,7 +38,7 @@ import com.landawn.abacus.annotation.Beta;
  *   <li>Method-level: Applies only to the specific method</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Apply to all data-modifying methods in the DAO
  * @CacheResult
@@ -86,7 +86,7 @@ public @interface RefreshCache {
      *   <li>High-frequency updates where immediate consistency isn't required</li>
      * </ul>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @RefreshCache
      * public interface UserDao {
@@ -119,7 +119,7 @@ public @interface RefreshCache {
      * <p>The default filter includes common data-modifying method names to automatically
      * refresh cache after operations that typically change data.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @RefreshCache(filter = {"save.*", "update.*", "delete.*", "remove.*"})
      * public interface CustomerDao {

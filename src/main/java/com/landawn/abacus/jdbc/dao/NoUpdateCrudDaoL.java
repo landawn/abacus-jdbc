@@ -34,7 +34,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface AuditLogDao extends NoUpdateCrudDaoL<AuditLog, SQLBuilder, AuditLogDao> {
  *     // Can insert new audit logs and read existing ones

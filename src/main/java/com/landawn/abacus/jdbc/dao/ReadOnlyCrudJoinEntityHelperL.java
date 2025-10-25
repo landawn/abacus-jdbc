@@ -27,7 +27,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * which overrides all mutation operations to throw {@link UnsupportedOperationException}.
  * Only read operations for join entities are available through this interface.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support
  * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, SQLBuilder, UserDao> {

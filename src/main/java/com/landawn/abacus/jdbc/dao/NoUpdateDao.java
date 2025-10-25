@@ -50,7 +50,7 @@ import com.landawn.abacus.util.Throwables;
  * {@link UnsupportedOperationException} when invoked. Only SELECT queries for reading data
  * and INSERT queries for adding new records are permitted.
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserReadOnlyDao extends NoUpdateDao<User, SQLBuilder, UserReadOnlyDao> {
  *     // Custom read-only methods
@@ -82,7 +82,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * to prepare UPDATE, DELETE, or other modification queries will result in an
      * {@link UnsupportedOperationException}.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?")) {
      *     query.setInt(1, 18);
@@ -114,7 +114,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * <p>When {@code generateKeys} is true, the prepared statement will be configured
      * to return auto-generated keys which can be retrieved after executing an INSERT.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = dao.prepareQuery(
      *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
@@ -150,12 +150,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * <p>The column indexes are 1-based, following JDBC conventions. This is useful
      * when your table has multiple auto-generated columns and you only need specific ones.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Retrieve only the first and third auto-generated columns
      * try (PreparedQuery query = dao.prepareQuery(
      *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)", 
-     *         new int[]{1, 3})) {
+     *         new int[] {1, 3})) {
      *     query.setLong(1, customerId);
      *     query.setBigDecimal(2, orderTotal);
      *     query.execute();
@@ -189,11 +189,11 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * <p>This approach is preferred over column indexes as it's more maintainable and
      * resistant to schema changes that might alter column positions.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = dao.prepareQuery(
      *         "INSERT INTO users (name, email) VALUES (?, ?)", 
-     *         new String[]{"id", "created_timestamp"})) {
+     *         new String[] {"id", "created_timestamp"})) {
      *     query.setString(1, "Jane Doe");
      *     query.setString(2, "jane@example.com");
      *     query.execute();
@@ -247,7 +247,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * <p>Named parameters can appear multiple times in the query and will all be set
      * to the same value when the parameter is bound.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String namedQuery = "SELECT * FROM users WHERE age > :minAge AND status = :status";
      * try (NamedQuery query = dao.prepareNamedQuery(namedQuery)) {
@@ -277,7 +277,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * Combines the benefits of named parameters with the ability to retrieve
      * auto-generated keys after INSERT operations.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String namedQuery = "INSERT INTO users (name, email, age) VALUES (:name, :email, :age)";
      * try (NamedQuery query = dao.prepareNamedQuery(namedQuery, true)) {
@@ -311,10 +311,10 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * This method combines named parameters with precise control over which auto-generated
      * columns should be returned by their index positions.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String namedQuery = "INSERT INTO orders (customer_id, total) VALUES (:customerId, :total)";
-     * try (NamedQuery query = dao.prepareNamedQuery(namedQuery, new int[]{1})) {
+     * try (NamedQuery query = dao.prepareNamedQuery(namedQuery, new int[] {1})) {
      *     query.setLong("customerId", customerId);
      *     query.setBigDecimal("total", orderTotal);
      *     query.execute();
@@ -344,11 +344,11 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * This method provides the most maintainable approach by combining named parameters
      * with column name-based generated key retrieval.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String namedQuery = "INSERT INTO users (name, email) VALUES (:name, :email)";
      * try (NamedQuery query = dao.prepareNamedQuery(
-     *         namedQuery, new String[]{"id", "created_at"})) {
+     *         namedQuery, new String[] {"id", "created_at"})) {
      *     query.setString("name", "Alice Johnson");
      *     query.setString("email", "alice@example.com");
      *     query.execute();
@@ -401,7 +401,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * <p>The ParsedSql object contains the original SQL with named parameters and
      * metadata about parameter positions and names.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ParsedSql parsedSql = NamedQuery.parse("SELECT * FROM users WHERE id = :id");
      * try (NamedQuery query = dao.prepareNamedQuery(parsedSql)) {
@@ -431,7 +431,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * Combines the efficiency of pre-parsed SQL with the ability to retrieve
      * auto-generated keys after INSERT operations.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ParsedSql parsedSql = NamedQuery.parse(
      *     "INSERT INTO users (name, email) VALUES (:name, :email)");
@@ -465,11 +465,11 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * This method combines pre-parsed SQL efficiency with precise control over
      * which auto-generated columns should be returned.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ParsedSql parsedSql = NamedQuery.parse(
      *     "INSERT INTO products (name, price) VALUES (:name, :price)");
-     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, new int[]{1})) {
+     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, new int[] {1})) {
      *     query.setString("name", "Widget");
      *     query.setBigDecimal("price", new BigDecimal("19.99"));
      *     query.execute();
@@ -499,12 +499,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * This method provides the most efficient and maintainable approach by combining
      * pre-parsed SQL with column name-based generated key retrieval.
      * 
-     * <p>Example usage:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ParsedSql parsedSql = NamedQuery.parse(
      *     "INSERT INTO customers (name, email) VALUES (:name, :email)");
      * try (NamedQuery query = dao.prepareNamedQuery(
-     *         parsedSql, new String[]{"customer_id", "registration_date"})) {
+     *         parsedSql, new String[] {"customer_id", "registration_date"})) {
      *     query.setString("name", "David Brown");
      *     query.setString("email", "david@example.com");
      *     query.execute();

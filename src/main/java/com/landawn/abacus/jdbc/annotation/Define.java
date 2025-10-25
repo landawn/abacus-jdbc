@@ -41,7 +41,7 @@ import java.lang.annotation.Target;
  *   <li>Database-specific SQL syntax variations</li>
  * </ul>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     

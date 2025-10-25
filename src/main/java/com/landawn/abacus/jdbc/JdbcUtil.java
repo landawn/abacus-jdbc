@@ -141,7 +141,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li>Index is the key point in a lot of database performance issues</li>
  * </ul>
  *
- * <h3>Example Usage:</h3>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Simple query execution
  * Dataset result = JdbcUtil.executeQuery(dataSource, "SELECT * FROM users WHERE age > ?", 18);
@@ -388,7 +388,7 @@ public final class JdbcUtil {
      * Retrieves the database product information from the given connection.
      * This method extracts metadata to determine the database type and version.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
      * if (dbInfo.version() == DBVersion.MySQL_8) {
@@ -475,7 +475,7 @@ public final class JdbcUtil {
      * Creates a HikariCP DataSource with the specified database connection details.
      * HikariCP is a high-performance JDBC connection pool.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createHikariDataSource(
      *     "jdbc:mysql://localhost:3306/mydb",
@@ -507,7 +507,7 @@ public final class JdbcUtil {
      * Creates a HikariCP DataSource with the specified database connection details and pool configuration.
      * This method allows fine-tuning of the connection pool size.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createHikariDataSource(
      *     "jdbc:mysql://localhost:3306/mydb",
@@ -546,7 +546,7 @@ public final class JdbcUtil {
      * Creates a C3P0 DataSource with the specified database connection details.
      * C3P0 is a mature JDBC connection pooling library.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createC3p0DataSource(
      *     "jdbc:postgresql://localhost:5432/mydb",
@@ -579,7 +579,7 @@ public final class JdbcUtil {
      * Creates a C3P0 DataSource with the specified database connection details and pool configuration.
      * This method allows configuration of the connection pool size.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createC3p0DataSource(
      *     "jdbc:oracle:thin:@localhost:1521:xe",
@@ -618,7 +618,7 @@ public final class JdbcUtil {
      * Creates a connection to the database using the specified URL, username, and password.
      * The appropriate JDBC driver is automatically determined from the URL.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = JdbcUtil.createConnection(
      *     "jdbc:mysql://localhost:3306/mydb",
@@ -641,7 +641,7 @@ public final class JdbcUtil {
      * Creates a connection to the database using the specified driver class, URL, username, and password.
      * This method allows explicit specification of the JDBC driver class.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = JdbcUtil.createConnection(
      *     "com.mysql.cj.jdbc.Driver",
@@ -669,7 +669,7 @@ public final class JdbcUtil {
      * Creates a connection to the database using the specified driver class, URL, username, and password.
      * This method allows type-safe specification of the JDBC driver class.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = JdbcUtil.createConnection(
      *     com.mysql.cj.jdbc.Driver.class,
@@ -1243,7 +1243,7 @@ public final class JdbcUtil {
      * @return a list of column names in the order they appear in the table
      * @throws SQLException if a SQL exception occurs while retrieving column names
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> columns = JdbcUtil.getColumnNameList(connection, "users");
      * // Returns: ["id", "username", "email", "created_date", ...]
@@ -1277,7 +1277,7 @@ public final class JdbcUtil {
      * Column labels are the names used for display, which may differ from actual column names
      * if aliases are used in the SQL query.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT id AS user_id, name FROM users");
      * List<String> labels = JdbcUtil.getColumnLabelList(rs);
@@ -1325,11 +1325,7 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while searching for the column
      */
     public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws SQLException {
-        try {
-            return getColumnIndex(resultSet.getMetaData(), columnName);
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
+        return getColumnIndex(resultSet.getMetaData(), columnName);
     }
 
     /**
@@ -1453,7 +1449,7 @@ public final class JdbcUtil {
      * Retrieves the value of the specified column in the current row of the given ResultSet.
      * This method handles special data types like Blob, Clob, and database-specific date/time types.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT id, name, data FROM users");
      * while (rs.next()) {
@@ -1558,7 +1554,7 @@ public final class JdbcUtil {
      * Retrieves all values of the specified column in the given ResultSet.
      * This method reads through the entire ResultSet and collects values from the specified column.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT user_id FROM orders");
      * List<Long> userIds = JdbcUtil.getAllColumnValues(rs, 1);
@@ -1690,7 +1686,7 @@ public final class JdbcUtil {
     /**
      * Retrieves the value of the specified column in the current row and converts it to the target type.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT id, amount FROM transactions");
      * while (rs.next()) {
@@ -1730,7 +1726,7 @@ public final class JdbcUtil {
      * Retrieves a mapping of column names to field names for the specified entity class.
      * This mapping is used for automatic column-to-property mapping in entity operations.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ImmutableMap<String, String> mapping = JdbcUtil.getColumn2FieldNameMap(User.class);
      * // Returns: {"user_id" -> "userId", "user_name" -> "userName", ...}
@@ -1796,7 +1792,7 @@ public final class JdbcUtil {
      * in the same thread, the Connection from the transaction will be used. Otherwise, a new Connection 
      * will be obtained from the DataSource.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
      *         "SELECT * FROM users WHERE age > ?")) {
@@ -1841,7 +1837,7 @@ public final class JdbcUtil {
     /**
      * Prepares a SQL query with auto-generated keys support using the provided DataSource and SQL string.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
      *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
@@ -1928,11 +1924,11 @@ public final class JdbcUtil {
     /**
      * Prepares a SQL query with specific column names for auto-generated keys using the provided DataSource.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
      *         "INSERT INTO users (name, email) VALUES (?, ?)", 
-     *         new String[]{"id", "created_date"})) {
+     *         new String[] {"id", "created_date"})) {
      *     OutParamResult result = query.setString(1, "John").setString(2, "john@example.com").insert();
      * }
      * }</pre>
@@ -2023,7 +2019,7 @@ public final class JdbcUtil {
      * JdbcUtil.prepareQuery(dataSource.getConnection(), sql);
      * }</pre>
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try (PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")) {
@@ -2129,7 +2125,7 @@ public final class JdbcUtil {
      * Prepares a SQL query optimized for large result sets using the provided DataSource.
      * This method sets the fetch direction to FORWARD and the fetch size to DEFAULT_FETCH_SIZE_FOR_BIG_RESULT (1000).
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (PreparedQuery query = JdbcUtil.prepareQueryForBigResult(dataSource, 
      *         "SELECT * FROM large_table")) {
@@ -2167,7 +2163,7 @@ public final class JdbcUtil {
      * Prepares a named SQL query using the provided DataSource and named SQL string.
      * Named queries use named parameters (e.g., :name) instead of positional parameters (?).
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, 
      *         "SELECT * FROM users WHERE age > :minAge AND city = :city")) {
@@ -2370,7 +2366,7 @@ public final class JdbcUtil {
      * Prepares a named SQL query using the provided Connection and named SQL string.
      * This method does not close the provided Connection after the query is executed.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, 
@@ -2829,7 +2825,7 @@ public final class JdbcUtil {
      * If a transaction is started by {@code JdbcUtil.beginTransaction} or in Spring with the same DataSource
      * in the same thread, the Connection from the transaction will be used.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource, 
      *         "{call get_user_info(?, ?, ?)}")) {
@@ -3208,7 +3204,7 @@ public final class JdbcUtil {
      * Executes a SQL query using the provided DataSource and SQL string with optional parameters.
      * If a transaction is started in the current thread, the Connection from the transaction will be used.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset result = JdbcUtil.executeQuery(dataSource, 
      *     "SELECT * FROM users WHERE age > ? AND city = ?", 
@@ -3247,7 +3243,7 @@ public final class JdbcUtil {
      * Executes a SQL query using the provided Connection and SQL string with optional parameters.
      * This method does not close the provided Connection after the query is executed.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try {
@@ -3291,7 +3287,7 @@ public final class JdbcUtil {
      * Executes a SQL update using the provided DataSource and SQL string with optional parameters.
      * This includes INSERT, UPDATE, DELETE, and DDL statements.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int rowsUpdated = JdbcUtil.executeUpdate(dataSource, 
      *     "UPDATE users SET status = ? WHERE last_login < ?", 
@@ -3329,7 +3325,7 @@ public final class JdbcUtil {
      * Executes a SQL update using the provided Connection and SQL string with optional parameters.
      * This method does not close the provided Connection after the update is executed.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try {
@@ -3368,12 +3364,12 @@ public final class JdbcUtil {
      * Executes a batch SQL update using the provided DataSource with default batch size.
      * The default batch size is {@link #DEFAULT_BATCH_SIZE}.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Object[]> batchParams = Arrays.asList(
-     *     new Object[]{"John", 25},
-     *     new Object[]{"Jane", 30},
-     *     new Object[]{"Bob", 35}
+     *     new Object[] {"John", 25},
+     *     new Object[] {"Jane", 30},
+     *     new Object[] {"Bob", 35}
      * );
      * int totalRows = JdbcUtil.executeBatchUpdate(dataSource, 
      *     "INSERT INTO users (name, age) VALUES (?, ?)", 
@@ -4049,7 +4045,7 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet and returns it as a Dataset.
      * This method reads all rows from the current position of the ResultSet.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
      * Dataset dataset = JdbcUtil.extractData(rs);
@@ -4066,7 +4062,7 @@ public final class JdbcUtil {
     /**
      * Extracts data from the provided ResultSet starting from the specified offset and up to the specified count.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
      * Dataset dataset = JdbcUtil.extractData(rs, 10, 50); // Skip 10 rows, get next 50
@@ -4304,7 +4300,7 @@ public final class JdbcUtil {
      * Each element in the stream is an Object array containing values from all columns of a row.
      * It's the user's responsibility to close the ResultSet after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
      * try {
@@ -4333,7 +4329,7 @@ public final class JdbcUtil {
      * Creates a stream from the provided ResultSet, mapping each row to the specified target class.
      * It's the user's responsibility to close the ResultSet after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
      * JdbcUtil.stream(rs, User.class)
@@ -4360,7 +4356,7 @@ public final class JdbcUtil {
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished, or call:
      * {@code JdbcUtil.stream(resultSet, rowMapper).onClose(Fn.closeQuietly(resultSet))...}
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowMapper<String> nameMapper = rs -> rs.getString("name");
      * JdbcUtil.stream(resultSet, nameMapper)
@@ -4466,7 +4462,7 @@ public final class JdbcUtil {
      * Only rows that pass the filter will be included in the stream.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowFilter ageFilter = rs -> rs.getInt("age") > 18;
      * RowMapper<User> userMapper = rs -> new User(rs.getString("name"), rs.getInt("age"));
@@ -4554,7 +4550,7 @@ public final class JdbcUtil {
      * BiRowMapper receives both the ResultSet and column labels, allowing for more flexible mapping.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiRowMapper<Map<String, Object>> mapMapper = (rs, columnLabels) -> {
      *     Map<String, Object> row = new HashMap<>();
@@ -4675,7 +4671,7 @@ public final class JdbcUtil {
      * Both the filter and mapper receive the ResultSet and column labels for maximum flexibility.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiRowFilter hasNonNullValues = (rs, columnLabels) -> {
      *     for (String label : columnLabels) {
@@ -4762,7 +4758,7 @@ public final class JdbcUtil {
      * This is useful when you only need values from a single column.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all names from the first column
      * JdbcUtil.stream(resultSet, 1)
@@ -4791,7 +4787,7 @@ public final class JdbcUtil {
      * This is useful when you only need values from a single column identified by name.
      * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all email addresses
      * JdbcUtil.stream(resultSet, "email")
@@ -4833,7 +4829,7 @@ public final class JdbcUtil {
      * This is useful when executing stored procedures that return multiple result sets.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}");
      * JdbcUtil.streamAllResultSets(stmt)
@@ -4856,7 +4852,7 @@ public final class JdbcUtil {
      * Each ResultSet is processed by the provided ResultExtractor.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultExtractor<List<String>> namesExtractor = rs -> {
      *     List<String> names = new ArrayList<>();
@@ -4895,7 +4891,7 @@ public final class JdbcUtil {
      * Each ResultSet is processed by the provided BiResultExtractor which also receives column labels.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiResultExtractor<Map<String, List<Object>>> columnarExtractor = (rs, columnLabels) -> {
      *     Map<String, List<Object>> columns = new HashMap<>();
@@ -4999,7 +4995,7 @@ public final class JdbcUtil {
      * The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
      * This method is useful for processing large result sets in manageable chunks.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 1000";
      * JdbcUtil.queryByPage(dataSource, query, 1000, (preparedQuery, previousPage) -> {
@@ -5033,7 +5029,7 @@ public final class JdbcUtil {
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided ResultExtractor.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM orders WHERE order_date > ? ORDER BY order_id LIMIT 500";
      * ResultExtractor<List<Order>> ordersExtractor = rs -> {
@@ -5581,7 +5577,7 @@ public final class JdbcUtil {
      * Checks if a table exists in the database.
      * This method attempts to execute a simple SELECT query on the table to determine its existence.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (JdbcUtil.doesTableExist(ds, "users")) {
      *     System.out.println("Users table exists");
@@ -5612,7 +5608,7 @@ public final class JdbcUtil {
      * Checks if a table exists in the database.
      * This method attempts to execute a simple SELECT query on the table to determine its existence.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (JdbcUtil.doesTableExist(connection, "users")) {
      *     System.out.println("Users table exists");
@@ -5644,7 +5640,7 @@ public final class JdbcUtil {
      * Creates a table if it does not already exist in the database.
      * This method first checks if the table exists, and if not, executes the provided schema to create it.
      * 
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String schema = "CREATE TABLE users (" +
      *                 "id BIGINT PRIMARY KEY, " +
@@ -5679,7 +5675,7 @@ public final class JdbcUtil {
      * This method first checks if the table exists before attempting to drop it,
      * preventing errors from trying to drop a non-existent table.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * boolean dropped = JdbcUtil.dropTableIfExists(connection, "temp_users");
      * System.out.println(dropped ? "Table dropped" : "Table did not exist");
@@ -5708,7 +5704,7 @@ public final class JdbcUtil {
      * The sequence provides thread-safe generation of sequential IDs with default starting value of 0 
      * and a buffer size of 1000.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "user_sequence", "user_id");
      * long nextId = sequence.next();
@@ -5727,7 +5723,7 @@ public final class JdbcUtil {
      * Returns a new instance of {@code DBSequence} with custom starting value and buffer size.
      * The sequence provides thread-safe generation of sequential IDs with the specified configuration.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Start from 1000 with a buffer of 500 IDs
      * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "order_sequence", "order_id", 1000, 500);
@@ -5750,7 +5746,7 @@ public final class JdbcUtil {
      * Returns a new instance of {@code DBLock} for implementing global locks using a database table.
      * This provides a distributed locking mechanism that works across multiple application instances.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBLock lock = JdbcUtil.getDBLock(dataSource, "distributed_locks");
      * if (lock.acquire("job_processor")) {
@@ -6014,7 +6010,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(() -> {
      *     // Perform database operations
@@ -6040,7 +6036,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.asyncRun(
      *     () -> JdbcUtil.update(dataSource, "UPDATE users SET status = ?", "active"),
@@ -6071,7 +6067,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures = 
      *     JdbcUtil.asyncRun(
@@ -6106,7 +6102,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User(123, "John", "john@example.com");
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(user, u -> {
@@ -6134,7 +6130,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, status, 
      *     (id, st) -> JdbcUtil.update(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
@@ -6164,7 +6160,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, orderId, status,
      *     (uid, oid, st) -> {
@@ -6199,7 +6195,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = JdbcUtil.asyncCall(() -> {
      *     return JdbcUtil.query(dataSource, "SELECT * FROM users WHERE active = ?", true)
@@ -6226,7 +6222,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<ContinuableFuture<Long>, ContinuableFuture<List<Order>>> futures = JdbcUtil.asyncCall(
      *     () -> JdbcUtil.queryForSingleResult(Long.class, dataSource, "SELECT COUNT(*) FROM users"),
@@ -6258,7 +6254,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures = 
      *     JdbcUtil.asyncCall(
@@ -6296,7 +6292,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<User> future = JdbcUtil.asyncCall(123L, 
      *     userId -> JdbcUtil.queryForSingleResult(User.class, dataSource, 
@@ -6326,7 +6322,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<Order>> future = JdbcUtil.asyncCall(userId, status,
      *     (uid, st) -> JdbcUtil.query(dataSource, 
@@ -6359,7 +6355,7 @@ public final class JdbcUtil {
      * Note: Any transaction started in current thread won't be automatically applied to the specified 
      * {@code sqlAction} which will be executed in another thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<BigDecimal> future = JdbcUtil.asyncCall(startDate, endDate, category,
      *     (start, end, cat) -> JdbcUtil.queryForSingleResult(BigDecimal.class, dataSource,
@@ -6577,7 +6573,7 @@ public final class JdbcUtil {
      * Retrieves the output parameters from the given CallableStatement.
      * This method extracts the values of output parameters after executing a stored procedure.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "{call get_user_info(?, ?, ?)}";
      * try (CallableStatement stmt = connection.prepareCall(sql)) {
@@ -6648,7 +6644,7 @@ public final class JdbcUtil {
      * Extracts the named parameters from the given SQL string.
      * Named parameters are placeholders in SQL that start with ':' followed by the parameter name.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "SELECT * FROM users WHERE name = :name AND age > :age AND city = :city";
      * List<String> params = JdbcUtil.getNamedParameters(sql);
@@ -6666,7 +6662,7 @@ public final class JdbcUtil {
      * Parses the given SQL string and returns a ParsedSql object.
      * This method analyzes SQL statements to extract information about parameters and structure.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "SELECT * FROM users WHERE name = :name AND age > ?";
      * ParsedSql parsedSql = JdbcUtil.parseSql(sql);
@@ -6687,7 +6683,7 @@ public final class JdbcUtil {
      * This method returns all property names that should be included in an INSERT statement,
      * excluding properties marked with annotations like @ReadOnly, @Id (for auto-generated IDs), etc.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * Collection<String> propNames = JdbcUtil.getInsertPropNames(user);
@@ -6705,7 +6701,7 @@ public final class JdbcUtil {
      * Returns the property names suitable for INSERT operations for the given entity,
      * excluding the specified property names.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * Set<String> excludedProps = N.asSet("createdTime", "modifiedTime");
@@ -6727,7 +6723,7 @@ public final class JdbcUtil {
      * This method analyzes the class structure to determine which properties should be
      * included in INSERT statements.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Collection<String> propNames = JdbcUtil.getInsertPropNames(User.class);
      * // Returns property names that should be included in INSERT statement for User entities
@@ -6744,7 +6740,7 @@ public final class JdbcUtil {
      * Returns the property names suitable for INSERT operations for the given entity class,
      * excluding the specified property names.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<String> excludedProps = N.asSet("id", "version");
      * Collection<String> propNames = JdbcUtil.getInsertPropNames(User.class, excludedProps);
@@ -6765,7 +6761,7 @@ public final class JdbcUtil {
      * This method returns all property names that should be included in a SELECT statement,
      * excluding properties marked with @Transient or other exclusion annotations.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class);
      * // Returns property names that should be included in SELECT statement
@@ -6782,7 +6778,7 @@ public final class JdbcUtil {
      * Gets the property names suitable for SELECT operations for the given entity class,
      * excluding the specified property names.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<String> excludedProps = N.asSet("password", "secretKey");
      * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, excludedProps);
@@ -6801,7 +6797,7 @@ public final class JdbcUtil {
      * Gets the property names suitable for SELECT operations for the given entity class,
      * with an option to include sub-entity properties and exclude specified property names.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Include properties of related entities (e.g., user.address.street)
      * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, true, null);
@@ -6824,7 +6820,7 @@ public final class JdbcUtil {
      * This method returns all property names that should be included in an UPDATE statement,
      * excluding properties marked with @ReadOnly, @NonUpdatable, @Id, etc.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Collection<String> propNames = JdbcUtil.getUpdatePropNames(User.class);
      * // Returns property names that can be updated
@@ -6841,7 +6837,7 @@ public final class JdbcUtil {
      * Gets the property names suitable for UPDATE operations for the given entity class,
      * excluding the specified property names.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<String> excludedProps = N.asSet("createdTime", "createdBy");
      * Collection<String> propNames = JdbcUtil.getUpdatePropNames(User.class, excludedProps);
@@ -6861,7 +6857,7 @@ public final class JdbcUtil {
      * Converts a Blob to a String using UTF-8 encoding and frees the Blob resources.
      * This method reads all bytes from the Blob and converts them to a String.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = resultSet.getBlob("data");
      * String content = JdbcUtil.blob2String(blob);
@@ -6886,7 +6882,7 @@ public final class JdbcUtil {
      * Converts a Blob to a String using the specified character encoding and frees the Blob resources.
      * This method reads all bytes from the Blob and converts them to a String using the given charset.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = resultSet.getBlob("data");
      * String content = JdbcUtil.blob2String(blob, Charsets.ISO_8859_1);
@@ -6912,7 +6908,7 @@ public final class JdbcUtil {
      * Writes the content of a Blob to a file and frees the Blob resources.
      * This method streams the Blob content directly to the specified file.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = resultSet.getBlob("document");
      * File outputFile = new File("document.pdf");
@@ -6940,7 +6936,7 @@ public final class JdbcUtil {
      * Converts a Clob to a String and frees the Clob resources.
      * This method reads all characters from the Clob and returns them as a String.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = resultSet.getClob("description");
      * String content = JdbcUtil.clob2String(clob);
@@ -6965,7 +6961,7 @@ public final class JdbcUtil {
      * Writes the content of a Clob to a file and frees the Clob resources.
      * This method streams the Clob content directly to the specified file.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = resultSet.getClob("article");
      * File outputFile = new File("article.txt");
@@ -6994,7 +6990,7 @@ public final class JdbcUtil {
      * Default values are: 0 for numeric types, {@code false} for boolean, empty for collections/maps,
      * and null for reference types.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.isNullOrDefault(null);        // true
      * JdbcUtil.isNullOrDefault(0);           // true
@@ -7078,7 +7074,7 @@ public final class JdbcUtil {
      * Once called, SQL statements will not be logged regardless of thread-local settings.
      * This setting cannot be reversed during the application lifecycle.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Disable SQL logging for production environment
      * JdbcUtil.turnOffSqlLogGlobally();
@@ -7093,7 +7089,7 @@ public final class JdbcUtil {
      * Once called, SQL execution times will not be logged regardless of thread-local settings.
      * This setting cannot be reversed during the application lifecycle.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Disable SQL performance logging for production
      * JdbcUtil.turnOffSqlPerfLogGlobally();
@@ -7108,7 +7104,7 @@ public final class JdbcUtil {
      * Once called, DAO method execution times will not be logged regardless of thread-local settings.
      * This setting cannot be reversed during the application lifecycle.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Disable DAO performance logging
      * JdbcUtil.turnOffDaoMethodPerfLogGlobally();
@@ -7157,7 +7153,7 @@ public final class JdbcUtil {
      * When enabled, all SQL statements executed in the current thread will be logged.
      * The default maximum SQL log length is 1024 characters.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.enableSqlLog();
      * // Execute SQL operations - they will be logged
@@ -7173,7 +7169,7 @@ public final class JdbcUtil {
      * Enables SQL logging for the current thread with a specified maximum log length.
      * SQL statements longer than the specified length will be truncated in the logs.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.enableSqlLog(2048); // Allow longer SQL statements in logs
      * // Execute SQL operations
@@ -7192,7 +7188,7 @@ public final class JdbcUtil {
      * After calling this method, SQL statements executed in the current thread will not be logged.
      * The maximum SQL log length setting is preserved for when logging is re-enabled.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.enableSqlLog();
      * // SQL operations here will be logged
@@ -7208,7 +7204,7 @@ public final class JdbcUtil {
     /**
      * Checks if SQL logging is enabled for the current thread.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (JdbcUtil.isSqlLogEnabled()) {
      *     System.out.println("SQL logging is active");
@@ -7273,7 +7269,7 @@ public final class JdbcUtil {
      * Retrieves the current SQL extractor function used to extract SQL statements from Statement objects.
      * The SQL extractor is used internally for logging and monitoring purposes.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Throwables.Function<Statement, String, SQLException> extractor = JdbcUtil.getSqlExtractor();
      * // Use the extractor to get SQL from a statement
@@ -7291,7 +7287,7 @@ public final class JdbcUtil {
      * This is useful when using custom Statement implementations or when the default
      * extraction method doesn't work for your JDBC driver.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.setSqlExtractor(statement -> {
      *     if (statement instanceof MyCustomStatement) {
@@ -7311,7 +7307,7 @@ public final class JdbcUtil {
      * Retrieves the current SQL log handler that processes SQL statements and their execution times.
      * The handler receives the SQL statement, start time, and end time of execution.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * TriConsumer<String, Long, Long> handler = JdbcUtil.getSqlLogHandler();
      * if (handler != null) {
@@ -7329,7 +7325,7 @@ public final class JdbcUtil {
      * Sets a custom SQL log handler to process SQL statements and their execution times.
      * This allows for custom logging, monitoring, or alerting based on SQL execution.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.setSqlLogHandler((sql, startTime, endTime) -> {
      *     long duration = endTime - startTime;
@@ -7352,7 +7348,7 @@ public final class JdbcUtil {
      * Only SQL statements that take longer than this threshold will be logged for performance monitoring.
      * Uses the default maximum SQL log length of 1024 characters.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log SQL statements that take more than 500ms
      * JdbcUtil.setMinExecutionTimeForSqlPerfLog(500);
@@ -7368,7 +7364,7 @@ public final class JdbcUtil {
      * Sets the minimum execution time threshold for SQL performance logging in the current thread
      * with a specified maximum SQL log length.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log SQL statements that take more than 1 second, with longer log length
      * JdbcUtil.setMinExecutionTimeForSqlPerfLog(1000, 2048);
@@ -7399,7 +7395,7 @@ public final class JdbcUtil {
      * Gets the current minimum execution time threshold for SQL performance logging in the current thread.
      * SQL statements that execute faster than this threshold will not be logged for performance.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long threshold = JdbcUtil.getMinExecutionTimeForSqlPerfLog();
      * System.out.println("Performance logging threshold: " + threshold + "ms");
@@ -7416,7 +7412,7 @@ public final class JdbcUtil {
      * This is useful for executing sensitive queries or reducing log verbosity for specific operations.
      * Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runWithSqlLogDisabled(() -> {
      *     // Execute sensitive SQL operations without logging
@@ -7448,7 +7444,7 @@ public final class JdbcUtil {
      * This is useful for executing sensitive queries that return values without logging.
      * Note: The SQL action should not be executed in another thread as the logging flag is thread-local.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = JdbcUtil.callWithSqlLogDisabled(() -> {
      *     // Execute sensitive query without logging
@@ -7482,7 +7478,7 @@ public final class JdbcUtil {
      * Checks if there is an active transaction for the given DataSource in the current thread.
      * This includes both JdbcUtil-managed transactions and Spring-managed transactions.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (JdbcUtil.isInTransaction(dataSource)) {
      *     // Execute operations within the existing transaction
@@ -7522,7 +7518,7 @@ public final class JdbcUtil {
      * Begins a new transaction with default isolation level for the given DataSource.
      * The transaction must be explicitly committed or rolled back.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
@@ -7547,7 +7543,7 @@ public final class JdbcUtil {
      * Begins a new transaction with the specified isolation level for the given DataSource.
      * The transaction must be explicitly committed or rolled back.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
      * try {
@@ -7650,7 +7646,7 @@ public final class JdbcUtil {
      * If the callable completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = JdbcUtil.callInTransaction(dataSource, () -> {
      *     // Perform database operations
@@ -7691,7 +7687,7 @@ public final class JdbcUtil {
      * If the function completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = JdbcUtil.callInTransaction(dataSource, conn -> {
      *     try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM users")) {
@@ -7733,7 +7729,7 @@ public final class JdbcUtil {
      * If the runnable completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runInTransaction(dataSource, () -> {
      *     // Perform multiple database operations
@@ -7769,7 +7765,7 @@ public final class JdbcUtil {
      * If the consumer completes successfully, the transaction is committed.
      * If an exception occurs, the transaction is rolled back.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runInTransaction(dataSource, conn -> {
      *     try (PreparedStatement ps = conn.prepareStatement("UPDATE users SET active = ? WHERE id = ?")) {
@@ -7807,7 +7803,7 @@ public final class JdbcUtil {
      * If a transaction is active in the current thread, a new connection (not part of the transaction)
      * will be used to execute the callable.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Inside a transaction, but need to log something immediately
      * JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
@@ -7861,7 +7857,7 @@ public final class JdbcUtil {
      * The function receives the DataSource as a parameter and can use it to create connections
      * that are not part of any active transaction.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = JdbcUtil.callNotInStartedTransaction(dataSource, ds -> {
      *     // Use the DataSource to perform operations outside transaction
@@ -7916,7 +7912,7 @@ public final class JdbcUtil {
      * If a transaction is active in the current thread, a new connection (not part of the transaction)
      * will be used to execute the runnable.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Inside a transaction, but need to perform non-transactional operation
      * JdbcUtil.runNotInStartedTransaction(dataSource, () -> {
@@ -7967,7 +7963,7 @@ public final class JdbcUtil {
      * The consumer receives the DataSource as a parameter and can use it to create connections
      * that are not part of any active transaction.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runNotInStartedTransaction(dataSource, ds -> {
      *     // Use the DataSource for non-transactional operations
@@ -8019,7 +8015,7 @@ public final class JdbcUtil {
      * This temporarily disables Spring transaction integration for the current thread.
      * Note: The action should not be executed in another thread as the flag is thread-local.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runWithoutUsingSpringTransaction(() -> {
      *     // Operations here will not participate in Spring transactions
@@ -8050,7 +8046,7 @@ public final class JdbcUtil {
      * This temporarily disables Spring transaction integration for the current thread.
      * Note: The action should not be executed in another thread as the flag is thread-local.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = JdbcUtil.callWithoutUsingSpringTransaction(() -> {
      *     // Operations here will not participate in Spring transactions
@@ -8356,7 +8352,7 @@ public final class JdbcUtil {
      * This allows customization of how IDs are extracted from ResultSets for a specific DAO.
      * The extractor is used when retrieving generated keys after insert operations.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom ID extraction for composite keys
      * JdbcUtil.setIdExtractorForDao(UserDao.class, rs -> {
@@ -8384,7 +8380,7 @@ public final class JdbcUtil {
      * Sets the ID extractor for the specified DAO interface using a BiRowMapper.
      * This allows customization of how IDs are extracted from ResultSets with access to column labels.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom ID extraction with column label awareness
      * JdbcUtil.setIdExtractorForDao(UserDao.class, (rs, columnLabels) -> {
@@ -8415,7 +8411,7 @@ public final class JdbcUtil {
      * Creates a DAO instance for the specified interface and DataSource.
      * Uses the default async executor for asynchronous operations.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
      * List<User> users = userDao.findAll();
@@ -8435,7 +8431,7 @@ public final class JdbcUtil {
      * Creates a DAO instance with a custom SQL mapper for query externalization.
      * The SQL mapper allows SQL queries to be defined in external files or resources.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLMapper sqlMapper = SQLMapper.fromFile("sql/user-queries.xml");
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
@@ -8475,7 +8471,7 @@ public final class JdbcUtil {
      * Creates a DAO instance with a custom executor for asynchronous operations.
      * This allows control over the thread pool used for async DAO methods.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService executor = Executors.newFixedThreadPool(10);
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, executor);
@@ -8497,7 +8493,7 @@ public final class JdbcUtil {
      * Creates a DAO instance with a custom SQL mapper and executor.
      * Combines external SQL management with custom thread pool control.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLMapper sqlMapper = SQLMapper.fromFile("sql/queries.xml");
      * ExecutorService executor = Executors.newCachedThreadPool();
@@ -8541,7 +8537,7 @@ public final class JdbcUtil {
      * Creates a DAO instance for a specific table name.
      * This is useful when the table name differs from the entity class name.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Entity class is "User" but table is "app_users"
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource);
@@ -8562,7 +8558,7 @@ public final class JdbcUtil {
      * Creates a DAO instance for a specific table with a custom SQL mapper.
      * Combines custom table naming with external SQL management.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLMapper sqlMapper = SQLMapper.fromFile("sql/legacy-queries.xml");
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
@@ -8604,7 +8600,7 @@ public final class JdbcUtil {
      * Creates a DAO instance for a specific table with a custom executor.
      * Allows custom table naming with control over async operations.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool customPool = new ForkJoinPool(20);
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, customPool);
@@ -8627,7 +8623,7 @@ public final class JdbcUtil {
      * Creates a DAO instance for a specific table with SQL mapper and executor.
      * Combines all customization options except caching.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLMapper sqlMapper = SQLMapper.fromResource("/sql/custom-queries.xml");
      * ExecutorService executor = Executors.newWorkStealingPool();
@@ -8712,7 +8708,7 @@ public final class JdbcUtil {
      * Creates a new thread-local cache that will be used by all DAOs in the current thread.
      * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Jdbc.DaoCache cache = JdbcUtil.startDaoCacheOnCurrentThread();
      * try {
@@ -8739,7 +8735,7 @@ public final class JdbcUtil {
      * The provided cache will be used by all DAOs in the current thread.
      * Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Use a custom cache implementation
      * Map<String, Object> cacheMap = new LRUMap<>(1000);
@@ -8771,7 +8767,7 @@ public final class JdbcUtil {
      * This method should always be called in a finally block after starting a thread-local cache
      * to prevent memory leaks.
      *
-     * <h3>Example:</h3>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.startDaoCacheOnCurrentThread();
      * try {

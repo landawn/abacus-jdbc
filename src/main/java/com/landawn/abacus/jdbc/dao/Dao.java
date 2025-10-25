@@ -157,6 +157,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * The SQLMapper provides SQL query templates that can be referenced by name.
      * If no SQLMapper is configured, an empty SQLMapper instance will be returned.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLMapper sqlMapper = dao.sqlMapper();
      * String query = sqlMapper.get("findUserByEmail");
@@ -219,6 +220,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a PreparedQuery for the specified SQL query string.
      * The query can be any valid SQL statement (SELECT, INSERT, UPDATE, DELETE, etc.).
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?");
      * List<User> users = query.setInt(1, 18).list(User.class);
@@ -238,6 +240,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a PreparedQuery with the option to generate keys for INSERT statements.
      * When generateKeys is true, auto-generated keys can be retrieved after execution.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery("INSERT INTO users (name) VALUES (?)", true);
      * long generatedId = query.setString(1, "John").insert().getGeneratedKeys().getLong(1);
@@ -273,10 +276,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a PreparedQuery that will return specific named columns as generated keys.
      * This allows retrieval of auto-generated values from specific columns by name.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery(
      *     "INSERT INTO users (name) VALUES (?)", 
-     *     new String[]{"id", "created_at"}
+     *     new String[] {"id", "created_at"}
      * );
      * }</pre>
      *
@@ -311,6 +315,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a SELECT query based on the specified condition.
      * All columns from the entity table will be selected.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery(CF.eq("status", "ACTIVE"));
      * List<User> activeUsers = query.list(User.class);
@@ -331,6 +336,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a SELECT query for specific columns based on the specified condition.
      * Only the specified properties will be included in the SELECT clause.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery(
      *     Arrays.asList("id", "name", "email"),
@@ -398,6 +404,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a NamedQuery for the specified named SQL query string.
      * Named queries use parameter names (e.g., :name) instead of positional parameters.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NamedQuery query = dao.prepareNamedQuery(
      *     "SELECT * FROM users WHERE age > :minAge AND status = :status"
@@ -638,6 +645,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a CallableQuery for executing stored procedures or functions.
      * The query should use the JDBC escape syntax: {call procedure_name(?, ?)}
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CallableQuery query = dao.prepareCallableQuery("{call get_user_count(?)}");
      * query.registerOutParameter(1, Types.INTEGER);
@@ -675,6 +683,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Saves (inserts) the specified entity to the database.
      * All non-null properties of the entity will be included in the INSERT statement.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("John", "Doe", "john@example.com");
      * dao.save(user);
@@ -689,6 +698,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Saves (inserts) the specified entity with only the specified properties.
      * Only the listed properties will be included in the INSERT statement.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
@@ -705,6 +715,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Saves (inserts) the entity using a custom named INSERT SQL statement.
      * The SQL should use named parameters that match the entity properties.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (name, email) VALUES (:name, :email)";
      * dao.save(sql, user);
@@ -720,6 +731,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Batch saves (inserts) multiple entities using the default batch size.
      * More efficient than saving entities one by one.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(user1, user2, user3);
      * dao.batchSave(users);
@@ -737,6 +749,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Batch saves (inserts) multiple entities with a specified batch size.
      * The entities are inserted in batches of the specified size for optimal performance.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = generateLargeUserList();
      * dao.batchSave(users, 1000); // Insert in batches of 1000
@@ -800,6 +813,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Checks if at least one record exists that matches the specified condition.
      * More efficient than counting when you only need to know if records exist.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * boolean hasActiveUsers = dao.exists(CF.eq("status", "ACTIVE"));
      * if (hasActiveUsers) {
@@ -818,6 +832,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Checks if no records exist that match the specified condition.
      * Convenience method that returns the opposite of exists().
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (dao.notExists(CF.eq("email", email))) {
      *     // Email is available, proceed with registration
@@ -837,6 +852,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Counts the number of records that match the specified condition.
      * Returns the exact count of matching records.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int activeCount = dao.count(CF.eq("status", "ACTIVE"));
      * System.out.println("Active users: " + activeCount);
@@ -852,6 +868,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds the first record that matches the specified condition.
      * Returns an Optional containing the entity if found, empty otherwise.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = dao.findFirst(CF.eq("email", "john@example.com"));
      * user.ifPresent(u -> System.out.println("Found: " + u.getName()));
@@ -867,6 +884,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds the first record matching the condition and maps it using the provided mapper.
      * Allows custom transformation of the result.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> userName = dao.findFirst(
      *     CF.eq("id", 123),
@@ -900,6 +918,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds the first record with only specified properties matching the condition.
      * Useful for retrieving partial entities with only needed fields.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = dao.findFirst(
      *     Arrays.asList("id", "name", "email"),
@@ -948,6 +967,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds exactly one record matching the condition, throwing exception if multiple found.
      * Use this when you expect exactly zero or one result.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = dao.findOnlyOne(CF.eq("email", "john@example.com"));
      * // Throws DuplicatedResultException if multiple users have this email
@@ -1038,6 +1058,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a boolean value from a single column.
      * Returns an OptionalBoolean containing the value if found.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = dao.queryForBoolean("is_active", CF.eq("id", 123));
      * if (isActive.orElse(false)) {
@@ -1089,6 +1110,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for an integer value from a single column.
      * Returns an OptionalInt containing the value if found.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt age = dao.queryForInt("age", CF.eq("id", 123));
      * System.out.println("Age: " + age.orElse(0));
@@ -1138,6 +1160,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a String value from a single column.
      * Returns a Nullable containing the value, which can be null.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> name = dao.queryForString("name", CF.eq("id", 123));
      * System.out.println("Name: " + name.orElse("Unknown"));
@@ -1198,6 +1221,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a single value of the specified type from a column.
      * Returns a Nullable that can contain null values.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> balance = dao.queryForSingleResult(
      *     "balance", 
@@ -1219,6 +1243,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a single non-null value of the specified type.
      * Returns an Optional, empty if no value found or if the value is null.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> email = dao.queryForSingleNonNull(
      *     "email", 
@@ -1302,6 +1327,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Executes a query and returns the results as a Dataset.
      * Dataset provides a flexible, column-oriented view of the results.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset ds = dao.query(CF.gt("age", 18));
      * for (int i = 0; i < ds.size(); i++) {
@@ -1330,6 +1356,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Executes a query and processes results with a custom result extractor.
      * The ResultSet is passed to the extractor for custom processing.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<Long, String> idToName = dao.query(
      *     CF.isNotNull("id"),
@@ -1393,6 +1420,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a list of all entities matching the specified condition.
      * The results are eagerly loaded into memory.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> activeUsers = dao.list(CF.eq("status", "ACTIVE"));
      * for (User user : activeUsers) {
@@ -1410,6 +1438,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a list of results mapped by the provided row mapper.
      * Each row is transformed by the mapper function.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> names = dao.list(
      *     CF.eq("active", true),
@@ -1441,6 +1470,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a filtered list of results mapped by the row mapper.
      * Only rows passing the filter are included in the result.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> adultUsers = dao.list(
      *     CF.isNotNull("age"),
@@ -1475,6 +1505,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a list of entities with only the specified properties populated.
      * More efficient than loading full entities when only specific fields are needed.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = dao.list(
      *     Arrays.asList("id", "name", "email"),
@@ -1549,6 +1580,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a list of values from a single property/column.
      * The property type is automatically detected and used for mapping.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> emails = dao.list("email", CF.eq("newsletter", true));
      * }</pre>
@@ -1570,6 +1602,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a list of single property values mapped by the row mapper.
      * Allows custom transformation of single column values.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> upperNames = dao.list(
      *     "name", 
@@ -1610,6 +1643,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a lazy Stream of entities matching the condition.
      * The stream uses lazy evaluation - no database connection or query execution occurs until a terminal operation is called.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Stream<User> users = dao.stream(CF.eq("status", "ACTIVE"))) {
      *     users.filter(u -> u.getAge() > 21)
@@ -1745,6 +1779,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a lazy Stream of values from a single property.
      * The property type is automatically detected for mapping.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Stream<String> emails = dao.stream("email", CF.eq("active", true))) {
      *     emails.distinct()
@@ -1802,6 +1837,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a paginated Stream of query results as Dataset pages.
      * Each element in the stream represents one page of results. The condition must include orderBy for consistent pagination.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Stream<Dataset> pages = dao.paginate(
      *     CF.criteria().where(CF.gt("id", 0)).orderBy("id"),
@@ -1909,6 +1945,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Iterates over query results, applying the row consumer to each row.
      * This is useful for processing large result sets without loading all data into memory.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.forEach(
      *     CF.eq("status", "PENDING"),
@@ -2007,6 +2044,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * The array is reused for each row to minimize object allocation.
      * WARNING: Do not store or cache the array parameter as it's reused.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.foreach(
      *     Arrays.asList("id", "name", "age"),
@@ -2047,6 +2085,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Updates a single property for all records matching the condition.
      * Convenience method for updating one field.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int updated = dao.update("status", "INACTIVE", CF.lt("lastLogin", thirtyDaysAgo));
      * System.out.println("Deactivated " + updated + " users");
@@ -2069,6 +2108,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Updates multiple properties for all records matching the condition.
      * The map keys are property names and values are the new values.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("lastModified", new Date());
@@ -2087,6 +2127,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Updates records matching the condition with all non-null properties from the entity.
      * This updates all properties except those with null values.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User updates = new User();
      * updates.setStatus("ACTIVE");
@@ -2110,6 +2151,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Updates records with only the specified properties from the entity.
      * This allows precise control over which fields are updated.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("new@example.com");
@@ -2133,6 +2175,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Performs an upsert operation - inserts if not exists, updates if exists.
      * The existence check is based on the specified unique properties.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("john@example.com", "John Doe");
      * User saved = dao.upsert(user, Arrays.asList("email"));
@@ -2157,6 +2200,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Performs an upsert operation based on a custom condition.
      * More flexible than property-based upsert for complex conditions.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setEmail("john@example.com");
@@ -2195,6 +2239,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Deletes all records matching the specified condition.
      * Returns the count of deleted records.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int deleted = dao.delete(CF.lt("expiryDate", new Date()));
      * System.out.println("Deleted " + deleted + " expired records");
@@ -2211,6 +2256,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * The operation runs in a separate thread and returns a ContinuableFuture.
      * Note: Transactions started in the current thread are NOT propagated to the async operation.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = dao.asyncCall(d -> 
      *     d.list(CF.eq("status", "ACTIVE"))
@@ -2235,6 +2281,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Executes an asynchronous database operation using the specified executor.
      * Provides control over which thread pool executes the operation.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
      * 
@@ -2264,6 +2311,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Executes an asynchronous database operation without return value using default executor.
      * Useful for fire-and-forget operations like logging or cleanup.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.asyncRun(d -> {
      *     d.delete(CF.lt("createdDate", oneYearAgo));
@@ -2284,6 +2332,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Executes an asynchronous database operation without return value using specified executor.
      * Combines async execution with custom thread pool management.
      *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
      * 

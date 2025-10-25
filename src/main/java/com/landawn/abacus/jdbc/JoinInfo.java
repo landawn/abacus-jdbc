@@ -60,7 +60,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p>The class supports joining entities through {@code @JoinedBy} annotations and provides
  * methods to retrieve joined entities and update join relationships.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Entity with join annotation
  * @Table("employees")

@@ -32,7 +32,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p>This interface is designed for scenarios where you need to query and read join entity relationships
  * but want to prevent any accidental modifications to the data.</p>
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Assuming we have a UserDao that extends this interface
  * UserDao userDao = daoFactory.getUserDao();
@@ -40,7 +40,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * User user = userDao.selectJoinEntitiesById(userId, "orders");
  * // Delete operations will throw UnsupportedOperationException
  * // userDao.deleteJoinEntities(user, Order.class); // This will fail
- * }</pre></p>
+ * }</pre>
  * 
  * @param <T> the type of the entity
  * @param <SB> the type of SQLBuilder used for query construction
@@ -62,7 +62,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Order.class);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityClass the class of the join entities to delete
@@ -86,7 +86,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Order.class);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityClass the class of the join entities to delete
@@ -110,7 +110,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, "orders");
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropName the property name identifying the join entities to delete
@@ -134,7 +134,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, "orders");
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropName the property name identifying the join entities to delete
@@ -158,7 +158,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"));
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
@@ -182,7 +182,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), true);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
@@ -209,7 +209,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), executor);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
@@ -235,7 +235,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"));
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
@@ -260,7 +260,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), true);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
@@ -287,7 +287,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), executor);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
@@ -313,7 +313,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(user);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose all related join entities should be deleted
      * @return the total count of updated/deleted records (never returned, always throws exception)
@@ -336,7 +336,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(user, true);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose all related join entities should be deleted
      * @param inParallel whether to execute the deletions in parallel
@@ -361,7 +361,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(user, executor);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entity the entity whose all related join entities should be deleted
      * @param executor the executor to use for parallel execution
@@ -385,7 +385,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(users);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose all related join entities should be deleted
      * @return the total count of updated/deleted records (never returned, always throws exception)
@@ -408,7 +408,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(users, true);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose all related join entities should be deleted
      * @param inParallel whether to execute the deletions in parallel
@@ -433,7 +433,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(users, executor);
-     * }</pre></p>
+     * }</pre>
      *
      * @param entities the collection of entities whose all related join entities should be deleted
      * @param executor the executor to use for parallel execution

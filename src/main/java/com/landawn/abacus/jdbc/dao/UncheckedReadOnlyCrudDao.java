@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p>All write operations (insert, batchInsert) will throw {@code UnsupportedOperationException}.
  * This interface extends both read-only and no-update CRUD DAO interfaces to disable all data modification operations.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudDao<User, Long, SQLBuilder.PSC, UserReadOnlyDao> {
  *     // Only query methods available, no insert/update/delete

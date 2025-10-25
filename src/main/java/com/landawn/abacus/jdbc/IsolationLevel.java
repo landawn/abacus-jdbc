@@ -132,7 +132,7 @@ public enum IsolationLevel {
     /**
      * Returns the integer value of this isolation level as defined in {@link Connection}.
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * conn.setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
@@ -147,7 +147,7 @@ public enum IsolationLevel {
     /**
      * Returns the IsolationLevel enum constant corresponding to the specified integer value.
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * int currentLevel = conn.getTransactionIsolation();

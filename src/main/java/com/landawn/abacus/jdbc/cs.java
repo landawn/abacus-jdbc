@@ -30,7 +30,7 @@ package com.landawn.abacus.jdbc;
  *   <li>Result set processing and mapping</li>
  * </ul>
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Using cs constants for parameter names
  * String sql = "SELECT * FROM users WHERE " + cs.columnName + " = ?";

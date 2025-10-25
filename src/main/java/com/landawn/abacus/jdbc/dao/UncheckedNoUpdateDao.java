@@ -36,7 +36,7 @@ import com.landawn.abacus.query.condition.Condition;
  * <p>Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}, providing a more
  * convenient API for developers who prefer unchecked exceptions.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, SQLBuilder.PSC, EventLogDao> {
  *     // Can insert new logs and query existing logs

@@ -31,7 +31,7 @@ import java.util.Map;
  * and uses it as the map key. If multiple rows have the same key value, the last row
  * will overwrite previous ones (unless using a multi-value map implementation).</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Map users by their ID

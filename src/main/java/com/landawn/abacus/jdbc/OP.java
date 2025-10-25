@@ -22,14 +22,14 @@ package com.landawn.abacus.jdbc;
  * <p>The OP enum is typically used to specify the operation type in query annotations or method calls,
  * allowing the framework to determine the appropriate execution strategy and return type.</p>
  * 
- * <p>Example usage:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.list)
  * List<User> findUsersByAge(int age);
  * 
  * @Query(value = "SELECT COUNT(*) FROM users", op = OP.queryForSingle)
  * int getUserCount();
- * }</pre></p>
+ * }</pre>
  * 
  * @see AbstractQuery
  * @since 1.0
@@ -42,11 +42,11 @@ public enum OP {
      * <p>This operation is optimized for existence checks and typically translates to
      * a query with LIMIT 1 or uses EXISTS clause internally for better performance.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT 1 FROM users WHERE email = ?", op = OP.exists)
      * boolean emailExists(String email);
-     * }</pre></p>
+     * }</pre>
      */
     exists,
 
@@ -57,11 +57,11 @@ public enum OP {
      * <p>Use this operation when you expect exactly one result and want to fail fast
      * if this expectation is not met. This is useful for queries by unique identifiers.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE id = ?", op = OP.findOnlyOne)
      * User getUserById(long id);
-     * }</pre></p>
+     * }</pre>
      *
      */
     findOnlyOne,
@@ -74,11 +74,11 @@ public enum OP {
      * exactly one. The query typically includes an ORDER BY clause to ensure
      * deterministic results.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = OP.findFirst)
      * Optional<User> findYoungestAdult(int minAge);
-     * }</pre></p>
+     * }</pre>
      */
     findFirst,
 
@@ -89,11 +89,11 @@ public enum OP {
      * <p>This is the most common operation for queries that return multiple records.
      * All results are loaded into memory at once, so use with caution for large result sets.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE active = true", op = OP.list)
      * List<User> getActiveUsers();
-     * }</pre></p>
+     * }</pre>
      */
     list,
 
@@ -101,11 +101,11 @@ public enum OP {
      * General query operation that returns results based on the method return type.
      * The framework automatically determines the appropriate result handling.
      *
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.query)
      * Dataset queryUsersByAge(int age);
-     * }</pre></p>
+     * }</pre>
      *
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code @Query}.
      */
@@ -118,11 +118,11 @@ public enum OP {
      * <p>The stream should be properly closed after use, preferably in a try-with-resources block.
      * This operation enables processing of large datasets with minimal memory footprint.</p>
      *
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users", op = OP.stream)
      * Stream<User> streamAllUsers();
-     * }</pre></p>
+     * }</pre>
      *
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code @Query}.
      */
@@ -135,14 +135,14 @@ public enum OP {
      * <p>This operation expects the query to return exactly one row with one column.
      * Common use cases include COUNT, SUM, MAX, MIN queries.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT MAX(salary) FROM employees", op = OP.queryForSingle)
      * Double getMaxSalary();
      * 
      * @Query(value = "SELECT name FROM users WHERE id = ?", op = OP.queryForSingle)
      * String getUserName(long id);
-     * }</pre></p>
+     * }</pre>
      */
     queryForSingle,
 
@@ -153,11 +153,11 @@ public enum OP {
      * <p>Use this operation when the result might be empty and you want to handle it
      * gracefully with a null return value rather than an exception.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT email FROM users WHERE username = ?", op = OP.queryForUnique)
      * String findEmailByUsername(String username);
-     * }</pre></p>
+     * }</pre>
      *
      */
     queryForUnique,
@@ -170,11 +170,11 @@ public enum OP {
      * that return multiple result sets. Each result set is processed and returned
      * in a collection.</p>
      *
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
-     * }</pre></p>
+     * }</pre>
      *
      * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.</p>
      */
@@ -187,11 +187,11 @@ public enum OP {
      * <p>Similar to listAll but returns Dataset objects which provide more
      * flexibility for data processing and transformation compared to typed Lists.</p>
      *
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
-     * }</pre></p>
+     * }</pre>
      *
      * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>
      */
@@ -205,11 +205,11 @@ public enum OP {
      * where you want to process data in a streaming fashion rather than loading
      * everything into memory at once.</p>
      *
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
-     * }</pre></p>
+     * }</pre>
      *
      * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.</p>
      */
@@ -222,13 +222,13 @@ public enum OP {
      * <p>This operation is specifically designed for stored procedures with OUT or INOUT
      * parameters. The return type should match the structure of the output parameters.</p>
      *
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call calculateStats(?, ?, ?)}", op = OP.executeAndGetOutParameters, isProcedure = true)
      * @OutParameter(position = 2, sqlType = Types.INTEGER)
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)
      * Tuple2<Integer, Double> calculateStats(@Bind("input") int input);
-     * }</pre></p>
+     * }</pre>
      *
      * <p>Mostly it's for {@code @Query} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.</p>
      */
@@ -241,14 +241,14 @@ public enum OP {
      * <p>This is the standard operation for DML (Data Manipulation Language) statements
      * that modify data in the database. The return value indicates how many rows were affected.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
      * int deactivateInactiveUsers(Date threshold);
      * 
      * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)
      * int createUser(String name, String email);
-     * }</pre></p>
+     * }</pre>
      */
     update,
 
@@ -259,11 +259,11 @@ public enum OP {
      * <p>Use this operation when the number of affected rows might exceed the range of int.
      * This is particularly relevant for bulk operations on large tables.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "DELETE FROM audit_logs WHERE created_date < ?", op = OP.largeUpdate)
      * long purgeOldAuditLogs(Date cutoffDate);
-     * }</pre></p>
+     * }</pre>
      */
     largeUpdate,
 
@@ -277,14 +277,14 @@ public enum OP {
      * to select the most appropriate operation. For example, SELECT statements default to list
      * or query operations, while UPDATE/INSERT/DELETE statements default to update operations.</p>
      * 
-     * <p>Example:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
      * List<User> getAllUsers();  // Framework infers OP.list
      * 
      * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
      * int deleteUser(long id);  // Framework infers OP.update
-     * }</pre></p>
+     * }</pre>
      */
     DEFAULT
 

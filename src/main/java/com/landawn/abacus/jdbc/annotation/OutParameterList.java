@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
  * <p>You typically don't use this annotation directly. Instead, use multiple {@link OutParameter}
  * annotations, and the compiler will automatically wrap them in this container.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EmployeeDao extends CrudDao<Employee, Long> {
  *
@@ -66,7 +66,7 @@ public @interface OutParameterList {
      * <p>This array is automatically populated when using multiple {@link OutParameter}
      * annotations on a method due to the {@link java.lang.annotation.Repeatable} mechanism.</p>
      * 
-     * <p>Example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @OutParameterList({
      *     @OutParameter(position = 1, sqlType = Types.VARCHAR),

@@ -39,7 +39,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  * 
- * <p>Example usage:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO for reporting
  * public interface ReportDao extends ReadOnlyCrudDao<Report, Long, SQLBuilder, ReportDao> {
