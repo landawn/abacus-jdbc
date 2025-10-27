@@ -1,3 +1,7 @@
+## 3.25.1
+
+* Improve javadoc and add unit tests
+
 ### 3.25.0
 * Replace `@Select/Update/Delete/Insert` with `@Query`.
 * Improvements and bug fix.
