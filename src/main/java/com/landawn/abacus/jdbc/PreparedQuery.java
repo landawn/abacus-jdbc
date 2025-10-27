@@ -55,15 +55,15 @@ import java.sql.PreparedStatement;
  * <p>This class is thread-safe only if the underlying {@code PreparedStatement} is not accessed concurrently
  * from multiple threads. It's recommended to create a new instance for each thread or use proper synchronization.
  *
- * @see {@link com.landawn.abacus.annotation.ReadOnly}
- * @see {@link com.landawn.abacus.annotation.ReadOnlyId}
- * @see {@link com.landawn.abacus.annotation.NonUpdatable}
- * @see {@link com.landawn.abacus.annotation.Transient}
- * @see {@link com.landawn.abacus.annotation.Table}
- * @see {@link com.landawn.abacus.annotation.Column}
- * @see {@link AbstractQuery}
- * @see {@link NamedQuery}
- * @see {@link CallableQuery}
+ * @see com.landawn.abacus.annotation.ReadOnly
+ * @see com.landawn.abacus.annotation.ReadOnlyId
+ * @see com.landawn.abacus.annotation.NonUpdatable
+ * @see com.landawn.abacus.annotation.Transient
+ * @see com.landawn.abacus.annotation.Table
+ * @see com.landawn.abacus.annotation.Column
+ * @see AbstractQuery
+ * @see NamedQuery
+ * @see CallableQuery
  *
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>

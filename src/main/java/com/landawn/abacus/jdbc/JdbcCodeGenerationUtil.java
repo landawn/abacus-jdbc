@@ -1876,9 +1876,18 @@ public final class JdbcCodeGenerationUtil {
         @Beta
         private JsonXmlConfig jsonXmlConfig;
 
+        /**
+         * Configuration for JSON and XML serialization/deserialization settings.
+         *
+         * <p>This class allows customization of how entity fields are serialized to
+         * and deserialized from JSON and XML formats. It includes settings for naming
+         * conventions, field filtering, date/time formatting, and enum handling.</p>
+         *
+         * <p>This feature is marked as {@code @Beta} and may be subject to changes
+         * in future releases.</p>
+         */
         @Builder
         @Data
-        @NoArgsConstructor
         @AllArgsConstructor
         @Accessors(chain = true)
         public static class JsonXmlConfig {
@@ -1893,6 +1902,12 @@ public final class JdbcCodeGenerationUtil {
             private String numberFormat;
 
             private EnumBy enumerated;
+
+            /**
+             * Constructs a new JsonXmlConfig instance with default values.
+             */
+            public JsonXmlConfig() {
+            }
         }
     }
 }

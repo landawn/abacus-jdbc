@@ -284,6 +284,11 @@
 			        <doclint>all</doclint>    
 					<source>${maven.compiler.source}</source>
 					<detectJavaApiLink>false</detectJavaApiLink>
+
+					<sourceFileExcludes>
+						<exclude>/com/landawn/abacus/jdbc/DaoImpl.java</exclude>
+						<exclude>/com/landawn/abacus/jdbc/cs.java</exclude>
+					</sourceFileExcludes>
 				</configuration>
 				<executions>
 					<execution>

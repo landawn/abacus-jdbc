@@ -122,7 +122,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * This class offers various utility methods for executing SQL queries, managing connections, handling transactions,
  * and working with ResultSets in a more convenient way than standard JDBC.
  * 
- * <h3>Key Features:</h3>
+ * <h2>Key Features:</h2>
  * <ul>
  *   <li>Simplified query execution with automatic resource management</li>
  *   <li>Support for both regular and named SQL queries</li>
@@ -134,7 +134,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li>DAO creation and caching</li>
  * </ul>
  *
- * <h3>Performance Tips:</h3>
+ * <h2>Performance Tips:</h2>
  * <ul>
  *   <li>Avoid unnecessary/repeated database calls</li>
  *   <li>Only fetch the columns you need or update the columns you want</li>
@@ -5016,7 +5016,6 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page (null for first page)
      * @return a Stream of Dataset, each representing a page of results
-     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -5058,7 +5057,6 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -5098,7 +5096,6 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
@@ -5136,7 +5133,6 @@ public final class JdbcUtil {
      * @param pageSize the number of rows to fetch per page
      * @param paramSetter the BiParametersSetter to set parameters for the query
      * @return a Stream of Dataset, each representing a page of results
-     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -5156,7 +5152,6 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query
      * @param resultExtractor the ResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -5196,7 +5191,6 @@ public final class JdbcUtil {
      * @param paramSetter the BiParametersSetter to set parameters for the query
      * @param resultExtractor the BiResultExtractor to extract results from the ResultSet
      * @return a Stream of the extracted results
-     * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String query, final int pageSize,
@@ -7573,7 +7567,7 @@ public final class JdbcUtil {
      * <p>Spring Transaction is supported and integrated. If a Spring transaction is already active
      * with the specified DataSource, the Connection from the Spring transaction will be used.</p>
      *
-     * <h3>Example of transaction sharing:</h3>
+     * <p><b>Example of transaction sharing:</b></p>
      * <pre>{@code
      * public void doSomethingA() {
      *     final SQLTransaction tranA = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);

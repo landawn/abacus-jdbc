@@ -57,7 +57,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Work with entities that use Long as their primary key type</li>
  *   <li>Avoid handling checked SQLExceptions in your code</li>
  *   <li>Create separate read-only and read-write DAO interfaces for the same entity</li>
- * </ul></p>
+ * </ul>
  * 
  * @param <T> the entity type managed by this DAO
  * @param <SB> the SQLBuilder type used for query construction

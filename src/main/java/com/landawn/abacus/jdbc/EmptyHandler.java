@@ -37,4 +37,13 @@ import com.landawn.abacus.jdbc.dao.Dao;
 @SuppressWarnings("rawtypes")
 public final class EmptyHandler implements Jdbc.Handler<Dao> {
 
+    /**
+     * Constructs a new EmptyHandler instance.
+     *
+     * <p>This no-operation handler is used internally by the framework
+     * as a placeholder when no actual handling logic is required.</p>
+     */
+    public EmptyHandler() {
+        // No-op constructor for empty handler
+    }
 }

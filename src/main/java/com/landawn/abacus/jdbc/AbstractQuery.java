@@ -6855,7 +6855,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .count();
      * }</pre>
      *
-     * @return A lazy-evaluated Stream of Map<String, Object> representing the rows
+     * @return A lazy-evaluated Stream of {@code Map<String, Object>} representing the rows
      * @throws IllegalStateException If this query is closed
      * @see #list()
      * @see #stream(Class)
