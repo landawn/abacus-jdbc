@@ -53,7 +53,7 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>6.25.0</version>
+			<version>6.25.1</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -240,33 +240,13 @@
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>3.4.0</version>
-				<executions>
-					<execution>
-						<id>add-source</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-								<source>./src/main/java</source>
-								<source>../abacus-core/src/jdbc</source>
-							</sources>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.12.1</version>
+				<version>3.14.1</version>
 				<configuration>
 					<source>${maven.compiler.source}</source>
 					<target>${maven.compiler.target}</target>
+					<release>${maven.compiler.release}</release>
 			        <annotationProcessorPaths>
 			          <path>
 			            <groupId>org.projectlombok</groupId>
@@ -280,11 +260,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.3.0</version>
-				<configuration>
-					<excludes>
-					</excludes>
-				</configuration>
+				<version>3.3.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -294,18 +270,20 @@
 					</execution>
 				</executions>
 			</plugin>
-
+			
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.6.3</version>
+				<version>3.12.0</version>
 				<configuration>
 					<doctitle>abacus-jdbc</doctitle>
 					<show>public</show>
-					<doclint>none</doclint>
+			        <source>25</source>
+			        <encoding>UTF-8</encoding>
+			        <doclint>all</doclint>    
 					<source>${maven.compiler.source}</source>
+					<detectJavaApiLink>false</detectJavaApiLink>
 				</configuration>
-
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -316,10 +294,57 @@
 				</executions>
 			</plugin>
 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.4</version>
+				<configuration>
+					<includes>
+						<include>**/AbacusJdbcTestSuite.java</include>
+					</includes>
+					<useModulePath>false</useModulePath>
+					<testFailureIgnore>true</testFailureIgnore> <!-- set to false if you want failures to fail the build -->
+					<argLine>
+          				-Dfile.encoding=UTF-8
+						--add-opens java.base/java.lang=ALL-UNNAMED
+						--add-opens java.base/java.lang.reflect=ALL-UNNAMED
+						--add-opens java.base/java.io=ALL-UNNAMED
+						--add-opens java.base/sun.nio.ch=ALL-UNNAMED
+						--add-opens java.base/java.nio=ALL-UNNAMED
+						--add-exports java.base/jdk.internal.ref=ALL-UNNAMED
+						--add-exports java.base/sun.nio.ch=ALL-UNNAMED
+						--add-exports jdk.unsupported/sun.misc=ALL-UNNAMED
+					</argLine>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.14</version>
+				<executions>
+					<!-- Prepare agent in all modules via inheritance -->
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<!-- Generate a single aggregated report at the parent -->
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
 	        <plugin>
 	          <groupId>org.sonatype.central</groupId>
 	          <artifactId>central-publishing-maven-plugin</artifactId>
-	          <version>0.8.0</version>
+	          <version>0.9.0</version>
 	          <extensions>true</extensions>
 	          <configuration>
 	             <publishingServerId>central</publishingServerId>
@@ -330,7 +355,7 @@
 		    <plugin>
 		      <groupId>org.apache.maven.plugins</groupId>
 		      <artifactId>maven-gpg-plugin</artifactId>
-		      <version>3.1.0</version>
+		      <version>3.2.8</version>
 		      <executions>
 		        <execution>
 		          <id>sign-artifacts</id>
