@@ -22,32 +22,34 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SQLBuilder;
 
 /**
- * A no-update CRUD DAO interface that uses primitive {@code long} for ID operations.
- * This interface combines the restrictions of no-update DAO (no update operations allowed)
- * with the convenience of primitive long ID methods.
- * 
- * <p>This is a beta API that supports insert and read operations with primitive long IDs,
- * but disables all update and delete operations. It's useful for append-only data stores
- * where records can be added but never modified or removed.</p>
- * 
+ * A no-update CRUD DAO interface that uses {@code Long} as the ID type with unchecked exception handling.
+ * This interface provides convenience methods that accept primitive {@code long} values
+ * in addition to the {@code Long} object methods inherited from {@link UncheckedNoUpdateCrudDao}.
+ *
+ * <p>This interface combines the restrictions of no-update DAO (no update operations allowed)
+ * with the convenience of primitive long ID methods. It's useful for append-only data stores
+ * where records can be added and read, but never modified.</p>
+ *
+ * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ * making it easier to work with in functional programming contexts.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, SQLBuilder.PSC, EventLogDao> {
- *     // Can insert and query, but not update or delete
+ *     // Can insert and query, but not update
  * }
- * 
+ *
  * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
- * 
+ *
  * // These operations work with primitive long:
  * Long id = dao.insert(new EventLog("User logged in"));
  * Optional<EventLog> log = dao.get(123L);
  * boolean exists = dao.exists(123L);
  * List<EventLog> logs = dao.list(CF.eq("severity", "ERROR"));
- * 
+ *
  * // These operations throw UnsupportedOperationException:
  * // dao.update("status", "PROCESSED", 123L);  // not allowed
  * // dao.deleteById(123L);                      // not allowed
- * // dao.batchUpdate(logs);                     // not allowed
  * }</pre>
  *
  * @param <T> the entity type
@@ -61,19 +63,19 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
         extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
 
     /**
-     * This operation is not supported in no-update DAO.
+     * This operation is not supported in a no-update DAO.
      * Always throws {@code UnsupportedOperationException}.
-     * 
+     *
      * <p>Even though this method accepts a convenient primitive long ID,
      * update operations are not allowed in no-update DAOs.</p>
      *
-     * @param propName the property name to update (ignored)
-     * @param propValue the new value (ignored)
-     * @param id the entity ID as primitive long (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @param propName the property name to update (operation will fail)
+     * @param propValue the new value (operation will fail)
+     * @param id the entity ID as primitive long (operation will fail)
+     * @return never returns normally
+     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -82,18 +84,18 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * This operation is not supported in no-update DAO.
+     * This operation is not supported in a no-update DAO.
      * Always throws {@code UnsupportedOperationException}.
-     * 
+     *
      * <p>Even though this method accepts a convenient primitive long ID,
      * update operations are not allowed in no-update DAOs.</p>
      *
-     * @param updateProps the properties to update (ignored)
-     * @param id the entity ID as primitive long (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @param updateProps the properties to update (operation will fail)
+     * @param id the entity ID as primitive long (operation will fail)
+     * @return never returns normally
+     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -102,17 +104,17 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * This operation is not supported in no-update DAO.
+     * This operation is not supported in a no-update DAO.
      * Always throws {@code UnsupportedOperationException}.
-     * 
-     * <p>Even though this method accepts a convenient primitive long ID,
-     * delete operations are not allowed in no-update DAOs.</p>
      *
-     * @param id the entity ID as primitive long (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as delete operations are not allowed
-     * @deprecated unsupported Operation
+     * <p>Even though this method accepts a convenient primitive long ID,
+     * delete operations are not allowed in this no-update DAO variant.</p>
+     *
+     * @param id the entity ID as primitive long (operation will fail)
+     * @return never returns normally
+     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override

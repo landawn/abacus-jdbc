@@ -35,59 +35,56 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 
 /**
- * The UncheckedCrudDaoL interface is a specialized CRUD DAO that uses primitive {@code long} for ID operations.
- * The 'L' suffix indicates this DAO is optimized for entities with {@code long} or {@code Long} ID types,
- * providing convenience methods that accept primitive {@code long} values directly.
- * 
- * <p>This interface extends {@code UncheckedCrudDao} with {@code Long} as the ID type and adds overloaded
- * methods that accept primitive {@code long} parameters, avoiding unnecessary boxing/unboxing operations.</p>
- * 
- * <p>This is a beta API designed for performance-critical applications where avoiding object allocation
- * for ID values can make a difference.</p>
- * 
+ * A specialized CrudDao interface that uses {@code Long} as the ID type with unchecked exception handling.
+ * This interface provides convenience methods that accept primitive {@code long} values
+ * in addition to the {@code Long} object methods inherited from {@link UncheckedCrudDao}.
+ *
+ * <p>This interface is particularly useful for entities that use numeric long IDs,
+ * which is a common pattern in many database schemas. All methods delegate to their
+ * corresponding UncheckedCrudDao methods after boxing the primitive long to Long.</p>
+ *
+ * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ * making it easier to work with in functional programming contexts.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends UncheckedCrudDaoL<User, SQLBuilder.PSC, UserDao> {
- *     // Inherits both Long and long ID methods
+ *     // Inherits all UncheckedCrudDao methods with Long ID type
+ *     // Plus convenience methods that accept primitive long
  * }
- * 
+ *
+ * // Usage with primitive long
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
- * 
- * // Using primitive long directly - no boxing needed
- * Optional<User> user = userDao.get(123L);
- * boolean exists = userDao.exists(123L);
- * int updated = userDao.update("status", "ACTIVE", 123L);
- * int deleted = userDao.deleteById(123L);
- * 
- * // Can still use Long objects when needed
- * Long userId = getUserIdFromSomewhere();
- * Optional<User> user2 = userDao.get(userId);
+ * Optional<User> user = userDao.get(123L);  // Can use primitive long
+ * userDao.deleteById(456L);  // More convenient than Long.valueOf(456)
  * }</pre>
  *
  * @param <T> the entity type
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedCrudDao
+ * @see com.landawn.abacus.query.condition.ConditionFactory
+ * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  */
 @Beta
 public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
         extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**
-     * Returns an {@code OptionalBoolean} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
-     * 
+     * Queries for a boolean value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = userDao.queryForBoolean("isActive", 123L);
      * if (isActive.isPresent() && isActive.getAsBoolean()) {
-     *     // User is active
+     *     System.out.println("User is active");
      * }
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalBoolean containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalBoolean containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -96,17 +93,18 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalChar} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
-     * 
+     * Queries for a char value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalChar grade = userDao.queryForChar("grade", 456L);
+     * OptionalChar grade = studentDao.queryForChar("grade", 123L);
+     * grade.ifPresent(g -> System.out.println("Student grade: " + g));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalChar containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalChar containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -115,17 +113,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalByte} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * OptionalByte level = userDao.queryForByte("userLevel", 789L);
-     * }</pre>
+     * Queries for a byte value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalByte containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalByte containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -134,17 +127,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalShort} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * OptionalShort age = userDao.queryForShort("age", 123L);
-     * }</pre>
+     * Queries for a short value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalShort containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalShort containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -153,20 +141,18 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalInt} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
-     * 
+     * Queries for an integer value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalInt loginCount = userDao.queryForInt("loginCount", 123L);
-     * if (loginCount.isPresent() && loginCount.getAsInt() > 100) {
-     *     // Frequent user
-     * }
+     * OptionalInt age = userDao.queryForInt("age", 123L);
+     * int userAge = age.orElse(0);
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalInt containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalInt containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

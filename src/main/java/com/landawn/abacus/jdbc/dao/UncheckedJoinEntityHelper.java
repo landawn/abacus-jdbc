@@ -106,9 +106,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
@@ -139,9 +138,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
@@ -174,9 +172,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -209,9 +206,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
@@ -243,9 +239,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
@@ -279,9 +274,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -315,10 +309,9 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the class of the join entities to load for each result
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return a list of entities with loaded join entities
      * @throws UncheckedSQLException if a database access error occurs
@@ -353,10 +346,9 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the collection of join entity classes to load for each result
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return a list of entities with loaded join entities
      * @throws UncheckedSQLException if a database access error occurs
@@ -398,9 +390,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to select from the main entity,
-     *                       excluding join entity properties.
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -436,7 +427,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to load join entities for
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -459,8 +450,9 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to load join entities for
-     * @param joinEntityClass the class of join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -488,7 +480,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to load join entities for
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -511,8 +503,9 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to load join entities for
-     * @param joinEntityClass the class of join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -571,7 +564,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity the entity to load join entities for
      * @param joinEntityPropName the property name of the join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -612,7 +606,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities the collection of entities to load join entities for
      * @param joinEntityPropName the property name of the join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -663,7 +658,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity the entity to load join entities for
      * @param joinEntityPropNames the property names of join entities to load
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -695,7 +690,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity the entity to load join entities for
      * @param joinEntityPropNames the property names of join entities to load
-     * @param executor the executor to use for parallel loading
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -757,7 +752,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities the collection of entities to load join entities for
      * @param joinEntityPropNames the property names of join entities to load
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -790,7 +785,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities the collection of entities to load join entities for
      * @param joinEntityPropNames the property names of join entities to load
-     * @param executor the executor to use for parallel loading
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -840,7 +835,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to load all join entities for
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -868,7 +863,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to load all join entities for
-     * @param executor the executor to use for parallel loading
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -913,7 +908,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to load all join entities for
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -941,7 +936,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to load all join entities for
-     * @param executor the executor to use for parallel loading
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -967,7 +962,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -990,8 +985,9 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
-     * @param joinEntityClass the class of join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1018,7 +1014,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
-     * @param joinEntityClass the class of join entities to load
+     * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1041,8 +1037,9 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
-     * @param joinEntityClass the class of join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1102,7 +1099,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1151,7 +1149,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *
      * @param entities the collection of entities to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
-     * @param selectPropNames the properties to select from join entities, or null for all
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1184,7 +1183,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
-     * @param joinEntityPropNames the property names to check and load
+     * @param joinEntityPropNames the property names of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1214,8 +1213,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
-     * @param joinEntityPropNames the property names to check and load
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1246,8 +1245,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load join entities for
-     * @param joinEntityPropNames the property names to check and load
-     * @param executor the executor to use for parallel loading
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -1279,7 +1278,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
-     * @param joinEntityPropNames the property names to check and load
+     * @param joinEntityPropNames the property names of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1309,8 +1308,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
-     * @param joinEntityPropNames the property names to check and load
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1342,8 +1341,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load join entities for
-     * @param joinEntityPropNames the property names to check and load
-     * @param executor the executor to use for parallel loading
+     * @param joinEntityPropNames the property names of the join entities to load
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
@@ -1392,7 +1391,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load all join entities for
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1419,7 +1418,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity to conditionally load all join entities for
-     * @param executor the executor to use for parallel loading
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1464,7 +1463,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load all join entities for
-     * @param inParallel true to load in parallel, {@code false} for sequential loading
+     * @param inParallel if {@code true}, entities are loaded in parallel; if {@code false}, loaded sequentially
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1491,7 +1490,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities to conditionally load all join entities for
-     * @param executor the executor to use for parallel loading
+     * @param executor the {@code Executor} to use for parallel execution
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1608,7 +1607,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropName the property name of join entities to delete
+     * @param joinEntityPropName the property name of the join entities to delete
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1626,7 +1625,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropName the property name of join entities to delete
+     * @param joinEntityPropName the property name of the join entities to delete
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1648,7 +1647,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropNames the property names of join entities to delete
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1693,8 +1692,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropNames the property names of join entities to delete
-     * @param executor the executor to use for parallel deletion
+     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
@@ -1730,8 +1729,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropNames the property names of join entities to delete
-     * @param inParallel true to delete in parallel, {@code false} for sequential deletion
+     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction if {@code isParallel} is {@code true}
@@ -1762,7 +1761,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropNames the property names of join entities to delete
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1807,8 +1806,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropNames the property names of join entities to delete
-     * @param inParallel true to delete in parallel, {@code false} for sequential deletion
+     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction if {@code isParallel} is {@code true}
@@ -1842,8 +1841,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropNames the property names of join entities to delete
-     * @param executor the executor to use for parallel deletion
+     * @param joinEntityPropNames the property names of the join entities to delete
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
@@ -1897,7 +1896,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity whose all join entities should be deleted
-     * @param inParallel true to delete in parallel, {@code false} for sequential deletion
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
@@ -1926,7 +1925,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entity the entity whose all join entities should be deleted
-     * @param executor the executor to use for parallel deletion
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
@@ -1975,7 +1974,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities whose all join entities should be deleted
-     * @param inParallel true to delete in parallel, {@code false} for sequential deletion
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction if {@code isParallel} is {@code true}
@@ -2004,7 +2003,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param entities the collection of entities whose all join entities should be deleted
-     * @param executor the executor to use for parallel deletion
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
      * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads

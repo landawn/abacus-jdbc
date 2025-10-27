@@ -365,10 +365,9 @@ public final class JdbcUtil {
      * Retrieves the database product information from the given DataSource.
      * This method establishes a temporary connection to extract metadata about the database.
      *
-     * @param ds The DataSource from which to retrieve the database product information
+     * @param ds The DataSource from which to obtain a database connection
      * @return A DBProductInfo object containing the database product name, version, and type
-     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information
-     * 
+     * @throws UncheckedSQLException If a database access error occurs
      * @see #getDBProductInfo(Connection)
      */
     public static DBProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws UncheckedSQLException {
@@ -387,7 +386,7 @@ public final class JdbcUtil {
     /**
      * Retrieves the database product information from the given connection.
      * This method extracts metadata to determine the database type and version.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
@@ -396,9 +395,9 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param conn The connection to the database
+     * @param conn The database Connection to use for retrieving metadata
      * @return A DBProductInfo object containing the database product name, version, and type (e.g., MySQL, PostgreSQL, Oracle)
-     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the database product information
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static DBProductInfo getDBProductInfo(final Connection conn) throws UncheckedSQLException {
         try {
@@ -474,7 +473,7 @@ public final class JdbcUtil {
     /**
      * Creates a HikariCP DataSource with the specified database connection details.
      * HikariCP is a high-performance JDBC connection pool.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createHikariDataSource(
@@ -485,8 +484,8 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param url The JDBC URL for the database connection
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @return A DataSource configured with HikariCP using the specified connection details
      * @throws RuntimeException If HikariCP is not available in the classpath or configuration fails
      */
@@ -506,7 +505,7 @@ public final class JdbcUtil {
     /**
      * Creates a HikariCP DataSource with the specified database connection details and pool configuration.
      * This method allows fine-tuning of the connection pool size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createHikariDataSource(
@@ -519,8 +518,8 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param url The JDBC URL for the database connection
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @param minIdle The minimum number of idle connections in the pool
      * @param maxPoolSize The maximum number of connections in the pool
      * @return A DataSource configured with HikariCP using the specified connection details and pool settings
@@ -545,7 +544,7 @@ public final class JdbcUtil {
     /**
      * Creates a C3P0 DataSource with the specified database connection details.
      * C3P0 is a mature JDBC connection pooling library.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createC3p0DataSource(
@@ -556,8 +555,8 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param url The JDBC URL for the database connection
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @return A DataSource configured with C3P0 using the specified connection details
      * @throws RuntimeException If C3P0 is not available in the classpath or configuration fails
      */
@@ -578,7 +577,7 @@ public final class JdbcUtil {
     /**
      * Creates a C3P0 DataSource with the specified database connection details and pool configuration.
      * This method allows configuration of the connection pool size.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = JdbcUtil.createC3p0DataSource(
@@ -591,8 +590,8 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param url The JDBC URL for the database connection
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @param minPoolSize The minimum number of connections in the pool
      * @param maxPoolSize The maximum number of connections in the pool
      * @return A DataSource configured with C3P0 using the specified connection details and pool settings
@@ -617,7 +616,7 @@ public final class JdbcUtil {
     /**
      * Creates a connection to the database using the specified URL, username, and password.
      * The appropriate JDBC driver is automatically determined from the URL.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = JdbcUtil.createConnection(
@@ -628,10 +627,10 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param url The JDBC URL for the database connection (e.g., "jdbc:mysql://localhost:3306/mydb")
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @return A Connection object that represents a connection to the database
-     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection or the driver cannot be determined from the URL
+     * @throws UncheckedSQLException If a database access error occurs or the driver cannot be determined from the URL
      */
     public static Connection createConnection(final String url, final String user, final String password) throws UncheckedSQLException {
         return createConnection(getDriverClassByUrl(url), url, user, password);
@@ -640,7 +639,7 @@ public final class JdbcUtil {
     /**
      * Creates a connection to the database using the specified driver class, URL, username, and password.
      * This method allows explicit specification of the JDBC driver class.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = JdbcUtil.createConnection(
@@ -653,10 +652,10 @@ public final class JdbcUtil {
      *
      * @param driverClass The fully qualified name of the JDBC driver class (e.g., "com.mysql.cj.jdbc.Driver")
      * @param url The JDBC URL for the database connection
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @return A Connection object that represents a connection to the database
-     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection or the driver class is not found
+     * @throws UncheckedSQLException If a database access error occurs or the driver class is not found
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
@@ -668,7 +667,7 @@ public final class JdbcUtil {
     /**
      * Creates a connection to the database using the specified driver class, URL, username, and password.
      * This method allows type-safe specification of the JDBC driver class.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = JdbcUtil.createConnection(
@@ -681,10 +680,10 @@ public final class JdbcUtil {
      *
      * @param driverClass The JDBC driver class
      * @param url The JDBC URL for the database connection
-     * @param user The username for the database connection
-     * @param password The password for the database connection
+     * @param user The username for the database authentication
+     * @param password The password for the database authentication
      * @return A Connection object that represents a connection to the database
-     * @throws UncheckedSQLException If a SQL exception occurs while creating the connection
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
@@ -742,10 +741,10 @@ public final class JdbcUtil {
      * it will return the connection associated with the current transaction.
      * Otherwise, it will return a new connection from the DataSource.
      *
-     * @param ds The DataSource from which to retrieve the connection
+     * @param ds The DataSource from which to obtain a database connection
      * @return A Connection object that represents a connection to the database
-     * @throws UncheckedSQLException If a SQL exception occurs while retrieving the connection
-     * 
+     * @throws UncheckedSQLException If a database access error occurs
+     *
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws UncheckedSQLException {
@@ -776,9 +775,9 @@ public final class JdbcUtil {
      * it will release the connection associated with the current transaction.
      * Otherwise, it will close the connection directly.
      *
-     * @param conn The Connection to be released
+     * @param conn The Connection to be released back to the DataSource or closed. May be null
      * @param ds The DataSource from which the connection was obtained
-     * 
+     *
      * @see #getConnection(javax.sql.DataSource)
      */
     public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds) {
@@ -801,9 +800,9 @@ public final class JdbcUtil {
     /**
      * Creates the close handler.
      *
-     * @param conn the database connection to release
-     * @param ds the data source from which the connection was obtained
-     * @return a Runnable that releases the connection back to the data source
+     * @param conn The database Connection to release
+     * @param ds The DataSource from which the connection was obtained
+     * @return A Runnable that releases the connection back to the DataSource
      */
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
         return () -> JdbcUtil.releaseConnection(conn, ds);
@@ -812,8 +811,8 @@ public final class JdbcUtil {
     /**
      * Closes the specified ResultSet.
      *
-     * @param rs The ResultSet to close
-     * @throws UncheckedSQLException If a SQL exception occurs while closing the ResultSet
+     * @param rs The ResultSet to close. May be null, in which case no action is taken
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static void close(final ResultSet rs) throws UncheckedSQLException {
         if (rs != null) {
@@ -828,9 +827,9 @@ public final class JdbcUtil {
     /**
      * Closes the specified ResultSet and optionally its associated Statement.
      *
-     * @param rs The ResultSet to close
+     * @param rs The ResultSet to close. May be null, in which case no action is taken
      * @param closeStatement If true, also closes the Statement that created the ResultSet
-     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static void close(final ResultSet rs, final boolean closeStatement) throws UncheckedSQLException {
         close(rs, closeStatement, false);
@@ -839,11 +838,11 @@ public final class JdbcUtil {
     /**
      * Closes the specified ResultSet and optionally its associated Statement and Connection.
      *
-     * @param rs The ResultSet to close
+     * @param rs The ResultSet to close. May be null, in which case no action is taken
      * @param closeStatement If true, also closes the Statement that created the ResultSet
      * @param closeConnection If true, also closes the Connection (requires closeStatement to be true)
      * @throws IllegalArgumentException If closeStatement is false while closeConnection is true
-     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static void close(final ResultSet rs, final boolean closeStatement, final boolean closeConnection)
             throws IllegalArgumentException, UncheckedSQLException {
@@ -876,8 +875,8 @@ public final class JdbcUtil {
     /**
      * Closes the specified Statement.
      *
-     * @param stmt The Statement to close
-     * @throws UncheckedSQLException If a SQL exception occurs while closing the Statement
+     * @param stmt The Statement to close. May be null, in which case no action is taken
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static void close(final Statement stmt) throws UncheckedSQLException {
         if (stmt != null) {
@@ -922,8 +921,8 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param conn The Connection to close. If {@code null}, no action is taken
-     * @throws UncheckedSQLException If a SQL exception occurs while closing the Connection
+     * @param conn The Connection to close. May be null, in which case no action is taken
+     * @throws UncheckedSQLException If a database access error occurs
      * @deprecated Use {@link #releaseConnection(Connection, javax.sql.DataSource)} instead
      *             to properly handle connection pooling and transaction management
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -944,9 +943,9 @@ public final class JdbcUtil {
      * Closes the specified ResultSet and Statement.
      * Resources are closed in the correct order: ResultSet first, then Statement.
      *
-     * @param rs The ResultSet to close
-     * @param stmt The Statement to close
-     * @throws UncheckedSQLException If a SQL exception occurs while closing the resources
+     * @param rs The ResultSet to close. May be null, in which case no action is taken
+     * @param stmt The Statement to close. May be null, in which case no action is taken
+     * @throws UncheckedSQLException If a database access error occurs
      */
     public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException {
         try {
@@ -1788,24 +1787,23 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query using the provided DataSource and SQL string.
-     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in Spring with the same DataSource 
-     * in the same thread, the Connection from the transaction will be used. Otherwise, a new Connection 
+     * If a transaction is started by {@code JdbcUtil.beginTransaction} or in Spring with the same DataSource
+     * in the same thread, the Connection from the transaction will be used. Otherwise, a new Connection
      * will be obtained from the DataSource.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
      *         "SELECT * FROM users WHERE age > ?")) {
      *     List<User> users = query.setInt(1, 18).list(User.class);
      * }
      * }</pre>
-     * 
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string to prepare
+     * @param ds The DataSource from which to obtain a connection for the query
+     * @param sql The SQL statement to prepare
      * @return A PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
-     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @throws SQLException If a database access error occurs
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -1836,23 +1834,22 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query with auto-generated keys support using the provided DataSource and SQL string.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
      *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
      *     Long generatedId = query.setString(1, "John").setString(2, "john@example.com")
      *                             .insert().getGeneratedKey(Long.class);
      * }
      * }</pre>
-     * 
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string to prepare
+     * @param ds The DataSource from which to obtain a connection for the query
+     * @param sql The SQL statement to prepare
      * @param autoGeneratedKeys Whether auto-generated keys should be returned
      * @return A PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
-     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @throws SQLException If a database access error occurs
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -1885,12 +1882,12 @@ public final class JdbcUtil {
     /**
      * Prepares a SQL query with specific column indexes for auto-generated keys using the provided DataSource.
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string to prepare
+     * @param ds The DataSource from which to obtain a connection for the query
+     * @param sql The SQL statement to prepare
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException If the DataSource, SQL string, or returnColumnIndexes is null or empty
-     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @throws SQLException If a database access error occurs
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -1923,23 +1920,22 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query with specific column names for auto-generated keys using the provided DataSource.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, 
-     *         "INSERT INTO users (name, email) VALUES (?, ?)", 
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "INSERT INTO users (name, email) VALUES (?, ?)",
      *         new String[] {"id", "created_date"})) {
      *     OutParamResult result = query.setString(1, "John").setString(2, "john@example.com").insert();
      * }
      * }</pre>
-     * 
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string to prepare
+     * @param ds The DataSource from which to obtain a connection for the query
+     * @param sql The SQL statement to prepare
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException If the DataSource, SQL string, or returnColumnNames is null or empty
-     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @throws SQLException If a database access error occurs
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -1973,12 +1969,12 @@ public final class JdbcUtil {
     /**
      * Prepares a SQL query using a custom statement creator with the provided DataSource.
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string to prepare
+     * @param ds The DataSource from which to obtain a connection for the query
+     * @param sql The SQL statement to prepare
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A PreparedQuery object representing the prepared SQL query
      * @throws IllegalArgumentException If the DataSource, SQL string, or stmtCreator is null or empty
-     * @throws SQLException If a SQL exception occurs while preparing the query
+     * @throws SQLException If a database access error occurs
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */

@@ -74,7 +74,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToInsert the entity to insert
+     * @param entityToInsert the entity to insert (must not be null)
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -90,8 +90,9 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToInsert the entity to insert
-     * @param propNamesToInsert collection of property names to insert
+     * @param entityToInsert the entity to insert (must not be null)
+     * @param propNamesToInsert the property names to include in the INSERT statement.
+     *                          If null or empty, all properties will be inserted
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -107,8 +108,8 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named SQL insert statement
-     * @param entityToSave the entity to save
+     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param entityToSave the entity whose properties will be bound to the named parameters
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -124,7 +125,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to insert
+     * @param entities the collection of entities to insert
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -140,8 +141,8 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to insert
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to insert
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -157,8 +158,8 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to insert
-     * @param propNamesToInsert collection of property names to insert
+     * @param entities the collection of entities to insert
+     * @param propNamesToInsert the property names to include in the INSERT statement
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -175,9 +176,9 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to insert
-     * @param propNamesToInsert collection of property names to insert
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to insert
+     * @param propNamesToInsert the property names to include in the INSERT statement
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -194,8 +195,8 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named SQL insert statement
-     * @param entities collection of entities to insert
+     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO
@@ -211,9 +212,9 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named SQL insert statement
-     * @param entities collection of entities to insert
-     * @param batchSize the batch size for batch execution
+     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param entities the collection of entities whose properties will be bound to the named parameters
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only DAO

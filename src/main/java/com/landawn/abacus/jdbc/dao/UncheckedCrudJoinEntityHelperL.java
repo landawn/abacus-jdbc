@@ -302,7 +302,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
-     * @param selectPropNames The properties to select from the main entity. If null, all properties are selected
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param joinEntitiesToLoad The class of the join entities to load
      * @return The entity with selected properties and loaded join entities, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -340,7 +341,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
-     * @param selectPropNames The properties to select from the main entity. If null, all properties are selected
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param joinEntitiesToLoad Collection of join entity classes to load
      * @return The entity with selected properties and loaded join entities, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -381,7 +383,8 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
-     * @param selectPropNames The properties to select from the main entity. If null, all properties are selected
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
+     *                       If null, all properties of the main entity are selected
      * @param includeAllJoinEntities If true, loads all mapped join entities
      * @return The entity with selected properties, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}

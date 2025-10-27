@@ -59,23 +59,23 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
- * The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations with 
- * unchecked exceptions. It extends UncheckedDao and adds entity ID-based operations for more 
+ * The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations
+ * with unchecked exceptions. It extends {@link UncheckedDao} and adds entity ID-based operations for more
  * convenient data access patterns.
- * 
- * <p>This interface throws {@code UncheckedSQLException} instead of {@code SQLException}, making it
- * easier to work with in functional programming contexts and reducing boilerplate exception handling.</p>
- * 
+ *
+ * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ * making it easier to work with in functional programming contexts and reducing boilerplate exception handling.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends UncheckedCrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Custom query methods can be added here
  * }
- * 
+ *
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = new User("John", "Doe");
  * Long id = userDao.insert(user);
- * 
+ *
  * Optional<User> found = userDao.get(id);
  * userDao.update("email", "john@example.com", id);
  * userDao.deleteById(id);
@@ -98,13 +98,15 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         extends UncheckedDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
     /**
-     * Generates a new ID for entity insertion. This method is not supported by default and will
-     * throw UnsupportedOperationException. Override this method if custom ID generation is needed.
+     * Generates a new ID for entity insertion.
+     *
+     * <p>This method should be overridden by implementations that support ID generation.
+     * Common use cases include generating UUIDs, using sequences, or other ID generation strategies.</p>
      *
      * @return the generated ID
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws UnsupportedOperationException always thrown as this operation is not supported by default
-     * @deprecated This operation is not supported by default. ID generation should typically be handled by the database.
+     * @throws UnsupportedOperationException if the operation is not supported (default behavior)
+     * @deprecated This operation is deprecated as ID generation should typically be handled by the database
      */
     @Deprecated
     @NonDBOperation
@@ -115,6 +117,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Inserts the specified entity into the database and returns the generated ID.
+     * All non-null properties of the entity will be included in the INSERT statement.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -126,14 +129,14 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @return the generated ID of the inserted entity
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if a database access error occurs or the entity is null
      */
     @Override
     ID insert(final T entityToInsert) throws UncheckedSQLException;
 
     /**
      * Inserts the specified entity with only the specified properties.
-     * Properties not included in {@code propNamesToInsert} will not be inserted.
+     * This is useful when you want to insert an entity with only certain fields populated.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -146,7 +149,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param entityToInsert the entity to insert (must not be null)
-     * @param propNamesToInsert the properties to insert, or null to insert all properties
+     * @param propNamesToInsert the property names to include in the INSERT statement.
+     *                          If null or empty, all properties will be inserted
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -154,8 +158,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
 
     /**
-     * Inserts the entity using a named insert SQL statement. The SQL statement should contain
-     * named parameters that will be populated from the entity properties.
+     * Inserts an entity using a custom named SQL insert statement.
+     * The SQL should use named parameters that match the entity's property names.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -165,8 +169,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Long id = userDao.insert(sql, user);
      * }</pre>
      *
-     * @param namedInsertSQL the named insert SQL statement
-     * @param entityToInsert the entity to insert (must not be null)
+     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param entityToInsert the entity whose properties will be bound to the named parameters
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -174,9 +178,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     ID insert(final String namedInsertSQL, final T entityToInsert) throws UncheckedSQLException;
 
     /**
-     * Batch inserts the specified entities to the database using the default batch size.
-     * Returns a list of generated IDs for the inserted entities.
-     * 
+     * Performs batch insert of multiple entities using the default batch size.
+     * This method is more efficient than inserting entities one by one.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
@@ -198,18 +202,17 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Batch inserts the specified entities using the specified batch size.
-     * The entities will be inserted in batches to improve performance.
-     * 
+     * Performs batch insert of multiple entities with a specified batch size.
+     * Large collections will be processed in batches of the specified size.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeUserList = generateThousandsOfUsers();
-     * // Insert in batches of 1000
-     * List<Long> ids = userDao.batchInsert(largeUserList, 1000);
+     * List<User> largeUserList = loadUsers(); // 10000 users
+     * List<Long> ids = userDao.batchInsert(largeUserList, 1000); // Process in batches of 1000
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param batchSize the size of each batch
+     * @param batchSize the number of entities to process in each batch
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -217,17 +220,18 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Batch inserts entities with only the specified properties using the default batch size.
-     * 
+     * Performs batch insert with only specified properties for all entities.
+     * Uses the default batch size.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = getUsersToImport();
-     * // Only insert essential fields
-     * List<Long> ids = userDao.batchInsert(users, Arrays.asList("firstName", "lastName", "email"));
+     * List<User> users = loadUsers();
+     * // Only insert email and createdDate for all users
+     * List<Long> ids = userDao.batchInsert(users, Arrays.asList("email", "createdDate"));
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToInsert the properties to insert for each entity
+     * @param propNamesToInsert the property names to include in the INSERT statement
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -237,19 +241,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Batch inserts entities with only the specified properties using the specified batch size.
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * List<User> users = getLargeUserList();
-     * List<String> propsToInsert = Arrays.asList("firstName", "lastName", "email", "status");
-     * // Insert in batches of 500 with only specified properties
-     * List<Long> ids = userDao.batchInsert(users, propsToInsert, 500);
-     * }</pre>
+     * Performs batch insert with only specified properties and custom batch size.
+     * This provides fine-grained control over both what fields are inserted and how the batch is processed.
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToInsert the properties to insert for each entity
-     * @param batchSize the size of each batch
+     * @param propNamesToInsert the property names to include in the INSERT statement
+     * @param batchSize the number of entities to process in each batch
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -257,19 +254,18 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UncheckedSQLException;
 
     /**
-     * Batch inserts entities using a named insert SQL statement with the default batch size.
-     * This is a beta API for custom batch insert operations.
-     * 
+     * Performs batch insert using a custom named SQL statement with default batch size.
+     * This is useful for complex insert scenarios that require custom SQL.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String sql = "INSERT INTO users (first_name, last_name, status) " +
-     *              "VALUES (:firstName, :lastName, 'ACTIVE')";
-     * List<User> users = getNewUsers();
+     * String sql = "INSERT INTO users (name, email, status) VALUES (:name, :email, 'PENDING')";
+     * List<User> users = loadPendingUsers();
      * List<Long> ids = userDao.batchInsert(sql, users);
      * }</pre>
      *
-     * @param namedInsertSQL the named insert SQL statement
-     * @param entities the collection of entities to insert
+     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -280,20 +276,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Batch inserts entities using a named insert SQL statement with the specified batch size.
-     * This is a beta API for custom batch insert operations.
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * String sql = "INSERT INTO users (first_name, last_name, created_by) " +
-     *              "VALUES (:firstName, :lastName, CURRENT_USER)";
-     * List<User> users = getBulkImportUsers();
-     * List<Long> ids = userDao.batchInsert(sql, users, 2000);
-     * }</pre>
+     * Performs batch insert using a custom named SQL statement with specified batch size.
+     * Combines custom SQL flexibility with batch processing efficiency.
      *
-     * @param namedInsertSQL the named insert SQL statement
-     * @param entities the collection of entities to insert
-     * @param batchSize the size of each batch
+     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param entities the collection of entities whose properties will be bound to the named parameters
+     * @param batchSize the number of entities to process in each batch
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */

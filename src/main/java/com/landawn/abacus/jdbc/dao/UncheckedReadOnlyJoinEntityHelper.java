@@ -213,7 +213,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
      * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
@@ -291,7 +291,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
      * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
@@ -364,7 +364,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * }</pre>
      *
      * @param entity the entity whose all related join entities should be deleted
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
      * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
@@ -436,7 +436,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * }</pre>
      *
      * @param entities the collection of entities whose all related join entities should be deleted
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
      * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation

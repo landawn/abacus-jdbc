@@ -132,8 +132,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * Optional<User> user = userDao.findFirst(Arrays.asList("id", "name"), Order.class, CF.eq("email", "john@example.com"));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
@@ -158,9 +158,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * Optional<User> user = userDao.findFirst(null, Arrays.asList(Order.class, Address.class), CF.eq("id", 1L));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
@@ -187,8 +187,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * Optional<User> user = userDao.findFirst(null, true, CF.eq("status", "active"));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -215,8 +215,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * Optional<User> user = userDao.findOnlyOne(null, Order.class, CF.eq("email", "unique@example.com"));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
@@ -244,9 +244,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * Optional<User> user = userDao.findOnlyOne(null, Arrays.asList(Order.class, Address.class), CF.eq("id", 1L));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicatedResultException if more than one record is found by the specified condition
@@ -275,8 +275,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * Optional<User> user = userDao.findOnlyOne(Arrays.asList("id", "name", "email"), true, CF.eq("status", "active"));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -305,8 +305,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * List<User> users = userDao.list(null, Order.class, CF.eq("status", "active"));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return a list of entities matching the condition with join entities loaded
@@ -337,9 +337,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * List<User> users = userDao.list(null, Arrays.asList(Order.class, Address.class), CF.gt("createdDate", lastWeek));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return a list of entities matching the condition with join entities loaded
      * @throws SQLException if a database access error occurs
@@ -375,8 +375,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * List<User> users = userDao.list(Arrays.asList("id", "name", "email"), true, CF.eq("membershipType", "premium"));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -410,8 +410,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *     .forEach(user -> processUserWithManyOrders(user));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return a {@code Stream} of entities matching the condition with join entities loaded
@@ -439,9 +439,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *     .collect(Collectors.toList());
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
-     * @param joinEntitiesToLoad the collection of join entity classes to be loaded
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return a {@code Stream} of entities matching the condition with join entities loaded
      */
@@ -474,8 +474,8 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *     .forEach(user -> exportUserData(user));
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding the properties of joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param selectPropNames the properties (columns) to be selected from the primary entity, excluding join entity properties.
+     *                       If null, all properties of the primary entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -513,7 +513,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
+     * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
@@ -532,9 +532,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -560,7 +560,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
+     * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
@@ -579,9 +579,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -611,7 +611,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
+     * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
@@ -630,9 +630,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityPropName the property name of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
@@ -649,7 +649,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
+     * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
@@ -668,9 +668,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityPropName the property name of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
@@ -687,7 +687,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -712,7 +712,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
@@ -737,7 +737,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
@@ -765,7 +765,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -790,7 +790,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
@@ -815,7 +815,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
@@ -976,7 +976,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
+     * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws SQLException {
@@ -995,9 +995,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
@@ -1023,7 +1023,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
+     * @param joinEntityClass the class of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
@@ -1042,9 +1042,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityClass the class of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityClass the class of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames)
@@ -1079,7 +1079,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
+     * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName) throws SQLException {
@@ -1098,9 +1098,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityPropName the property name of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
@@ -1124,7 +1124,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
+     * @param joinEntityPropName the property name of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
@@ -1143,9 +1143,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to be loaded
-     * @param selectPropNames the properties (columns) to be selected from joining entities. 
-     *                       All properties will be selected if {@code null}
+     * @param joinEntityPropName the property name of the join entities to load
+     * @param selectPropNames the properties (columns) to be selected from the join entities.
+     *                       If null, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -1175,7 +1175,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -1200,7 +1200,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
@@ -1225,7 +1225,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
@@ -1255,7 +1255,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -1280,7 +1280,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
@@ -1306,7 +1306,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropNames the property names of the join entities to be loaded
+     * @param joinEntityPropNames the property names of the join entities to load
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
@@ -1477,7 +1477,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
-     * @param joinEntityClass the class of the join entities to be deleted
+     * @param joinEntityClass the class of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
@@ -1520,7 +1520,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityClass the class of the join entities to be deleted
+     * @param joinEntityClass the class of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
@@ -1567,7 +1567,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
-     * @param joinEntityPropName the property name of the join entities to be deleted
+     * @param joinEntityPropName the property name of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
@@ -1585,7 +1585,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityPropName the property name of the join entities to be deleted
+     * @param joinEntityPropName the property name of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
@@ -1603,7 +1603,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to be deleted
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
@@ -1645,7 +1645,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to be deleted
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
@@ -1673,7 +1673,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to be deleted
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
@@ -1705,7 +1705,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to be deleted
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
@@ -1747,7 +1747,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to be deleted
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
@@ -1775,7 +1775,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityPropNames the property names of the join entities to be deleted
+     * @param joinEntityPropNames the property names of the join entities to delete
      * @param executor the executor to use for parallel deletion
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs

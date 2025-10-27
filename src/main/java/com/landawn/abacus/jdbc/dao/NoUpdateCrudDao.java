@@ -78,7 +78,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToUpdate the entity containing the new values
+     * @param entityToUpdate the entity with updated values
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -94,8 +94,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToUpdate the entity containing the new values
-     * @param propNamesToUpdate collection of property names to update
+     * @param entityToUpdate the entity containing the values to update
+     * @param propNamesToUpdate the property names to update. If null or empty, all properties will be updated
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -111,7 +111,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param propName the name of the property to update
+     * @param propName the property name to update
      * @param propValue the new value for the property
      * @param id the entity ID to update
      * @return never returns normally
@@ -146,7 +146,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to update
+     * @param entities the collection of entities to update
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -162,8 +162,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to update
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to update
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -179,8 +179,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to update
-     * @param propNamesToUpdate collection of property names to update
+     * @param entities the collection of entities to update
+     * @param propNamesToUpdate the property names to update for all entities
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -197,9 +197,9 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to update
-     * @param propNamesToUpdate collection of property names to update
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to update
+     * @param propNamesToUpdate the property names to update for all entities
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
@@ -232,8 +232,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entity the entity to upsert
-     * @param cond condition to verify if the record exists
+     * @param entity the entity to insert or update
+     * @param cond the condition to check if the entity exists
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as upserts are not supported
@@ -249,8 +249,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entity the entity to upsert
-     * @param uniquePropNamesForQuery property names that uniquely identify the entity
+     * @param entity the entity to insert or update
+     * @param uniquePropNamesForQuery the property names that uniquely identify the entity
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as upserts are not supported
@@ -266,7 +266,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to upsert
+     * @param entities the collection of entities to upsert
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as upserts are not supported
@@ -282,8 +282,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to upsert
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to upsert
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as upserts are not supported
@@ -299,8 +299,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to upsert
-     * @param uniquePropNamesForQuery property names that uniquely identify each entity
+     * @param entities the collection of entities to upsert
+     * @param uniquePropNamesForQuery the property names that uniquely identify each entity
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as upserts are not supported
@@ -317,9 +317,9 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to upsert
-     * @param uniquePropNamesForQuery property names that uniquely identify each entity
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to upsert
+     * @param uniquePropNamesForQuery the property names that uniquely identify each entity
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as upserts are not supported
@@ -336,7 +336,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entity the entity to delete
+     * @param entity the entity to delete (must have ID populated)
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
@@ -368,7 +368,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to delete
+     * @param entities the collection of entities to delete
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
@@ -384,8 +384,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entities collection of entities to delete
-     * @param batchSize the batch size for batch execution
+     * @param entities the collection of entities to delete
+     * @param batchSize the number of entities to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
@@ -401,7 +401,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param ids collection of IDs of entities to delete
+     * @param ids the collection of IDs to delete
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
@@ -417,8 +417,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * This operation is not supported for no-update DAOs.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param ids collection of IDs of entities to delete
-     * @param batchSize the batch size for batch execution
+     * @param ids the collection of IDs to delete
+     * @param batchSize the number of IDs to process in each batch
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported

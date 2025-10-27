@@ -2272,7 +2272,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets five String parameters starting from index 1.
      * Convenience method for queries with exactly five String parameters.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John", "Doe", "john@example.com", "123-456-7890", "New York")
+     *      .execute();
+     * }</pre>
+     *
      * @param param1 The first String parameter
      * @param param2 The second String parameter
      * @param param3 The third String parameter
@@ -2294,7 +2300,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets six String parameters starting from index 1.
      * Convenience method for queries with exactly six String parameters.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John", "Doe", "john@example.com", "123-456-7890", "New York", "USA")
+     *      .execute();
+     * }</pre>
+     *
      * @param param1 The first String parameter
      * @param param2 The second String parameter
      * @param param3 The third String parameter
@@ -2319,7 +2331,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets seven String parameters starting from index 1.
      * Convenience method for queries with exactly seven String parameters.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John", "Doe", "john@example.com", "123-456-7890", "New York", "USA", "10001")
+     *      .execute();
+     * }</pre>
+     *
      * @param param1 The first String parameter
      * @param param2 The second String parameter
      * @param param3 The third String parameter
@@ -2387,7 +2405,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets four Object parameters starting from index 1.
      * Convenience method for queries with exactly four parameters of any type.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John Doe", 25, LocalDate.now(), true)
+     *      .list(User.class);
+     * }</pre>
+     *
      * @param param1 The first parameter
      * @param param2 The second parameter
      * @param param3 The third parameter
@@ -2407,7 +2431,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets five Object parameters starting from index 1.
      * Convenience method for queries with exactly five parameters of any type.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"))
+     *      .list(Employee.class);
+     * }</pre>
+     *
      * @param param1 The first parameter
      * @param param2 The second parameter
      * @param param3 The third parameter
@@ -2429,7 +2459,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets six Object parameters starting from index 1.
      * Convenience method for queries with exactly six parameters of any type.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT")
+     *      .list(Employee.class);
+     * }</pre>
+     *
      * @param param1 The first parameter
      * @param param2 The second parameter
      * @param param3 The third parameter
@@ -2454,7 +2490,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets seven Object parameters starting from index 1.
      * Convenience method for queries with exactly seven parameters of any type.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT")
+     *      .list(Employee.class);
+     * }</pre>
+     *
      * @param param1 The first parameter
      * @param param2 The second parameter
      * @param param3 The third parameter
@@ -2481,7 +2523,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets eight Object parameters starting from index 1.
      * Convenience method for queries with exactly eight parameters of any type.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT", "Manager")
+     *      .list(Employee.class);
+     * }</pre>
+     *
      * @param param1 The first parameter
      * @param param2 The second parameter
      * @param param3 The third parameter
@@ -2510,7 +2558,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets nine Object parameters starting from index 1.
      * Convenience method for queries with exactly nine parameters of any type.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT", "Manager", LocalDateTime.now())
+     *      .list(Employee.class);
+     * }</pre>
+     *
      * @param param1 The first parameter
      * @param param2 The second parameter
      * @param param3 The third parameter
@@ -6099,7 +6153,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Lists the rows in the first ResultSet and maps them to the specified target type with a maximum result limit.
-     * 
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * // Deprecated: Prefer using SQL LIMIT clause instead
+     * List<User> users = query.list(User.class, 10);
+     * // Better: Use LIMIT in SQL: "SELECT * FROM users LIMIT 10"
+     * }</pre>
+     *
      * @param <T> the type of entities in the returned list
      * @param targetType The class of the type to map the rows to
      * @param maxResult The maximum number of results to return
@@ -6154,6 +6215,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Lists the rows in the first ResultSet using the provided row mapper with a maximum result limit.
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * // Deprecated: Prefer using SQL LIMIT clause instead
+     * List<User> users = query.list(rs -> new User(rs.getLong("id"), rs.getString("name")), 10);
+     * // Better: Use LIMIT in SQL: "SELECT * FROM users LIMIT 10"
+     * }</pre>
      *
      * @param <T> the type of entities in the returned list
      * @param rowMapper The row mapper to map each row to an object
@@ -6301,6 +6369,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Lists the rows in the first ResultSet using a BiRowMapper with a maximum result limit.
+     *
+     * <p><b>Usage Example:</b></p>
+     * <pre>{@code
+     * // Deprecated: Prefer using SQL LIMIT clause instead
+     * List<User> users = query.list((rs, labels) -> new User(rs.getLong("id"), rs.getString("name")), 10);
+     * // Better: Use LIMIT in SQL: "SELECT * FROM users LIMIT 10"
+     * }</pre>
      *
      * @param <T> the type of entities in the returned list
      * @param rowMapper The BiRowMapper to map each row

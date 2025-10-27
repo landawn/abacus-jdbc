@@ -25,44 +25,47 @@ import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
- * A specialized DAO interface that disables update and delete operations while allowing read and insert operations.
+ * A specialized CRUD DAO interface that disables update operations while allowing read, insert, and delete operations.
  * This interface is designed for use cases where data modification is restricted to insertions and deletions only,
- * ensuring data integrity by preventing accidental updates. All update-related methods throw {@link UnsupportedOperationException}.
- * 
- * <p>This interface extends multiple DAO interfaces to provide comprehensive read and delete functionality while
+ * ensuring data integrity by preventing accidental updates.
+ *
+ * <p>This interface extends multiple DAO interfaces to provide comprehensive read, insert, and delete functionality while
  * blocking update operations. It's particularly useful in audit systems, append-only data stores, or scenarios
  * where historical data must remain immutable.</p>
- * 
- * <p>All methods in this interface throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ *
+ * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
  * allowing for cleaner code without explicit exception handling.</p>
- * 
+ *
+ * <p>All update-related methods (including {@code update}, {@code batchUpdate}, and {@code upsert}) will throw
+ * {@link UnsupportedOperationException}.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * UncheckedNoUpdateCrudDao<User, Long, SQLBuilder, ?> userDao = daoFactory.createNoUpdateDao(User.class);
- * 
- * // Read operations work normally
- * Optional<User> user = userDao.findById(123L);
- * List<User> activeUsers = userDao.findAll(CF.eq("status", "ACTIVE"));
- * 
- * // Insert operations work normally  
- * User newUser = new User("John", "john@example.com");
- * userDao.insert(newUser);
- * 
- * // Update operations throw UnsupportedOperationException
- * try {
- *     userDao.update(existingUser); // This will throw!
- * } catch (UnsupportedOperationException e) {
- *     // Expected behavior
+ * public interface AuditLogDao extends UncheckedNoUpdateCrudDao<AuditLog, Long, SQLBuilder.PSC, AuditLogDao> {
+ *     // Only read, insert, and delete operations available
  * }
- * 
+ *
+ * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
+ *
+ * // Insert operations work normally
+ * AuditLog log = new AuditLog("User login", userId);
+ * Long id = auditDao.insert(log);
+ *
+ * // Read operations work normally
+ * Optional<AuditLog> retrieved = auditDao.get(id);
+ * List<AuditLog> logs = auditDao.list(CF.eq("userId", userId));
+ *
+ * // Update operations throw UnsupportedOperationException
+ * // auditDao.update(log);  // This will throw!
+ *
  * // Delete operations work normally
- * userDao.deleteById(123L);
+ * auditDao.deleteById(id);
  * }</pre>
  *
- * @param <T> The entity type that this DAO manages
- * @param <ID> The type of the entity's primary key (ID)
- * @param <SB> The type of {@link SQLBuilder} used to generate SQL scripts. Must be one of {@code SQLBuilder.PSC}, {@code SQLBuilder.PAC}, or {@code SQLBuilder.PLC}
- * @param <TD> The self-referential type parameter for method chaining in fluent APIs
+ * @param <T> the entity type
+ * @param <ID> the ID type
+ * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.condition.ConditionFactory
  * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  * @see NoUpdateCrudDao

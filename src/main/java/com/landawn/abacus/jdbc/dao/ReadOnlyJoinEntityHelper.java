@@ -138,7 +138,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      *
      * @param entity the entity whose join entities should be deleted
      * @param joinEntityPropNames the collection of property names of join entities to delete
-     * @param inParallel whether to execute the deletions in parallel
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -157,7 +157,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      *
      * @param entity the entity whose join entities should be deleted
      * @param joinEntityPropNames the collection of property names of join entities to delete
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -194,7 +194,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      *
      * @param entities the collection of entities whose join entities should be deleted
      * @param joinEntityPropNames the collection of property names of join entities to delete
-     * @param inParallel whether to execute the deletions in parallel
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -213,7 +213,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      *
      * @param entities the collection of entities whose join entities should be deleted
      * @param joinEntityPropNames the collection of property names of join entities to delete
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -247,7 +247,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity whose all join entities should be deleted
-     * @param inParallel whether to execute the deletions in parallel
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -264,7 +264,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity whose all join entities should be deleted
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -297,7 +297,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities whose all join entities should be deleted
-     * @param inParallel whether to execute the deletions in parallel
+     * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
@@ -314,7 +314,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities whose all join entities should be deleted
-     * @param executor the executor to use for parallel execution
+     * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
