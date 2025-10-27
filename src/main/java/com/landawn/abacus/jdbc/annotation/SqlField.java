@@ -54,17 +54,34 @@ public @interface SqlField {
     /**
      * Specifies the SQL column name or identifier that this field maps to.
      * If not specified (empty string), the field name itself will be used as the column identifier.
-     * 
+     *
      * <p>This is useful when the database column naming convention differs from Java field naming
      * conventions, such as when the database uses snake_case while Java uses camelCase.</p>
-     * 
-     * <p><b>Examples:</b></p>
-     * <ul>
-     *   <li>{@code @SqlField(id = "customer_id")} - Maps to column "customer_id"</li>
-     *   <li>{@code @SqlField(id = "FIRST_NAME")} - Maps to column "FIRST_NAME"</li>
-     *   <li>{@code @SqlField()} or {@code @SqlField(id = "")} - Uses the field name as column name</li>
-     * </ul>
-     * 
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * public class Customer {
+     *     @SqlField(id = "customer_id")
+     *     private Long id;
+     *
+     *     @SqlField(id = "FIRST_NAME")
+     *     private String firstName;
+     *
+     *     @SqlField(id = "email_address")
+     *     private String email;
+     *
+     *     @SqlField  // Uses field name as column name
+     *     private String status;
+     *
+     *     @SqlField(id = "")  // Explicitly uses field name as column name
+     *     private Date createdDate;
+     * }
+     *
+     * // Usage in queries
+     * @Query("SELECT customer_id, FIRST_NAME, email_address, status FROM customers")
+     * List<Customer> findAll();  // Framework maps columns to fields using @SqlField
+     * }</pre>
+     *
      * @return the SQL column name/identifier for this field, or empty string to use the field name
      */
     String id() default ""; // default will be field name.

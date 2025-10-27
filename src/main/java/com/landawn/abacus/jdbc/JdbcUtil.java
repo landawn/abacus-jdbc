@@ -365,6 +365,15 @@ public final class JdbcUtil {
      * Retrieves the database product information from the given DataSource.
      * This method establishes a temporary connection to extract metadata about the database.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource);
+     * System.out.println("Database: " + dbInfo.productName() + " " + dbInfo.productVersion());
+     * if (dbInfo.version() == DBVersion.PostgreSQL_12) {
+     *     // Use PostgreSQL 12 specific features
+     * }
+     * }</pre>
+     *
      * @param ds The DataSource from which to obtain a database connection
      * @return A DBProductInfo object containing the database product name, version, and type
      * @throws UncheckedSQLException If a database access error occurs
@@ -741,6 +750,18 @@ public final class JdbcUtil {
      * it will return the connection associated with the current transaction.
      * Otherwise, it will return a new connection from the DataSource.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Connection conn = JdbcUtil.getConnection(dataSource);
+     * try {
+     *     PreparedStatement ps = conn.prepareStatement("SELECT * FROM users");
+     *     ResultSet rs = ps.executeQuery();
+     *     // Process results
+     * } finally {
+     *     JdbcUtil.releaseConnection(conn, dataSource);
+     * }
+     * }</pre>
+     *
      * @param ds The DataSource from which to obtain a database connection
      * @return A Connection object that represents a connection to the database
      * @throws UncheckedSQLException If a database access error occurs
@@ -774,6 +795,20 @@ public final class JdbcUtil {
      * If Spring transaction management is enabled and a transaction is active,
      * it will release the connection associated with the current transaction.
      * Otherwise, it will close the connection directly.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Connection conn = JdbcUtil.getConnection(dataSource);
+     * try {
+     *     // Perform database operations
+     *     PreparedStatement ps = conn.prepareStatement("INSERT INTO users VALUES (?, ?)");
+     *     ps.setString(1, "John");
+     *     ps.setString(2, "john@example.com");
+     *     ps.executeUpdate();
+     * } finally {
+     *     JdbcUtil.releaseConnection(conn, dataSource); // Always release in finally block
+     * }
+     * }</pre>
      *
      * @param conn The Connection to be released back to the DataSource or closed. May be null
      * @param ds The DataSource from which the connection was obtained
@@ -811,6 +846,18 @@ public final class JdbcUtil {
     /**
      * Closes the specified ResultSet.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ResultSet rs = statement.executeQuery("SELECT * FROM users");
+     * try {
+     *     while (rs.next()) {
+     *         // Process results
+     *     }
+     * } finally {
+     *     JdbcUtil.close(rs);
+     * }
+     * }</pre>
+     *
      * @param rs The ResultSet to close. May be null, in which case no action is taken
      * @throws UncheckedSQLException If a database access error occurs
      */
@@ -826,6 +873,16 @@ public final class JdbcUtil {
 
     /**
      * Closes the specified ResultSet and optionally its associated Statement.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * ResultSet rs = statement.executeQuery("SELECT * FROM orders");
+     * try {
+     *     // Process results
+     * } finally {
+     *     JdbcUtil.close(rs, true); // Also closes the statement
+     * }
+     * }</pre>
      *
      * @param rs The ResultSet to close. May be null, in which case no action is taken
      * @param closeStatement If true, also closes the Statement that created the ResultSet

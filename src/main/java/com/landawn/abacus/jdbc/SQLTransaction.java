@@ -130,6 +130,23 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the JDBC connection associated with this transaction.
      * This connection should not be closed manually as it will be managed by the transaction.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     Connection conn = tran.connection();
+     *     // Use the connection for custom operations
+     *     try (PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE id = ?")) {
+     *         stmt.setLong(1, userId);
+     *         ResultSet rs = stmt.executeQuery();
+     *         // Process results...
+     *     }
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     * }</pre>
+     *
      * @return the JDBC connection used by this transaction
      */
     public Connection connection() {

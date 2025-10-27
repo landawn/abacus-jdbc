@@ -82,7 +82,7 @@ public final class PreparedQuery extends AbstractQuery<PreparedStatement, Prepar
      * <p>The ownership of the {@code PreparedStatement} is transferred to this {@code PreparedQuery} instance,
      * which means this class will be responsible for closing it based on the {@code closeAfterExecution} flag.
      * 
-     * <p><b>Usage Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM employees WHERE department = ?");

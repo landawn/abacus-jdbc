@@ -67,7 +67,7 @@ public @interface HandlerList {
     /**
      * Returns the array of {@link Handler} annotations contained in this list.
      * The handlers will be processed in the order they appear in this array.
-     * 
+     *
      * <p>When multiple handlers are applied to a DAO or method, they form
      * a chain of interceptors, with each handler having the opportunity to:</p>
      * <ul>
@@ -76,15 +76,24 @@ public @interface HandlerList {
      *   <li>Transform or filter the results</li>
      *   <li>Handle exceptions in custom ways</li>
      * </ul>
-     * 
-     * <p>Example of accessing HandlerList programmatically:</p>
+     *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Accessing HandlerList programmatically via reflection
      * HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class);
      * if (handlers != null) {
      *     for (Handler handler : handlers.value()) {
      *         System.out.println("Handler type: " + handler.type());
      *         System.out.println("Filter: " + Arrays.toString(handler.filter()));
      *     }
+     * }
+     *
+     * // Multiple handlers are automatically wrapped in HandlerList
+     * @Handler(type = LoggingHandler.class)
+     * @Handler(type = SecurityHandler.class)
+     * @Handler(type = CacheHandler.class)
+     * public interface UserDao extends CrudDao<User, Long> {
+     *     // The compiler wraps these in a HandlerList annotation
      * }
      * }</pre>
      *

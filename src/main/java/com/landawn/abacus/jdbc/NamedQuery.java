@@ -129,7 +129,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method sets all occurrences of the named parameter in the SQL query to NULL.
      * If the parameter appears multiple times in the query, all occurrences will be set to NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setNull("userId", Types.INTEGER);
      * }</pre>
@@ -193,7 +193,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method is particularly useful for database-specific SQL types. It sets all occurrences 
      * of the named parameter in the SQL query to NULL with the specified type information.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setNull("location", Types.STRUCT, "POINT");
      * }</pre>
@@ -257,7 +257,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified boolean value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setBoolean("isActive", true);
      * }</pre>
@@ -318,7 +318,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Boolean value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Boolean isVerified = getUserVerificationStatus(); // might return null
      * query.setBoolean("isVerified", isVerified);
@@ -345,7 +345,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified byte value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setByte("status", (byte) 1);
      * }</pre>
@@ -406,7 +406,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Byte value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Byte priorityLevel = getPriorityLevel(); // might return null
      * query.setByte("priority", priorityLevel);
@@ -433,7 +433,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified short value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setShort("quantity", (short) 100);
      * }</pre>
@@ -494,7 +494,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Short value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Short categoryId = getCategoryId(); // might return null
      * query.setShort("categoryId", categoryId);
@@ -521,7 +521,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified int value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setInt("userId", 12345);
      * }</pre>
@@ -584,7 +584,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
      * Otherwise, it sets the parameter to the int value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Integer age = getAge(); // might return null
      * query.setInt("age", age);
@@ -611,7 +611,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method converts the char to its numeric value (Unicode code point) and stores it as an integer.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setInt("grade", 'A'); // stores 65 (ASCII value of 'A')
      * }</pre>
@@ -635,7 +635,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method handles null values by setting the parameter to SQL NULL if the provided value is null.
      * Otherwise, it converts the char to its numeric value and stores it as an integer.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Character grade = getGrade(); // might return null
      * query.setInt("grade", grade);
@@ -665,7 +665,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified long value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setLong("timestamp", System.currentTimeMillis());
      * }</pre>
@@ -726,7 +726,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Long value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Long accountId = getAccountId(); // might return null
      * query.setLong("accountId", accountId);
@@ -756,7 +756,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Consider using {@link #setBigDecimal(String, BigInteger)} or {@link #setBigIntegerAsString(String, BigInteger)} 
      * for values that might exceed long range.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * BigInteger largeNumber = new BigInteger("9223372036854775807");
      * query.setLong("largeNumber", largeNumber);
@@ -784,7 +784,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified float value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setFloat("price", 19.99f);
      * }</pre>
@@ -845,7 +845,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Float value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Float discount = getDiscount(); // might return null
      * query.setFloat("discount", discount);
@@ -872,7 +872,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified double value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setDouble("latitude", 37.7749);
      * }</pre>
@@ -933,7 +933,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a Double value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Double balance = getAccountBalance(); // might return null
      * query.setDouble("balance", balance);
@@ -961,7 +961,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified BigDecimal value.
      * BigDecimal is the preferred type for precise decimal values in databases.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setBigDecimal("amount", new BigDecimal("123.45"));
      * }</pre>
@@ -1023,7 +1023,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method converts the BigInteger to a BigDecimal and stores it as a DECIMAL type.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * BigInteger bigInt = new BigInteger("123456789012345678901234567890");
      * query.setBigDecimal("largeValue", bigInt);
@@ -1049,7 +1049,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method stores very large integer values as strings in the database. This is useful
      * when the numeric value exceeds the range of standard numeric types.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * BigInteger veryLargeNumber = new BigInteger("99999999999999999999999999999999");
      * query.setBigIntegerAsString("bigNumber", veryLargeNumber);
@@ -1074,7 +1074,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets all occurrences of the named parameter in the SQL query to the specified String value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setString("username", "john_doe");
      * }</pre>
@@ -1137,7 +1137,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method converts the CharSequence (StringBuilder, StringBuffer, etc.) to a String
      * and sets the parameter. Null values are handled appropriately.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * StringBuilder sb = new StringBuilder("Hello World");
      * query.setString("message", sb);
@@ -1158,7 +1158,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method converts the char to a String and sets the parameter.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setString("grade", 'A');
      * }</pre>
@@ -1179,7 +1179,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method converts the Character to a String and sets the parameter.
      * Null values are handled appropriately.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Character initial = getMiddleInitial(); // might return null
      * query.setString("middleInitial", initial);
@@ -1201,7 +1201,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method converts the BigInteger to its decimal string representation.
      * This is useful for storing very large integers that exceed database numeric limits.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * BigInteger bigInt = new BigInteger("123456789012345678901234567890");
      * query.setString("largeNumber", bigInt);
@@ -1227,7 +1227,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method is used for databases that distinguish between regular strings and national character strings
      * (NCHAR, NVARCHAR). It sets all occurrences of the named parameter to the specified value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setNString("description", "Description with unicode: 你好");
      * }</pre>
@@ -1290,7 +1290,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method converts the CharSequence to a String and sets it as a national character string.
      * Useful for databases that support NCHAR/NVARCHAR types.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * StringBuilder unicodeText = new StringBuilder("Unicode text: 世界");
      * query.setNString("unicodeField", unicodeText);
@@ -1354,7 +1354,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method sets a date value without time information. For date with time,
      * use {@link #setTimestamp(String, java.sql.Timestamp)}.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setDate("birthDate", java.sql.Date.valueOf("1990-01-15"));
      * }</pre>
@@ -1417,7 +1417,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method converts java.util.Date to java.sql.Date, truncating time information.
      * For preserving time information, use {@link #setTimestamp(String, java.util.Date)}.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Date utilDate = new Date();
      * query.setDate("createdDate", utilDate);
@@ -1440,7 +1440,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method converts the Java 8 LocalDate to java.sql.Date for database storage.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * LocalDate today = LocalDate.now();
      * query.setDate("eventDate", today);
@@ -1463,7 +1463,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method sets a time value without date information.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setTime("startTime", java.sql.Time.valueOf("09:30:00"));
      * }</pre>
@@ -1527,7 +1527,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * portion (hours, minutes, seconds) and discarding the date portion. If the provided
      * Date is already a java.sql.Time instance, it is used directly without conversion.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * java.util.Date date = new Date(); // Current date and time
      * query.setTime("startTime", date); // Only time portion is used
@@ -1558,7 +1558,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * LocalTime represents a time without a time-zone in the ISO-8601 calendar system,
      * such as 10:15:30.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * LocalTime lunchTime = LocalTime.of(12, 30, 0);
      * query.setTime("lunchTime", lunchTime);
@@ -1589,7 +1589,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * with nanosecond precision. Timestamps are typically used for recording when events
      * occur in the database.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Using current timestamp
      * query.setTimestamp("createdAt", new Timestamp(System.currentTimeMillis()));
@@ -1660,7 +1660,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * date and time information. If the provided Date is already a java.sql.Timestamp
      * instance, it is used directly without conversion.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Date now = new Date();
      * query.setTimestamp("lastLogin", now);
@@ -1690,7 +1690,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * represents a date-time without a time-zone in the ISO-8601 calendar system,
      * such as 2023-12-25T10:15:30.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * LocalDateTime dateTime = LocalDateTime.of(2023, 12, 25, 10, 30, 0);
      * query.setTimestamp("eventDate", dateTime);
@@ -1721,7 +1721,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * the instant. The time zone information is used for the conversion but is not stored
      * in the resulting Timestamp.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * ZonedDateTime zonedDateTime = ZonedDateTime.now(ZoneId.of("America/New_York"));
      * query.setTimestamp("meetingTime", zonedDateTime);
@@ -1750,7 +1750,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * the instant. The offset information is used for the conversion but is not stored
      * in the resulting Timestamp.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * OffsetDateTime offsetDateTime = OffsetDateTime.now();
      * query.setTimestamp("recordedAt", offsetDateTime);
@@ -1778,7 +1778,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method converts a java.time.Instant to java.sql.Timestamp. An Instant
      * represents a point on the time-line in UTC.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Current instant
      * query.setTimestamp("timestamp", Instant.now());
@@ -1809,7 +1809,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method is typically used for storing binary data such as images, files,
      * or serialized objects in BLOB columns. The entire byte array is sent to the database.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Storing file content
      * byte[] fileContent = Files.readAllBytes(Paths.get("document.pdf"));
@@ -1884,7 +1884,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * the data from the stream as needed. The stream should contain only ASCII characters.
      * Note that the stream will be read when the query is executed, not when this method is called.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // From file
      * FileInputStream fis = new FileInputStream("large_text.txt");
@@ -1955,7 +1955,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' bytes from the stream. This can be
      * more efficient than the length-unspecified version.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * File file = new File("data.txt");
      * FileInputStream fis = new FileInputStream(file);
@@ -2027,7 +2027,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * or other binary data. The JDBC driver will read the data from the stream as needed.
      * The stream will be read when the query is executed, not when this method is called.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Uploading image
      * FileInputStream imageStream = new FileInputStream("photo.jpg");
@@ -2098,7 +2098,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' bytes from the stream. This can be
      * more efficient than the length-unspecified version and is required by some drivers.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Uploading file with known size
      * File file = new File("document.pdf");
@@ -2171,7 +2171,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read the data from the Reader as needed. The Reader should
      * contain Unicode character data.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // From file
      * FileReader reader = new FileReader("large_text.txt", StandardCharsets.UTF_8);
@@ -2242,7 +2242,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' characters from the Reader. This can be
      * more efficient than the length-unspecified version.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // From file with known character count
      * String content = readFileContent();
@@ -2315,7 +2315,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The data will be read from the stream as needed. This is used for databases
      * that distinguish between character and national character data types.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Unicode text with special characters
      * String unicodeText = "Hello 世界 🌍";
@@ -2386,7 +2386,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * the length is known. The JDBC driver will read exactly 'length' characters from
      * the Reader.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Unicode content with known length
      * String unicodeContent = getUnicodeContent();
@@ -2458,7 +2458,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * typically used for storing large binary data such as images, audio, or video files
      * in the database.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Creating a Blob from connection
      * Blob blob = connection.createBlob();
@@ -2532,7 +2532,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * will read all available data from the stream. This is convenient when you have
      * binary data in a stream format.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // From file
      * FileInputStream fis = new FileInputStream("image.jpg");
@@ -2603,7 +2603,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 'length' bytes. This is more efficient when the size is known and ensures
      * exactly the specified amount of data is read.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // From file with known size
      * File imageFile = new File("large_image.jpg");
@@ -2676,7 +2676,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * typically used for storing large text data such as documents, XML, or JSON data
      * in the database.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Creating a Clob from connection
      * Clob clob = connection.createClob();
@@ -2750,7 +2750,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method is useful for setting large text data without loading it entirely into memory.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setClob("content", new FileReader("large_text.txt"));
      * }</pre>
@@ -2815,7 +2815,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * {@link #setClob(String, Reader)}. If the parameter name appears multiple times in the query, 
      * all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setClob("description", new StringReader(longText), longText.length());
      * }</pre>
@@ -2880,7 +2880,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
      * nclob.setString(1, unicodeText);
@@ -2946,7 +2946,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method is useful for setting large Unicode text data without loading it entirely into memory.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setNClob("unicode_text", new FileReader("unicode_data.txt", StandardCharsets.UTF_8));
      * }</pre>
@@ -3010,7 +3010,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>This method provides more control over the amount of Unicode data read from the Reader.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * String unicodeText = "Unicode content...";
      * query.setNClob("description", new StringReader(unicodeText), unicodeText.length());
@@ -3076,7 +3076,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>The URL is stored as a DATALINK value in the database. If the parameter name appears 
      * multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setURL("website", new URL("https://www.example.com"));
      * }</pre>
@@ -3139,7 +3139,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>The SQLXML interface is used for mapping SQL XML data type. If the parameter name appears 
      * multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * SQLXML xmlData = connection.createSQLXML();
      * xmlData.setString("<root><item>value</item></root>");
@@ -3204,7 +3204,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>RowId is a SQL data type that represents the address of a row in a database table.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
      * query.setRowId("row_identifier", rowId);
@@ -3268,7 +3268,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>A Ref is a reference to an SQL structured type value in the database.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Ref ref = resultSet.getRef("employee_ref");
      * query.setRef("manager_ref", ref);
@@ -3332,7 +3332,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>The Array interface is the mapping for the SQL ARRAY type. If the parameter name appears 
      * multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Integer[] numbers = {1, 2, 3, 4, 5};
      * Array sqlArray = connection.createArrayOf("INTEGER", numbers);
@@ -3407,7 +3407,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * query.setObject("user_id", 12345)
      *      .setObject("created_date", new Timestamp(System.currentTimeMillis()))
@@ -3474,7 +3474,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Use this when the default type mapping is not sufficient or when you need to ensure a specific SQL type.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Set a string as CHAR type instead of VARCHAR
      * query.setObject("code", "ABC", Types.CHAR);
@@ -3550,7 +3550,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Set a decimal with 2 decimal places
      * query.setObject("amount", new BigDecimal("123.45"), Types.DECIMAL, 2);
@@ -3623,7 +3623,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * type safety and vendor-specific type support compared to using int constants from java.sql.Types.
      * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * import java.sql.JDBCType;
      * 
@@ -3695,7 +3695,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * import java.sql.JDBCType;
      * 
@@ -3771,7 +3771,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Using a custom JSON type handler
      * Type<UserPreferences> jsonType = TypeFactory.getType(UserPreferences.class);
@@ -3843,7 +3843,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * that exist in both the map and the query will be set. Parameters in the query that are not 
      * present in the map will remain unset.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * Map<String, Object> params = new HashMap<>();
      * params.put("name", "John Doe");
@@ -3897,7 +3897,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Single value</b>: Used only if the query has exactly one parameter</li>
      * </ul>
      * 
-     * <p><b>Examples:</b>
+     * <p><b>Usage Examples:</b>
      * <pre>{@code
      * // Using a bean
      * User user = new User("John", 30, "john@example.com");
@@ -3962,7 +3962,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * to set query parameters. Only properties with names matching those in the parameterNames 
      * collection will be used.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(1);
@@ -4049,7 +4049,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * setting parameters. The setter function receives the parsed SQL, this NamedQuery instance, 
      * and your parameters object.
      * 
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * UserSearchCriteria criteria = new UserSearchCriteria();
      * criteria.setMinAge(25);
@@ -4105,7 +4105,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>After adding batch parameters, call {@code executeBatch()} to execute the batch.
      *
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
      *     new User("John", 30, "john@example.com"),
@@ -4160,7 +4160,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>After adding batch parameters, call {@code executeBatch()} to execute the batch.
      *
-     * <p><b>Example:</b>
+     * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * // Using an iterator from a database result
      * Iterator<User> userIterator = getUsersFromSource();
