@@ -41,9 +41,9 @@ import com.landawn.abacus.query.SQLBuilder;
  * dao.deleteJoinEntities(user, Role.class); // Throws UnsupportedOperationException
  * }</pre>
  * 
- * @param <T> the type of the entity
- * @param <SB> the type of SQLBuilder used for query construction
- * @param <TD> the type of the CRUD DAO with Long ID type
+ * @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type with Long ID (self-referencing for method chaining)
  * @see ReadOnlyCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see CrudDaoL

@@ -301,7 +301,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Nullable<UserStatus> status = userDao.queryForSingleResult("status", 123L, UserStatus.class);
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -323,7 +323,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * username.ifPresent(name -> System.out.println("Username: " + name));
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -345,7 +345,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *     (rs, columnNames) -> rs.getString(1).toUpperCase());
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
@@ -369,7 +369,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * // Throws DuplicatedResultException if multiple records found
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -387,7 +387,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * This is a convenience method that accepts a primitive long ID.
      * Throws DuplicatedResultException if more than one record is found.
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -405,7 +405,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * This is a convenience method that accepts a primitive long ID.
      * Throws DuplicatedResultException if more than one record is found.
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result

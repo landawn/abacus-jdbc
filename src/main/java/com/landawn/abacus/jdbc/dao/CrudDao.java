@@ -567,7 +567,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Nullable<UserStatus> status = userDao.queryForSingleResult("status", userId, UserStatus.class);
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
@@ -589,7 +589,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * username.ifPresent(name -> System.out.println("Username: " + name));
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
@@ -611,7 +611,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *     (rs, columnNames) -> rs.getString(1).toUpperCase());
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper to transform the result
@@ -636,7 +636,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * // Throws DuplicatedResultException if multiple records found
      * }</pre>
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
@@ -655,7 +655,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Throws DuplicatedResultException if more than one record is found.
      * Returns empty Optional if no record found or value is null.
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
@@ -673,7 +673,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Queries for a unique non-null result using a custom row mapper.
      * Throws DuplicatedResultException if more than one record is found.
      *
-     * @param <V> the type of the value to retrieve
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param rowMapper the custom mapper to transform the result

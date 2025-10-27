@@ -584,7 +584,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * });
      * }</pre>
      *
-     * @param <E> the type of exception that the {@code Runnable} might throw
+     * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Runnable} to be executed outside of this transaction
      * @throws E if the {@code Runnable} throws an exception
      * @throws IllegalStateException if another transaction is opened during execution
@@ -619,8 +619,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * });
      * }</pre>
      *
-     * @param <R> the type of the result returned by the {@code Callable}
-     * @param <E> the type of exception that the {@code Callable} might throw
+     * @param <R> the result type returned by the operation
+     * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Callable} to be executed outside of this transaction
      * @return the result returned by the {@code Callable}
      * @throws E if the {@code Callable} throws an exception

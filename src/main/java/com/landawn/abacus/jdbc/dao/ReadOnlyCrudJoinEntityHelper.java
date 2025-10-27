@@ -41,10 +41,10 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  * }</pre>
  * 
- * @param <T> the type of the entity
- * @param <ID> the type of the entity's identifier
- * @param <SB> the type of SQLBuilder used for query construction
- * @param <TD> the type of the CRUD DAO implementation
+ * @param <T> the entity type managed by this DAO
+ * @param <ID> the ID type of the entity
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see ReadOnlyJoinEntityHelper
  * @see CrudJoinEntityHelper
  * @see CrudDao

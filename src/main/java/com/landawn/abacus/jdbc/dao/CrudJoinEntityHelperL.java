@@ -57,9 +57,9 @@ import com.landawn.abacus.util.u.Optional;
  * Optional<User> userWithAll = userDao.get(123L, true);
  * }</pre>
  *
- * @param <T> the type of the entity
- * @param <SB> the type of the SQL builder
- * @param <TD> the type of the CRUD DAO
+ * @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * 
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see CrudJoinEntityHelper

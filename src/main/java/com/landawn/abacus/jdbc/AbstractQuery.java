@@ -2147,7 +2147,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObject(1, myCustomObject, customType);
      * }</pre>
      *
-     * @param <T> The type of the object
+     * @param <T> the type of the object being set as a parameter
      * @param parameterIndex The index of the parameter to set, starting from 1
      * @param x The object to set
      * @param type The Type handler for custom serialization
@@ -2622,7 +2622,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param <T> The type of the parameters
+     * @param <T> the type of elements in the parameters array
      * @param parameters The array of values to set
      * @return this query instance for method chaining
      * @throws IllegalArgumentException If parameters is {@code null}
@@ -2662,7 +2662,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param <T> The type of the parameters
+     * @param <T> the type of elements in the parameters collection
      * @param parameters The collection of values to set
      * @param type The class type of the parameters
      * @return this query instance for method chaining
@@ -2751,7 +2751,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).update();
      * }</pre>
      *
-     * @param <T> The type of the additional parameter
+     * @param <T> the type of the additional parameter object
      * @param parameters The additional data to use when setting parameters
      * @param paramsSetter The function to set parameters on the PreparedStatement
      * @return this query instance for method chaining
@@ -2866,7 +2866,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param <T> The type of the parameters
+     * @param <T> the type of elements in the parameters array
      * @param startParameterIndex The starting parameter index (1-based)
      * @param parameters The array of values to set
      * @return this query instance for method chaining
@@ -2932,7 +2932,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .list();
      * }</pre>
      *
-     * @param <T> The type of the parameters
+     * @param <T> the type of elements in the parameters collection
      * @param startParameterIndex The starting parameter index (1-based)
      * @param parameters The collection of values to set
      * @param type The class type of the parameters
@@ -3050,7 +3050,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).list();
      * }</pre>
      *
-     * @param <T> The type of the additional parameter
+     * @param <T> the type of the additional parameter object
      * @param parameters The additional data to use when setting parameters
      * @param paramsSetter The function to set parameters on this query
      * @return this query instance for method chaining
@@ -3540,7 +3540,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * // Each name becomes a single parameter in a batch
      * }</pre>
      *
-     * @param <T> The type of the batch parameters
+     * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Collection of parameters
      * @param type The class type of the parameters
      * @return this query instance for method chaining
@@ -3637,7 +3637,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.addBatchParameters(dates, LocalDate.class).batchUpdate();
      * }</pre>
      *
-     * @param <T> The type of the batch parameters
+     * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Iterator over parameters
      * @param type The class type of the parameters
      * @return this query instance for method chaining
@@ -3733,7 +3733,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).batchInsert();
      * }</pre>
      *
-     * @param <T> The type of the batch parameters
+     * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Collection of parameter objects
      * @param parametersSetter Function to set parameters for each object
      * @return this query instance for method chaining
@@ -3762,7 +3762,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).batchUpdate();
      * }</pre>
      *
-     * @param <T> The type of the batch parameters
+     * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Iterator over parameter objects
      * @param parametersSetter Function to set parameters for each object
      * @return this query instance for method chaining
@@ -3861,7 +3861,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).batchInsert();
      * }</pre>
      *
-     * @param <T> The type of the batch parameters
+     * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Collection of parameter objects
      * @param parametersSetter Function to set parameters with access to query and statement
      * @return this query instance for method chaining
@@ -3892,7 +3892,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).batchUpdate();
      * }</pre>
      *
-     * @param <T> The type of the batch parameters
+     * @param <T> the type of elements in the batch parameters collection
      * @param batchParameters Iterator over parameter objects
      * @param parametersSetter Function to set parameters with access to query and statement
      * @return this query instance for method chaining
@@ -4640,7 +4640,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForSingleResult(LocalDate.class);  // SELECT order_date FROM orders WHERE id = ?
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The class of the desired result type
      * @return A {@code Nullable} containing the value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4665,7 +4665,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForSingleResult(customType);
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The Type handler for converting the result
      * @return A {@code Nullable} containing the value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4695,7 +4695,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * email.ifPresent(e -> sendNotification(e));
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The class of the desired result type
      * @return An {@code Optional} containing the non-null value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4721,7 +4721,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForSingleNonNull(uuidType);
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The Type handler for converting the result
      * @return An {@code Optional} containing the non-null value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4751,7 +4751,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * // Throws exception if multiple users have the same email
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The class of the desired result type
      * @return A {@code Nullable} containing the unique value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4779,7 +4779,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForUniqueResult(moneyType);  // SELECT balance FROM accounts WHERE account_no = ?
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The Type handler for converting the result
      * @return A {@code Nullable} containing the unique value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4818,7 +4818,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * // Throws exception if multiple sessions exist for the token
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The class of the desired result type
      * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4846,7 +4846,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForUniqueNonNull(idType);
      * }</pre>
      *
-     * @param <V> The type of the result
+     * @param <V> the type of the single result value to be returned
      * @param targetValueType The Type handler for converting the result
      * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
@@ -4875,11 +4875,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      *
-     * @param rs
-     * @param targetType
-     * @param <T>
-     * @return
-     * @throws SQLException
+     * @param <T> the type of entity to extract from the result set
+     * @param rs the ResultSet to extract data from
+     * @param targetType the class type to map the row to
+     * @return the extracted entity instance
+     * @throws SQLException if a database access error occurs
      */
     private static <T> T getRow(final ResultSet rs, final Class<? extends T> targetType) throws SQLException {
         final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
@@ -4947,7 +4947,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <R> The type of the result to be extracted
+     * @param <R> the type of the result extracted by the extractor function
      * @param resultExtractor The extractor used to process the {@code ResultSet} and produce the result. 
      *                        The ResultSet will be automatically closed after this call.
      * @return The result extracted from the {@code ResultSet}
@@ -4989,7 +4989,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <R> The type of the result to be extracted
+     * @param <R> the type of the result extracted by the extractor function
      * @param resultExtractor The extractor that receives both ResultSet and column labels. 
      *                        The ResultSet will be automatically closed after this call.
      * @return The result extracted from the {@code ResultSet}
@@ -5025,8 +5025,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<Order> orders = results._2;
      * }</pre>
      *
-     * @param <R1> The type of the result extracted from the first {@code ResultSet}
-     * @param <R2> The type of the result extracted from the second {@code ResultSet}
+     * @param <R1> the type of result extracted from the first {@code ResultSet}
+     * @param <R2> the type of result extracted from the second {@code ResultSet}
      * @param resultExtractor1 The extractor for the first {@code ResultSet}. ResultSet will be closed after extraction.
      * @param resultExtractor2 The extractor for the second {@code ResultSet}. ResultSet will be closed after extraction.
      * @return A {@code Tuple2} containing the results from both ResultSets (may contain null if ResultSet not available)
@@ -5086,9 +5086,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <R1> The type of the result extracted from the first {@code ResultSet}
-     * @param <R2> The type of the result extracted from the second {@code ResultSet}
-     * @param <R3> The type of the result extracted from the third {@code ResultSet}
+     * @param <R1> the type of result extracted from the first {@code ResultSet}
+     * @param <R2> the type of result extracted from the second {@code ResultSet}
+     * @param <R3> the type of result extracted from the third {@code ResultSet}
      * @param resultExtractor1 The extractor for the first {@code ResultSet}. ResultSet will be closed after extraction.
      * @param resultExtractor2 The extractor for the second {@code ResultSet}. ResultSet will be closed after extraction.
      * @param resultExtractor3 The extractor for the third {@code ResultSet}. ResultSet will be closed after extraction.
@@ -5180,7 +5180,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <R> The type of the result extracted from each {@code ResultSet}
+     * @param <R> the type of result extracted from each {@code ResultSet}
      * @param resultExtractor The extractor to process each {@code ResultSet}. Each ResultSet will be closed after extraction.
      * @return A list containing the extracted results from all ResultSets
      * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}
@@ -5237,7 +5237,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <R> The type of the result extracted from each {@code ResultSet}
+     * @param <R> the type of result extracted from each {@code ResultSet}
      * @param resultExtractor The extractor that receives ResultSet and column labels. Each ResultSet will be closed after extraction.
      * @return A list containing the extracted results from all ResultSets
      * @throws IllegalArgumentException If the provided {@code resultExtractor} is {@code null}
@@ -5289,8 +5289,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <R> The type of the result produced by the function
-     * @param <E> The type of exception that the function might throw
+     * @param <R> the type of result produced by the transformation function
+     * @param <E> the type of exception that may be thrown by the function
      * @param func The function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
      * @throws SQLException If a database access error occurs
@@ -5315,8 +5315,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <R> The type of the result produced by the function
-     * @param <E> The type of exception that the function might throw
+     * @param <R> the type of result produced by the transformation function
+     * @param <E> the type of exception that may be thrown by the function
      * @param entityClassForExtractor The class used to provide metadata for column mapping
      * @param func The function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
@@ -5344,7 +5344,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <E> The type of exception that the consumer action might throw
+     * @param <E> the type of exception that may be thrown by the consumer
      * @param action The consumer action to apply to the {@code Dataset} resulting from the query
      * @throws SQLException If a database access error occurs
      * @throws E If the consumer action throws an exception
@@ -5370,7 +5370,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <E> The type of exception that the consumer action might throw
+     * @param <E> the type of exception that may be thrown by the consumer
      * @param entityClassForExtractor The class used to provide metadata for column mapping
      * @param action The consumer action to apply to the {@code Dataset} resulting from the query
      * @throws SQLException If a database access error occurs
@@ -5425,7 +5425,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * User foundUser = user.orElseThrow(() -> new NotFoundException("User not found"));
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param targetType The class to map the result row to
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
      * @throws DuplicatedResultException If the query finds more than one record
@@ -5453,7 +5453,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     ));
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
@@ -5483,7 +5483,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
@@ -5534,7 +5534,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param targetType The class to map the result row to
      * @return The mapped object if exactly one record is found, otherwise {@code null}
      * @throws IllegalArgumentException If the target type is invalid
@@ -5578,7 +5578,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     ));
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
@@ -5623,7 +5623,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
      * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
@@ -5693,7 +5693,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * firstUser.ifPresent(user -> System.out.println("First active user: " + user.getName()));
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param targetType The class to map the result row to
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws SQLException If a database access error occurs
@@ -5717,7 +5717,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .findFirst(rs -> rs.getString("first_name") + " " + rs.getString("last_name"));
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
@@ -5742,7 +5742,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowFilter The {@code RowFilter} used to filter the rows in the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first matching result, or empty if no match is found
@@ -5773,7 +5773,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
@@ -5799,7 +5799,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowFilter The {@code BiRowFilter} used to filter the rows in the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first matching result, or empty if no match is found
@@ -5849,7 +5849,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param targetType The class to map the result row to
      * @return The first result mapped to the specified type, or {@code null} if no result is found
      * @throws IllegalArgumentException If targetType is null
@@ -5883,7 +5883,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .findFirstOrNull(rs -> rs.getString("name"));
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to an object
      * @return The first result mapped by the rowMapper, or {@code null} if no result is found
      * @throws IllegalStateException If this query is closed
@@ -5919,7 +5919,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowFilter The {@code RowFilter} used to filter rows
      * @param rowMapper The {@code RowMapper} used to map the result set to an object
      * @return The first matching result, or {@code null} if no match is found
@@ -5961,7 +5961,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to an object
      * @return The first result mapped by the rowMapper, or {@code null} if no result is found
      * @throws IllegalStateException If this query is closed
@@ -5996,7 +5996,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entity to be retrieved from the result set
      * @param rowFilter The {@code BiRowFilter} used to filter rows
      * @param rowMapper The {@code BiRowMapper} used to map the result set to an object
      * @return The first matching result, or {@code null} if no match is found
@@ -6082,7 +6082,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param targetType The class of the type to map the rows to. Must not be null.
      * @return A list of objects of the specified type, where each object represents a row in the result set.
      *         Returns an empty list if no rows are found.
@@ -6100,7 +6100,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists the rows in the first ResultSet and maps them to the specified target type with a maximum result limit.
      * 
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param targetType The class of the type to map the rows to
      * @param maxResult The maximum number of results to return
      * @return A list of objects of the specified type, limited by maxResult
@@ -6139,7 +6139,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<Product> products = query.list(productMapper);
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowMapper The row mapper to map each row of the ResultSet to an object. Must not be null.
      * @return A list of objects of the specified type, where each object represents a row in the result set
      * @throws IllegalArgumentException If rowMapper is null
@@ -6155,7 +6155,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists the rows in the first ResultSet using the provided row mapper with a maximum result limit.
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowMapper The row mapper to map each row to an object
      * @param maxResult The maximum number of results to return
      * @return A list of mapped objects, limited by maxResult
@@ -6192,7 +6192,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowFilter The filter to apply to each row of the ResultSet. Must not be null.
      * @param rowMapper The row mapper to map each row of the ResultSet to an object. Must not be null.
      * @return A list of objects that passed the filter, mapped by the row mapper
@@ -6224,7 +6224,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowFilter The filter to apply to each row. Must not be null.
      * @param rowMapper The row mapper to map filtered rows to objects. Must not be null.
      * @param maxResult The maximum number of results to return. Must be non-negative.
@@ -6286,7 +6286,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowMapper The BiRowMapper to map each row. Receives ResultSet and column labels. Must not be null.
      * @return A list of objects mapped by the BiRowMapper
      * @throws IllegalArgumentException If rowMapper is null
@@ -6302,7 +6302,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists the rows in the first ResultSet using a BiRowMapper with a maximum result limit.
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowMapper The BiRowMapper to map each row
      * @param maxResult The maximum number of results to return
      * @return A list of mapped objects, limited by maxResult
@@ -6329,7 +6329,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowFilter The BiRowFilter to test each row. Must not be null.
      * @param rowMapper The BiRowMapper to map filtered rows. Must not be null.
      * @return A list of objects that passed the filter
@@ -6374,7 +6374,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the result object
+     * @param <T> the type of entities in the returned list
      * @param rowFilter The BiRowFilter to test each row. Must not be null.
      * @param rowMapper The BiRowMapper to map filtered rows. Must not be null.
      * @param maxResult The maximum number of results to return. Must be non-negative.
@@ -6429,7 +6429,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * // Note: This assumes all result sets can be mapped to Order type
      * }</pre>
      *
-     * @param <T> The type of objects in each result set
+     * @param <T> the type of entities extracted from each result set
      * @param targetType The class to map each row to. Must not be null.
      * @return A list of lists, where each inner list represents one ResultSet
      * @throws IllegalArgumentException If targetType is null
@@ -6466,7 +6466,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of objects in each result set
+     * @param <T> the type of entities extracted from each result set
      * @param rowMapper The row mapper to apply to each row in all ResultSets. Must not be null.
      * @return A list of lists, where each inner list represents one ResultSet
      * @throws IllegalArgumentException If rowMapper is null
@@ -6502,7 +6502,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of objects in each result set
+     * @param <T> the type of entities extracted from each result set
      * @param rowFilter The filter to apply to each row. Must not be null.
      * @param rowMapper The row mapper for filtered rows. Must not be null.
      * @return A list of lists, where each inner list contains filtered and mapped rows from one ResultSet
@@ -6543,7 +6543,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of objects in each result set
+     * @param <T> the type of entities extracted from each result set
      * @param rowMapper The BiRowMapper to apply to each row. Must not be null.
      * @return A list of lists, where each inner list represents one ResultSet
      * @throws IllegalArgumentException If rowMapper is null
@@ -6586,7 +6586,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of objects in each result set
+     * @param <T> the type of entities extracted from each result set
      * @param rowFilter The BiRowFilter to test each row. Must not be null.
      * @param rowMapper The BiRowMapper for filtered rows. Must not be null.
      * @return A list of lists with filtered and mapped rows from each ResultSet
@@ -6635,9 +6635,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of elements in the list
-     * @param <R> The type of the result after applying the function
-     * @param <E> The type of exception that the function may throw
+     * @param <T> the type of entities in the list result
+     * @param <R> the type of result after applying the transformation function
+     * @param <E> the type of exception that may be thrown by the function
      * @param targetType The class to map each row to. Must not be null.
      * @param func The function to apply to the list. Must not be null.
      * @return The result of applying the function to the list
@@ -6674,9 +6674,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of elements in the list
-     * @param <R> The type of the result after applying the function
-     * @param <E> The type of exception that the function may throw
+     * @param <T> the type of entities in the list result
+     * @param <R> the type of result after applying the transformation function
+     * @param <E> the type of exception that may be thrown by the function
      * @param rowMapper The row mapper to use. Must not be null.
      * @param func The function to apply to the list. Must not be null.
      * @return The result of applying the function to the list
@@ -6712,9 +6712,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of elements in the list
-     * @param <R> The type of the result after applying the function
-     * @param <E> The type of exception that the function may throw
+     * @param <T> the type of entities in the list result
+     * @param <R> the type of result after applying the transformation function
+     * @param <E> the type of exception that may be thrown by the function
      * @param rowMapper The BiRowMapper to use. Must not be null.
      * @param func The function to apply to the list. Must not be null.
      * @return The result of applying the function to the list
@@ -6755,8 +6755,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <T> The type of elements in the list
-     * @param <E> The type of exception that the consumer may throw
+     * @param <T> the type of entities in the list result
+     * @param <E> the type of exception that may be thrown by the consumer
      * @param targetType The class to map each row to. Must not be null.
      * @param consumer The consumer to process the list. Must not be null.
      * @throws SQLException If a database access error occurs
@@ -6786,8 +6786,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of elements in the list
-     * @param <E> The type of exception that the consumer may throw
+     * @param <T> the type of entities in the list result
+     * @param <E> the type of exception that may be thrown by the consumer
      * @param rowMapper The RowMapper to use. Must not be null.
      * @param consumer The consumer to process the list. Must not be null.
      * @throws SQLException If a database access error occurs
@@ -6819,8 +6819,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of elements in the list
-     * @param <E> The type of exception that the consumer may throw
+     * @param <T> the type of entities in the list result
+     * @param <E> the type of exception that may be thrown by the consumer
      * @param rowMapper The BiRowMapper to use. Must not be null.
      * @param consumer The consumer to process the list. Must not be null.
      * @throws SQLException If a database access error occurs
@@ -6892,7 +6892,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .collect(Collectors.toList());
      * }</pre>
      *
-     * @param <T> The type of objects in the stream
+     * @param <T> the type of entities in the stream result
      * @param targetType The class to map each row to. Must not be null.
      * @return A lazy-evaluated Stream of the specified type
      * @throws IllegalArgumentException If targetType is null
@@ -6934,7 +6934,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .forEach(this::process);
      * }</pre>
      *
-     * @param <T> The type of objects in the stream
+     * @param <T> the type of entities in the stream result
      * @param rowMapper The RowMapper to transform each row. Must not be null.
      * @return A lazy-evaluated Stream of mapped objects
      * @throws IllegalArgumentException If rowMapper is null
@@ -6978,7 +6978,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }
      * }</pre>
      *
-     * @param <T> The type of objects in the stream
+     * @param <T> the type of entities in the stream result
      * @param rowMapper The BiRowMapper receiving ResultSet and column labels. Must not be null.
      * @return A lazy-evaluated Stream of mapped objects
      * @throws IllegalArgumentException If rowMapper is null
@@ -7018,7 +7018,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }
      * }</pre>
      *
-     * @param <T> The type of objects in the stream
+     * @param <T> the type of entities in the stream result
      * @param rowFilter The filter to test each row. Must not be null.
      * @param rowMapper The mapper for rows that pass the filter. Must not be null.
      * @return A lazy-evaluated Stream of filtered and mapped objects
@@ -7071,7 +7071,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }
      * }</pre>
      *
-     * @param <T> The type of objects in the stream
+     * @param <T> the type of entities in the stream result
      * @param rowFilter The BiRowFilter to test each row. Must not be null.
      * @param rowMapper The BiRowMapper for filtered rows. Must not be null.
      * @return A lazy-evaluated Stream of filtered and mapped objects
@@ -7284,7 +7284,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <R> The type of the result extracted from each ResultSet
+     * @param <R> the type of result extracted from each ResultSet
      * @param resultExtractor The extractor used to process each ResultSet and produce a result.
      *                        Must not be null. The ResultSet will be closed after extraction.
      * @return A stream of R extracted from all ResultSets returned by the executed procedure
@@ -7337,7 +7337,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <R> The type of the result extracted from each ResultSet
+     * @param <R> the type of result extracted from each ResultSet
      * @param resultExtractor The extractor used to process each ResultSet with column labels.
      *                        Must not be null. The ResultSet will be closed after extraction.
      * @return A stream of R extracted from all ResultSets returned by the executed procedure
@@ -8361,7 +8361,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <ID> The type of the generated key (typically Long or Integer)
+     * @param <ID> the type of the auto-generated key (typically Long or Integer)
      * @return An Optional containing the generated key if available, otherwise empty
      * @throws SQLException If a database access error occurs
      * @see #insert(RowMapper)
@@ -8393,7 +8393,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <ID> The type of the generated key
+     * @param <ID> the type of the auto-generated key (typically Long or Integer)
      * @param autoGeneratedKeyExtractor The function to extract the key from the generated keys ResultSet. 
      *                                  The function receives the ResultSet positioned at the generated key row.
      *                                  Must not be null.
@@ -8425,7 +8425,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <ID> The type of the generated key
+     * @param <ID> the type of the auto-generated key (typically Long or Integer)
      * @param autoGeneratedKeyExtractor The extractor that receives both ResultSet and column labels.
      *                                  Must not be null.
      * @return An Optional containing the generated key if it exists, otherwise an empty Optional
@@ -8444,7 +8444,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * generated key retrieval. It allows specification of a custom predicate to determine
      * whether a generated key is valid (non-default).</p>
      *
-     * @param <ID> The type of the generated key
+     * @param <ID> the type of the auto-generated key (typically Long or Integer)
      * @param autoGeneratedKeyExtractor The extractor to retrieve the auto-generated key
      * @param isDefaultIdTester The predicate to test if the generated key is a default/invalid value
      * @return An Optional containing the generated key if it exists and is valid, otherwise an empty Optional
@@ -8473,7 +8473,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This internal method provides the core implementation for insert operations with
      * generated key retrieval using a bi-row mapper that has access to column labels.</p>
      *
-     * @param <ID> The type of the generated key
+     * @param <ID> the type of the auto-generated key (typically Long or Integer)
      * @param autoGeneratedKeyExtractor The extractor that receives both ResultSet and column labels
      * @param isDefaultIdTester The predicate to test if the generated key is a default/invalid value
      * @return An Optional containing the generated key if it exists and is valid, otherwise an empty Optional
@@ -8517,7 +8517,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .batchInsert();
      * }</pre>
      *
-     * @param <ID> The type of the generated keys (inferred as Long by default)
+     * @param <ID> the type of the auto-generated keys (inferred as Long by default)
      * @return A list of generated keys. Empty list if no keys were generated.
      * @throws SQLException If a database access error occurs
      * @see #batchInsert(RowMapper)
@@ -8539,7 +8539,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <ID> The type of the generated keys
+     * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor to retrieve the auto-generated keys from each row.
      *                                  Must not be null.
      * @return A list of generated keys. Empty list if no keys were generated.
@@ -8569,7 +8569,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <ID> The type of the generated keys
+     * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor that receives both ResultSet and column labels.
      *                                  Must not be null.
      * @return A list of generated keys. Empty list if no keys were generated.
@@ -8587,7 +8587,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This internal method provides the core implementation for batch insert operations
      * with generated key retrieval and validation.</p>
      *
-     * @param <ID> The type of the generated keys
+     * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor to retrieve the auto-generated keys
      * @param isDefaultIdTester A predicate to test if the generated key is a default/invalid value
      * @return A list of generated keys, excluding any that fail the validation test
@@ -8625,7 +8625,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This internal method provides the core implementation for batch insert operations
      * with generated key retrieval using a bi-row mapper that has access to column labels.</p>
      *
-     * @param <ID> The type of the generated keys
+     * @param <ID> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor that receives both ResultSet and column labels
      * @param isDefaultIdTester A predicate to test if the generated key is a default/invalid value
      * @return A list of generated keys, excluding any that fail the validation test
@@ -8712,7 +8712,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<Long> auditIds = result._2;
      * }</pre>
      *
-     * @param <T> The type of the generated keys
+     * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor to retrieve the auto-generated keys.
      *                                  Must not be null.
      * @return A tuple containing the number of rows affected and a list of generated keys.
@@ -8763,7 +8763,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      * }</pre>
      *
-     * @param <T> The type of the generated keys
+     * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor that receives both ResultSet and column labels.
      *                                  Must not be null.
      * @return A tuple containing the number of rows affected and a list of generated keys
@@ -8798,8 +8798,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Internal helper method to create a result tuple.
      * 
-     * @param <U> The type of the update count
-     * @param <T> The type of the generated keys
+     * @param <U> the type of the update count value
+     * @param <T> the type of the auto-generated keys
      * @param updatedRowCount The number of rows updated
      * @param generatedKeysList The list of generated keys
      * @return A tuple containing the update count and generated keys list
@@ -8864,7 +8864,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<Long> orderIds = result._2;
      * }</pre>
      *
-     * @param <T> The type of the generated keys
+     * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor to retrieve the auto-generated keys.
      *                                  Must not be null.
      * @return A tuple containing an array of update counts and a list of generated keys
@@ -8910,7 +8910,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     );
      * }</pre>
      *
-     * @param <T> The type of the generated keys
+     * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor The extractor that receives both ResultSet and column labels.
      *                                  Must not be null.
      * @return A tuple containing an array of update counts and a list of generated keys
@@ -9075,7 +9075,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <R> The type of the result
+     * @param <R> the type of result returned from the operation
      * @param getter The function to apply to the PreparedStatement after execution.
      *               Must not be null.
      * @return The result of applying the function to the PreparedStatement
@@ -9117,7 +9117,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * });
      * }</pre>
      *
-     * @param <R> The type of the result
+     * @param <R> the type of result returned from the operation
      * @param getter The function to apply to the PreparedStatement. The first parameter is the executed PreparedStatement,
      *               the second parameter indicates if the first result is a ResultSet object.
      *               Must not be null.
@@ -9261,7 +9261,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<User> users = future.get(); // Wait for result
      * }</pre>
      *
-     * @param <R> The type of the result produced by the SQL action
+     * @param <R> the type of result produced by the SQL operation
      * @param sqlAction The SQL action to be executed asynchronously. Must not be null.
      * @return A ContinuableFuture representing the result of the asynchronous execution
      * @throws IllegalArgumentException If the provided SQL action is null
@@ -9304,7 +9304,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * );
      * }</pre>
      *
-     * @param <R> The type of the result produced by the SQL action
+     * @param <R> the type of result produced by the SQL operation
      * @param sqlAction The SQL action to be executed asynchronously. Must not be null.
      * @param executor The executor to use for asynchronous execution. Must not be null.
      * @return A ContinuableFuture representing the result of the asynchronous execution

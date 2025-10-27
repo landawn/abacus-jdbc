@@ -71,10 +71,10 @@ import com.landawn.abacus.util.u.Optional;
  * List<User> users = userDao.batchGet(userIds, Order.class);
  * }</pre>
  *
- * @param <T> the type of the entity managed by this DAO
- * @param <ID> the type of the entity's ID field
- * @param <SB> the type of the SQL builder used for query construction
- * @param <TD> the type of the CRUD DAO (self-type for method chaining)
+ * @param <T> the entity type managed by this DAO
+ * @param <ID> the ID type of the entity
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.condition.ConditionFactory

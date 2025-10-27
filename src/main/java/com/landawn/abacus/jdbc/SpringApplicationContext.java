@@ -65,7 +65,7 @@ final class SpringApplicationContext {
      * DataSource dataSource = springAppContext.getBean(DataSource.class);
      * }</pre>
      *
-     * @param <T> the type of the bean to retrieve
+     * @param <T> the bean type to be retrieved from the Spring context
      * @param requiredType the class object representing the type of bean to retrieve
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
      * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists

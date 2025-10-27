@@ -256,7 +256,7 @@ public final class JdbcUtils {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the filter
+     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning true will be imported
@@ -376,7 +376,7 @@ public final class JdbcUtils {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the filter
+     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning true will be imported
      * @param conn the Connection to the database
@@ -475,7 +475,7 @@ public final class JdbcUtils {
      * int rowsImported = JdbcUtils.importData(dataset, filter, conn, insertSQL, 500, 0, setter);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the filter
+     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning true will be imported
      * @param conn the Connection to the database
@@ -599,7 +599,7 @@ public final class JdbcUtils {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the filter
+     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning true will be imported
@@ -705,7 +705,7 @@ public final class JdbcUtils {
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the filter
+     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning true will be imported
      * @param stmt the PreparedStatement to be used for the import
@@ -844,7 +844,7 @@ public final class JdbcUtils {
      * int rowsImported = JdbcUtils.importData(dataset, filter, stmt, 500, 0, setter);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the filter
+     * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning true will be imported
      * @param stmt the PreparedStatement to be used for the import
@@ -915,7 +915,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importData(csvFile, dataSource, insertSQL, parser);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the function
+     * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param sourceDataSource the DataSource to obtain database connections
      * @param insertSQL the SQL insert statement with placeholders
@@ -952,7 +952,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importData(csvFile, connection, insertSQL, 1000, 100, parser);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the function
+     * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSQL the SQL insert statement with placeholders
@@ -986,7 +986,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importData(dataFile, stmt, 500, 50, parser);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the function
+     * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
@@ -1019,7 +1019,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importData(reader, dataSource, insertSQL, parser);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the function
+     * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param sourceDataSource the DataSource to obtain database connections
      * @param insertSQL the SQL insert statement with placeholders
@@ -1059,7 +1059,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importData(reader, connection, insertSQL, 2000, 200, parser);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the function
+     * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSQL the SQL insert statement with placeholders
@@ -1100,7 +1100,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importData(reader, stmt, 1000, 0, parser);
      * }</pre>
      *
-     * @param <E> the type of exception that might be thrown by the function
+     * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
@@ -1181,7 +1181,7 @@ public final class JdbcUtils {
      * System.out.println("Imported " + rowsImported + " users");
      * }</pre>
      *
-     * @param <T> the type of elements in the iterator
+     * @param <T> iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param sourceDataSource the DataSource to obtain database connections from
      * @param insertSQL the SQL insert statement with parameter placeholders (?)
@@ -1231,7 +1231,7 @@ public final class JdbcUtils {
      * }
      * }</pre>
      *
-     * @param <T> the type of elements in the iterator
+     * @param <T> iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param conn the Connection to the database (will not be closed by this method)
      * @param insertSQL the SQL insert statement with parameter placeholders (?)
@@ -1303,7 +1303,7 @@ public final class JdbcUtils {
      * }
      * }</pre>
      *
-     * @param <T> the type of elements in the iterator
+     * @param <T> iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
@@ -1547,7 +1547,7 @@ public final class JdbcUtils {
      * System.out.println("Imported " + rowsImported + " active users");
      * }</pre>
      *
-     * @param <E> the type of exception that may be thrown by the filter
+     * @param <E> exception type that filter may throw
      * @param file the CSV file containing the data to be imported
      * @param filter a predicate to filter rows; only rows returning true will be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
@@ -1735,7 +1735,7 @@ public final class JdbcUtils {
      * System.out.println("Imported " + rowsImported + " valid users");
      * }</pre>
      *
-     * @param <E> the type of exception that may be thrown by the filter
+     * @param <E> exception type that filter may throw
      * @param reader the Reader to read the CSV data from
      * @param filter a predicate to filter rows; only rows returning true will be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)

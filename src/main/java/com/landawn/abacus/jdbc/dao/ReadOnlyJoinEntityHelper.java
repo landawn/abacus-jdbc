@@ -38,9 +38,9 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  * }</pre>
  * 
- * @param <T> the type of the entity
- * @param <SB> the type of SQLBuilder used for query construction
- * @param <TD> the type of the DAO implementation
+ * @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see JoinEntityHelper
  * @see Dao
  */

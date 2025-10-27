@@ -892,7 +892,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * );
      * }</pre>
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the function to map the result row
      * @return Optional containing the mapped result
@@ -905,7 +905,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds the first record matching the condition and maps it using a bi-function mapper.
      * The mapper receives both the ResultSet and column labels.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result row
      * @return Optional containing the mapped result
@@ -937,7 +937,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds the first record with specified properties and maps the result.
      * Combines property selection with custom result mapping.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param selectPropNames the properties to select, null for all
      * @param cond the search condition
      * @param rowMapper the function to map the result
@@ -952,7 +952,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds the first record with specified properties using a bi-function mapper.
      * Provides maximum flexibility for property selection and result mapping.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param selectPropNames the properties to select, null for all
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
@@ -984,7 +984,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds exactly one record and maps it, throwing exception if multiple found.
      * Ensures uniqueness while allowing custom result transformation.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped result
@@ -999,7 +999,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds exactly one record using a bi-function mapper, throwing if multiple found.
      * Provides column labels to the mapper for more flexible processing.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
      * @return Optional containing the mapped result
@@ -1026,7 +1026,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds exactly one record with specified properties and maps it.
      * Ensures both property selection and uniqueness with custom mapping.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param selectPropNames the properties to select, null for all
      * @param cond the search condition
      * @param rowMapper the function to map the result
@@ -1042,7 +1042,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds exactly one record with specified properties using a bi-function mapper.
      * Maximum flexibility with property selection, uniqueness, and custom mapping.
      *
-     * @param <R> the type of the mapped result
+     * @param <R> the result type after applying the mapping function
      * @param selectPropNames the properties to select, null for all
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result

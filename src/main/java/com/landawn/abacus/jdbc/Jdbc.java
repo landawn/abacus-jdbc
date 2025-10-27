@@ -147,7 +147,7 @@ public final class Jdbc {
      * };
      * }</pre>
      *
-     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement})
+     * @param <QS> query statement type (e.g., {@code PreparedStatement}, {@code CallableStatement})
      */
     @FunctionalInterface
     public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
@@ -184,8 +184,8 @@ public final class Jdbc {
      * };
      * }</pre>
      *
-     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement})
-     * @param <T> the type of the parameter object
+     * @param <QS> query statement type (e.g., {@code PreparedStatement}, {@code CallableStatement})
+     * @param <T> parameter object type
      */
     @FunctionalInterface
     public interface BiParametersSetter<QS, T> extends Throwables.BiConsumer<QS, T, SQLException> {
@@ -230,7 +230,7 @@ public final class Jdbc {
          * // setter.accept(preparedStatement, new Object[] {"John", 30});
          * }</pre>
          *
-         * @param <T> the component type of the array
+         * @param <T> array component type
          * @param fieldNameList the list of property names from the {@code entityClass}. The order
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
@@ -291,7 +291,7 @@ public final class Jdbc {
          * // setter.accept(preparedStatement, List.of("John", 30));
          * }</pre>
          *
-         * @param <T> the element type of the list
+         * @param <T> list element type
          * @param fieldNameList the list of property names from the {@code entityClass}. The order
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
@@ -347,8 +347,8 @@ public final class Jdbc {
      * };
      * }</pre>
      *
-     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement})
-     * @param <T> the type of the parameter object
+     * @param <QS> query statement type (e.g., {@code PreparedStatement}, {@code CallableStatement})
+     * @param <T> parameter object type
      */
     @SuppressWarnings("RedundantThrows")
     @FunctionalInterface
@@ -396,7 +396,7 @@ public final class Jdbc {
      * };
      * }</pre>
      *
-     * @param <T> the type of the result
+     * @param <T> result type
      */
     @FunctionalInterface
     public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
@@ -440,7 +440,7 @@ public final class Jdbc {
          * ResultExtractor<Integer> userCountExtractor = userListExtractor.andThen(List::size);
          * }</pre>
          *
-         * @param <R> the type of the result of the {@code after} function
+         * @param <R> result type of the {@code after} function
          * @param after the function to apply after this extractor is applied
          * @return a composed {@code ResultExtractor}
          * @throws IllegalArgumentException if {@code after} is null
@@ -474,8 +474,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the type of the map keys
-         * @param <V> the type of the map values
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @return a {@code ResultExtractor} that produces a {@code Map}
@@ -499,9 +499,9 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
@@ -526,8 +526,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param mergeFunction a function to resolve collisions between values associated with the same key
@@ -556,9 +556,9 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the type of the map keys
-         * @param <V> the type of the map values
-         * @param <M> the type of the resulting {@code Map}
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <M> resulting map type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param mergeFunction a function to resolve collisions between values associated with the same key
@@ -591,9 +591,9 @@ public final class Jdbc {
          * downstream {@code Collector} to the values associated with each key. This is analogous
          * to {@code java.util.stream.Collectors.groupingBy}.
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row, which is then fed into the collector
          * @param downstream the {@code Collector} to process values associated with each key
@@ -611,10 +611,10 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a custom {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
-         * @param <M> the type of the resulting {@code Map}
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
+         * @param <M> resulting map type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row, which is then fed into the collector
          * @param downstream the {@code Collector} to process values associated with each key
@@ -642,8 +642,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @return a {@code ResultExtractor} that produces a {@code ListMultimap}
@@ -666,10 +666,10 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <C> the collection type for values (e.g., {@code List<V>}, {@code Set<V>})
-         * @param <M> the multimap type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <C> collection type for grouped values (e.g., {@code List<V>}, {@code Set<V>})
+         * @param <M> concrete multimap implementation type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param multimapSupplier a {@code Supplier} that provides a new, empty {@code Multimap} instance
@@ -704,8 +704,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @return a {@code ResultExtractor} that produces a {@code Map} with {@code List} values
@@ -718,9 +718,9 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that groups rows into a custom {@code Map} where each key is
          * associated with a {@code List} of values.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
@@ -762,9 +762,9 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param downstream the {@code Collector} for aggregating values associated with each key
@@ -790,10 +790,10 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code RowMapper} to extract the key from each row
          * @param valueExtractor a {@code RowMapper} to extract the value from each row
          * @param downstream the {@code Collector} for aggregating values associated with each key
@@ -848,7 +848,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <T> the element type of the list
+         * @param <T> list element type
          * @param rowMapper the function to map each row to an element
          * @return a {@code ResultExtractor} that produces a {@code List}
          */
@@ -869,7 +869,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <T> the element type of the list
+         * @param <T> list element type
          * @param rowFilter a predicate to filter rows from the result set
          * @param rowMapper the function to map each accepted row to an element
          * @return a {@code ResultExtractor} that produces a filtered {@code List}
@@ -902,7 +902,7 @@ public final class Jdbc {
          * ResultExtractor<List<User>> userListExtractor = ResultExtractor.toList(User.class);
          * }</pre>
          *
-         * @param <T> the entity type
+         * @param <T> entity type
          * @param targetClass the class of the entities to be created
          * @return a {@code ResultExtractor} that produces a {@code List} of entities
          * @see BiResultExtractor#toList(Class)
@@ -940,7 +940,7 @@ public final class Jdbc {
          * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class);
          * }</pre>
          *
-         * @param <T> the entity type
+         * @param <T> entity type
          * @param targetClass the class of the entities to create and merge
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
          * @see Dataset#toMergedEntities(Class)
@@ -966,7 +966,7 @@ public final class Jdbc {
          * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class, "email");
          * }</pre>
          *
-         * @param <T> the entity type
+         * @param <T> entity type
          * @param targetClass the class of the entities to create and merge
          * @param idPropNameForMerge the property name to use for identifying unique entities to merge
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
@@ -995,7 +995,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <T> the entity type
+         * @param <T> entity type
          * @param targetClass the class of the entities to create and merge
          * @param idPropNamesForMerge the collection of property names that form the composite key for merging
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
@@ -1110,7 +1110,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <R> the final result type
+         * @param <R> final result type
          * @param after the function to apply to the intermediate {@code Dataset}
          * @return a {@code ResultExtractor} that produces the transformed result
          */
@@ -1128,7 +1128,7 @@ public final class Jdbc {
      * the {@code apply} method will typically be closed automatically after the method returns.
      * Do not attempt to return or store the {@code ResultSet} itself.</p>
      *
-     * @param <T> the type of the result
+     * @param <T> result type
      */
     @FunctionalInterface
     public interface BiResultExtractor<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
@@ -1164,7 +1164,7 @@ public final class Jdbc {
          * Returns a composed {@code BiResultExtractor} that first applies this extractor to
          * the {@code ResultSet} and then applies the {@code after} function to the result.
          *
-         * @param <R> the type of the result of the {@code after} function
+         * @param <R> result type of the {@code after} function
          * @param after the function to apply after this extractor is applied
          * @return a composed {@code BiResultExtractor}
          * @throws IllegalArgumentException if {@code after} is null
@@ -1187,8 +1187,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @return a {@code BiResultExtractor} that produces a {@code Map}
@@ -1201,9 +1201,9 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a custom {@code Map}.
          * Each row is mapped to a key-value pair. Throws an {@code IllegalStateException} on duplicate keys.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
@@ -1227,8 +1227,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param mergeFunction a function to resolve collisions for the same key
@@ -1246,9 +1246,9 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a custom {@code Map},
          * with a specified function to merge values of duplicate keys.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param mergeFunction a function to resolve collisions for the same key
@@ -1280,9 +1280,9 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param downstream the {@code Collector} to process values for each key
@@ -1300,10 +1300,10 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} and applies a
          * downstream {@code Collector} to the values associated with each key.
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param downstream the {@code Collector} to process values for each key
@@ -1330,8 +1330,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @return a {@code BiResultExtractor} that produces a {@code ListMultimap}
@@ -1344,10 +1344,10 @@ public final class Jdbc {
         /**
          * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Multimap}.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <C> the collection type for values
-         * @param <M> the multimap type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <C> collection type for values
+         * @param <M> concrete multimap implementation type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param multimapSupplier a {@code Supplier} that provides a new, empty {@code Multimap} instance
@@ -1374,8 +1374,8 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a {@code Map} where each key is
          * associated with a {@code List} of values.
          *
-         * @param <K> the key type
-         * @param <V> the value type
+         * @param <K> map key type
+         * @param <V> map value type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @return a {@code BiResultExtractor} that produces a {@code Map} with {@code List} values
@@ -1388,9 +1388,9 @@ public final class Jdbc {
          * Creates a {@code BiResultExtractor} that groups rows into a custom {@code Map} where each key is
          * associated with a {@code List} of values.
          *
-         * @param <K> the key type
-         * @param <V> the value type
-         * @param <M> the map type
+         * @param <K> map key type
+         * @param <V> map value type
+         * @param <M> concrete map implementation type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param supplier a {@code Supplier} that provides a new, empty {@code Map} instance
@@ -1431,9 +1431,9 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the key type
-         * @param <V> the input value type for the downstream collector
-         * @param <D> the result type of the downstream collector
+         * @param <K> map key type
+         * @param <V> input value type for downstream collector
+         * @param <D> result type of downstream collector
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param downstream the {@code Collector} for aggregating values associated with each key
@@ -1458,10 +1458,10 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <K> the type of keys in the map
-         * @param <V> the type of input values for the collector
-         * @param <D> the result type of the downstream collector
-         * @param <M> the type of the resulting map
+         * @param <K> map key type
+         * @param <V> input value type for collector
+         * @param <D> result type of downstream collector
+         * @param <M> resulting map type
          * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
          * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
          * @param downstream the {@code Collector} for aggregating values associated with each key
@@ -1517,7 +1517,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <T> the element type of the list
+         * @param <T> list element type
          * @param rowMapper the function to map each row to an element
          * @return a {@code BiResultExtractor} that produces a {@code List}
          */
@@ -1537,7 +1537,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <T> the element type of the list
+         * @param <T> list element type
          * @param rowFilter a predicate to filter rows
          * @param rowMapper the function to map each accepted row to an element
          * @return a {@code BiResultExtractor} that produces a filtered {@code List}
@@ -1575,7 +1575,7 @@ public final class Jdbc {
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(User.class);
          * }</pre>
          *
-         * @param <T> the entity type
+         * @param <T> entity type
          * @param targetClass the class of the entities to be created
          * @return a {@code BiResultExtractor} that produces a {@code List} of entities.
          * @see ResultExtractor#toList(Class)
@@ -1612,7 +1612,7 @@ public final class Jdbc {
      * );
      * }</pre>
      *
-     * @param <T> the type of the object to be mapped from a row
+     * @param <T> entity type to map each row to
      * @see ColumnOne
      */
     @FunctionalInterface
@@ -1641,7 +1641,7 @@ public final class Jdbc {
          * RowMapper<String> nameMapper = userMapper.andThen(User::getName);
          * }</pre>
          *
-         * @param <R> the type of the result of the {@code after} function
+         * @param <R> result type of the {@code after} function
          * @param after the function to apply to the result of this mapper; must not be null
          * @return a composed {@code RowMapper}
          * @throws IllegalArgumentException if {@code after} is null
@@ -1675,8 +1675,8 @@ public final class Jdbc {
          * // combinedMapper.apply(rs) would return Tuple.of(1, "John") for a given row.
          * }</pre>
          *
-         * @param <T> the result type of the first mapper
-         * @param <U> the result type of the second mapper
+         * @param <T> result type of first mapper
+         * @param <U> result type of second mapper
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @return a new {@code RowMapper} that produces a {@code Tuple2}
@@ -1701,9 +1701,9 @@ public final class Jdbc {
          * RowMapper<Tuple3<Integer, String, Date>> combinedMapper = RowMapper.combine(idMapper, nameMapper, dateMapper);
          * }</pre>
          *
-         * @param <A> the result type of the first mapper
-         * @param <B> the result type of the second mapper
-         * @param <C> the result type of the third mapper
+         * @param <A> result type of first mapper
+         * @param <B> result type of second mapper
+         * @param <C> result type of third mapper
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @param rowMapper3 the third mapper; must not be null
@@ -1784,7 +1784,7 @@ public final class Jdbc {
          * after the first execution. It should not be cached, shared, or used in parallel streams.
          * </p>
          *
-         * @param <C> the collection type
+         * @param <C> collection type
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @param supplier a function that takes the column count and returns a new {@code Collection} instance
          * @return a stateful {@code RowMapper} that maps a row to a {@code Collection}
@@ -2252,7 +2252,7 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
              * </p>
              *
-             * @param <C> the specific collection type (e.g., {@code List}, {@code Set})
+             * @param <C> specific collection type (e.g., {@code List}, {@code Set})
              * @param supplier a function that provides a new collection instance, given the column count
              * @return a new stateful {@code RowMapper<C>}
              */
@@ -2351,7 +2351,7 @@ public final class Jdbc {
              * .to(arr -> new User((String) arr.get(0), (int) arr.get(1)));
              * }</pre>
              *
-             * @param <R> the final result type
+             * @param <R> final result type
              * @param finisher a function that transforms the row's values into the final result object
              * @return a new stateful {@code RowMapper<R>}
              */
@@ -2390,7 +2390,7 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
              *
-             * @param <R> the final result type
+             * @param <R> final result type
              * @param finisher a function that transforms column labels and row values into the final result object
              * @return a new stateful {@code RowMapper<R>}
              */
@@ -2444,7 +2444,7 @@ public final class Jdbc {
      * };
      * }</pre>
      *
-     * @param <T> the type of the object that each row will be mapped to
+     * @param <T> entity type to map each row to
      */
     @FunctionalInterface
     public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
@@ -2542,7 +2542,7 @@ public final class Jdbc {
          * Returns a composed {@code BiRowMapper} that first applies this mapper to the row and then
          * applies the {@code after} function to the result.
          *
-         * @param <R> the type of the result of the {@code after} function
+         * @param <R> result type of the {@code after} function
          * @param after the function to apply to the result of this mapper; must not be null
          * @return a composed {@code BiRowMapper}
          * @throws IllegalArgumentException if {@code after} is null
@@ -2587,8 +2587,8 @@ public final class Jdbc {
          * Combines two {@code BiRowMapper} instances into a single mapper that returns a {@code Tuple2}
          * containing the results of both. Both mappers are applied to the same row.
          *
-         * @param <T> the result type of the first mapper
-         * @param <U> the result type of the second mapper
+         * @param <T> result type of first mapper
+         * @param <U> result type of second mapper
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @return a new {@code BiRowMapper} that produces a {@code Tuple2}
@@ -2604,9 +2604,9 @@ public final class Jdbc {
          * Combines three {@code BiRowMapper} instances into a single mapper that returns a {@code Tuple3}
          * containing the results of all three. All mappers are applied to the same row.
          *
-         * @param <A> the result type of the first mapper
-         * @param <B> the result type of the second mapper
-         * @param <C> the result type of the third mapper
+         * @param <A> result type of first mapper
+         * @param <B> result type of second mapper
+         * @param <C> result type of third mapper
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @param rowMapper3 the third mapper; must not be null
@@ -2639,7 +2639,7 @@ public final class Jdbc {
          * BiRowMapper<User> userMapper = BiRowMapper.to(User.class);
          * }</pre>
          *
-         * @param <T> the target type
+         * @param <T> target type
          * @param targetClass the class to map rows to
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
@@ -2658,7 +2658,7 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * @param <T> the target type
+         * @param <T> target type
          * @param targetClass the class to map rows to
          * @param ignoreNonMatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are ignored;
          * if {@code false}, an {@code IllegalArgumentException} is thrown.
@@ -2688,7 +2688,7 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param <T> the target type
+         * @param <T> target type
          * @param targetClass the class to map rows to
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
@@ -2710,7 +2710,7 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * @param <T> the target type
+         * @param <T> target type
          * @param targetClass the class to map rows to
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
@@ -3022,7 +3022,7 @@ public final class Jdbc {
          * BiRowMapper<User> mapper = BiRowMapper.to(User.class, prefixMap);
          * }</pre>
          *
-         * @param <T> the target entity type
+         * @param <T> target entity type
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
@@ -3042,7 +3042,7 @@ public final class Jdbc {
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
          *
-         * @param <T> the target entity type
+         * @param <T> target entity type
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
          * @param ignoreNonMatchedColumns if {@code true}, columns without a matching property are ignored
@@ -3461,7 +3461,7 @@ public final class Jdbc {
         /**
          * Creates a {@code BiRowMapper} that maps all columns of a row to a {@code Collection}.
          *
-         * @param <C> the collection type
+         * @param <C> collection type
          * @param columnGetterForAll the {@code ColumnGetter} used for every column
          * @param supplier a function that takes the column count and returns a new {@code Collection} instance
          * @return a {@code BiRowMapper} that produces a {@code Collection}
@@ -3837,7 +3837,7 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
              *
-             * @param <T> the target type
+             * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
              */
@@ -3855,7 +3855,7 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
              *
-             * @param <T> the target type
+             * @param <T> target type
              * @param targetClass the class to map rows to
              * @param ignoreNonMatchedColumns if {@code true}, columns without a corresponding property are ignored
              * @return a new stateful {@code BiRowMapper<T>}
@@ -4960,7 +4960,7 @@ public final class Jdbc {
      * A functional interface for extracting a typed value from a specified column of a {@code ResultSet}.
      * This provides a type-safe and reusable way to retrieve column data.
      *
-     * @param <V> the type of the value to be extracted.
+     * @param <V> extracted value type
      */
     @FunctionalInterface
     public interface ColumnGetter<V> {
@@ -5070,7 +5070,7 @@ public final class Jdbc {
          * Retrieves a cached or creates a new {@code ColumnGetter} for the specified class type.
          * It leverages Abacus-common's {@code Type} system to determine the appropriate extraction method.
          *
-         * @param <T> the target type.
+         * @param <T> target type
          * @param cls the class for which to get a {@code ColumnGetter}.
          * @return a {@code ColumnGetter} for the specified type.
          */
@@ -5082,7 +5082,7 @@ public final class Jdbc {
          * Retrieves a cached or creates a new {@code ColumnGetter} for the specified Abacus-common {@code Type}.
          * Common types are cached for efficient reuse.
          *
-         * @param <T> the target type.
+         * @param <T> target type
          * @param type the {@code Type} for which to get a {@code ColumnGetter}.
          * @return a {@code ColumnGetter} for the specified type.
          */
@@ -5333,7 +5333,7 @@ public final class Jdbc {
             /**
              * Gets a generic {@code RowMapper} that extracts a value as an {@code Object} from the first column.
              *
-             * @param <T> the target type (inferred).
+             * @param <T> target type (inferred).
              * @return a {@code RowMapper} that extracts an {@code Object} from the first column.
              */
             public static <T> RowMapper<T> getObject() {
@@ -5352,7 +5352,7 @@ public final class Jdbc {
              * RowMapper<Integer> intMapper = ColumnOne.get(Integer.class);
              * }</pre>
              *
-             * @param <T> the target type.
+             * @param <T> target type
              * @param firstColumnType the class of the value in the first column.
              * @return a {@code RowMapper} for the specified type.
              */
@@ -5364,7 +5364,7 @@ public final class Jdbc {
              * Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type} from the first column.
              * This method uses a cache for commonly used types.
              *
-             * @param <T> the target type.
+             * @param <T> target type
              * @param type the {@code Type} of the value in the first column.
              * @return a {@code RowMapper} for the specified type.
              */
@@ -5391,7 +5391,7 @@ public final class Jdbc {
              * User user = preparedQuery.queryForSingle(userMapper).get();
              * }</pre>
              *
-             * @param <T> the target type.
+             * @param <T> target type
              * @param targetType the class to deserialize the JSON string into.
              * @return a {@code RowMapper} that performs JSON deserialization.
              */
@@ -5410,7 +5410,7 @@ public final class Jdbc {
              * User user = preparedQuery.queryForSingle(userMapper).get();
              * }</pre>
              *
-             * @param <T> the target type.
+             * @param <T> target type
              * @param targetType the class to deserialize the XML string into.
              * @return a {@code RowMapper} that performs XML deserialization.
              */
@@ -5422,7 +5422,7 @@ public final class Jdbc {
              * Creates a {@code BiParametersSetter} for setting a value of the specified type as the first parameter
              * of a {@code PreparedStatement}.
              *
-             * @param <T> the parameter type.
+             * @param <T> parameter type
              * @param type the class of the parameter.
              * @return a {@code BiParametersSetter} for the specified type.
              */
@@ -5435,7 +5435,7 @@ public final class Jdbc {
              * Creates a {@code BiParametersSetter} for setting a value of the specified Abacus-common {@code Type}
              * as the first parameter of a {@code PreparedStatement}.
              *
-             * @param <T> the parameter type.
+             * @param <T> parameter type
              * @param type the {@code Type} of the parameter.
              * @return a {@code BiParametersSetter} for the specified type.
              */
@@ -5513,7 +5513,7 @@ public final class Jdbc {
         /**
          * Retrieves the value of an output parameter by its 1-based index.
          *
-         * @param <T> the expected type of the parameter value.
+         * @param <T> expected parameter value type
          * @param parameterIndex the 1-based index of the parameter.
          * @return the parameter value, cast to type {@code T}. May be {@code null}.
          */
@@ -5524,7 +5524,7 @@ public final class Jdbc {
         /**
          * Retrieves the value of an output parameter by its name.
          *
-         * @param <T> the expected type of the parameter value.
+         * @param <T> expected parameter value type
          * @param parameterName the name of the parameter.
          * @return the parameter value, cast to type {@code T}. May be {@code null}.
          */
@@ -5568,7 +5568,7 @@ public final class Jdbc {
      * };
      * }</pre>
      *
-     * @param <P> the type of the DAO proxy.
+     * @param <P> DAO proxy type
      */
     @Beta
     public interface Handler<P> {
@@ -5767,8 +5767,8 @@ public final class Jdbc {
         /**
          * Creates a {@code Handler} with a custom action to be executed before method invocation.
          *
-         * @param <T> the proxy type.
-         * @param <E> the exception type that the action can throw.
+         * @param <T> proxy type
+         * @param <E> exception type that action can throw
          * @param beforeInvokeAction the action to perform before the method is called.
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code beforeInvokeAction} is null.
@@ -5789,8 +5789,8 @@ public final class Jdbc {
         /**
          * Creates a {@code Handler} with a custom action to be executed after method invocation.
          *
-         * @param <T> the proxy type.
-         * @param <E> the exception type that the action can throw.
+         * @param <T> proxy type
+         * @param <E> exception type that action can throw
          * @param afterInvokeAction the action to perform after the method returns.
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code afterInvokeAction} is null.
@@ -5813,8 +5813,8 @@ public final class Jdbc {
         /**
          * Creates a {@code Handler} with custom actions to be executed both before and after method invocation.
          *
-         * @param <T> the proxy type.
-         * @param <E> the exception type that the actions can throw.
+         * @param <T> proxy type
+         * @param <E> exception type that actions can throw
          * @param beforeInvokeAction the action to perform before the method is called.
          * @param afterInvokeAction the action to perform after the method returns.
          * @return a new {@code Handler} instance.

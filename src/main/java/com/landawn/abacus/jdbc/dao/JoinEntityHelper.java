@@ -69,9 +69,9 @@ import com.landawn.abacus.util.stream.Stream;
  * userDao.loadJoinEntities(users, "orders");
  * }</pre>
  *
- * @param <T> the type of the primary entity
- * @param <SB> the type of SQLBuilder used by the DAO
- * @param <TD> the type of the target DAO interface
+ * @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.condition.ConditionFactory

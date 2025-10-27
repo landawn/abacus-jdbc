@@ -59,9 +59,9 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Create separate read-only and read-write DAO interfaces for the same entity</li>
  * </ul></p>
  * 
- * @param <T> the type of the entity managed by this DAO
- * @param <SB> the type of SQLBuilder used for query construction
- * @param <TD> the type of the DAO extending this interface (self-referencing for fluent API support)
+ * @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used for query construction
+ * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * 
  * @see UncheckedReadOnlyCrudDao
  * @see UncheckedNoUpdateCrudDaoL

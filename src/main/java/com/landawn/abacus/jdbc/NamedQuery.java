@@ -3782,7 +3782,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setObject("status", Status.ACTIVE, enumType);
      * }</pre>
      *
-     * @param <T> the type of the parameter value
+     * @param <T> parameter value type
      * @param parameterName the name of the parameter (without the ':' prefix)
      * @param x the object containing the parameter value
      * @param type the Type handler to use for setting the parameter
@@ -4065,7 +4065,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * });
      * }</pre>
      *
-     * @param <T> the type of the parameters object
+     * @param <T> parameters object type
      * @param parameters the parameters object to pass to the setter
      * @param paramsSetter a function that sets parameters on the query
      * @return this NamedQuery instance for method chaining
