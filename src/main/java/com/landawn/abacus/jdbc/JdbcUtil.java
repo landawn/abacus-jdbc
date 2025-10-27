@@ -6061,9 +6061,9 @@ public final class JdbcUtil {
      * <pre>{@code
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(() -> {
      *     // Perform database operations
-     *     JdbcUtil.update(dataSource, "UPDATE users SET status = ? WHERE id = ?", "active", userId);
+     *     JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", "active", userId);
      * });
-     * 
+     *
      * future.thenRun(() -> System.out.println("Update completed"));
      * }</pre>
      *
@@ -6086,11 +6086,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> futures = JdbcUtil.asyncRun(
-     *     () -> JdbcUtil.update(dataSource, "UPDATE users SET status = ?", "active"),
-     *     () -> JdbcUtil.update(dataSource, "UPDATE orders SET processed = ?", true)
+     *     () -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ?", "active"),
+     *     () -> JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET processed = ?", true)
      * );
-     * 
-     * ContinuableFuture.allOf(futures._1, futures._2).thenRun(() -> 
+     *
+     * ContinuableFuture.allOf(futures._1, futures._2).thenRun(() ->
      *     System.out.println("Both updates completed")
      * );
      * }</pre>
@@ -6116,14 +6116,14 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures = 
+     * Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> futures =
      *     JdbcUtil.asyncRun(
-     *         () -> JdbcUtil.update(dataSource, "UPDATE users SET status = ?", "active"),
-     *         () -> JdbcUtil.update(dataSource, "UPDATE orders SET processed = ?", true),
-     *         () -> JdbcUtil.update(dataSource, "UPDATE inventory SET updated = ?", new Date())
+     *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ?", "active"),
+     *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET processed = ?", true),
+     *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE inventory SET updated = ?", new Date())
      *     );
-     * 
-     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() -> 
+     *
+     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() ->
      *     System.out.println("All updates completed")
      * );
      * }</pre>
@@ -6151,11 +6151,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = new User(123, "John", "john@example.com");
-     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(user, u -> {
-     *     JdbcUtil.insert(dataSource, u);
+     * User entity = new User(123, "John", "john@example.com");
+     * ContinuableFuture<Void> future = JdbcUtil.asyncRun(entity, e -> {
+     *     JdbcUtil.executeUpdate(dataSource, "INSERT INTO users (name, email) VALUES (?, ?)", e.getName(), e.getEmail());
      * });
-     * 
+     *
      * future.thenRun(() -> System.out.println("User inserted"));
      * }</pre>
      *
@@ -6244,12 +6244,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<List<User>> future = JdbcUtil.asyncCall(() -> {
-     *     return JdbcUtil.query(dataSource, "SELECT * FROM users WHERE active = ?", true)
-     *                    .list(User.class);
+     * ContinuableFuture<User> future = JdbcUtil.asyncCall(() -> {
+     *     return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findFirst(User.class).orElse(null);
      * });
-     * 
-     * future.thenAccept(users -> System.out.println("Found " + users.size() + " active users"));
+     *
+     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
      * }</pre>
      *
      * @param <R> The type of the result
@@ -6271,13 +6270,13 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<ContinuableFuture<Long>, ContinuableFuture<List<Order>>> futures = JdbcUtil.asyncCall(
-     *     () -> JdbcUtil.queryForSingleResult(Long.class, dataSource, "SELECT COUNT(*) FROM users"),
-     *     () -> JdbcUtil.query(dataSource, "SELECT * FROM orders WHERE date = ?", today).list(Order.class)
+     * Tuple2<ContinuableFuture<String>, ContinuableFuture<List<String>>> futures = JdbcUtil.asyncCall(
+     *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT name FROM users WHERE id = ?").setLong(1, userId).queryForSingleResult(String.class).orElse(null),
+     *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE age > ?").setInt(1, 18).list(String.class)
      * );
-     * 
-     * futures._1.thenAccept(count -> System.out.println("Total users: " + count));
-     * futures._2.thenAccept(orders -> System.out.println("Today's orders: " + orders.size()));
+     *
+     * futures._1.thenAccept(name -> System.out.println("User name: " + name));
+     * futures._2.thenAccept(results -> System.out.println("Found " + results.size() + " emails"));
      * }</pre>
      *
      * @param <R1> The type of the result from the first action
@@ -6341,12 +6340,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ContinuableFuture<User> future = JdbcUtil.asyncCall(123L, 
-     *     userId -> JdbcUtil.queryForSingleResult(User.class, dataSource, 
-     *                                              "SELECT * FROM users WHERE id = ?", userId)
+     * ContinuableFuture<User> future = JdbcUtil.asyncCall(123L,
+     *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).queryForSingleResult(User.class).orElse(null)
      * );
-     * 
-     * future.thenAccept(user -> System.out.println("Found user: " + user.getName()));
+     *
+     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
      * }</pre>
      *
      * @param <T> The type of the parameter

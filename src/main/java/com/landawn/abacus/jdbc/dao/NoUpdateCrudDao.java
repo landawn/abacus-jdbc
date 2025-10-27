@@ -55,7 +55,7 @@ import com.landawn.abacus.query.condition.Condition;
  * // Usage:
  * Transaction txn = new Transaction();
  * String id = transactionDao.insert(txn); // Works
- * Transaction retrieved = transactionDao.findById(id); // Works
+ * Transaction retrieved = transactionDao.gett(id); // Works (returns null if not found)
  * transactionDao.update(txn); // Throws UnsupportedOperationException
  * transactionDao.deleteById(id); // Throws UnsupportedOperationException
  * }</pre>
