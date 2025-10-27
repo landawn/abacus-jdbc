@@ -35,6 +35,7 @@
 		<java.version>17</java.version>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
+		<maven.compiler.release>17</maven.compiler.release>
 		<junit.jupiter.version>5.10.2</junit.jupiter.version>
 		<junit.platform.version>1.10.2</junit.platform.version>
 		<mockito.version>5.18.0</mockito.version> 
