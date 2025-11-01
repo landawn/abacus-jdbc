@@ -57,7 +57,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see CacheResult
  * @see RefreshCache
  * @see DaoCache
- * @since 0.8
  */
 @Beta
 @Retention(RetentionPolicy.RUNTIME)

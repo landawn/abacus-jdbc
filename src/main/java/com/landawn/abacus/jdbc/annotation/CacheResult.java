@@ -73,7 +73,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * @see Cache
  * @see RefreshCache
  * @see <a href="https://github.com/EsotericSoftware/kryo">Kryo Serialization</a>
- * @since 0.8
  */
 @Beta
 @Retention(RetentionPolicy.RUNTIME)

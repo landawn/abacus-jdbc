@@ -69,7 +69,6 @@ import com.landawn.abacus.jdbc.OnDeleteAction;
  *
  * @deprecated This annotation won't be implemented. Define ON DELETE behavior in database schema instead.
  * @see OnDeleteAction
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

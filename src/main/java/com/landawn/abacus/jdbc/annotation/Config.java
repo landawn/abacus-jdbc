@@ -63,7 +63,6 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * }</pre>
  *
  * @see CrudDao
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })

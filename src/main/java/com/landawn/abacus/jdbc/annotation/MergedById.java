@@ -92,7 +92,6 @@ import com.landawn.abacus.annotation.JoinedBy;
  *
  * @see MappedByKey
  * @see JoinedBy
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

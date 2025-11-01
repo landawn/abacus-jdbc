@@ -41,7 +41,6 @@ import com.landawn.abacus.util.Strings;
  * }</pre>
  * 
  * @see DBProductInfo
- * @since 1.0
  */
 public enum DBVersion {
 

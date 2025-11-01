@@ -26,7 +26,6 @@ package com.landawn.abacus.jdbc;
  * </ul>
  * 
  * @author Haiyang Li
- * @since 3.0
  * 
  * @see JdbcUtil#enableSqlLog()
  * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long) 

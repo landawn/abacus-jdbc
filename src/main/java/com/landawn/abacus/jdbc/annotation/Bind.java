@@ -71,7 +71,6 @@ import java.lang.annotation.Target;
  *
  * @see BindList
  * @see Define
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)

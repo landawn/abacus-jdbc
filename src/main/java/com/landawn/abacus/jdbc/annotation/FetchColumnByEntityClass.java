@@ -61,7 +61,6 @@ import java.lang.annotation.Target;
  * types. It has no effect on methods that return entity objects directly.</p>
  *
  * @see Config#fetchColumnByEntityClassForDatasetQuery()
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

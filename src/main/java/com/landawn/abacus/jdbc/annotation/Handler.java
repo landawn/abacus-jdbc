@@ -80,7 +80,6 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * @see HandlerList
  * @see Jdbc.Handler
  * @see NonDBOperation
- * @since 0.8
  */
 @Beta
 @Retention(RetentionPolicy.RUNTIME)

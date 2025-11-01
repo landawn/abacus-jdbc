@@ -71,7 +71,6 @@ import java.sql.PreparedStatement;
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
  * 
  * @author Haiyang Li
- * @since 3.0
  */
 public final class PreparedQuery extends AbstractQuery<PreparedStatement, PreparedQuery> {
 

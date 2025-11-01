@@ -118,49 +118,315 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
- * A comprehensive utility class for JDBC operations providing simplified database access and transaction management.
- * This class offers various utility methods for executing SQL queries, managing connections, handling transactions,
- * and working with ResultSets in a more convenient way than standard JDBC.
- * 
- * <h2>Key Features:</h2>
+ * A comprehensive, production-ready utility class providing enterprise-grade JDBC operations with advanced
+ * database access patterns, transaction management, and performance optimization features. This class serves
+ * as a high-level abstraction over standard JDBC APIs, offering simplified database interactions while
+ * maintaining full control over connections, transactions, and resource management for mission-critical
+ * applications requiring robust data persistence solutions.
+ *
+ * <p>The {@code JdbcUtil} class addresses common challenges in enterprise database programming by providing
+ * intuitive APIs for complex JDBC operations, automatic resource management, comprehensive error handling,
+ * and seamless integration with popular frameworks. It supports both traditional JDBC patterns and modern
+ * functional programming approaches, making it suitable for legacy system integration and greenfield
+ * development scenarios in enterprise environments.</p>
+ *
+ * <p><b>⚠️ IMPORTANT - Production Database Usage:</b>
+ * This utility is designed for enterprise production environments with built-in support for connection
+ * pooling, transaction management, SQL injection prevention, and performance monitoring. Always use
+ * prepared statements and parameterized queries to prevent SQL injection attacks and ensure optimal
+ * performance through statement caching and execution plan optimization.</p>
+ *
+ * <p><b>Key Features and Capabilities:</b>
  * <ul>
- *   <li>Simplified query execution with automatic resource management</li>
- *   <li>Support for both regular and named SQL queries</li>
- *   <li>Transaction management with Spring integration support</li>
- *   <li>Batch operations for improved performance</li>
- *   <li>Stream-based ResultSet processing</li>
- *   <li>SQL logging and performance monitoring</li>
- *   <li>Connection pooling support (HikariCP, C3P0)</li>
- *   <li>DAO creation and caching</li>
+ *   <li><b>Simplified JDBC Operations:</b> High-level APIs that eliminate boilerplate code and resource management</li>
+ *   <li><b>Transaction Management:</b> Comprehensive transaction support with Spring Framework integration</li>
+ *   <li><b>Connection Pooling:</b> Built-in support for HikariCP, C3P0, and other popular connection pools</li>
+ *   <li><b>Batch Processing:</b> Optimized batch operations for high-throughput data processing scenarios</li>
+ *   <li><b>Stream Integration:</b> Functional programming patterns with Java Streams for ResultSet processing</li>
+ *   <li><b>SQL Logging:</b> Comprehensive SQL execution logging with performance metrics and debugging information</li>
+ *   <li><b>Type Safety:</b> Strong typing for database operations with automatic object mapping</li>
+ *   <li><b>Asynchronous Operations:</b> Non-blocking database operations with {@link ContinuableFuture} support</li>
  * </ul>
  *
- * <h2>Performance Tips:</h2>
+ * <p><b>Design Philosophy:</b>
  * <ul>
- *   <li>Avoid unnecessary/repeated database calls</li>
- *   <li>Only fetch the columns you need or update the columns you want</li>
- *   <li>Index is the key point in a lot of database performance issues</li>
+ *   <li><b>Simplicity Over Complexity:</b> Intuitive APIs that handle complex JDBC scenarios transparently</li>
+ *   <li><b>Performance First:</b> Optimized for high-throughput enterprise applications with minimal overhead</li>
+ *   <li><b>Resource Safety:</b> Automatic resource management preventing connection leaks and memory issues</li>
+ *   <li><b>Framework Integration:</b> Seamless compatibility with Spring, Hibernate, and other enterprise frameworks</li>
+ *   <li><b>Developer Productivity:</b> Reduces development time while maintaining enterprise-grade reliability</li>
  * </ul>
  *
- * <p><b>Usage Examples:</b></p>
+ * <p><b>Supported Database Operations:</b>
+ * <table border="1" style="border-collapse: collapse;">
+ *   <caption><b>Database Operation Types and Methods</b></caption>
+ *   <tr style="background-color: #f2f2f2;">
+ *     <th>Operation Type</th>
+ *     <th>Primary Methods</th>
+ *     <th>Use Cases</th>
+ *     <th>Performance Notes</th>
+ *   </tr>
+ *   <tr>
+ *     <td>Query Execution</td>
+ *     <td>executeQuery(), prepareQuery()</td>
+ *     <td>SELECT operations, data retrieval</td>
+ *     <td>Uses prepared statements for caching</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Data Modification</td>
+ *     <td>executeUpdate(), prepareUpdate()</td>
+ *     <td>INSERT, UPDATE, DELETE operations</td>
+ *     <td>Optimized for bulk operations</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Batch Processing</td>
+ *     <td>executeBatch(), prepareBatch()</td>
+ *     <td>High-volume data processing</td>
+ *     <td>Significant performance gains</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Stored Procedures</td>
+ *     <td>prepareCall(), executeCall()</td>
+ *     <td>Complex business logic execution</td>
+ *     <td>Database-side processing</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Transaction Management</td>
+ *     <td>beginTransaction(), commit(), rollback()</td>
+ *     <td>ACID compliance, data consistency</td>
+ *     <td>Connection-level transaction control</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Stream Processing</td>
+ *     <td>stream(), streamAll()</td>
+ *     <td>Large ResultSet processing</td>
+ *     <td>Memory-efficient iteration</td>
+ *   </tr>
+ * </table>
+ *
+ * <p><b>Core API Categories:</b>
+ * <ul>
+ *   <li><b>Connection Management:</b> {@code getConnection()}, {@code releaseConnection()}, {@code createDataSource()}</li>
+ *   <li><b>Query Operations:</b> {@code executeQuery()}, {@code prepareQuery()}, {@code findFirst()}, {@code exists()}</li>
+ *   <li><b>Update Operations:</b> {@code executeUpdate()}, {@code prepareUpdate()}, {@code insert()}, {@code update()}, {@code delete()}</li>
+ *   <li><b>Batch Operations:</b> {@code executeBatch()}, {@code prepareBatch()}, {@code batchInsert()}, {@code batchUpdate()}</li>
+ *   <li><b>Transaction Support:</b> {@code beginTransaction()}, {@code runInTransaction()}, {@code asyncRunInTransaction()}</li>
+ *   <li><b>DAO Creation:</b> {@code createDao()}, {@code createCrudDao()}, {@code createReadOnlyDao()}</li>
+ * </ul>
+ *
+ * <p><b>Common Usage Patterns:</b>
  * <pre>{@code
- * // Simple query execution
- * Dataset result = JdbcUtil.executeQuery(dataSource, "SELECT * FROM users WHERE age > ?", 18);
- * 
- * // Using PreparedQuery
- * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")) {
- *     List<User> users = query.setLong(1, userId).list(User.class);
+ * // Basic query execution with automatic resource management
+ * DataSource dataSource = createHikariDataSource(config);
+ * List<User> users = JdbcUtil.executeQuery(dataSource,
+ *     "SELECT * FROM users WHERE department = ? AND active = ?",
+ *     User.class, "Engineering", true);
+ *
+ * // PreparedQuery for reusable statements
+ * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+ *         "SELECT * FROM orders WHERE customer_id = ? AND order_date > ?")) {
+ *
+ *     List<Order> recentOrders = query.setLong(1, customerId)
+ *         .setDate(2, lastWeek)
+ *         .list(Order.class);
+ *
+ *     // Reuse the same prepared statement
+ *     List<Order> allOrders = query.setLong(1, customerId)
+ *         .setDate(2, yearAgo)
+ *         .list(Order.class);
  * }
- * 
- * // Transaction management
- * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ *
+ * // Transaction management with automatic rollback
+ * SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource);
  * try {
- *     // perform database operations
- *     tran.commit();
+ *     JdbcUtil.executeUpdate(transaction.connection(),
+ *         "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+ *         amount, fromAccountId);
+ *
+ *     JdbcUtil.executeUpdate(transaction.connection(),
+ *         "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+ *         amount, toAccountId);
+ *
+ *     transaction.commit();
  * } finally {
- *     tran.rollbackIfNotCommitted();
+ *     transaction.rollbackIfNotCommitted();
+ * }
+ *
+ * // Stream processing for large result sets
+ * try (Stream<Product> productStream = JdbcUtil.stream(dataSource,
+ *         Product.class, "SELECT * FROM products WHERE category = ?", category)) {
+ *
+ *     Map<String, List<Product>> productsByBrand = productStream
+ *         .filter(p -> p.getPrice() > minPrice)
+ *         .collect(Collectors.groupingBy(Product::getBrand));
  * }
  * }</pre>
  *
+ * <p><b>Advanced Transaction Patterns:</b>
+ * <pre>{@code
+ * // Functional transaction management
+ * public class OrderService {
+ *     private final DataSource dataSource;
+ *
+ *     public Order processOrder(OrderRequest request) {
+ *         return JdbcUtil.runInTransaction(dataSource, () -> {
+ *             // Validate inventory
+ *             boolean available = JdbcUtil.exists(dataSource,
+ *                 "SELECT 1 FROM inventory WHERE product_id = ? AND quantity >= ?",
+ *                 request.getProductId(), request.getQuantity());
+ *
+ *             if (!available) {
+ *                 throw new InsufficientInventoryException();
+ *             }
+ *
+ *             // Create order
+ *             long orderId = JdbcUtil.insert(dataSource,
+ *                 "INSERT INTO orders (customer_id, product_id, quantity, order_date) VALUES (?, ?, ?, ?)",
+ *                 request.getCustomerId(), request.getProductId(),
+ *                 request.getQuantity(), Timestamp.valueOf(LocalDateTime.now()));
+ *
+ *             // Update inventory
+ *             JdbcUtil.executeUpdate(dataSource,
+ *                 "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
+ *                 request.getQuantity(), request.getProductId());
+ *
+ *             // Return created order
+ *             return JdbcUtil.queryForEntity(dataSource, Order.class,
+ *                 "SELECT * FROM orders WHERE id = ?", orderId);
+ *         });
+ *     }
+ *
+ *     // Asynchronous transaction processing
+ *     public ContinuableFuture<Void> processOrdersAsync(List<OrderRequest> requests) {
+ *         return JdbcUtil.asyncRunInTransaction(dataSource, () -> {
+ *             return JdbcUtil.prepareBatch(dataSource,
+ *                 "INSERT INTO orders (customer_id, product_id, quantity) VALUES (?, ?, ?)")
+ *                 .addBatchParameters(requests, (stmt, request) -> {
+ *                     stmt.setLong(1, request.getCustomerId());
+ *                     stmt.setLong(2, request.getProductId());
+ *                     stmt.setInt(3, request.getQuantity());
+ *                 })
+ *                 .executeBatch();
+ *         });
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p><b>Batch Processing and Performance Optimization:</b>
+ * <ul>
+ *   <li><b>Batch Size Optimization:</b> Default batch size of 200 with configurable limits for optimal performance</li>
+ *   <li><b>Statement Caching:</b> Automatic prepared statement caching to reduce compilation overhead</li>
+ *   <li><b>Fetch Size Control:</b> Configurable fetch sizes for large result sets (default: 1000)</li>
+ *   <li><b>Connection Pooling:</b> Integration with HikariCP, C3P0, and other enterprise connection pools</li>
+ *   <li><b>Bulk Operations:</b> Optimized bulk insert, update, and delete operations</li>
+ * </ul>
+ *
+ * <p><b>Database Vendor Support:</b>
+ * <ul>
+ *   <li><b>Universal JDBC:</b> Works with any JDBC-compliant database driver</li>
+ *   <li><b>Vendor Optimizations:</b> Specific optimizations for Oracle, PostgreSQL, MySQL, SQL Server</li>
+ *   <li><b>SQL Dialect Support:</b> Handles vendor-specific SQL syntax variations</li>
+ *   <li><b>Type Mapping:</b> Automatic Java-to-SQL type mapping with vendor-specific extensions</li>
+ *   <li><b>Pagination Support:</b> Database-specific pagination query generation</li>
+ * </ul>
+ *
+ * <p><b>Security and SQL Injection Prevention:</b>
+ * <ul>
+ *   <li><b>Parameterized Queries:</b> All query methods use prepared statements with parameter binding</li>
+ *   <li><b>Input Validation:</b> Automatic validation of SQL parameters to prevent injection attacks</li>
+ *   <li><b>Connection Security:</b> Secure connection handling with proper credential management</li>
+ *   <li><b>SQL Sanitization:</b> Built-in sanitization for dynamic SQL construction scenarios</li>
+ *   <li><b>Audit Logging:</b> Comprehensive logging for security audit and compliance requirements</li>
+ * </ul>
+ *
+ * <p><b>Error Handling and Exception Management:</b>
+ * <ul>
+ *   <li><b>UncheckedSQLException:</b> Runtime wrapper for SQLException to eliminate checked exception handling</li>
+ *   <li><b>Connection Failures:</b> Automatic retry logic for transient connection failures</li>
+ *   <li><b>Resource Cleanup:</b> Guaranteed resource cleanup even in exceptional circumstances</li>
+ *   <li><b>Detailed Error Messages:</b> Enhanced error messages with SQL context and parameter information</li>
+ *   <li><b>Exception Translation:</b> Framework-specific exception translation for Spring integration</li>
+ * </ul>
+ *
+ * <p><b>Performance Monitoring and Logging:</b>
+ * <ul>
+ *   <li><b>SQL Execution Logging:</b> Detailed logging of all SQL statements with execution times</li>
+ *   <li><b>Performance Metrics:</b> Built-in metrics collection for query performance analysis</li>
+ *   <li><b>Connection Pool Monitoring:</b> Statistics on connection usage and pool health</li>
+ *   <li><b>Slow Query Detection:</b> Automatic detection and logging of slow-performing queries</li>
+ *   <li><b>Debug Information:</b> Comprehensive debugging information for troubleshooting</li>
+ * </ul>
+ *
+ * <p><b>Framework Integration Support:</b>
+ * <ul>
+ *   <li><b>Spring Framework:</b> Seamless integration with Spring's transaction management and dependency injection</li>
+ *   <li><b>Spring Boot:</b> Auto-configuration support for Spring Boot applications</li>
+ *   <li><b>Hibernate Integration:</b> Compatible with Hibernate for mixed ORM/JDBC scenarios</li>
+ *   <li><b>JTA Support:</b> Integration with Java Transaction API for distributed transactions</li>
+ *   <li><b>CDI Compatible:</b> Works with Java EE/Jakarta EE dependency injection frameworks</li>
+ * </ul>
+ *
+ * <p><b>Data Access Object (DAO) Support:</b>
+ * <ul>
+ *   <li><b>DAO Creation:</b> Dynamic DAO implementation generation with automatic method mapping</li>
+ *   <li><b>CRUD Operations:</b> Built-in CRUD operations with type-safe entity handling</li>
+ *   <li><b>Custom Queries:</b> Support for custom query methods with annotation-based configuration</li>
+ *   <li><b>Caching Integration:</b> DAO-level caching with configurable cache strategies</li>
+ *   <li><b>Validation Support:</b> Automatic entity validation before database operations</li>
+ * </ul>
+ *
+ * <p><b>Type Safety and Object Mapping:</b>
+ * <ul>
+ *   <li><b>Automatic Mapping:</b> Automatic mapping between ResultSet and Java objects using reflection</li>
+ *   <li><b>Type Conversion:</b> Built-in type conversion for common database-to-Java type mappings</li>
+ *   <li><b>Generic Support:</b> Full generic type support for collections and complex objects</li>
+ *   <li><b>Custom Mappers:</b> Support for custom RowMapper implementations for complex mapping scenarios</li>
+ *   <li><b>Annotation Support:</b> JPA-style annotations for entity mapping configuration</li>
+ * </ul>
+ *
+ * <p><b>Best Practices and Recommendations:</b>
+ * <ul>
+ *   <li>Always use parameterized queries to prevent SQL injection attacks</li>
+ *   <li>Configure appropriate connection pool settings for your application load</li>
+ *   <li>Use transactions for operations that modify multiple tables or require consistency</li>
+ *   <li>Leverage batch operations for bulk data processing to improve performance</li>
+ *   <li>Monitor SQL execution times and optimize slow queries with proper indexing</li>
+ *   <li>Use streaming APIs for large result sets to avoid memory exhaustion</li>
+ *   <li>Configure appropriate timeouts for database operations in production environments</li>
+ *   <li>Implement proper error handling and retry logic for transient failures</li>
+ * </ul>
+ *
+ * <p><b>Common Anti-Patterns to Avoid:</b>
+ * <ul>
+ *   <li>Creating new connections for each database operation (use connection pooling)</li>
+ *   <li>String concatenation for SQL construction (use parameterized queries)</li>
+ *   <li>Ignoring transaction boundaries in multi-step operations</li>
+ *   <li>Not closing resources properly (use try-with-resources or JdbcUtil's automatic management)</li>
+ *   <li>Loading entire large result sets into memory (use streaming or pagination)</li>
+ *   <li>Not handling SQL exceptions appropriately in application logic</li>
+ *   <li>Using overly complex queries when simpler ones would suffice</li>
+ * </ul>
+ *
+ * <p><b>Performance Optimization Guidelines:</b>
+ * <ul>
+ *   <li><b>Index Optimization:</b> Ensure proper database indexing for frequently queried columns</li>
+ *   <li><b>Query Optimization:</b> Write efficient SQL queries avoiding unnecessary JOINs and subqueries</li>
+ *   <li><b>Batch Processing:</b> Use batch operations for bulk data modifications</li>
+ *   <li><b>Connection Pooling:</b> Configure connection pools with appropriate min/max connection limits</li>
+ *   <li><b>Statement Caching:</b> Leverage prepared statement caching for frequently executed queries</li>
+ *   <li><b>Fetch Size Tuning:</b> Adjust fetch sizes based on expected result set sizes</li>
+ * </ul>
+ *
+ * <p><b>Memory Management and Resource Optimization:</b>
+ * <ul>
+ *   <li><b>Connection Lifecycle:</b> Automatic connection acquisition and release</li>
+ *   <li><b>Statement Cleanup:</b> Proper cleanup of PreparedStatement and CallableStatement resources</li>
+ *   <li><b>ResultSet Management:</b> Automatic ResultSet closing and memory cleanup</li>
+ *   <li><b>Large Object Handling:</b> Efficient handling of BLOB and CLOB data types</li>
+ *   <li><b>Memory Monitoring:</b> Built-in monitoring for memory usage in large data operations</li>
+ * </ul>
+ *
+ * @see Connection
  * @see com.landawn.abacus.query.condition.ConditionFactory
  * @see com.landawn.abacus.query.condition.ConditionFactory.CF
  * @see com.landawn.abacus.annotation.ReadOnly
@@ -169,10 +435,20 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.annotation.Transient
  * @see com.landawn.abacus.annotation.Table
  * @see com.landawn.abacus.annotation.Column
+ * @see PreparedStatement
+ * @see ResultSet
+ * @see DataSource
+ * @see SQLTransaction
+ * @see PreparedQuery
+ * @see com.landawn.abacus.jdbc.dao.Dao
+ * @see com.landawn.abacus.jdbc.dao.CrudDao
+ * @see com.landawn.abacus.util.ContinuableFuture
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
+ * @see <a href="https://docs.oracle.com/javase/tutorial/jdbc/">JDBC Tutorial</a>
+ * @see <a href="https://github.com/brettwooldridge/HikariCP">HikariCP Connection Pool</a>
  */
 @SuppressWarnings({ "java:S1192", "java:S6539", "resource" })
 public final class JdbcUtil {

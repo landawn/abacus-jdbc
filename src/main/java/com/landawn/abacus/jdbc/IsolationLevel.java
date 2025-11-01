@@ -42,7 +42,6 @@ import java.sql.Connection;
  *
  * @see Connection#setTransactionIsolation(int)
  * @see <a href="http://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html">JDBC Transactions Tutorial</a>
- * @since 1.0
  */
 public enum IsolationLevel {
     /**

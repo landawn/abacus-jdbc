@@ -40,7 +40,6 @@ import com.landawn.abacus.annotation.Beta;
  * 
  * @deprecated Foreign key actions should be defined and implemented at the database server level,
  *             not in application code. Use proper database schema definitions instead.
- * @since 1.0
  */
 @Beta
 @Deprecated

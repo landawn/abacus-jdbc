@@ -67,7 +67,6 @@ import java.lang.annotation.Target;
  *
  * @see Handler
  * @see Transactional
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

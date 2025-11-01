@@ -77,7 +77,6 @@ import com.landawn.abacus.util.Strings;
  * }</pre>
  * 
  * @see DataSource
- * @since 1.0
  */
 public final class DBLock {
 

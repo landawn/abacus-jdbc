@@ -50,7 +50,6 @@ package com.landawn.abacus.jdbc;
  * }</pre>
  * 
  * @see com.landawn.abacus.jdbc.annotation.Transactional
- * @since 1.0
  */
 public enum Propagation {
 

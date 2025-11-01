@@ -69,7 +69,6 @@ import com.landawn.abacus.annotation.Beta;
  *
  * @see Bind
  * @see DefineList
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)

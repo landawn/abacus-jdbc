@@ -31,7 +31,6 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * 
  * @see Jdbc.Handler
  * @see Dao
- * @since 1.0
  */
 @Internal
 @SuppressWarnings("rawtypes")

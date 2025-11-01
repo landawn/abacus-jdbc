@@ -33,7 +33,6 @@ package com.landawn.abacus.jdbc;
  * @param version The parsed {@link DBVersion} enum representing the database type and major version
  * 
  * @see DBVersion
- * @since 1.0
  */
 public record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR
 

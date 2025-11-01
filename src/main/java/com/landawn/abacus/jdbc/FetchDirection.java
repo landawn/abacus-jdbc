@@ -42,7 +42,6 @@ import java.sql.ResultSet;
  * 
  * @see ResultSet#setFetchDirection(int)
  * @see ResultSet#getFetchDirection()
- * @since 1.0
  */
 public enum FetchDirection {
 

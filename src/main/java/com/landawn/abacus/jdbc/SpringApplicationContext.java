@@ -29,7 +29,6 @@ import org.springframework.context.ApplicationContext;
  * <p>Note: This class is intended for internal use only and requires Spring Framework to be present in the classpath.</p>
  * 
  * @author Haiyang Li
- * @since 2.0
  */
 final class SpringApplicationContext {
 

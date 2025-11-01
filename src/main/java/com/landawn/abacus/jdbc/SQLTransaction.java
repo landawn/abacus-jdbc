@@ -51,7 +51,6 @@ import com.landawn.abacus.util.Throwables;
  * }</pre>
  * 
  * @author Haiyang Li
- * @since 1.0
  * 
  * @see Transaction
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource)

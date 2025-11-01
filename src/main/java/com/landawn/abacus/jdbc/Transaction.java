@@ -37,7 +37,6 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *
  * @see IsolationLevel
  * @see Status
- * @since 0.8
  */
 public interface Transaction {
 
@@ -214,7 +213,6 @@ public interface Transaction {
      *        → FAILED_ROLLBACK (on rollback failure)
      * </pre>
      *
-     * @since 0.8
      */
     enum Status {
         /**
@@ -276,7 +274,6 @@ public interface Transaction {
      * transactionManager.completeTransaction(transaction, action);
      * }</pre>
      *
-     * @since 0.8
      */
     enum Action {
         /**

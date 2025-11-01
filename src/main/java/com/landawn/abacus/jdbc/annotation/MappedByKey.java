@@ -69,7 +69,6 @@ import java.util.Map;
  * </ul>
  *
  * @see MergedById
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

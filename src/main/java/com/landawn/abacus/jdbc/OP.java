@@ -32,7 +32,6 @@ package com.landawn.abacus.jdbc;
  * }</pre>
  * 
  * @see AbstractQuery
- * @since 1.0
  */
 public enum OP {
     /**
@@ -62,7 +61,6 @@ public enum OP {
      * @Query(value = "SELECT * FROM users WHERE id = ?", op = OP.findOnlyOne)
      * User getUserById(long id);
      * }</pre>
-     *
      */
     findOnlyOne,
 
@@ -158,7 +156,6 @@ public enum OP {
      * @Query(value = "SELECT email FROM users WHERE username = ?", op = OP.queryForUnique)
      * String findEmailByUsername(String username);
      * }</pre>
-     *
      */
     queryForUnique,
 

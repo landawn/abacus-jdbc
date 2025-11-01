@@ -70,7 +70,6 @@ import java.util.Collection;
  *
  * @see Define
  * @see BindList
- * @since 0.8
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })

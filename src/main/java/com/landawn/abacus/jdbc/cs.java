@@ -37,7 +37,6 @@ package com.landawn.abacus.jdbc;
  * query.setParameter(cs.entity, userEntity);
  * }</pre>
  * 
- * @since 1.0
  */
 public final class cs { // NOSONAR
     /**
