@@ -42,7 +42,6 @@ import java.lang.annotation.Target;
  * }
  * }</pre>
  * 
- * @author Haiyang Li
  * @see java.lang.annotation.Retention
  * @see java.lang.annotation.Target
  */

@@ -50,7 +50,6 @@ import com.landawn.abacus.util.Throwables;
  * } // Auto-rollback if not committed
  * }</pre>
  * 
- * @author Haiyang Li
  * 
  * @see Transaction
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource)

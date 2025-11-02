@@ -74,7 +74,6 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *                                               "employees", "projects");
  * }</pre>
  * 
- * @author Haiyang Li
  */
 @Internal
 @SuppressWarnings({ "java:S1192", "resource" })

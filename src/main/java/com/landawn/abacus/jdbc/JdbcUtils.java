@@ -292,15 +292,6 @@ import com.landawn.abacus.util.WD;
  *   <li><b>Memory Monitoring:</b> Built-in memory usage tracking and optimization suggestions</li>
  * </ul>
  *
- * <p><b>Database Vendor Compatibility:</b>
- * <ul>
- *   <li><b>Universal JDBC Support:</b> Works with any JDBC-compliant database</li>
- *   <li><b>Vendor Optimizations:</b> Database-specific optimizations for Oracle, PostgreSQL, MySQL, SQL Server</li>
- *   <li><b>SQL Dialect Awareness:</b> Handles vendor-specific SQL syntax variations</li>
- *   <li><b>Type System Integration:</b> Native support for database-specific data types</li>
- *   <li><b>Performance Tuning:</b> Database-specific performance optimizations</li>
- * </ul>
- *
  * <p><b>Integration with Enterprise Frameworks:</b>
  * <ul>
  *   <li><b>Spring Framework:</b> Seamless integration with Spring's transaction management</li>

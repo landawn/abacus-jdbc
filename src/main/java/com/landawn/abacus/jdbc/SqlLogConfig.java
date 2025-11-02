@@ -25,7 +25,6 @@ package com.landawn.abacus.jdbc;
  *   <li>Performance logging - logs only SQL statements that exceed a specified execution time threshold</li>
  * </ul>
  * 
- * @author Haiyang Li
  * 
  * @see JdbcUtil#enableSqlLog()
  * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long) 
