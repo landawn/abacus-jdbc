@@ -71,8 +71,9 @@ import java.lang.annotation.Target;
  *     // getters/setters
  * }
  * }</pre>
- * 
+ *
  */
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })
 public @interface PrefixFieldMapping {

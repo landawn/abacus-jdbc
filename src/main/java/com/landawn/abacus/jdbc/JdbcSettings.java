@@ -15,9 +15,39 @@
  */
 package com.landawn.abacus.jdbc;
 
-//Archive for history. Replaced b PreparedQuery and Dao.
+/**
+ * Archive class containing historical JDBC configuration settings.
+ *
+ * <p>This class has been deprecated and replaced by {@link PreparedQuery} and DAO interfaces.
+ * It is retained for historical reference only and should not be used in new code.</p>
+ *
+ * <p>The commented code in this class represents configuration options that were previously
+ * available for JDBC operations, including:</p>
+ * <ul>
+ *   <li>SQL logging configuration</li>
+ *   <li>Batch processing settings</li>
+ *   <li>Transaction isolation levels</li>
+ *   <li>ResultSet configuration (type, concurrency, holdability)</li>
+ *   <li>Statement settings (fetch size, fetch direction, query timeout)</li>
+ *   <li>Auto-generated key handling</li>
+ * </ul>
+ *
+ * <p>For current configuration options, refer to:</p>
+ * <ul>
+ *   <li>{@link PreparedQuery} - for query-specific configuration</li>
+ *   <li>DAO interfaces - for data access object implementations</li>
+ *   <li>{@link JdbcUtil} - for global JDBC utility settings</li>
+ * </ul>
+ *
+ * @deprecated This class is archived and no longer used. Use {@link PreparedQuery} and DAO interfaces instead.
+ */
+@Deprecated
 final class JdbcSettings {
 
+    /**
+     * Private constructor to prevent instantiation.
+     * This class is retained for historical reference only.
+     */
     private JdbcSettings() {
         // no use.
     }

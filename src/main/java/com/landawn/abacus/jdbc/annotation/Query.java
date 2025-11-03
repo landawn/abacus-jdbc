@@ -570,7 +570,7 @@ public @interface Query {
      * // Finding currently active records
      * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", defineIncludesNamedParams = true)
      * List<Promotion> findActivePromotions(@Define("{whereCause}") String whereCause);
-     * findsActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
+     * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
      *
      * @return {@code true} if template variables defined by {@link Define} or {@link DefineList} will be replaced with query fragments

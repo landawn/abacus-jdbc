@@ -77,10 +77,22 @@ final class ResultSetProxy implements ResultSet {
     private Map<String, Throwables.Function<ResultSet, Object, SQLException>> columnGettersByLabel;
     private final ResultSet delegate;
 
+    /**
+     * Constructs a new ResultSetProxy wrapping the specified ResultSet.
+     *
+     * @param delegate the ResultSet to be wrapped
+     */
     ResultSetProxy(ResultSet delegate) {
         this.delegate = delegate;
     }
 
+    /**
+     * Creates a ResultSetProxy wrapper for the specified ResultSet.
+     * Returns null if the input ResultSet is null.
+     *
+     * @param rs the ResultSet to wrap
+     * @return a new ResultSetProxy wrapping the ResultSet, or null if rs is null
+     */
     static ResultSetProxy wrap(ResultSet rs) {
         return (rs == null) ? null : new ResultSetProxy(rs);
     }
@@ -294,6 +306,20 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getMetaData();
     }
 
+    /**
+     * Retrieves the value of the designated column in the current row as an Object.
+     *
+     * <p>This method provides optimized retrieval with intelligent type handling:</p>
+     * <ul>
+     *   <li>Caches the appropriate getter strategy for each column on first access</li>
+     *   <li>Automatically converts Oracle-specific types (oracle.sql.TIMESTAMP, oracle.sql.DATE) to standard Java SQL types</li>
+     *   <li>Disambiguates between DATE and TIMESTAMP types using metadata when necessary</li>
+     * </ul>
+     *
+     * @param columnIndex the first column is 1, the second is 2, ...
+     * @return the column value; if the value is SQL NULL, the value returned is null
+     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     */
     @Override
     public Object getObject(int columnIndex) throws SQLException {
         ResultSetMetaData metadata = null;
@@ -356,6 +382,20 @@ final class ResultSetProxy implements ResultSet {
         }
     }
 
+    /**
+     * Retrieves the value of the designated column in the current row as an Object.
+     *
+     * <p>This method provides optimized retrieval with intelligent type handling:</p>
+     * <ul>
+     *   <li>Caches the appropriate getter strategy for each column label on first access</li>
+     *   <li>Automatically converts Oracle-specific types (oracle.sql.TIMESTAMP, oracle.sql.DATE) to standard Java SQL types</li>
+     *   <li>Disambiguates between DATE and TIMESTAMP types using metadata when necessary</li>
+     * </ul>
+     *
+     * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
+     * @return the column value; if the value is SQL NULL, the value returned is null
+     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     */
     @Override
     public Object getObject(String columnLabel) throws SQLException {
         ResultSetMetaData metadata = null;

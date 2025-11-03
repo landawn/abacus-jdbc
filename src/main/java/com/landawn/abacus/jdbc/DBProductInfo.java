@@ -18,20 +18,35 @@ package com.landawn.abacus.jdbc;
 /**
  * A record that encapsulates database product information including the product name,
  * version string, and parsed version enum.
- * 
+ *
  * <p>This record is typically used to store metadata about the underlying database system
- * retrieved from JDBC connection metadata.</p>
- * 
- * <p>Usage example:
+ * retrieved from JDBC connection metadata. It provides a convenient way to access both
+ * the raw version information and the parsed enum value for database-specific logic.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * DBProductInfo dbInfo = new DBProductInfo("MySQL", "8.0.33", DBVersion.MYSQL_8);
- * String name = dbInfo.productName(); // "MySQL"
+ * // Create from JDBC metadata
+ * Connection conn = dataSource.getConnection();
+ * DatabaseMetaData metaData = conn.getMetaData();
+ * String productName = metaData.getDatabaseProductName();
+ * String productVersion = metaData.getDatabaseProductVersion();
+ * DBVersion version = parseVersion(productName, productVersion);
+ * DBProductInfo dbInfo = new DBProductInfo(productName, productVersion, version);
+ *
+ * // Access product information
+ * System.out.println("Database: " + dbInfo.productName()); // "MySQL"
+ * System.out.println("Version: " + dbInfo.productVersion()); // "8.0.33"
+ *
+ * // Use parsed version for logic
+ * if (dbInfo.version().isMySQL()) {
+ *     // MySQL-specific operations
+ * }
  * }</pre>
- * 
- * @param productName The name of the database product (e.g., "MySQL", "PostgreSQL", "Oracle")
- * @param productVersion The version string of the database product (e.g., "8.0.33", "15.3")
- * @param version The parsed {@link DBVersion} enum representing the database type and major version
- * 
+ *
+ * @param productName the name of the database product (e.g., "MySQL", "PostgreSQL", "Oracle"), must not be {@code null}
+ * @param productVersion the version string of the database product (e.g., "8.0.33", "15.3"), must not be {@code null}
+ * @param version the parsed {@link DBVersion} enum representing the database type and major version, must not be {@code null}
+ *
  * @see DBVersion
  */
 public record DBProductInfo(String productName, String productVersion, DBVersion version) { // NOSONAR

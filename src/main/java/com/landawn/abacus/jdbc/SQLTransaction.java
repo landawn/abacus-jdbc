@@ -30,7 +30,6 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 
-// TODO: Auto-generated Javadoc
 /**
  * Represents a SQL transaction that manages database transaction lifecycle and connection state.
  * This class provides transaction management capabilities including commit, rollback, and automatic
@@ -250,9 +249,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Commits the current transaction and executes the specified action after the commit.
+     * This is an internal method used for executing post-commit callbacks.
      *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully
      * @throws UncheckedSQLException if an SQL error occurs during the commit
+     * @throws IllegalArgumentException if the transaction is not in a valid state for committing
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
@@ -331,9 +332,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Rolls back the current transaction and executes the specified action after the rollback.
+     * This is an internal method used for executing post-rollback callbacks.
      *
      * @param actionAfterRollback the action to be executed after the current transaction is rolled back
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
+     * @throws IllegalStateException if the transaction is not in a valid state for rollback
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
@@ -414,10 +417,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Executes the rollback operation.
+     * Executes the rollback operation and runs the specified action after completion.
+     * This is an internal method that performs the actual database rollback operation.
      *
      * @param actionAfterRollback the action to be executed after rollback
-     * @throws UncheckedSQLException if an SQL error occurs
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback
      */
     private void executeRollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         logger.warn("Rolling back transaction(id={})", _timedId);
@@ -463,12 +467,14 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Increments the reference count and updates transaction settings.
-     * Used for nested transaction support.
+     * This method is used internally to support nested transaction operations by maintaining
+     * a reference count and stacking isolation levels.
      *
      * @param isolationLevel the isolation level for the nested transaction
-     * @param forUpdateOnly whether this is a read-only transaction for updates
-     * @return the new reference count
-     * @throws UncheckedSQLException if the transaction is not active
+     * @param forUpdateOnly whether this transaction level is for update operations only
+     * @return the new reference count after incrementing
+     * @throws IllegalStateException if the transaction is not active
+     * @throws UncheckedSQLException if a database error occurs while setting the isolation level
      */
     synchronized int incrementAndGetRef(final IsolationLevel isolationLevel, final boolean forUpdateOnly) {
         if (_status != Status.ACTIVE) {
@@ -502,10 +508,12 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Decrements the reference count and manages transaction cleanup.
-     * Used for nested transaction support.
+     * This method is used internally to support nested transaction operations. When the reference
+     * count reaches zero, the transaction is removed from the thread-local map. For counts greater
+     * than zero, the previous isolation level is restored from the stack.
      *
-     * @return the new reference count
-     * @throws UncheckedSQLException if an error occurs
+     * @return the new reference count after decrementing
+     * @throws UncheckedSQLException if a database error occurs while restoring the isolation level
      */
     synchronized int decrementAndGetRef() throws UncheckedSQLException {
         final int res = _refCount.decrementAndGet();
@@ -553,21 +561,24 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Generates a unique transaction ID for the given data source and creator.
+     * The ID is composed of the data source's identity hash code, current thread ID,
+     * thread name, and creator ordinal value.
      *
      * @param ds the data source
      * @param creator the transaction creator type
-     * @return a unique transaction identifier
+     * @return a unique transaction identifier string, never {@code null}
      */
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
         return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", Thread.currentThread().getName(), "_", creator.ordinal());
     }
 
     /**
-     * Retrieves the active transaction for the given data source and creator.
+     * Retrieves the active transaction for the given data source and creator from the thread-local map.
+     * This method is used internally to check if a transaction already exists for the current thread.
      *
      * @param ds the data source
      * @param creator the transaction creator type
-     * @return the active transaction, or null if none exists
+     * @return the active transaction for this thread, or {@code null} if none exists
      */
     static SQLTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) {
         return threadTransactionMap.get(getTransactionId(ds, creator));
@@ -575,9 +586,10 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Registers a transaction in the thread-local transaction map.
+     * This method is used internally to track active transactions for the current thread.
      *
      * @param tran the transaction to register
-     * @return the previously registered transaction, or null
+     * @return the previously registered transaction for this thread and data source, or {@code null} if none existed
      */
     static SQLTransaction putTransaction(final SQLTransaction tran) {
         return threadTransactionMap.put(tran._id, tran);

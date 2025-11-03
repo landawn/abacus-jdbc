@@ -49,8 +49,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  * 
  * // Usage:
- * Report report = reportDao.findById(123L); // Works
- * List<Report> reports = reportDao.list(); // Works
+ * Report report = reportDao.gett(123L); // Works (returns null if not found)
+ * List<Report> reports = reportDao.list(CF.alwaysTrue()); // Works
  * reportDao.insert(new Report()); // Throws UnsupportedOperationException
  * reportDao.update(report); // Throws UnsupportedOperationException
  * reportDao.deleteById(123L); // Throws UnsupportedOperationException

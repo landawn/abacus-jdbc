@@ -21,29 +21,47 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation used to customize the mapping between a Java field and its corresponding SQL column.
- * This annotation can be applied to fields in entity classes to specify custom column names
- * or other SQL-related metadata that differs from the default field name.
- * 
- * <p>The annotation is retained at runtime, allowing JDBC frameworks and ORM tools to inspect
- * it via reflection and apply the custom mapping during SQL query generation and result set mapping.</p>
- * 
- * <p><b>Usage Example:</b></p>
+ * Customizes the mapping between entity fields and database columns.
+ * This annotation can be applied to fields in entity classes to explicitly specify
+ * the corresponding database column name, especially when field naming conventions
+ * differ from database column naming conventions.
+ *
+ * <p>When not specified or when the id is empty, the field name itself is used
+ * as the column name. This annotation is particularly useful when:</p>
+ * <ul>
+ *   <li>Database uses different naming conventions (e.g., snake_case vs camelCase)</li>
+ *   <li>Column names are reserved keywords or have special characters</li>
+ *   <li>Legacy databases with non-standard naming</li>
+ *   <li>Mapping to views or complex queries with aliased columns</li>
+ * </ul>
+ *
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
+ * // Entity class with custom column mappings
  * public class User {
  *     @SqlField(id = "user_id")
  *     private Long id;
- *     
+ *
  *     @SqlField(id = "full_name")
  *     private String name;
- *     
+ *
  *     @SqlField  // Uses field name "email" as column name
  *     private String email;
+ *
+ *     private String status;  // Without annotation, uses field name as column
+ * }
+ *
+ * // DAO usage - framework handles mapping automatically
+ * public interface UserDao extends CrudDao<User, Long> {
+ *     // Automatically maps user_id→id, full_name→name, email→email
+ *     @Query("SELECT user_id, full_name, email, status FROM users WHERE user_id = :id")
+ *     User findById(@Bind("id") Long id);
+ *
+ *     // Insert also uses the mappings
+ *     @Query("INSERT INTO users (user_id, full_name, email) VALUES (:id, :name, :email)")
+ *     int insertUser(User user);
  * }
  * }</pre>
- * 
- * @see java.lang.annotation.Retention
- * @see java.lang.annotation.Target
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)

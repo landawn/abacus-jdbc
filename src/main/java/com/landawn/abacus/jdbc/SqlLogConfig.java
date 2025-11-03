@@ -18,16 +18,24 @@ package com.landawn.abacus.jdbc;
 /**
  * Configuration class for SQL logging behavior in the JDBC framework.
  * This class manages settings for SQL statement logging and performance logging thresholds.
- * 
+ *
  * <p>The configuration supports two modes:</p>
  * <ul>
  *   <li>General SQL logging - logs all SQL statements when enabled</li>
  *   <li>Performance logging - logs only SQL statements that exceed a specified execution time threshold</li>
  * </ul>
- * 
- * 
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * // Enable general SQL logging
+ * SqlLogConfig config1 = new SqlLogConfig(true, 1000);
+ *
+ * // Enable performance logging for queries taking more than 500ms
+ * SqlLogConfig config2 = new SqlLogConfig(500L, 1000);
+ * }</pre>
+ *
  * @see JdbcUtil#enableSqlLog()
- * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long) 
+ * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long)
  */
 final class SqlLogConfig {
     boolean isEnabled;

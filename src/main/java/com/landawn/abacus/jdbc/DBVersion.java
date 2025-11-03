@@ -20,16 +20,19 @@ import com.landawn.abacus.util.Strings;
 
 /**
  * Enumeration representing various database products and their major versions.
- * 
+ *
  * <p>This enum provides a standardized way to identify different database systems
  * and their versions, which is useful for handling database-specific SQL syntax,
- * features, and optimizations.</p>
- * 
+ * features, and optimizations. The enum helps in writing database-portable code
+ * while allowing version-specific behavior when necessary.</p>
+ *
  * <p>The enum includes entries for popular databases like MySQL, PostgreSQL, Oracle,
- * and others, with specific version distinctions where behavior differences are significant.</p>
- * 
- * <p>Usage example:
+ * SQL Server, DB2, and others, with specific version distinctions where behavior
+ * differences are significant.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
+ * // Detect database version and use appropriate syntax
  * DBVersion version = DBVersion.MySQL_8;
  * if (version.isMySQL()) {
  *     // Use MySQL-specific syntax
@@ -38,8 +41,17 @@ import com.landawn.abacus.util.Strings;
  *     // Use PostgreSQL-specific syntax
  *     query = "SELECT * FROM users LIMIT 10";
  * }
+ *
+ * // Handle version-specific features
+ * if (version == DBVersion.MySQL_8) {
+ *     // Use MySQL 8.x window functions
+ *     query = "SELECT *, ROW_NUMBER() OVER (ORDER BY id) as row_num FROM users";
+ * } else if (version == DBVersion.MySQL_5_7) {
+ *     // Fall back to MySQL 5.7 compatible syntax
+ *     query = "SELECT @row_num := @row_num + 1 as row_num, t.* FROM users t, (SELECT @row_num := 0) r";
+ * }
  * }</pre>
- * 
+ *
  * @see DBProductInfo
  */
 public enum DBVersion {

@@ -56,24 +56,47 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * Manages join relationships between entities in JDBC operations.
  * This class handles both one-to-many and many-to-many join configurations,
  * generating appropriate SQL statements and managing parameter bindings for join operations.
- * 
+ *
  * <p>The class supports joining entities through {@code @JoinedBy} annotations and provides
- * methods to retrieve joined entities and update join relationships.</p>
- * 
+ * methods to retrieve joined entities and update join relationships. It automatically generates
+ * optimized SQL queries for both single and batch join operations.</p>
+ *
+ * <p><b>Supported Join Types:</b></p>
+ * <ul>
+ *   <li><b>One-to-Many:</b> Direct foreign key relationship between entities</li>
+ *   <li><b>Many-to-Many:</b> Relationship through an intermediate join table</li>
+ * </ul>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Entity with join annotation
+ * // Entity with one-to-many join annotation
  * @Table("employees")
  * public class Employee {
+ *     @Id
+ *     private Long employeeId;
+ *
  *     @JoinedBy("employeeId")
  *     private List<Project> projects;
  * }
- * 
- * // Get join info for an entity
- * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class, 
+ *
+ * // Entity with many-to-many join annotation
+ * @Table("employees")
+ * public class Employee {
+ *     @Id
+ *     private Long employeeId;
+ *
+ *     @JoinedBy("employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")
+ *     private List<Project> projects;
+ * }
+ *
+ * // Get join info and load related entities
+ * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
  *                                               "employees", "projects");
+ * List<Employee> employees = employeeDao.list();
+ * List<Project> projects = projectDao.list();
+ * joinInfo.setJoinPropEntities(employees, projects);
  * }</pre>
- * 
+ *
  */
 @Internal
 @SuppressWarnings({ "java:S1192", "resource" })
@@ -576,10 +599,21 @@ public final class JoinInfo {
      * Retrieves the SQL builder and parameter setter for single entity select operations.
      * This method is used for building SQL SELECT statements with join conditions for a single entity.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>
+     *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
+     *
+     * // Build SQL with specific columns
+     * String sql = builder._1.apply(Arrays.asList("id", "name", "description"));
+     * }</pre>
+     *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing a function to build SQL and a parameter setter for prepared statements
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * 
+     *
      * @see SQLBuilder.PSC
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
@@ -599,10 +633,22 @@ public final class JoinInfo {
      * Retrieves the SQL builder and parameter setter for batch select operations.
      * This method is used for building SQL SELECT statements with join conditions for multiple entities.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>
+     *     batchBuilder = joinInfo.getBatchSelectSQLBuilderAndParamSetter(PSC.class);
+     *
+     * // Build SQL for batch of entities
+     * List<Employee> employees = getEmployees();
+     * String sql = batchBuilder._1.apply(Arrays.asList("id", "name"), employees.size());
+     * }</pre>
+     *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing a function to build SQL and a parameter setter for batch operations
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * 
+     *
      * @see SQLBuilder.PSC
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
@@ -633,10 +679,22 @@ public final class JoinInfo {
      * Retrieves the SQL and parameter setter for delete operations.
      * This method returns SQL statements for deleting joined entities and optionally the join table entries.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple3<String, String, BiParametersSetter<PreparedStatement, Object>>
+     *     deleteSql = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
+     *
+     * String deleteSql = deleteSql._1;  // Main delete SQL
+     * String middleTableDeleteSql = deleteSql._2;  // Join table delete SQL (if many-to-many)
+     * BiParametersSetter<PreparedStatement, Object> paramSetter = deleteSql._3;
+     * }</pre>
+     *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL, optional middle table delete SQL, and parameter setter
+     * @return a tuple containing the delete SQL, optional middle table delete SQL (null if not many-to-many), and parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * 
+     *
      * @see SQLBuilder.PSC
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
@@ -655,10 +713,23 @@ public final class JoinInfo {
      * Retrieves the SQL builder and parameter setter for batch delete operations.
      * This method is used for building SQL DELETE statements for multiple joined entities.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>>
+     *     batchDelete = joinInfo.getBatchDeleteSQLBuilderAndParamSetter(PSC.class);
+     *
+     * List<Employee> employees = getEmployeesToDelete();
+     * String deleteSql = batchDelete._1.apply(employees.size());  // Main delete SQL
+     * String middleTableDeleteSql = batchDelete._2 != null ? batchDelete._2.apply(employees.size()) : null;
+     * BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDelete._3;
+     * }</pre>
+     *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing SQL builders for delete operations and a parameter setter
+     * @return a tuple containing SQL builders for delete operations (main and optional middle table) and a parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
-     * 
+     *
      * @see SQLBuilder.PSC
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
@@ -679,13 +750,28 @@ public final class JoinInfo {
      * Sets join property entities for a collection of source entities.
      * This method populates the join properties of the source entities with the provided joined entities
      * based on the join key relationships.
-     * 
+     *
      * <p>For one-to-one or one-to-many joins, the method groups the joined entities by their keys
      * and assigns them to the corresponding source entities.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Load employees
+     * List<Employee> employees = employeeDao.list();
+     *
+     * // Load projects
+     * List<Project> projects = projectDao.list();
+     *
+     * // Get join info and populate relationships
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * joinInfo.setJoinPropEntities(employees, projects);
+     * // Now each employee has their projects populated
+     * }</pre>
+     *
      * @param entities the source entities to populate with joined entities
      * @param joinPropEntities the joined entities to be set on the source entities
-     * 
+     *
      * @see #setJoinPropEntities(Collection, Map)
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities) {
@@ -696,9 +782,26 @@ public final class JoinInfo {
     /**
      * Sets join property entities for a collection of source entities using pre-grouped entities.
      * This method populates the join properties of the source entities with the provided grouped entities.
-     * 
+     *
      * <p>The method handles both collection properties (List, Set, etc.) and single entity properties,
      * automatically adapting the assignment based on the property type.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Load employees
+     * List<Employee> employees = employeeDao.list();
+     *
+     * // Load and group projects by employee ID
+     * List<Project> projects = projectDao.list();
+     * Map<Object, List<Object>> projectsByEmployeeId = projects.stream()
+     *     .collect(Collectors.groupingBy(p -> p.getEmployeeId(),
+     *                                     Collectors.toList()));
+     *
+     * // Get join info and populate relationships with pre-grouped data
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     * joinInfo.setJoinPropEntities(employees, projectsByEmployeeId);
+     * }</pre>
      *
      * @param entities the source entities to populate with joined entities
      * @param groupedPropEntities a map of grouped entities keyed by their join keys
@@ -733,6 +836,20 @@ public final class JoinInfo {
      * Checks if this join relationship is a many-to-many join.
      * A many-to-many join involves an intermediate join table connecting two entities.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
+     *                                               "employees", "projects");
+     *
+     * if (joinInfo.isManyToManyJoin()) {
+     *     // Handle many-to-many relationship with join table
+     *     System.out.println("This is a many-to-many relationship");
+     * } else {
+     *     // Handle one-to-many or one-to-one relationship
+     *     System.out.println("This is a direct relationship");
+     * }
+     * }</pre>
+     *
      * @return {@code true} if this is a many-to-many join, {@code false} otherwise
      */
     public boolean isManyToManyJoin() {
@@ -757,11 +874,37 @@ public final class JoinInfo {
      * This method returns a map of property names to their corresponding JoinInfo objects
      * for all properties annotated with {@code @JoinedBy} in the entity class.
      *
-     * @param daoClass the DAO class associated with the entity
-     * @param entityClass the entity class to inspect for join properties
-     * @param tableName the database table name for the entity
-     * @return a map of property names to JoinInfo objects
-     * 
+     * <p>The result is cached for performance, so subsequent calls with the same parameters
+     * will return the cached map without re-parsing the entity class.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get all join info for Employee entity
+     * Map<String, JoinInfo> joinInfoMap = JoinInfo.getEntityJoinInfo(
+     *     EmployeeDao.class,
+     *     Employee.class,
+     *     "employees"
+     * );
+     *
+     * // Iterate through all join properties
+     * for (Map.Entry<String, JoinInfo> entry : joinInfoMap.entrySet()) {
+     *     String propName = entry.getKey();
+     *     JoinInfo joinInfo = entry.getValue();
+     *     System.out.println("Join property: " + propName);
+     *
+     *     if (joinInfo.isManyToManyJoin()) {
+     *         System.out.println("  - Many-to-many relationship");
+     *     } else {
+     *         System.out.println("  - One-to-many relationship");
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param daoClass the DAO class associated with the entity, must not be {@code null}
+     * @param entityClass the entity class to inspect for join properties, must not be {@code null}
+     * @param tableName the database table name for the entity, must not be {@code null}
+     * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist
+     *
      * @see JoinedBy
      * @see Config
      */
@@ -798,14 +941,43 @@ public final class JoinInfo {
      * Retrieves join information for a specific property in an entity.
      * This method returns the JoinInfo for a single property annotated with {@code @JoinedBy}.
      *
-     * @param daoClass the DAO class associated with the entity
-     * @param entityClass the entity class containing the join property
-     * @param tableName the database table name for the entity
-     * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation
-     * @return the JoinInfo for the specified property
+     * <p>This is a convenience method that calls {@link #getEntityJoinInfo(Class, Class, String)}
+     * and retrieves the specific property from the result.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get join info for the 'projects' property
+     * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(
+     *     EmployeeDao.class,
+     *     Employee.class,
+     *     "employees",
+     *     "projects"
+     * );
+     *
+     * // Use the join info to load related entities for a single employee
+     * Employee employee = employeeDao.findById(123);
+     * Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>
+     *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
+     * String sql = builder._1.apply(null); // Use default columns
+     * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
+     *                                   .setParameters(builder._2, employee)
+     *                                   .list(Project.class);
+     *
+     * // Or use batch loading for multiple employees
+     * List<Employee> employees = employeeDao.list();
+     * List<Project> allProjects = projectDao.list();
+     * joinInfo.setJoinPropEntities(employees, allProjects);
+     * }</pre>
+     *
+     * @param daoClass the DAO class associated with the entity, must not be {@code null}
+     * @param entityClass the entity class containing the join property, must not be {@code null}
+     * @param tableName the database table name for the entity, must not be {@code null}
+     * @param joinEntityPropName the name of the property with the {@code @JoinedBy} annotation, must not be {@code null}
+     * @return the JoinInfo for the specified property, never {@code null}
      * @throws IllegalArgumentException if no join property is found with the given name
-     * 
+     *
      * @see JoinedBy
+     * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
         final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass, tableName).get(joinEntityPropName);
@@ -825,13 +997,47 @@ public final class JoinInfo {
      * This method finds all properties annotated with {@code @JoinedBy} that reference
      * the specified entity class.
      *
-     * @param daoClass the DAO class associated with the entity
-     * @param entityClass the entity class to search for join properties
-     * @param tableName the database table name for the entity
-     * @param joinPropEntityClass the class of the joined entity to search for
-     * @return a list of property names that join to the specified entity class, or empty list if none found
-     * 
+     * <p>This is useful when you need to discover all relationships between two entity types,
+     * especially when there might be multiple join properties pointing to the same entity class.</p>
+     *
+     * <p>The result is cached for performance, so subsequent calls with the same parameters
+     * will return the cached list.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Find all properties in Employee that join to Project
+     * List<String> projectJoinProps = JoinInfo.getJoinEntityPropNamesByType(
+     *     EmployeeDao.class,
+     *     Employee.class,
+     *     "employees",
+     *     Project.class
+     * );
+     *
+     * // Result might be: ["projects", "archivedProjects"]
+     * for (String propName : projectJoinProps) {
+     *     System.out.println("Found join property: " + propName);
+     *
+     *     // Load each join property separately
+     *     JoinInfo joinInfo = JoinInfo.getPropJoinInfo(
+     *         EmployeeDao.class, Employee.class, "employees", propName);
+     *     // ... use joinInfo
+     * }
+     *
+     * // Check if entity has any joins to a specific type
+     * if (!projectJoinProps.isEmpty()) {
+     *     System.out.println("Employee has " + projectJoinProps.size() +
+     *                        " relationship(s) with Project");
+     * }
+     * }</pre>
+     *
+     * @param daoClass the DAO class associated with the entity, must not be {@code null}
+     * @param entityClass the entity class to search for join properties, must not be {@code null}
+     * @param tableName the database table name for the entity, must not be {@code null}
+     * @param joinPropEntityClass the class of the joined entity to search for, must not be {@code null}
+     * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found
+     *
      * @see JoinedBy
+     * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {

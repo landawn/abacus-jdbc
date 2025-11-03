@@ -131,12 +131,21 @@ public final class DBLock {
 
     /**
      * Constructs a new DBLock instance with the specified data source and table name.
-     * Creates the lock table if it doesn't exist and removes any dead locks from previous
-     * application instances.
-     * 
-     * @param ds The data source to use for database connections
-     * @param tableName The name of the table to use for storing locks
-     * @throws UncheckedSQLException if database operations fail
+     *
+     * <p>This constructor performs the following operations:</p>
+     * <ul>
+     *   <li>Creates the lock table if it doesn't exist with the required schema</li>
+     *   <li>Removes any dead locks from previous application instances running on the same host</li>
+     *   <li>Starts a background thread to periodically refresh active locks</li>
+     * </ul>
+     *
+     * <p>The lock table schema includes: host_name, target, code, status, expiry_time,
+     * update_time, and create_time columns.</p>
+     *
+     * @param ds the data source to use for database connections, must not be {@code null}
+     * @param tableName the name of the table to use for storing locks, must not be {@code null} or empty
+     * @throws UncheckedSQLException if database operations fail during initialization
+     * @throws RuntimeException if the lock table cannot be created or initialized
      */
     @SuppressWarnings("deprecation")
     DBLock(final DataSource ds, final String tableName) {
@@ -214,19 +223,28 @@ public final class DBLock {
 
     /**
      * Acquires a lock on the specified target with the default lock live time and timeout.
-     * 
+     *
      * <p>This method uses {@link #DEFAULT_LOCK_LIVE_TIME} (3 minutes) for the lock duration
      * and {@link #DEFAULT_TIMEOUT} (3 seconds) for the acquisition timeout.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * DBLock dbLock = new DBLock(dataSource, "locks");
      * String lockCode = dbLock.lock("user-123");
      * if (lockCode != null) {
-     *     // Lock acquired successfully
+     *     try {
+     *         // Lock acquired successfully - perform exclusive operation
+     *         processUser(123);
+     *     } finally {
+     *         dbLock.unlock("user-123", lockCode);
+     *     }
+     * } else {
+     *     // Failed to acquire lock within timeout
+     *     System.out.println("Resource is currently locked by another process");
      * }
      * }</pre>
      *
-     * @param target The target resource to lock (must be unique across all lock holders)
+     * @param target the target resource to lock (must be unique across all lock holders)
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the default timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
@@ -236,11 +254,24 @@ public final class DBLock {
 
     /**
      * Acquires a lock on the specified target with the specified timeout.
-     * 
+     *
      * <p>This method uses {@link #DEFAULT_LOCK_LIVE_TIME} (3 minutes) for the lock duration.</p>
      *
-     * @param target The target resource to lock
-     * @param timeout The maximum time to wait for the lock in milliseconds
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Try to acquire lock with custom timeout of 10 seconds
+     * String lockCode = dbLock.lock("critical-resource", 10000);
+     * if (lockCode != null) {
+     *     try {
+     *         // Perform operation
+     *     } finally {
+     *         dbLock.unlock("critical-resource", lockCode);
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param target the target resource to lock
+     * @param timeout the maximum time to wait for the lock in milliseconds (must be non-negative)
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
@@ -250,19 +281,28 @@ public final class DBLock {
 
     /**
      * Acquires a lock on the specified target with the specified lock live time and timeout.
-     * 
+     *
      * <p>The lock will automatically expire after the specified live time to prevent deadlocks
-     * in case the lock holder crashes or fails to release the lock.</p>
-     * 
+     * in case the lock holder crashes or fails to release the lock. The lock is periodically
+     * refreshed by a background thread while it's held to prevent premature expiration.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Try to acquire lock for 5 minutes, wait up to 10 seconds
      * String lockCode = dbLock.lock("resource-xyz", 300000, 10000);
+     * if (lockCode != null) {
+     *     try {
+     *         // Perform long-running operation
+     *         processLargeDataSet();
+     *     } finally {
+     *         dbLock.unlock("resource-xyz", lockCode);
+     *     }
+     * }
      * }</pre>
      *
-     * @param target The target resource to lock
-     * @param liveTime The duration for which the lock will be held in milliseconds
-     * @param timeout The maximum time to wait for the lock in milliseconds
+     * @param target the target resource to lock
+     * @param liveTime the duration for which the lock will be held in milliseconds (must be positive)
+     * @param timeout the maximum time to wait for the lock in milliseconds (must be non-negative)
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
@@ -272,23 +312,36 @@ public final class DBLock {
 
     /**
      * Acquires a lock on the specified target with the specified lock live time, timeout, and retry period.
-     * 
+     *
      * <p>This method attempts to acquire a lock by inserting a record into the database table.
      * If the initial attempt fails (due to another process holding the lock), it will retry
-     * periodically until the timeout is reached.</p>
-     * 
-     * <p>Before attempting to acquire the lock, this method removes any expired locks for the target.</p>
-     * 
+     * periodically until the timeout is reached. The method uses optimistic locking to handle
+     * concurrent access from multiple application instances.</p>
+     *
+     * <p>Before attempting to acquire the lock, this method removes any expired locks for the target
+     * to ensure stale locks don't block new acquisitions.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Try to acquire lock for 1 minute, wait up to 5 seconds, retry every 100ms
      * String lockCode = dbLock.lock("critical-resource", 60000, 5000, 100);
+     * if (lockCode != null) {
+     *     try {
+     *         // Lock acquired - perform operation
+     *         updateSharedResource();
+     *     } finally {
+     *         dbLock.unlock("critical-resource", lockCode);
+     *     }
+     * } else {
+     *     // Could not acquire lock after retrying
+     *     logger.warn("Failed to acquire lock on critical-resource");
+     * }
      * }</pre>
      *
-     * @param target The target resource to lock
-     * @param liveTime The duration for which the lock will be held in milliseconds
-     * @param timeout The maximum time to wait for the lock in milliseconds
-     * @param retryPeriod The period in milliseconds to wait between retry attempts (0 for no delay)
+     * @param target the target resource to lock
+     * @param liveTime the duration for which the lock will be held in milliseconds (must be positive)
+     * @param timeout the maximum time to wait for the lock in milliseconds (must be non-negative)
+     * @param retryPeriod the period in milliseconds to wait between retry attempts (0 for immediate retry without delay)
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */

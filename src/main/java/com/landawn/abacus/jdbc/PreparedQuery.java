@@ -35,8 +35,8 @@ import java.sql.PreparedStatement;
  *   <li>The {@code ResultSet} returned by query will always be closed after execution, even {@code 'closeAfterExecution'} flag is set to {@code false}.</li>
  *   <li>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</li>
  * </ul>
- * 
- * <p><b>Usage Example:</b>
+ *
+ * <p><b>Usage Example:</b></p>
  * <pre>{@code
  * // Simple query execution
  * PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?");

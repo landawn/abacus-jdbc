@@ -437,7 +437,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.annotation.Column
  * @see PreparedStatement
  * @see ResultSet
- * @see DataSource
+ * @see javax.sql.DataSource
  * @see SQLTransaction
  * @see PreparedQuery
  * @see com.landawn.abacus.jdbc.dao.Dao

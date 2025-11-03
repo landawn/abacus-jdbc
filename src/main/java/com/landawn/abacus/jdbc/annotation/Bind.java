@@ -69,8 +69,18 @@ import java.lang.annotation.Target;
  * void insertUser(@Bind("u") User user);  // Explicit binding with prefix
  * }</pre>
  *
+ * <p>Best practices:</p>
+ * <ul>
+ *   <li>Use descriptive parameter names for clarity</li>
+ *   <li>Be consistent with naming conventions</li>
+ *   <li>Consider using explicit names for better refactoring support</li>
+ *   <li>For collections, use {@link BindList} instead</li>
+ *   <li>For dynamic SQL structure, use {@link Define} instead</li>
+ * </ul>
+ *
  * @see BindList
  * @see Define
+ * @see Query
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
