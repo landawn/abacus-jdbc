@@ -68,8 +68,6 @@ import com.landawn.abacus.annotation.Beta;
  * }
  * }</pre>
  * 
- * @see CacheResult
- * @see Cache
  */
 @Beta
 @Retention(RetentionPolicy.RUNTIME)

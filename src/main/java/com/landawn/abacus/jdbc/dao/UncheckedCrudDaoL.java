@@ -116,6 +116,14 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * Queries for a byte value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalByte level = userDao.queryForByte("level", 123L);
+     * if (level.isPresent() && level.getAsByte() >= 5) {
+     *     // User has sufficient level
+     * }
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @return an OptionalByte containing the value if found, otherwise empty
@@ -129,6 +137,14 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalShort year = userDao.queryForShort("birthYear", 123L);
+     * if (year.isPresent()) {
+     *     int age = currentYear - year.getAsShort();
+     * }
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
