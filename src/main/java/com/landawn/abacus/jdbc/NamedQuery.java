@@ -3625,7 +3625,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.setObject("user_id", 12345, JDBCType.INTEGER)
      *      .setObject("email", "user@example.com", JDBCType.VARCHAR)
@@ -3697,7 +3696,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * // Set a decimal with specific scale
      * query.setObject("price", new BigDecimal("99.999"), JDBCType.DECIMAL, 2);

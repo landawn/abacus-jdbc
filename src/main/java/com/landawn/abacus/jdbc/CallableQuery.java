@@ -1745,7 +1745,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.setString(1, "input_value")
      *      .registerOutParameter(2, JDBCType.VARCHAR)
@@ -1775,7 +1774,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.registerOutParameter(1, JDBCType.DECIMAL, 2)  // For money
      *      .registerOutParameter(2, JDBCType.NUMERIC, 4)   // For precise calculations
@@ -1806,7 +1804,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.registerOutParameter(1, JDBCType.STRUCT, "SCHEMA.CUSTOM_TYPE")
      *      .registerOutParameter(2, JDBCType.ARRAY, "VARCHAR_ARRAY")
@@ -1837,7 +1834,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.setString("inputParam", "value")
      *      .registerOutParameter("resultCode", JDBCType.INTEGER)
@@ -1867,7 +1863,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.setInt("orderId", 12345)
      *      .registerOutParameter("totalAmount", JDBCType.DECIMAL, 2)
@@ -1899,7 +1894,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * import java.sql.JDBCType;
      * 
      * query.setInt("customerId", 100)
      *      .registerOutParameter("customerData", JDBCType.STRUCT, "CUSTOMER_TYPE")
