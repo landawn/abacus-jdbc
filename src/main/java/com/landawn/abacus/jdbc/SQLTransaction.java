@@ -116,6 +116,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the unique identifier of this transaction.
      * The ID includes timestamp information to ensure uniqueness across time.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * String transactionId = tran.id();
+     * logger.info("Starting transaction: " + transactionId);
+     * }</pre>
+     *
      * @return the unique transaction identifier, never {@code null}
      */
     @Override
@@ -154,8 +161,17 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the isolation level of this transaction.
      * The isolation level determines how this transaction interacts with other concurrent transactions.
      *
-     * @return the transaction isolation level
-     * 
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
+     * IsolationLevel level = tran.isolationLevel();
+     * if (level == IsolationLevel.SERIALIZABLE) {
+     *     // Handle high isolation scenario
+     * }
+     * }</pre>
+     *
+     * @return the transaction isolation level, never {@code null}
+     *
      * @see IsolationLevel
      */
     @Override
@@ -167,8 +183,17 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the current status of this transaction.
      * The status indicates whether the transaction is active, committed, rolled back, or marked for rollback.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * Transaction.Status status = tran.status();
+     * if (status == Transaction.Status.ACTIVE) {
+     *     // Transaction is still active and can be committed or rolled back
+     * }
+     * }</pre>
+     *
      * @return the current transaction status, never {@code null}
-     * 
+     *
      * @see Transaction.Status
      */
     @Override
@@ -179,6 +204,18 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     /**
      * Checks if this transaction is currently active.
      * A transaction is active if it has not been committed, rolled back, or marked for rollback.
+     *
+     * <p>This is a convenience method equivalent to checking if the status
+     * equals {@link Status#ACTIVE}.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * if (tran.isActive()) {
+     *     // Safe to perform operations within this transaction
+     *     performDatabaseOperations();
+     * }
+     * }</pre>
      *
      * @return {@code true} if the transaction is active, {@code false} otherwise
      */
@@ -249,9 +286,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Commits the current transaction and executes the specified action after the commit.
-     * This is an internal method used for executing post-commit callbacks.
+     * This is an internal method used for executing post-commit callbacks with nested transaction support.
      *
-     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully
+     * <p>When called on a nested transaction (reference count > 0), this method simply decrements
+     * the reference count without actually committing. The actual commit only occurs when the
+     * outermost transaction's commit is called (reference count reaches 0).</p>
+     *
+     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit
      * @throws IllegalArgumentException if the transaction is not in a valid state for committing
      */
@@ -332,9 +373,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Rolls back the current transaction and executes the specified action after the rollback.
-     * This is an internal method used for executing post-rollback callbacks.
+     * This is an internal method used for executing post-rollback callbacks with nested transaction support.
      *
-     * @param actionAfterRollback the action to be executed after the current transaction is rolled back
+     * <p>When called on a nested transaction (reference count > 0), this method marks the transaction
+     * for rollback and decrements the reference count. The actual rollback occurs when the outermost
+     * transaction completes (reference count reaches 0).</p>
+     *
+     * @param actionAfterRollback the action to be executed after the current transaction is rolled back, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction is not in a valid state for rollback
      */
@@ -418,9 +463,14 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Executes the rollback operation and runs the specified action after completion.
-     * This is an internal method that performs the actual database rollback operation.
+     * This is an internal method that performs the actual database rollback operation,
+     * resets the connection state, and executes the post-rollback callback.
      *
-     * @param actionAfterRollback the action to be executed after rollback
+     * <p>The method sets the transaction status to {@link Status#FAILED_ROLLBACK} before attempting
+     * the rollback, and updates it to {@link Status#ROLLED_BACK} upon success. The connection is
+     * always reset and closed regardless of the rollback outcome.</p>
+     *
+     * @param actionAfterRollback the action to be executed after rollback, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      */
     private void executeRollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
@@ -451,6 +501,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Resets the connection to its original state and closes it if necessary.
+     * This method restores the auto-commit mode and transaction isolation level
+     * to their original values before the transaction was started.
+     *
+     * <p>If the {@code closeConnection} flag was set to {@code true} during transaction
+     * creation, the connection will be released back to the data source pool.</p>
      */
     private void resetAndCloseConnection() {
         try {
@@ -551,7 +606,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Checks if this transaction is marked for update operations only.
-     * This is used internally for transaction management.
+     * This flag is used internally for transaction management to optimize read-only versus
+     * read-write transaction handling.
      *
      * @return {@code true} if the transaction is for update only, {@code false} otherwise
      */
@@ -690,6 +746,16 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Returns the hash code value for this transaction.
      * The hash code is based on the transaction's unique timed ID.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource);
+     * SQLTransaction tran2 = JdbcUtil.beginTransaction(dataSource);
+     *
+     * Set<SQLTransaction> transactions = new HashSet<>();
+     * transactions.add(tran1);
+     * transactions.add(tran2);
+     * }</pre>
+     *
      * @return the hash code value for this transaction
      */
     @Override
@@ -701,6 +767,16 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Indicates whether some other object is "equal to" this transaction.
      * Two transactions are considered equal if they have the same timed ID.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource);
+     * SQLTransaction tran2 = tran1;
+     *
+     * if (tran1.equals(tran2)) {
+     *     // Same transaction instance
+     * }
+     * }</pre>
+     *
      * @param obj the reference object with which to compare
      * @return {@code true} if this transaction is equal to the obj argument; {@code false} otherwise
      */
@@ -711,7 +787,14 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Returns a string representation of this transaction.
-     * The string includes the transaction's unique ID.
+     * The string includes the transaction's unique timed ID for logging and debugging purposes.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * logger.debug("Transaction details: " + tran.toString());
+     * // Output: SQLTransaction={id=...}
+     * }</pre>
      *
      * @return a string representation of this transaction
      */
