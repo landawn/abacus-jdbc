@@ -20,14 +20,47 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
 /**
- * A utility class that provides access to Spring's ApplicationContext for bean retrieval.
- * This class is used internally by the JDBC framework to integrate with Spring's dependency injection container.
- * 
+ * A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
+ *
+ * <p>This class is used internally by the JDBC framework to integrate with Spring's dependency injection container,
+ * enabling the framework to retrieve Spring-managed beans such as DataSources, TransactionManagers, and custom
+ * DAO implementations.</p>
+ *
  * <p>The ApplicationContext is automatically injected by Spring when this class is registered as a Spring bean.
  * Once injected, it provides methods to retrieve beans by name or type from the Spring container.</p>
- * 
- * <p>Note: This class is intended for internal use only and requires Spring Framework to be present in the classpath.</p>
- * 
+ *
+ * <p><b>Framework Integration:</b></p>
+ * <p>This class must be registered as a Spring bean for the JDBC framework to access Spring-managed resources.
+ * The framework uses this to look up DataSources and other dependencies configured in the Spring context.</p>
+ *
+ * <p><b>Spring Configuration Example:</b></p>
+ * <pre>{@code
+ * @Configuration
+ * public class JdbcConfig {
+ *     @Bean
+ *     public SpringApplicationContext springApplicationContext() {
+ *         return new SpringApplicationContext();
+ *     }
+ *
+ *     @Bean
+ *     public DataSource dataSource() {
+ *         // Configure and return DataSource
+ *         return new HikariDataSource(config);
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p><b>Requirements:</b></p>
+ * <ul>
+ *   <li>Spring Framework must be present in the classpath</li>
+ *   <li>This class must be registered as a Spring bean</li>
+ *   <li>The ApplicationContext will be automatically injected by Spring</li>
+ * </ul>
+ *
+ * <p>Note: This class is intended for internal framework use only and should not be used directly
+ * by application code.</p>
+ *
+ * @see org.springframework.context.ApplicationContext
  */
 final class SpringApplicationContext {
 

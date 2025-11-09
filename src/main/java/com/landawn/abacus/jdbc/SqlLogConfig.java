@@ -21,17 +21,22 @@ package com.landawn.abacus.jdbc;
  *
  * <p>The configuration supports two modes:</p>
  * <ul>
- *   <li>General SQL logging - logs all SQL statements when enabled</li>
- *   <li>Performance logging - logs only SQL statements that exceed a specified execution time threshold</li>
+ *   <li><b>General SQL logging:</b> Logs all SQL statements when enabled, useful for debugging</li>
+ *   <li><b>Performance logging:</b> Logs only SQL statements that exceed a specified execution time threshold,
+ *       useful for identifying slow queries in production environments</li>
  * </ul>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Enable general SQL logging
+ * // Enable general SQL logging with default max length
  * SqlLogConfig config1 = new SqlLogConfig(true, 1000);
  *
  * // Enable performance logging for queries taking more than 500ms
+ * // This logs only slow queries, not all queries
  * SqlLogConfig config2 = new SqlLogConfig(500L, 1000);
+ *
+ * // Enable performance logging with no SQL length limit
+ * SqlLogConfig config3 = new SqlLogConfig(100L, -1);
  * }</pre>
  *
  * @see JdbcUtil#enableSqlLog()

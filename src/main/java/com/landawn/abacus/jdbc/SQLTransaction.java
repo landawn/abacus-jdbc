@@ -260,16 +260,20 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     //    }
 
     /**
-     * Commits the current transaction.
-     * This method commits all changes made within the transaction to the database.
-     * If the transaction is marked for rollback only, it will be rolled back instead.
-     * The connection will be automatically closed after successful commit.
-     * 
+     * Commits the current transaction, making all changes permanent.
+     * After a successful commit, the transaction is no longer active and the connection
+     * will be automatically reset and closed (if applicable).
+     *
+     * <p>If the transaction is marked for rollback only, it will be rolled back instead
+     * of committed. After successful commit, the transaction status is set to {@link Status#COMMITTED}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
-     *     // perform database operations
+     *     // Perform database operations
+     *     dao.insert(entity);
+     *     dao.update(anotherEntity);
      *     tran.commit();
      * } catch (Exception e) {
      *     tran.rollbackIfNotCommitted();
@@ -288,9 +292,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Commits the current transaction and executes the specified action after the commit.
      * This is an internal method used for executing post-commit callbacks with nested transaction support.
      *
-     * <p>When called on a nested transaction (reference count > 0), this method simply decrements
+     * <p>When called on a nested transaction (reference count greater than 0), this method simply decrements
      * the reference count without actually committing. The actual commit only occurs when the
      * outermost transaction's commit is called (reference count reaches 0).</p>
+     *
+     * <p>If the transaction is marked for rollback only, it will be rolled back instead of committed.</p>
      *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit
@@ -344,18 +350,19 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Rolls back the current transaction.
-     * This method undoes all changes made within the transaction.
-     * The connection will be automatically closed after the rollback.
-     * 
+     * Rolls back the current transaction, undoing all changes made within the transaction scope.
+     * After a successful rollback, the transaction is no longer active and the connection
+     * will be automatically reset and closed (if applicable).
+     *
      * <p><b>Note:</b> This method is deprecated. Use {@link #rollbackIfNotCommitted()} instead
      * for better transaction management in try-finally blocks.</p>
-     * 
+     *
      * <p>Example of preferred usage:</p>
      * <pre>{@code
-     * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
-     *     // perform database operations
+     *     // Perform database operations
+     *     dao.insert(entity);
      *     tran.commit();
      * } finally {
      *     tran.rollbackIfNotCommitted(); // Safer than rollback()
@@ -375,7 +382,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Rolls back the current transaction and executes the specified action after the rollback.
      * This is an internal method used for executing post-rollback callbacks with nested transaction support.
      *
-     * <p>When called on a nested transaction (reference count > 0), this method marks the transaction
+     * <p>When called on a nested transaction (reference count greater than 0), this method marks the transaction
      * for rollback and decrements the reference count. The actual rollback occurs when the outermost
      * transaction completes (reference count reaches 0).</p>
      *
@@ -404,20 +411,24 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Rolls back the transaction if it has not been committed successfully.
-     * This method is designed to be called in finally blocks to ensure proper transaction cleanup.
-     * It will do nothing if the transaction has already been committed.
-     * 
-     * <p>This is the recommended way to handle transaction cleanup:</p>
+     * This method is safe to call multiple times and will only perform a rollback
+     * if the transaction is still active or in a failed commit state.
+     *
+     * <p>This method is particularly useful in finally blocks or cleanup code
+     * where you want to ensure a transaction is not left in an active state.
+     * It will do nothing if the transaction has already been committed.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
-     *     // perform database operations
+     *     // Perform database operations
      *     dao.insert(entity);
      *     dao.update(anotherEntity);
-     *     
+     *
      *     tran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted(); // Safe cleanup
+     *     tran.rollbackIfNotCommitted(); // Ensures cleanup
      * }
      * }</pre>
      *
@@ -468,7 +479,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p>The method sets the transaction status to {@link Status#FAILED_ROLLBACK} before attempting
      * the rollback, and updates it to {@link Status#ROLLED_BACK} upon success. The connection is
-     * always reset and closed regardless of the rollback outcome.</p>
+     * always reset and closed (if applicable) regardless of the rollback outcome.</p>
      *
      * @param actionAfterRollback the action to be executed after rollback, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
@@ -501,11 +512,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Resets the connection to its original state and closes it if necessary.
-     * This method restores the auto-commit mode and transaction isolation level
+     * This is an internal method that restores the auto-commit mode and transaction isolation level
      * to their original values before the transaction was started.
      *
      * <p>If the {@code closeConnection} flag was set to {@code true} during transaction
      * creation, the connection will be released back to the data source pool.</p>
+     *
+     * <p>This method is called automatically after commit or rollback operations.</p>
      */
     private void resetAndCloseConnection() {
         try {
@@ -521,11 +534,14 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Increments the reference count and updates transaction settings.
-     * This method is used internally to support nested transaction operations by maintaining
+     * Increments the reference count and updates transaction settings for nested transactions.
+     * This is an internal method used to support nested transaction operations by maintaining
      * a reference count and stacking isolation levels.
      *
-     * @param isolationLevel the isolation level for the nested transaction
+     * <p>The isolation level stack allows nested transactions to have different isolation levels,
+     * which are restored when the nested transaction completes.</p>
+     *
+     * @param isolationLevel the isolation level for the nested transaction, must not be {@code null}
      * @param forUpdateOnly whether this transaction level is for update operations only
      * @return the new reference count after incrementing
      * @throws IllegalStateException if the transaction is not active
@@ -562,10 +578,12 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Decrements the reference count and manages transaction cleanup.
-     * This method is used internally to support nested transaction operations. When the reference
-     * count reaches zero, the transaction is removed from the thread-local map. For counts greater
-     * than zero, the previous isolation level is restored from the stack.
+     * Decrements the reference count and manages transaction cleanup for nested transactions.
+     * This is an internal method used to support nested transaction operations.
+     *
+     * <p>When the reference count reaches zero, the transaction is removed from the thread-local map
+     * and the transaction is considered complete. For counts greater than zero, the previous isolation
+     * level is restored from the stack.</p>
      *
      * @return the new reference count after decrementing
      * @throws UncheckedSQLException if a database error occurs while restoring the isolation level
@@ -606,7 +624,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Checks if this transaction is marked for update operations only.
-     * This flag is used internally for transaction management to optimize read-only versus
+     * This is an internal method used for transaction management to optimize read-only versus
      * read-write transaction handling.
      *
      * @return {@code true} if the transaction is for update only, {@code false} otherwise
@@ -617,11 +635,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Generates a unique transaction ID for the given data source and creator.
-     * The ID is composed of the data source's identity hash code, current thread ID,
-     * thread name, and creator ordinal value.
+     * This is an internal method that creates a transaction identifier composed of the data source's
+     * identity hash code, current thread ID, thread name, and creator ordinal value.
      *
-     * @param ds the data source
-     * @param creator the transaction creator type
+     * @param ds the data source, must not be {@code null}
+     * @param creator the transaction creator type, must not be {@code null}
      * @return a unique transaction identifier string, never {@code null}
      */
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
@@ -630,10 +648,10 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Retrieves the active transaction for the given data source and creator from the thread-local map.
-     * This method is used internally to check if a transaction already exists for the current thread.
+     * This is an internal method used to check if a transaction already exists for the current thread.
      *
-     * @param ds the data source
-     * @param creator the transaction creator type
+     * @param ds the data source, must not be {@code null}
+     * @param creator the transaction creator type, must not be {@code null}
      * @return the active transaction for this thread, or {@code null} if none exists
      */
     static SQLTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) {
@@ -642,9 +660,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Registers a transaction in the thread-local transaction map.
-     * This method is used internally to track active transactions for the current thread.
+     * This is an internal method used to track active transactions for the current thread.
      *
-     * @param tran the transaction to register
+     * @param tran the transaction to register, must not be {@code null}
      * @return the previously registered transaction for this thread and data source, or {@code null} if none existed
      */
     static SQLTransaction putTransaction(final SQLTransaction tran) {
@@ -655,20 +673,32 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Executes the specified {@code Runnable} outside of this transaction context.
      * This method temporarily removes the transaction from the current thread,
      * executes the runnable, and then restores the transaction.
-     * 
+     *
      * <p>This is useful when you need to perform operations that should not be
-     * part of the current transaction.</p>
-     * 
+     * part of the current transaction, such as logging or audit operations that
+     * should not be rolled back with the main transaction.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * transaction.runNotInMe(() -> {
-     *     // This code runs outside the transaction
-     *     auditLogger.log("Transaction started");
-     * });
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     // Perform transactional operations
+     *     dao.update(entity);
+     *
+     *     // Execute non-transactional operation
+     *     tran.runNotInMe(() -> {
+     *         // This code runs outside the transaction
+     *         auditLogger.log("Entity updated");
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
      * }</pre>
      *
      * @param <E> the exception type that may be thrown during execution
-     * @param cmd the {@code Runnable} to be executed outside of this transaction
+     * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
      * @throws E if the {@code Runnable} throws an exception
      * @throws IllegalStateException if another transaction is opened during execution
      */
@@ -690,21 +720,33 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * Executes the specified {@code Callable} outside of this transaction context.
      * This method temporarily removes the transaction from the current thread,
      * executes the callable, and then restores the transaction.
-     * 
+     *
      * <p>This is useful when you need to perform operations that should not be
-     * part of the current transaction and return a result.</p>
-     * 
+     * part of the current transaction and return a result, such as querying
+     * data that should not be affected by uncommitted changes.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String result = transaction.callNotInMe(() -> {
-     *     // This query runs outside the transaction
-     *     return dao.queryForString("SELECT current_timestamp");
-     * });
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     // Perform transactional operations
+     *     dao.insert(entity);
+     *
+     *     // Query outside transaction to see committed state
+     *     String timestamp = tran.callNotInMe(() -> {
+     *         // This query runs outside the transaction
+     *         return dao.queryForString("SELECT current_timestamp");
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
      * }</pre>
      *
      * @param <R> the result type returned by the operation
      * @param <E> the exception type that may be thrown during execution
-     * @param cmd the {@code Callable} to be executed outside of this transaction
+     * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
      * @return the result returned by the {@code Callable}
      * @throws E if the {@code Callable} throws an exception
      * @throws IllegalStateException if another transaction is opened during execution
@@ -805,7 +847,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     /**
      * Enumeration representing the creator of a transaction.
-     * Used internally to track and manage transactions by their origin.
+     * This is used internally to track and manage transactions by their origin,
+     * allowing different transaction scopes based on how they were created.
      */
     enum CreatedBy {
         /**

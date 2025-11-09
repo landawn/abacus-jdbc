@@ -30,11 +30,11 @@ import com.landawn.abacus.util.Strings;
 
 /**
  * Provides distributed sequence generation using a database table as the backing store.
- * 
+ *
  * <p>This class implements a high-performance sequence generator that minimizes database
  * round trips by allocating blocks of sequence values. It's suitable for generating
  * unique identifiers across multiple application instances or processes.</p>
- * 
+ *
  * <p>The sequence mechanism uses a database table with the following structure:
  * <ul>
  *   <li>seq_name: The name of the sequence (unique)</li>
@@ -42,7 +42,7 @@ import com.landawn.abacus.util.Strings;
  *   <li>update_time: Last update timestamp</li>
  *   <li>create_time: Sequence creation timestamp</li>
  * </ul>
- * 
+ *
  * <p>Features:
  * <ul>
  *   <li>Thread-safe sequence generation</li>
@@ -51,20 +51,20 @@ import com.landawn.abacus.util.Strings;
  *   <li>Support for multiple named sequences in the same table</li>
  *   <li>Ability to reset sequences with new starting values</li>
  * </ul>
- * 
- * <p>Usage example:
+ *
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * DBSequence sequence = new DBSequence(dataSource, "sequences", "order_id", 1000, 100);
- * 
+ *
  * // Generate unique IDs
  * long id1 = sequence.nextVal(); // 1000
  * long id2 = sequence.nextVal(); // 1001
  * // ... up to 100 values before next DB access
- * 
+ *
  * // Reset sequence if needed
  * sequence.reset(5000, 50);
  * }</pre>
- * 
+ *
  * @see DataSource
  */
 public final class DBSequence {
@@ -92,7 +92,7 @@ public final class DBSequence {
      *
      * <p>This constructor performs the following operations:</p>
      * <ul>
-     *   <li>Creates the sequence table if it doesn't exist</li>
+     *   <li>Creates the sequence table if it doesn't exist with the required schema</li>
      *   <li>Initializes the sequence with the specified starting value if it doesn't already exist</li>
      *   <li>Updates the sequence to startVal if it exists with a lower value</li>
      *   <li>Prepares SQL statements for sequence operations</li>
@@ -207,18 +207,18 @@ public final class DBSequence {
      * from multiple application instances. If another instance has already claimed the next
      * block, this method will retry until it successfully reserves a block.</p>
      *
-     * <p><b>Performance:</b> By caching a block of sequence values in memory, this method
+     * <p><b>Performance Note:</b> By caching a block of sequence values in memory, this method
      * minimizes database round trips. For example, with a buffer size of 100, only 1 database
      * access is needed for every 100 calls to nextVal().</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBSequence sequence = new DBSequence(ds, "sequences", "order_id", 1000, 100);
+     * DBSequence sequence = new DBSequence(dataSource, "sequences", "order_id", 1000, 100);
      *
      * // Generate unique order IDs
      * for (int i = 0; i < 10; i++) {
      *     long orderId = sequence.nextVal();
-     *     System.out.println("Order ID: " + orderId);
+     *     logger.info("Generated Order ID: " + orderId);
      * }
      *
      * // Thread-safe usage in multi-threaded environment
@@ -284,9 +284,9 @@ public final class DBSequence {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBSequence sequence = new DBSequence(ds, "sequences", "temp_id", 1, 10);
+     * DBSequence sequence = new DBSequence(dataSource, "sequences", "temp_id", 1, 10);
      *
-     * // Use sequence...
+     * // Use sequence
      * long id = sequence.nextVal(); // Returns 1
      *
      * // Reset to start from 1000 with larger buffer

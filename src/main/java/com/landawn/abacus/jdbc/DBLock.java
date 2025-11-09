@@ -42,7 +42,7 @@ import com.landawn.abacus.util.Strings;
  * Provides distributed locking functionality using a database table as the lock storage mechanism.
  * This class enables multiple processes or applications to coordinate access to shared resources
  * by acquiring exclusive locks stored in a database.
- * 
+ *
  * <p>The lock mechanism uses a database table with the following structure:
  * <ul>
  *   <li>host_name: The hostname of the lock holder</li>
@@ -53,7 +53,7 @@ import com.landawn.abacus.util.Strings;
  *   <li>update_time: Last update timestamp</li>
  *   <li>create_time: Lock creation timestamp</li>
  * </ul>
- * 
+ *
  * <p>Features:
  * <ul>
  *   <li>Automatic lock expiration to prevent deadlocks</li>
@@ -61,21 +61,22 @@ import com.landawn.abacus.util.Strings;
  *   <li>Automatic cleanup of expired and dead locks</li>
  *   <li>Configurable timeout and retry mechanisms</li>
  * </ul>
- * 
- * <p>Usage example:
+ *
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * DBLock lock = new DBLock(dataSource, "distributed_locks");
  * String lockCode = lock.lock("resource-123", 60000, 5000); // 60s live time, 5s timeout
  * if (lockCode != null) {
  *     try {
  *         // Perform exclusive operation
+ *         processSharedResource();
  *     } finally {
  *         lock.unlock("resource-123", lockCode);
  *     }
  * }
  * lock.close(); // Clean up when done
  * }</pre>
- * 
+ *
  * @see DataSource
  */
 public final class DBLock {
@@ -240,11 +241,11 @@ public final class DBLock {
      *     }
      * } else {
      *     // Failed to acquire lock within timeout
-     *     System.out.println("Resource is currently locked by another process");
+     *     logger.warn("Resource is currently locked by another process");
      * }
      * }</pre>
      *
-     * @param target the target resource to lock (must be unique across all lock holders)
+     * @param target the target resource to lock, must not be {@code null} or empty
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the default timeout
      * @throws IllegalStateException if this DBLock instance has been closed
      */
@@ -259,18 +260,20 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * DBLock dbLock = new DBLock(dataSource, "locks");
      * // Try to acquire lock with custom timeout of 10 seconds
      * String lockCode = dbLock.lock("critical-resource", 10000);
      * if (lockCode != null) {
      *     try {
      *         // Perform operation
+     *         updateCriticalResource();
      *     } finally {
      *         dbLock.unlock("critical-resource", lockCode);
      *     }
      * }
      * }</pre>
      *
-     * @param target the target resource to lock
+     * @param target the target resource to lock, must not be {@code null} or empty
      * @param timeout the maximum time to wait for the lock in milliseconds (must be non-negative)
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
      * @throws IllegalStateException if this DBLock instance has been closed
@@ -288,6 +291,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * DBLock dbLock = new DBLock(dataSource, "locks");
      * // Try to acquire lock for 5 minutes, wait up to 10 seconds
      * String lockCode = dbLock.lock("resource-xyz", 300000, 10000);
      * if (lockCode != null) {
@@ -300,7 +304,7 @@ public final class DBLock {
      * }
      * }</pre>
      *
-     * @param target the target resource to lock
+     * @param target the target resource to lock, must not be {@code null} or empty
      * @param liveTime the duration for which the lock will be held in milliseconds (must be positive)
      * @param timeout the maximum time to wait for the lock in milliseconds (must be non-negative)
      * @return the unique code representing the lock, or {@code null} if the target cannot be locked within the specified timeout
@@ -323,6 +327,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * DBLock dbLock = new DBLock(dataSource, "locks");
      * // Try to acquire lock for 1 minute, wait up to 5 seconds, retry every 100ms
      * String lockCode = dbLock.lock("critical-resource", 60000, 5000, 100);
      * if (lockCode != null) {
@@ -338,7 +343,7 @@ public final class DBLock {
      * }
      * }</pre>
      *
-     * @param target the target resource to lock
+     * @param target the target resource to lock, must not be {@code null} or empty
      * @param liveTime the duration for which the lock will be held in milliseconds (must be positive)
      * @param timeout the maximum time to wait for the lock in milliseconds (must be non-negative)
      * @param retryPeriod the period in milliseconds to wait between retry attempts (0 for immediate retry without delay)
@@ -399,27 +404,29 @@ public final class DBLock {
 
     /**
      * Releases the lock on the specified target if the provided code matches the code associated with the lock.
-     * 
+     *
      * <p>This method verifies that the provided code matches the lock code to ensure that only
      * the lock holder can release the lock. If the codes don't match, the unlock operation fails.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * DBLock dbLock = new DBLock(dataSource, "locks");
      * String lockCode = dbLock.lock("resource-123");
      * if (lockCode != null) {
      *     try {
-     *         // Do work
+     *         // Perform work
+     *         processResource();
      *     } finally {
      *         boolean released = dbLock.unlock("resource-123", lockCode);
      *         if (!released) {
-     *             // Lock was already released or code didn't match
+     *             logger.warn("Lock was already released or code didn't match");
      *         }
      *     }
      * }
      * }</pre>
      *
-     * @param target The target resource to unlock
-     * @param code The unique code that was returned when the lock was acquired
+     * @param target the target resource to unlock, must not be {@code null} or empty
+     * @param code the unique code that was returned when the lock was acquired, must not be {@code null}
      * @return {@code true} if the lock was successfully released, {@code false} if the lock doesn't exist or the code doesn't match
      * @throws IllegalStateException if this DBLock instance has been closed
      * @throws UncheckedSQLException if a database error occurs
@@ -440,18 +447,26 @@ public final class DBLock {
 
     /**
      * Closes this DBLock instance, releasing any resources held.
-     * 
+     *
      * <p>This method cancels the background refresh task and marks the instance as closed.
      * After calling this method, any attempt to acquire or release locks will throw an
      * {@link IllegalStateException}.</p>
-     * 
+     *
      * <p>If the instance is already closed, this method does nothing.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DBLock lock = new DBLock(dataSource, "locks");
      * try {
-     *     // Use the lock
+     *     // Use the lock for various operations
+     *     String code = lock.lock("resource-1");
+     *     if (code != null) {
+     *         try {
+     *             processResource1();
+     *         } finally {
+     *             lock.unlock("resource-1", code);
+     *         }
+     *     }
      * } finally {
      *     lock.close();
      * }

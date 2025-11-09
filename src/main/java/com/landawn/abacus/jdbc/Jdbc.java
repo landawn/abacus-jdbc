@@ -5505,6 +5505,12 @@ public final class Jdbc {
         private final List<OutParam> outParams;
         private final Map<Object, Object> outParamValues;
 
+        /**
+         * Constructs an {@code OutParamResult} with the specified output parameters and their values.
+         *
+         * @param outParams the list of {@code OutParam} definitions.
+         * @param outParamValues a map of output parameter values, keyed by index or name.
+         */
         OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) {
             this.outParams = outParams;
             this.outParamValues = outParamValues;

@@ -20,15 +20,22 @@ import com.landawn.abacus.jdbc.dao.Dao;
 
 /**
  * A no-operation implementation of {@link Jdbc.Handler} for DAO instances.
- * 
- * <p>This class serves as a placeholder handler that performs no operations.
- * It is marked as {@code @Internal} indicating it is intended for framework
+ *
+ * <p>This class serves as a placeholder handler that performs no operations, following the
+ * Null Object pattern. It is marked as {@code @Internal} indicating it is intended for framework
  * internal use only and should not be used directly by application code.</p>
- * 
- * <p>The EmptyHandler is typically used in scenarios where a handler interface
- * must be provided but no actual handling logic is required, following the
- * Null Object pattern.</p>
- * 
+ *
+ * <p>The EmptyHandler is automatically used by the framework in scenarios where a handler interface
+ * must be provided but no actual handling logic is required, such as when creating DAO instances
+ * without custom initialization or cleanup logic.</p>
+ *
+ * <p><b>Internal Framework Usage:</b></p>
+ * <pre>{@code
+ * // Framework code - DO NOT use directly in application code
+ * Jdbc.Handler<Dao> handler = new EmptyHandler();
+ * // Handler is applied during DAO creation but performs no operations
+ * }</pre>
+ *
  * @see Jdbc.Handler
  * @see Dao
  */

@@ -20,24 +20,39 @@ import com.landawn.abacus.annotation.Beta;
 
 /**
  * Represents foreign key constraint actions that can be performed when a referenced row is deleted.
- * 
- * <p>This enum defines the behavior that should occur when a parent record is deleted and 
+ *
+ * <p>This enum defines the behavior that should occur when a parent record is deleted and
  * there are child records that reference it through a foreign key constraint. These actions
  * are typically implemented at the database level as part of the foreign key definition.</p>
- * 
+ *
  * <p><strong>Note:</strong> This enum is deprecated and should not be used in new code.
  * Foreign key constraints and their associated actions should be defined directly in the
  * database schema rather than being managed by application code.</p>
- * 
- * <p>Example database usage (for reference only):
+ *
+ * <p><b>Database Schema Examples (for reference only):</b></p>
  * <pre>{@code
+ * -- CASCADE: Deletes child records when parent is deleted
  * CREATE TABLE orders (
  *     id INT PRIMARY KEY,
  *     customer_id INT,
  *     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
  * );
+ *
+ * -- SET NULL: Sets foreign key to NULL when parent is deleted
+ * CREATE TABLE orders (
+ *     id INT PRIMARY KEY,
+ *     customer_id INT,
+ *     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+ * );
+ *
+ * -- NO ACTION/RESTRICT: Prevents deletion if child records exist
+ * CREATE TABLE orders (
+ *     id INT PRIMARY KEY,
+ *     customer_id INT NOT NULL,
+ *     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+ * );
  * }</pre>
- * 
+ *
  * @deprecated Foreign key actions should be defined and implemented at the database server level,
  *             not in application code. Use proper database schema definitions instead.
  */
@@ -47,18 +62,43 @@ public enum OnDeleteAction {
     /**
      * No action is taken when the referenced row is deleted.
      * The delete operation will fail if there are still child rows referencing the parent.
-     * This is equivalent to the SQL RESTRICT action.
+     *
+     * <p>This is equivalent to the SQL RESTRICT action and is the most conservative approach,
+     * preventing accidental data loss by requiring explicit deletion of child records first.</p>
+     *
+     * <p><b>Database Behavior:</b> DELETE operation on parent table will fail with a foreign key
+     * constraint violation if any child records exist.</p>
      */
     NO_ACTION(0),
+
     /**
      * When the referenced row is deleted, the foreign key columns in child rows are set to NULL.
-     * This action requires that the foreign key columns be nullable.
+     *
+     * <p>This action requires that the foreign key columns be nullable. It's useful when you want
+     * to maintain child records even after the parent is deleted, with the foreign key indicating
+     * that the parent no longer exists.</p>
+     *
+     * <p><b>Database Behavior:</b> All child records will have their foreign key column set to NULL
+     * when the parent record is deleted.</p>
+     *
+     * <p><b>Important:</b> The foreign key column must be defined as nullable (without NOT NULL constraint)
+     * for this action to work.</p>
      */
     SET_NULL(1),
+
     /**
      * When the referenced row is deleted, all child rows that reference it are also deleted.
-     * This action cascades the delete operation through the relationship hierarchy.
-     * Use with caution as it can result in the deletion of large amounts of data.
+     *
+     * <p>This action cascades the delete operation through the relationship hierarchy. Use with
+     * caution as it can result in the deletion of large amounts of data, especially with deep
+     * relationship chains.</p>
+     *
+     * <p><b>Database Behavior:</b> All child records referencing the deleted parent will be
+     * automatically deleted. If those child records are parents to other records with CASCADE
+     * actions, the deletion will continue cascading through the entire hierarchy.</p>
+     *
+     * <p><b>Warning:</b> Can lead to unexpected data loss if not carefully designed. Always review
+     * the full impact of cascading deletes in your data model.</p>
      */
     CASCADE(2);
 
