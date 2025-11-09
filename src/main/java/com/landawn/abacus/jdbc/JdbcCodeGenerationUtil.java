@@ -149,7 +149,7 @@ public final class JdbcCodeGenerationUtil {
         return null;
     };
 
-    private static final String LINE_SEPARATOR = IOUtil.LINE_SEPARATOR;
+    private static final String LINE_SEPARATOR = IOUtil.LINE_SEPARATOR_UNIX;
 
     private static final String eccImports = """
             import javax.persistence.Column;

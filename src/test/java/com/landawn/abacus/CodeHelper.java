@@ -133,7 +133,7 @@ public class CodeHelper {
                                 if (idx.isPresent()) {
                                     lines.add(idx.orElseThrow() + 1, "import com.landawn.abacus.jdbc.s;");
                                 } else {
-                                    lines.add(i + 1, IOUtil.LINE_SEPARATOR + "import com.landawn.abacus.jdbc.s;");
+                                    lines.add(i + 1, IOUtil.LINE_SEPARATOR_UNIX + "import com.landawn.abacus.jdbc.s;");
                                 }
                             }
                         }
@@ -153,7 +153,7 @@ public class CodeHelper {
             final List<String> newLines = Stream.of(parameterNamesToAdd)
                     .sorted()
                     .map(it -> "    public static final String " + it + " = \"" + it + "\";")
-                    .prepend(IOUtil.LINE_SEPARATOR)
+                    .prepend(IOUtil.LINE_SEPARATOR_UNIX)
                     .toList();
 
             lines.addAll(lines.size() - 1, newLines);

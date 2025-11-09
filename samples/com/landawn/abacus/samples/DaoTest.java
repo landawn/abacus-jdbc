@@ -408,7 +408,7 @@ public class DaoTest {
             JdbcUtils.exportCSV(rs, IOUtil.newOutputStreamWriter(System.out));
         }
 
-        N.println(IOUtil.LINE_SEPARATOR);
+        N.println(IOUtil.LINE_SEPARATOR_UNIX);
         N.println(Strings.repeat("=", 80));
 
         try (Connection conn = JdbcTest.dataSource.getConnection();

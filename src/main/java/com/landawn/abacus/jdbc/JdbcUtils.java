@@ -2586,7 +2586,7 @@ public final class JdbcUtils {
                 CSVUtil.writeField(bw, strType, columnNames[i]);
             }
 
-            bw.write(IOUtil.LINE_SEPARATOR);
+            bw.write(IOUtil.LINE_SEPARATOR_UNIX);
 
             final Type<Object>[] typeArray = new Type[columnCount];
             Type<Object> type = null;
@@ -2594,7 +2594,7 @@ public final class JdbcUtils {
 
             while (rs.next()) {
                 if (result++ > 0) {
-                    bw.write(IOUtil.LINE_SEPARATOR);
+                    bw.write(IOUtil.LINE_SEPARATOR_UNIX);
                 }
 
                 for (int i = 0, j = 0; i < columnCount; i++) {
