@@ -110,7 +110,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  * 
- * <p><b>Usage Example:</b></p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * JdbcUtil.prepareQuery(connection, "SELECT * FROM users WHERE age > ?")
  *     .setInt(1, 18)
@@ -194,7 +194,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Set to {@code false} if you want to reuse the statement for multiple executions,
      * but ensure you manually close it when done.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * AbstractQuery query = JdbcUtil.prepareQuery(connection, sql)
      *     .closeAfterExecution(false);
@@ -228,7 +228,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This is useful for cleaning up resources that were created for this query.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.onClose(() -> System.out.println("Query closed"))
      *      .onClose(() -> releaseResources());
@@ -264,7 +264,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a SQL NULL value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNull(1, Types.VARCHAR)
      *      .setNull(2, Types.INTEGER);
@@ -286,7 +286,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a SQL NULL value for the specified parameter with a type name.
      * This method is used for user-defined types and REF types.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNull(1, Types.STRUCT, "MY_TYPE");
      * }</pre>
@@ -306,7 +306,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a boolean parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setBoolean(1, true)
      *      .setBoolean(2, false);
@@ -327,7 +327,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Boolean parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Boolean value = getOptionalBoolean();
      * query.setBoolean(1, value);  // handles null automatically
@@ -351,7 +351,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a byte parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setByte(1, (byte)127);
      * }</pre>
@@ -371,7 +371,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Byte parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Byte value = getOptionalByte();
      * query.setByte(1, value);  // handles null automatically
@@ -396,7 +396,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Byte parameter value with a default value for null.
      * If the value is null, uses the specified default value instead of SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setByte(1, nullableByte, (byte)0);  // use 0 if null
      * }</pre>
@@ -420,7 +420,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a short parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setShort(1, (short)1000);
      * }</pre>
@@ -440,7 +440,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Short parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Short value = getOptionalShort();
      * query.setShort(1, value);  // handles null automatically
@@ -465,7 +465,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Short parameter value with a default value for null.
      * If the value is null, uses the specified default value instead of SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setShort(1, nullableShort, (short)0);  // use 0 if null
      * }</pre>
@@ -489,7 +489,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an int parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 42)
      *      .setInt(2, userId);
@@ -510,7 +510,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an Integer parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Integer age = user.getAge();  // might be null
      * query.setInt(1, age);  // handles null automatically
@@ -535,7 +535,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an Integer parameter value with a default value for null.
      * If the value is null, uses the specified default value instead of SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, nullableCount, 0);  // use 0 if null
      * }</pre>
@@ -589,7 +589,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a char parameter value as an integer.
      * The character is stored as its numeric value (Unicode code point).
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 'A');  // stores 65
      * }</pre>
@@ -613,7 +613,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Character parameter value as an integer, handling null values.
      * The character is stored as its numeric value (Unicode code point).
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Character grade = getGrade();  // might be null
      * query.setInt(1, grade);  // stores as integer or NULL
@@ -641,7 +641,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a long parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLong(1, System.currentTimeMillis())
      *      .setLong(2, recordId);
@@ -662,7 +662,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Long parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Long timestamp = getOptionalTimestamp();
      * query.setLong(1, timestamp);  // handles null automatically
@@ -687,7 +687,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Long parameter value with a default value for null.
      * If the value is null, uses the specified default value instead of SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLong(1, nullableId, -1L);  // use -1 if null
      * }</pre>
@@ -741,7 +741,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a BigInteger parameter value as a long.
      * The BigInteger must be within the range of a long value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigValue = new BigInteger("123456789");
      * query.setLong(1, bigValue);  // converts to long
@@ -775,7 +775,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a float parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFloat(1, 3.14f)
      *      .setFloat(2, temperature);
@@ -796,7 +796,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Float parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Float percentage = calculatePercentage();  // might return null
      * query.setFloat(1, percentage);  // handles null automatically
@@ -821,7 +821,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Float parameter value with a default value for null.
      * If the value is null, uses the specified default value instead of SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFloat(1, nullableRating, 0.0f);  // use 0.0 if null
      * }</pre>
@@ -873,7 +873,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a double parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setDouble(1, 3.14159)
      *      .setDouble(2, price);
@@ -894,7 +894,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Double parameter value, handling null values.
      * If the value is null, sets the parameter to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Double amount = calculateAmount();  // might return null
      * query.setDouble(1, amount);  // handles null automatically
@@ -919,7 +919,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Double parameter value with a default value for null.
      * If the value is null, uses the specified default value instead of SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setDouble(1, nullablePrice, 0.0);  // use 0.0 if null
      * }</pre>
@@ -971,7 +971,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a BigDecimal parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigDecimal price = new BigDecimal("19.99");
      * query.setBigDecimal(1, price);
@@ -991,7 +991,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a BigInteger parameter value as a BigDecimal.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigInt = new BigInteger("123456789012345678901234567890");
      * query.setBigDecimal(1, bigInt);  // converts to BigDecimal
@@ -1016,7 +1016,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a BigInteger parameter value as a String.
      * This is useful for databases that don't have native support for arbitrarily large integers.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger largeNumber = new BigInteger("99999999999999999999999999999");
      * query.setBigIntegerAsString(1, largeNumber);
@@ -1036,7 +1036,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a String parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, "John Doe")
      *      .setString(2, email);
@@ -1056,7 +1056,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a CharSequence parameter value as a String.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringBuilder sb = new StringBuilder("Hello World");
      * query.setString(1, sb);
@@ -1076,7 +1076,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a char parameter value as a String.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, 'A');  // stores as "A"
      * }</pre>
@@ -1095,7 +1095,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a Character parameter value as a String, handling null values.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Character initial = user.getMiddleInitial();  // might be null
      * query.setString(1, initial);  // handles null automatically
@@ -1116,7 +1116,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a BigInteger parameter value as a String.
      * This is useful for databases that don't have native support for arbitrarily large integers.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger largeNumber = new BigInteger("99999999999999999999999999999");
      * query.setString(1, largeNumber);  // stores as string
@@ -1142,7 +1142,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a national character set String (NCHAR, NVARCHAR, LONGNVARCHAR) parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNString(1, "こんにちは");  // Japanese text
      * }</pre>
@@ -1161,7 +1161,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a national character set CharSequence (NCHAR, NVARCHAR, LONGNVARCHAR) parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringBuilder text = new StringBuilder("世界");
      * query.setNString(1, text);
@@ -1181,7 +1181,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a java.sql.Date parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Date date = java.sql.Date.valueOf("2023-12-25");
      * query.setDate(1, date);
@@ -1202,7 +1202,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a java.util.Date parameter value as a SQL Date.
      * The time portion of the date is truncated.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilDate = new java.util.Date();
      * query.setDate(1, utilDate);  // converts to SQL Date
@@ -1222,7 +1222,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a SQL Date parameter value using a Calendar for timezone conversion.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
      * query.setDate(1, sqlDate, cal);
@@ -1243,7 +1243,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a LocalDate parameter value as a SQL Date.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDate today = LocalDate.now();
      * query.setDate(1, today);
@@ -1263,7 +1263,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a java.sql.Time parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Time time = java.sql.Time.valueOf("14:30:00");
      * query.setTime(1, time);
@@ -1284,7 +1284,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a java.util.Date parameter value as a SQL Time.
      * Only the time portion of the date is used.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilDate = new java.util.Date();
      * query.setTime(1, utilDate);  // extracts time portion
@@ -1304,7 +1304,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a SQL Time parameter value using a Calendar for timezone conversion.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
      * query.setTime(1, sqlTime, cal);
@@ -1325,7 +1325,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a LocalTime parameter value as a SQL Time.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalTime now = LocalTime.now();
      * query.setTime(1, now);
@@ -1345,7 +1345,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a java.sql.Timestamp parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Timestamp ts = new Timestamp(System.currentTimeMillis());
      * query.setTimestamp(1, ts);
@@ -1365,7 +1365,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a java.util.Date parameter value as a SQL Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date date = new java.util.Date();
      * query.setTimestamp(1, date);  // converts to Timestamp
@@ -1385,7 +1385,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a SQL Timestamp parameter value using a Calendar for timezone conversion.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
      * query.setTimestamp(1, timestamp, cal);
@@ -1406,7 +1406,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a LocalDateTime parameter value as a SQL Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDateTime now = LocalDateTime.now();
      * query.setTimestamp(1, now);
@@ -1427,7 +1427,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a ZonedDateTime parameter value as a SQL Timestamp.
      * The timestamp is converted to the system's default timezone.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ZonedDateTime zonedNow = ZonedDateTime.now();
      * query.setTimestamp(1, zonedNow);
@@ -1447,7 +1447,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an OffsetDateTime parameter value as a SQL Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OffsetDateTime offsetNow = OffsetDateTime.now();
      * query.setTimestamp(1, offsetNow);
@@ -1467,7 +1467,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an Instant parameter value as a SQL Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Instant now = Instant.now();
      * query.setTimestamp(1, now);
@@ -1487,7 +1487,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a byte array parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * byte[] imageData = loadImageData();
      * query.setBytes(1, imageData);
@@ -1508,7 +1508,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an ASCII stream parameter value.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream asciiStream = new FileInputStream("data.txt");
      * query.setAsciiStream(1, asciiStream);
@@ -1528,7 +1528,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an ASCII stream parameter value with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream asciiStream = new FileInputStream("data.txt");
      * query.setAsciiStream(1, asciiStream, 1024);
@@ -1549,7 +1549,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an ASCII stream parameter value with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream asciiStream = new FileInputStream("large_file.txt");
      * query.setAsciiStream(1, asciiStream, file.length());
@@ -1571,7 +1571,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a binary stream parameter value.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream binaryStream = new FileInputStream("image.jpg");
      * query.setBinaryStream(1, binaryStream);
@@ -1591,7 +1591,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a binary stream parameter value with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream binaryStream = new FileInputStream("document.pdf");
      * query.setBinaryStream(1, binaryStream, 2048);
@@ -1612,7 +1612,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a binary stream parameter value with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream binaryStream = new FileInputStream("large_file.bin");
      * query.setBinaryStream(1, binaryStream, file.length());
@@ -1634,7 +1634,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a character stream parameter value.
      * The JDBC driver will read the data from the reader as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileReader reader = new FileReader("text.txt");
      * query.setCharacterStream(1, reader);
@@ -1654,7 +1654,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a character stream parameter value with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader reader = new StringReader("Hello World");
      * query.setCharacterStream(1, reader, 11);
@@ -1675,7 +1675,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a character stream parameter value with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileReader reader = new FileReader("large_text.txt");
      * query.setCharacterStream(1, reader, file.length());
@@ -1697,7 +1697,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a national character stream parameter value.
      * Used for NCHAR, NVARCHAR and LONGNVARCHAR columns.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader reader = new StringReader("Unicode テキスト");
      * query.setNCharacterStream(1, reader);
@@ -1718,7 +1718,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a national character stream parameter value with a specified length.
      * Used for NCHAR, NVARCHAR and LONGNVARCHAR columns.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader reader = new StringReader("Unicode 文字列");
      * query.setNCharacterStream(1, reader, text.length());
@@ -1739,7 +1739,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a Blob parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = connection.createBlob();
      * blob.setBytes(1, imageData);
@@ -1761,7 +1761,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Blob parameter value from an InputStream.
      * The data will be read from the stream as needed.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream imageStream = new FileInputStream("photo.jpg");
      * query.setBlob(1, imageStream);
@@ -1781,7 +1781,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a Blob parameter value from an InputStream with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileInputStream videoStream = new FileInputStream("video.mp4");
      * query.setBlob(1, videoStream, file.length());
@@ -1802,7 +1802,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a Clob parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = connection.createClob();
      * clob.setString(1, largeText);
@@ -1823,7 +1823,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Clob parameter value from a Reader.
      * The data will be read from the reader as needed.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * FileReader textReader = new FileReader("document.txt");
      * query.setClob(1, textReader);
@@ -1842,7 +1842,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a Clob parameter value from a Reader with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader textReader = new StringReader(largeText);
      * query.setClob(1, textReader, largeText.length());
@@ -1864,7 +1864,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an NClob parameter value.
      * Used for storing large amounts of national character data.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
      * nclob.setString(1, unicodeText);
@@ -1885,7 +1885,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an NClob parameter value from a Reader.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader unicodeReader = new StringReader("大きなテキスト");
      * query.setNClob(1, unicodeReader);
@@ -1905,7 +1905,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an NClob parameter value from a Reader with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringReader unicodeReader = new StringReader(largeUnicodeText);
      * query.setNClob(1, unicodeReader, largeUnicodeText.length());
@@ -1926,7 +1926,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a URL parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * URL website = new URL("https://example.com");
      * query.setURL(1, website);
@@ -1946,7 +1946,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an Array parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Array array = connection.createArrayOf("VARCHAR", new String[] {"A", "B", "C"});
      * query.setArray(1, array);
@@ -1966,7 +1966,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a SQLXML parameter value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xml = connection.createSQLXML();
      * xml.setString("<data>value</data>");
@@ -1988,7 +1988,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a Ref parameter value.
      * A Ref is a reference to an SQL structured type value in the database.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Ref ref = resultSet.getRef("ref_column");
      * query.setRef(1, ref);
@@ -2009,7 +2009,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets a RowId parameter value.
      * A RowId is a unique identifier for a row in a database table.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
      * query.setRowId(1, rowId);
@@ -2030,7 +2030,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an Object parameter value.
      * The JDBC driver will attempt to map the object to an appropriate SQL type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject(1, user)
      *      .setObject(2, LocalDate.now())
@@ -2055,7 +2055,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an Object parameter value with a specified SQL type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject(1, "123", Types.INTEGER);  // converts string to integer
      * }</pre>
@@ -2076,7 +2076,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an Object parameter value with a specified SQL type and scale or length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject(1, 123.456, Types.DECIMAL, 2);  // 2 decimal places
      * }</pre>
@@ -2098,7 +2098,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an Object parameter value with a specified SQL type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLType jsonType = JDBCType.OTHER;
      * query.setObject(1, jsonString, jsonType);
@@ -2119,7 +2119,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets an Object parameter value with a specified SQL type and scale or length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject(1, 123.456, JDBCType.DECIMAL, 2);
      * }</pre>
@@ -2141,7 +2141,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an Object parameter value using a custom Type handler.
      * This allows for custom serialization/deserialization logic.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<MyCustomType> customType = TypeFactory.getType(MyCustomType.class);
      * query.setObject(1, myCustomObject, customType);
@@ -2201,7 +2201,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets two String parameters starting from index 1.
      * Convenience method for queries with exactly two String parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe")
      *      .list();  // SELECT * FROM users WHERE first_name = ? AND last_name = ?
@@ -2223,7 +2223,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets three String parameters starting from index 1.
      * Convenience method for queries with exactly three String parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", "john@example.com")
      *      .update();  // UPDATE users SET first_name = ?, last_name = ? WHERE email = ?
@@ -2247,7 +2247,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets four String parameters starting from index 1.
      * Convenience method for queries with exactly four String parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", "john@example.com", "USA")
      *      .insert();
@@ -2273,7 +2273,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets five String parameters starting from index 1.
      * Convenience method for queries with exactly five String parameters.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", "john@example.com", "123-456-7890", "New York")
      *      .execute();
@@ -2301,7 +2301,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets six String parameters starting from index 1.
      * Convenience method for queries with exactly six String parameters.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", "john@example.com", "123-456-7890", "New York", "USA")
      *      .execute();
@@ -2332,7 +2332,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets seven String parameters starting from index 1.
      * Convenience method for queries with exactly seven String parameters.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", "john@example.com", "123-456-7890", "New York", "USA", "10001")
      *      .execute();
@@ -2382,7 +2382,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets three Object parameters starting from index 1.
      * Convenience method for queries with exactly three parameters of any type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", 25, LocalDate.now())
      *      .list();
@@ -2406,7 +2406,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets four Object parameters starting from index 1.
      * Convenience method for queries with exactly four parameters of any type.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John Doe", 25, LocalDate.now(), true)
      *      .list(User.class);
@@ -2432,7 +2432,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets five Object parameters starting from index 1.
      * Convenience method for queries with exactly five parameters of any type.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"))
      *      .list(Employee.class);
@@ -2460,7 +2460,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets six Object parameters starting from index 1.
      * Convenience method for queries with exactly six parameters of any type.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT")
      *      .list(Employee.class);
@@ -2491,7 +2491,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets seven Object parameters starting from index 1.
      * Convenience method for queries with exactly seven parameters of any type.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT")
      *      .list(Employee.class);
@@ -2524,7 +2524,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets eight Object parameters starting from index 1.
      * Convenience method for queries with exactly eight parameters of any type.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT", "Manager")
      *      .list(Employee.class);
@@ -2559,7 +2559,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets nine Object parameters starting from index 1.
      * Convenience method for queries with exactly nine parameters of any type.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT", "Manager", LocalDateTime.now())
      *      .list(Employee.class);
@@ -2615,7 +2615,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple int parameters starting from index 1.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters(new int[] {10, 20, 30})
      *      .list();  // SELECT * FROM table WHERE col1 = ? AND col2 = ? AND col3 = ?
@@ -2633,7 +2633,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple long parameters starting from index 1.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters(new long[] {1000L, 2000L, 3000L})
      *      .list();
@@ -2651,7 +2651,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple String parameters starting from index 1.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters(new String[] {"John", "Doe", "USA"})
      *      .insert();
@@ -2669,7 +2669,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple parameters of the same type starting from index 1.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDate[] dates = {LocalDate.now(), LocalDate.now().plusDays(7)};
      * query.setParameters(dates)
@@ -2689,7 +2689,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple parameters from a Collection starting from index 1.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
      * query.setParameters(names)
@@ -2709,7 +2709,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets multiple parameters from a typed Collection starting from index 1.
      * This method ensures type safety when setting parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<LocalDate> dates = getDates();
      * query.setParameters(dates, LocalDate.class)
@@ -2731,7 +2731,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets parameters using a custom ParametersSetter.
      * This allows for complex parameter setting logic.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters(stmt -> {
      *     stmt.setString(1, user.getName());
@@ -2795,7 +2795,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets parameters using a BiParametersSetter with additional context.
      * This allows passing additional data along with the statement for parameter setting.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getUser();
      * query.setParameters(user, (stmt, u) -> {
@@ -2834,7 +2834,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple int parameters starting from the specified index.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, "Active")
      *      .settParameters(2, new int[] {10, 20, 30})
@@ -2860,7 +2860,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple long parameters starting from the specified index.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, "Premium")
      *      .settParameters(2, new long[] {1000L, 2000L, 3000L})
@@ -2886,7 +2886,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple String parameters starting from the specified index.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 2023)
      *      .settParameters(2, new String[] {"Q1", "Q2", "Q3", "Q4"})
@@ -2912,7 +2912,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple parameters of the same type starting from the specified index.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigDecimal[] amounts = {new BigDecimal("100.50"), new BigDecimal("200.75")};
      * query.setString(1, "USD")
@@ -2950,7 +2950,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets multiple parameters from a Collection starting from the specified index.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> categories = Arrays.asList("Electronics", "Books", "Clothing");
      * query.setDate(1, startDate)
@@ -2978,7 +2978,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets multiple parameters from a typed Collection starting from the specified index.
      * This method ensures type safety when setting parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<UUID> userIds = getUserIds();
      * query.setString(1, "Active")
@@ -3055,7 +3055,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets parameters using a custom ParametersSetter that operates on this query instance.
      * This provides access to all the parameter setting methods of this class.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.settParameters(q -> {
      *     q.setString(1, "John")
@@ -3091,7 +3091,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets parameters using a BiParametersSetter that operates on this query instance with additional context.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UserFilter filter = getUserFilter();
      * query.settParameters(filter, (q, f) -> {
@@ -3135,7 +3135,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets the same SQL NULL value to multiple parameter positions.
      * Useful when multiple parameters should be NULL with the same SQL type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Set positions 2, 4, and 6 to NULL (VARCHAR)
      * query.setString(1, "Active")
@@ -3164,7 +3164,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Boolean value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setBooleanForMultiPositions(true, 1, 3, 5, 7);
      * }</pre>
@@ -3188,7 +3188,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Integer value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Set default status code to multiple positions
      * query.setIntForMultiPositions(0, 2, 5, 8);
@@ -3252,7 +3252,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Long value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLongForMultiPositions(System.currentTimeMillis(), 2, 4, 6);
      * }</pre>
@@ -3276,7 +3276,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Double value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setDoubleForMultiPositions(0.0, 1, 3, 5, 7);
      * }</pre>
@@ -3300,7 +3300,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same String value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setStringForMultiPositions("N/A", 2, 4, 6, 8);
      * }</pre>
@@ -3324,7 +3324,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Date value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Date today = new java.sql.Date(System.currentTimeMillis());
      * query.setDateForMultiPositions(today, 1, 3, 5);
@@ -3349,7 +3349,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same java.util.Date value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date now = new java.util.Date();
      * query.setDateForMultiPositions(now, 2, 4, 6);
@@ -3374,7 +3374,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Time value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Time noon = java.sql.Time.valueOf("12:00:00");
      * query.setTimeForMultiPositions(noon, 1, 3, 5);
@@ -3399,7 +3399,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same java.util.Date value as Time to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date time = new java.util.Date();
      * query.setTimeForMultiPositions(time, 2, 4, 6);
@@ -3424,7 +3424,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Timestamp value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Timestamp ts = new Timestamp(System.currentTimeMillis());
      * query.setTimestampForMultiPositions(ts, 1, 3, 5, 7);
@@ -3449,7 +3449,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same java.util.Date value as Timestamp to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date now = new java.util.Date();
      * query.setTimestampForMultiPositions(now, 2, 4, 6, 8);
@@ -3474,7 +3474,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Object value to multiple parameter positions.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UUID defaultId = UUID.randomUUID();
      * query.setObjectForMultiPositions(defaultId, 1, 3, 5, 7);
@@ -3558,7 +3558,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Adds multiple sets of parameters for batch execution.
      * Each element in the collection represents one set of parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<List<Object>> batchData = Arrays.asList(
      *     Arrays.asList("John", 25, "john@email.com"),
@@ -3587,7 +3587,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of typed parameters for batch execution.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
      * query.addBatchParameters(names, String.class).batchUpdate();
@@ -3616,7 +3616,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of parameters for batch execution using an iterator.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Iterator<Object[]> dataIterator = getLargeDataset();
      * query.addBatchParameters(dataIterator).batchUpdate();
@@ -3685,7 +3685,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of typed parameters for batch execution using an iterator.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Iterator<LocalDate> dates = getDateRange();
      * query.addBatchParameters(dates, LocalDate.class).batchUpdate();
@@ -3777,7 +3777,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of parameters for batch execution using a custom parameter setter.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getUsers();
      * query.addBatchParameters(users, (q, user) -> {
@@ -3806,7 +3806,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of parameters for batch execution using a custom parameter setter and iterator.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Iterator<Product> products = getProductIterator();
      * query.addBatchParameters(products, (q, product) -> {
@@ -3904,7 +3904,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Adds multiple sets of parameters for batch execution using a TriConsumer parameter setter.
      * This provides access to both the query instance and the underlying statement.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<ComplexObject> objects = getComplexObjects();
      * query.addBatchParameters(objects, (q, stmt, obj) -> {
@@ -3935,7 +3935,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Adds multiple sets of parameters for batch execution using a TriConsumer parameter setter and iterator.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Iterator<DataRecord> records = getBigDataIterator();
      * query.addBatchParameters(records, (q, stmt, record) -> {
@@ -4015,7 +4015,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Adds the current set of parameters to this statement's batch of commands.
      * Call this after setting all parameters for one row/record.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, "John").setInt(2, 25).addBatch();
      * query.setString(1, "Jane").setInt(2, 30).addBatch();
@@ -4051,7 +4051,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the direction for fetching rows from database tables.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFetchDirection(FetchDirection.FORWARD)
      *      .setFetchSize(1000)
@@ -4080,7 +4080,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets the fetch direction to FORWARD.
      * This is a convenience method equivalent to {@code setFetchDirection(FetchDirection.FORWARD)}.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFetchDirectionToForward()
      *      .setFetchSize(500)
@@ -4099,7 +4099,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets the number of rows that should be fetched from the database when more rows are needed.
      * This is a hint to the JDBC driver and may be ignored.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For large result sets
      * query.setFetchSize(1000)
@@ -4127,7 +4127,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * This limit applies only to BINARY, VARBINARY, LONGVARBINARY, CHAR, VARCHAR, NCHAR, NVARCHAR, 
      * LONGNVARCHAR and LONGVARCHAR columns.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setMaxFieldSize(1024 * 1024)  // 1MB limit
      *      .list();
@@ -4152,7 +4152,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets the maximum number of rows that this query can return.
      * If the limit is exceeded, the excess rows are silently dropped.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setMaxRows(100)  // Return at most 100 rows
      *      .list();
@@ -4175,7 +4175,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets the maximum number of rows that this query can return (for large row counts).
      * If the limit is exceeded, the excess rows are silently dropped.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLargeMaxRows(1_000_000L)  // Return at most 1 million rows
      *      .stream();
@@ -4198,7 +4198,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets the number of seconds the driver will wait for a Statement to execute.
      * If the limit is exceeded, a SQLException is thrown.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setQueryTimeout(30)  // 30 seconds timeout
      *      .list();
@@ -4223,7 +4223,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Configures this statement using a custom configuration function.
      * This allows for advanced statement configuration not covered by other methods.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * final Throwables.Consumer<PreparedStatement, SQLException> commonConfig = stmt -> {
      *     stmt.setFetchSize(100);
@@ -4264,7 +4264,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Configures this statement using a BiConsumer that has access to both the query and statement.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.configStmt((q, stmt) -> {
      *     q.setFetchSize(100).setQueryTimeout(60);
@@ -4312,7 +4312,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first boolean value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = query
      *     .setString(1, userId)
@@ -4338,7 +4338,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first character value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = query
      *     .setString(1, studentId)
@@ -4366,7 +4366,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first byte value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalByte status = query
      *     .setInt(1, recordId)
@@ -4390,7 +4390,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first short value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalShort year = query
      *     .setString(1, movieId)
@@ -4415,7 +4415,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the query and returns the first integer value from the result set.
      * Commonly used for COUNT queries.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt count = query
      *     .setString(1, "Active")
@@ -4441,7 +4441,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first long value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong totalRevenue = query
      *     .setInt(1, year)
@@ -4465,7 +4465,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first float value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat rating = query
      *     .setString(1, productId)
@@ -4489,7 +4489,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first double value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble average = query
      *     .setString(1, department)
@@ -4513,7 +4513,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first String value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> name = query
      *     .setInt(1, userId)
@@ -4541,7 +4541,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first BigInteger value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigInteger> largeNumber = query
      *     .setString(1, accountId)
@@ -4566,7 +4566,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first BigDecimal value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = query
      *     .setString(1, productCode)
@@ -4591,7 +4591,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first Date value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = query
      *     .setString(1, employeeId)
@@ -4615,7 +4615,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first Time value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = query
      *     .setString(1, eventId)
@@ -4639,7 +4639,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first Timestamp value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<Timestamp> lastLogin = query
      *     .setString(1, username)
@@ -4663,7 +4663,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first byte array value from the result set.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = query
      *     .setInt(1, userId)
@@ -4687,7 +4687,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first value from the result set as the specified type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<LocalDate> date = query
      *     .setString(1, orderId)
@@ -4711,7 +4711,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first value from the result set using a custom Type handler.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<MyCustomType> customType = TypeFactory.getType(MyCustomType.class);
      * Nullable<MyCustomType> result = query
@@ -4740,7 +4740,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first non-null value from the result set as the specified type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> email = query
      *     .setInt(1, userId)
@@ -4767,7 +4767,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the first non-null value from the result set using a custom Type handler.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<UUID> uuidType = Type.of(UUID.class);
      * Optional<UUID> sessionId = query
@@ -4797,7 +4797,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the query and returns the unique result value from the result set as the specified type.
      * Throws DuplicatedResultException if more than one row is found.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> username = query
      *     .setString(1, email)
@@ -4825,7 +4825,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the query and returns the unique result value from the result set using a custom Type handler.
      * Throws DuplicatedResultException if more than one row is found.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<BigDecimal> moneyType = Type.of(BigDecimal.class);
      * Nullable<BigDecimal> balance = query
@@ -4864,7 +4864,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the query and returns the unique non-null result value as the specified type.
      * Throws DuplicatedResultException if more than one row is found.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Integer> userId = query
      *     .setString(1, sessionToken)
@@ -4892,7 +4892,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the query and returns the unique non-null result value using a custom Type handler.
      * Throws DuplicatedResultException if more than one row is found.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<CustomId> idType = Type.of(CustomId.class);
      * Optional<CustomId> id = query
@@ -4948,7 +4948,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * a flexible, in-memory representation of the result set data. The Dataset can be used
      * for further data manipulation and transformation.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = preparedQuery.query();
      * dataset.forEach(row -> System.out.println(row));
@@ -4968,7 +4968,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>The entity class is used to determine how to map columns from the result set to the Dataset.
      * This provides type information for better data handling and conversion.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = preparedQuery.query(User.class);
      * // Dataset will use User class metadata for column mapping
@@ -4989,7 +4989,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This is a flexible method that allows custom result extraction logic. The ResultExtractor
      * receives the entire ResultSet and can process it in any way needed, returning a custom result.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract to a custom summary object
      * Summary summary = preparedQuery.query(rs -> {
@@ -5026,7 +5026,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Similar to {@link #query(ResultExtractor)}, but the BiResultExtractor also receives
      * the column labels list, which can be useful for dynamic column processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract with column labels awareness
      * Map<String, List<Object>> columnData = preparedQuery.query((rs, labels) -> {
@@ -5069,7 +5069,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is typically used with stored procedures that return multiple result sets.
      * It extracts the first two result sets using the provided extractors.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<List<User>, List<Order>> results = callableQuery.query2Resultsets(
      *     Jdbc.BiResultExtractor.toList(User.class),
@@ -5131,7 +5131,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is typically used with stored procedures that return multiple result sets.
      * It extracts the first three result sets using the provided extractors.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple3<List<User>, List<Order>, Summary> results = callableQuery.query3Resultsets(
      *     Jdbc.BiResultExtractor.toList(User.class),
@@ -5201,7 +5201,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is useful for stored procedures that return multiple result sets.
      * Each result set is converted to a separate Dataset in the returned list.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Call a stored procedure that returns multiple result sets
      * List<Dataset> allResults = callableQuery.queryAllResultsets();
@@ -5224,7 +5224,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method allows custom processing of each result set returned by a stored procedure
      * or multi-result query.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract row counts from all result sets
      * List<Integer> rowCounts = callableQuery.queryAllResultsets(rs -> {
@@ -5278,7 +5278,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Similar to {@link #queryAllResultsets(ResultExtractor)}, but the extractor also receives
      * the column labels for each result set.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract column metadata from all result sets
      * List<Map<String, Class<?>>> metadata = callableQuery.queryAllResultsets((rs, labels) -> {
@@ -5335,7 +5335,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method combines query execution with result transformation in a single operation,
      * useful for chaining operations on the query result.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Calculate average from query result
      * Double average = preparedQuery.queryThenApply(dataset -> 
@@ -5361,7 +5361,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Similar to {@link #queryThenApply(Throwables.Function)}, but uses an entity class
      * for better type-aware column mapping in the Dataset.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process User entities from query
      * List<String> names = preparedQuery.queryThenApply(User.class, dataset -> 
@@ -5390,7 +5390,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is useful when you need to perform side effects with the query results
      * without returning a value.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Print all results
      * preparedQuery.queryThenAccept(dataset -> 
@@ -5414,7 +5414,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Similar to {@link #queryThenAccept(Throwables.Consumer)}, but uses an entity class
      * for better type-aware column mapping in the Dataset.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process User entities and save to file
      * preparedQuery.queryThenAccept(User.class, dataset -> {
@@ -5443,7 +5443,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method ensures that the query returns exactly one row. If no rows or multiple rows
      * are found, it throws an appropriate exception.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find exactly one user by ID
      * Optional<Map<String, Object>> user = preparedQuery
@@ -5469,7 +5469,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method maps the single result row to an instance of the specified class using
      * reflection-based mapping.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find exactly one user by email
      * Optional<User> user = preparedQuery
@@ -5496,7 +5496,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method allows custom mapping logic for the single result row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for a single result
      * Optional<UserSummary> summary = preparedQuery
@@ -5523,7 +5523,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findOnlyOne(Jdbc.RowMapper)}, but the mapper also receives the column labels.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Map with column labels awareness
      * Optional<CustomObject> result = preparedQuery
@@ -5553,7 +5553,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findOnlyOne()}, but returns null instead of an empty Optional when no record is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> user = preparedQuery
      *     .setLong(1, userId)
@@ -5577,7 +5577,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findOnlyOne(Class)}, but returns null instead of an empty Optional when no record is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = preparedQuery
      *     .setString(1, email)
@@ -5622,7 +5622,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findOnlyOne(Jdbc.RowMapper)}, but returns null instead of an empty Optional when no record is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UserDTO user = preparedQuery
      *     .setLong(1, userId)
@@ -5667,7 +5667,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findOnlyOne(BiRowMapper)}, but returns null instead of an empty Optional when no record is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CustomResult result = preparedQuery
      *     .setLong(1, id)
@@ -5713,7 +5713,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Unlike {@link #findOnlyOne()}, this method doesn't throw an exception if multiple rows are found;
      * it simply returns the first row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get the first matching user
      * Optional<Map<String, Object>> firstUser = preparedQuery
@@ -5737,7 +5737,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method maps the first result row to an instance of the specified class.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get the first active user
      * Optional<User> firstUser = preparedQuery
@@ -5763,7 +5763,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method allows custom mapping logic for the first result row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for the first result
      * Optional<String> firstName = preparedQuery
@@ -5786,7 +5786,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method filters rows and maps the first matching row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first premium user
      * Optional<User> firstPremium = preparedQuery
@@ -5814,7 +5814,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findFirst(RowMapper)}, but the mapper also receives the column labels.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Map first result with column awareness
      * Optional<Map<String, Object>> first = preparedQuery
@@ -5842,7 +5842,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method filters rows using column labels and maps the first matching row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first row where any column contains "admin"
      * Optional<User> firstAdmin = preparedQuery
@@ -5872,7 +5872,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findFirst()}, but returns null instead of an empty Optional when no result is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> firstRow = preparedQuery.findFirstOrNull();
      * if (firstRow != null) {
@@ -5892,7 +5892,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findFirst(Class)}, but returns null instead of an empty Optional when no result is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User firstUser = preparedQuery
      *     .setString(1, "active")
@@ -5930,7 +5930,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findFirst(RowMapper)}, but returns null instead of an empty Optional when no result is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String name = preparedQuery
      *     .setLong(1, userId)
@@ -5964,7 +5964,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method applies the filter to each row and returns the first row that matches.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User firstActiveUser = preparedQuery
      *     .findFirstOrNull(
@@ -6005,7 +6005,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>Similar to {@link #findFirst(BiRowMapper)}, but returns null instead of an empty Optional when no result is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CustomObject first = preparedQuery
      *     .findFirstOrNull((rs, labels) -> {
@@ -6041,7 +6041,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This method applies the filter with column labels awareness and returns the first matching row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Product firstExpensive = preparedQuery
      *     .findFirstOrNull(
@@ -6084,7 +6084,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p>This is one of the most commonly used methods for retrieving multiple rows from a query.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Map<String, Object>> users = preparedQuery
      *     .setString(1, "active")
@@ -6115,7 +6115,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *   <li>Type conversion is automatic for common types</li>
      * </ul>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Define a simple entity class
      * public class User {
@@ -6154,7 +6154,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists the rows in the first ResultSet and maps them to the specified target type with a maximum result limit.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Deprecated: Prefer using SQL LIMIT clause instead
      * List<User> users = query.list(User.class, 10);
@@ -6178,7 +6178,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists the rows in the first ResultSet using the provided row mapper.
      * This method provides complete control over how each row is converted to an object.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for complex logic
      * List<UserDTO> users = preparedQuery
@@ -6216,7 +6216,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists the rows in the first ResultSet using the provided row mapper with a maximum result limit.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Deprecated: Prefer using SQL LIMIT clause instead
      * List<User> users = query.list(rs -> new User(rs.getLong("id"), rs.getString("name")), 10);
@@ -6240,7 +6240,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists the rows in the first ResultSet that match the specified row filter and maps them using the provided row mapper.
      * This method allows filtering rows at the JDBC level before mapping.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter rows based on a condition before mapping
      * List<User> activeUsers = preparedQuery
@@ -6281,7 +6281,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method processes rows sequentially, applying the filter first and only mapping rows that pass the filter.
      * Processing stops when either the ResultSet is exhausted or maxResult mapped objects have been created.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get top 10 high-value orders
      * List<Order> topOrders = preparedQuery
@@ -6328,7 +6328,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists the rows in the first ResultSet and maps them using the provided BiRowMapper.
      * BiRowMapper receives both the ResultSet and column labels, providing more context for mapping.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Map with access to column labels
      * List<Map<String, Object>> results = preparedQuery
@@ -6370,7 +6370,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists the rows in the first ResultSet using a BiRowMapper with a maximum result limit.
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Deprecated: Prefer using SQL LIMIT clause instead
      * List<User> users = query.list((rs, labels) -> new User(rs.getLong("id"), rs.getString("name")), 10);
@@ -6394,7 +6394,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists the rows in the first ResultSet that match the specified BiRowFilter and maps them using the provided BiRowMapper.
      * Both the filter and mapper receive the ResultSet and column labels for maximum flexibility.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter based on column existence and values
      * List<Product> products = preparedQuery
@@ -6425,7 +6425,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides the most flexible row processing, with both filtering and mapping having access to
      * the ResultSet and column metadata. Processing stops when maxResult objects have been created.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex filtering and mapping with result limit
      * List<OrderSummary> summaries = preparedQuery
@@ -6489,7 +6489,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is primarily used when executing stored procedures that return multiple ResultSets.
      * Each ResultSet is processed independently and mapped to a list of the target type.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Call a stored procedure that returns multiple result sets
      * CallableQuery query = JdbcUtil.prepareCall(connection, "{call getOrdersAndCustomers(?)}");
@@ -6529,7 +6529,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists all the ResultSets using the provided row mapper.
      * This method is used for processing multiple ResultSets returned by stored procedures.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for each result set
      * List<List<CustomDTO>> allResults = callableQuery
@@ -6567,7 +6567,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists all the ResultSets that match the specified row filter and maps them using the provided row mapper.
      * Allows filtering rows across all ResultSets before mapping.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process multiple result sets with filtering
      * List<List<ActiveRecord>> activeRecords = callableQuery
@@ -6604,7 +6604,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists all the ResultSets and maps them using the provided BiRowMapper.
      * The BiRowMapper receives both ResultSet and column labels for flexible mapping.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Map multiple result sets with column awareness
      * List<List<FlexibleDTO>> allResults = callableQuery
@@ -6644,7 +6644,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists all the ResultSets that match the specified BiRowFilter and maps them using the provided BiRowMapper.
      * Both filter and mapper receive ResultSet and column labels for maximum flexibility.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process multiple result sets with column-aware filtering and mapping
      * List<List<ProcessedRecord>> results = callableQuery
@@ -6689,7 +6689,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Retrieves query results as a list and applies the specified function to transform them.
      * This method combines querying and transformation in a single operation.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Convert list to a map indexed by ID
      * Map<Long, User> userMap = preparedQuery
@@ -6730,7 +6730,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Retrieves query results using a row mapper and applies the specified function to transform them.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract specific data from custom-mapped results
      * Set<String> uniqueCategories = preparedQuery
@@ -6767,7 +6767,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Retrieves query results using a BiRowMapper and applies the specified function to transform them.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process results with column awareness and transform
      * JsonArray jsonResult = preparedQuery
@@ -6806,7 +6806,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Retrieves query results as a list and processes them with the specified consumer.
      * This method is useful for side effects like logging, caching, or batch processing.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Log all results
      * preparedQuery
@@ -6848,7 +6848,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Retrieves query results using a RowMapper and processes them with the specified consumer.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process custom-mapped results
      * preparedQuery
@@ -6877,7 +6877,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Retrieves query results using a BiRowMapper and processes them with the specified consumer.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process results with column metadata
      * preparedQuery
@@ -6915,7 +6915,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * until a terminal operation is called on the stream. The Connection and Statement remain open
      * until the stream is closed or a terminal operation completes.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process large result set without loading all into memory
      * try (Stream<Map<String, Object>> stream = preparedQuery.stream()) {
@@ -6950,7 +6950,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Important:</b> The stream is lazy-evaluated. The query executes when a terminal operation
      * is called on the stream. Resources are held open until the stream is closed.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process users in batches without loading all into memory
      * try (Stream<User> userStream = preparedQuery.stream(User.class)) {
@@ -6987,7 +6987,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Important:</b> The stream is lazy-evaluated and holds database resources open.
      * Always close the stream or use try-with-resources to ensure proper cleanup.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream with custom mapping
      * try (Stream<CustomerDTO> stream = preparedQuery.stream(rs -> {
@@ -7037,7 +7037,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Streams the rows in the first ResultSet using the provided BiRowMapper.
      * The BiRowMapper receives both ResultSet and column labels for flexible mapping.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream with column-aware mapping
      * try (Stream<FlexibleRecord> stream = preparedQuery.stream((rs, labels) -> {
@@ -7080,7 +7080,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Streams the rows in the first ResultSet, filtering with RowFilter and mapping with RowMapper.
      * Combines filtering and mapping in a lazy-evaluated stream for efficient processing.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream with filtering and mapping
      * try (Stream<Order> stream = preparedQuery.stream(
@@ -7127,7 +7127,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
      * </p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Advanced streaming with column-aware filtering and mapping
      * try (Stream<Report> stream = preparedQuery.stream(
@@ -7316,7 +7316,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is typically used when executing stored procedures that return multiple result sets.
      * Each ResultSet is converted to a Dataset for easy manipulation and processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Execute a stored procedure that returns multiple result sets
      * try (Stream<Dataset> resultSets = callableQuery.streamAllResultsets()) {
@@ -7347,7 +7347,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Important:</b> The ResultExtractor should not save or return the ResultSet reference,
      * as it will be automatically closed after processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract summary information from each result set
      * Stream<Summary> summaries = callableQuery.streamAllResultsets(
@@ -7393,7 +7393,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Important:</b> The BiResultExtractor should not save or return the ResultSet reference,
      * as it will be automatically closed after processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract data with column-aware processing
      * Stream<Report> reports = callableQuery.streamAllResultsets(
@@ -7467,7 +7467,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * not a rewritten query like {@code SELECT 1 FROM ...} or {@code SELECT COUNT(*) FROM ...}.
      * The query stops processing after finding the first row.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Check if user exists
      * boolean userExists = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE email = ?")
@@ -7506,7 +7506,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * better expresses the intent when checking for absence of records, similar to
      * SQL's {@code NOT EXISTS} clause.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Check if email is available for registration
      * boolean emailAvailable = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE email = ?")
@@ -7536,7 +7536,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Note:</b> Only the first row is processed even if multiple rows exist.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process user if found
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")
@@ -7573,7 +7573,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is similar to {@link #ifExists(RowConsumer)} but provides access
      * to column labels along with the ResultSet, enabling column-aware processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process user with dynamic column handling
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")
@@ -7615,7 +7615,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides a complete conditional execution pattern: process the first row
      * if it exists, or execute an alternative action if no rows are found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load user or create default
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")
@@ -7666,7 +7666,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is similar to {@link #ifExistsOrElse(RowConsumer, Throwables.Runnable)} 
      * but provides access to column labels for column-aware processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load configuration or use defaults
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM config WHERE app_id = ?")
@@ -7765,7 +7765,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * that satisfy the provided filter condition. While more flexible than {@link #count()},
      * it still requires fetching all rows and can be inefficient for large result sets.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Count premium users from a user query
      * int premiumCount = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE created_date > ?")
@@ -7810,7 +7810,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * the ResultSet and the column labels. This allows for dynamic filtering based on
      * which columns are present in the result set.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Count rows with specific conditions based on available columns
      * int validCount = JdbcUtil.prepareQuery(conn, "SELECT * FROM products")
@@ -7859,7 +7859,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method short-circuits and returns {@code true} as soon as a matching row is found,
      * making it efficient for checking existence of records matching specific criteria.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Check if any order is pending
      * boolean hasPendingOrders = JdbcUtil.prepareQuery(conn, 
@@ -7904,7 +7904,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides column-aware matching with short-circuit evaluation.
      * It returns {@code true} as soon as a matching row is found.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Check if any product has invalid data considering available columns
      * boolean hasInvalidProducts = JdbcUtil.prepareQuery(conn, "SELECT * FROM products")
@@ -7954,7 +7954,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * the filter condition. It short-circuits and returns {@code false} as soon as a
      * non-matching row is found. An empty result set returns {@code true}.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Verify all items in order are in stock
      * boolean allInStock = JdbcUtil.prepareQuery(conn, 
@@ -8001,7 +8001,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * only if every row satisfies the filter condition, with access to column labels
      * for dynamic validation.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Validate all employee records have required fields
      * boolean allValid = JdbcUtil.prepareQuery(conn, "SELECT * FROM employees WHERE dept_id = ?")
@@ -8052,7 +8052,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This is a convenience method that returns the opposite of {@link #anyMatch(RowFilter)}.
      * It returns {@code true} only if no row satisfies the filter condition.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Ensure no orders exceed credit limit
      * boolean withinCreditLimit = JdbcUtil.prepareQuery(conn, 
@@ -8084,7 +8084,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * It provides column-aware filtering and returns {@code true} only if no row satisfies
      * the filter condition.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Ensure no products have conflicting data
      * boolean noConflicts = JdbcUtil.prepareQuery(conn, "SELECT * FROM products WHERE category_id = ?")
@@ -8116,7 +8116,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * provided consumer to each row. Unlike stream operations, this executes immediately
      * and processes all rows before returning.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process all active users
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE active = true")
@@ -8166,7 +8166,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * rows that satisfy the filter condition. This is more efficient than filtering
      * after retrieval for large result sets.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process only premium users with high balance
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM users")
@@ -8212,7 +8212,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * column labels to the consumer. This enables dynamic processing based on the
      * actual columns present in the result set.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process rows with dynamic column handling
      * JdbcUtil.prepareQuery(conn, "SELECT * FROM products")
@@ -8262,7 +8262,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * and consumer receive the ResultSet and column labels, enabling sophisticated
      * conditional processing based on available columns.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process valid products with dynamic field handling
      * JdbcUtil.prepareQuery(conn, "SELECT p.*, c.name as category_name FROM products p " +
@@ -8344,7 +8344,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> The DisposableObjArray is only valid within the consumer execution.
      * Do not store references to it or its contents for later use.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process rows with disposable arrays
      * preparedQuery.foreach(row -> {
@@ -8378,7 +8378,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method uses the field types defined in the entity class to properly
      * retrieve values from the ResultSet, ensuring type safety and proper conversion.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Define entity class
      * public class User {
@@ -8422,7 +8422,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * (typically an auto-increment ID). If no key is generated or the key is a
      * default value (null, 0, etc.), an empty Optional is returned.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Insert new user and get generated ID
      * Optional<Long> userId = JdbcUtil.prepareQuery(conn, 
@@ -8453,7 +8453,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * composite keys or non-standard key generation. The method executes the INSERT statement
      * and then applies the provided extractor to the generated keys ResultSet.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Insert with custom key extraction
      * Optional<String> generatedCode = JdbcUtil.prepareQuery(conn,
@@ -8489,7 +8489,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys, offering more flexibility than the standard row mapper.</p>
      *
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Map<String, Object>> keyMap = preparedQuery.insert((rs, columnLabels) -> {
      *     Map<String, Object> map = new HashMap<>();
@@ -8582,7 +8582,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method uses the default single-column generated key extractor that assumes
      * the generated keys are numeric (Long) values in the first column.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> generatedIds = JdbcUtil.prepareQuery(conn,
      *         "INSERT INTO users (name, email) VALUES (?, ?)")
@@ -8607,7 +8607,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method allows custom extraction of generated keys from batch insert operations,
      * useful when dealing with non-numeric keys or composite keys.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<UUID> generatedUUIDs = preparedQuery.batchInsert(rs -> 
      *     UUID.fromString(rs.getString("id"))
@@ -8633,7 +8633,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys from batch operations.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Map<String, Object>> keyMaps = preparedQuery.batchInsert((rs, labels) -> {
      *     Map<String, Object> keyMap = new HashMap<>();
@@ -8740,7 +8740,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method executes the prepared statement and returns the update count,
      * which represents the number of rows affected by the SQL statement.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int rowsUpdated = JdbcUtil.prepareQuery(conn,
      *         "UPDATE users SET status = 'ACTIVE' WHERE last_login > ?")
@@ -8775,7 +8775,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is useful when you need to perform an update operation that generates keys
      * (e.g., an INSERT with auto-generated columns or an UPDATE that triggers key generation).</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Integer, List<Long>> result = JdbcUtil.prepareQuery(conn,
      *         "INSERT INTO audit_log (action, user_id) VALUES (?, ?)")
@@ -8826,7 +8826,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys from update operations.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Integer, List<Map<String, Object>>> result = 
      *     preparedQuery.updateAndReturnGeneratedKeys((rs, labels) -> {
@@ -8890,7 +8890,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * containing one element for each command, indicating the number of rows affected
      * by that command.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int[] results = JdbcUtil.prepareQuery(conn,
      *         "UPDATE users SET last_login = ? WHERE id = ?")
@@ -8927,7 +8927,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is useful for batch INSERT operations where you need to track both
      * the success of each insert and retrieve the generated keys.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<int[], List<Long>> result = JdbcUtil.prepareQuery(conn,
      *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)")
@@ -8977,7 +8977,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys from batch update operations.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<int[], List<CompositeKey>> result = 
      *     preparedQuery.batchUpdateAndReturnGeneratedKeys((rs, labels) -> 
@@ -9024,7 +9024,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * update counts that exceed {@link Integer#MAX_VALUE}. Use this method when working with
      * very large tables or bulk operations.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long rowsArchived = JdbcUtil.prepareQuery(conn,
      *         "INSERT INTO archive_table SELECT * FROM active_table WHERE created < ?")
@@ -9056,7 +9056,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is similar to {@link #batchUpdate()} but returns an array of long values
      * to accommodate update counts that exceed {@link Integer#MAX_VALUE}.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long[] results = JdbcUtil.prepareQuery(conn,
      *         "UPDATE large_table SET processed = true WHERE batch_id = ?")
@@ -9093,7 +9093,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * the type of the first result. Use this method when the SQL statement may return
      * multiple result sets, update counts, or a combination of both.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * boolean hasResultSet = JdbcUtil.prepareQuery(conn, "CALL complex_procedure(?)")
      *     .setInt(1, parameter)
@@ -9134,7 +9134,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * PreparedStatement, allowing custom result extraction. This is useful when you need
      * to access statement metadata or handle complex result processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get the first result set after execution
      * ResultSet rs = preparedQuery.executeThenApply(stmt -> stmt.getResultSet());
@@ -9180,7 +9180,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method executes the statement and then applies the provided function to both
      * the PreparedStatement and a boolean indicating whether the first result is a ResultSet.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process result based on type
      * Object result = preparedQuery.executeThenApply((stmt, isResultSet) -> {
@@ -9223,7 +9223,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * provided consumer for processing. This is useful for side effects or when you don't
      * need to return a value.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process warnings after execution
      * preparedQuery.executeThenAccept(stmt -> {
@@ -9278,7 +9278,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method executes the statement and then passes both the PreparedStatement and
      * a boolean indicating whether the first result is a ResultSet to the provided consumer.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * preparedQuery.executeThenAccept((stmt, isResultSet) -> {
      *     if (isResultSet) {
@@ -9325,7 +9325,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * is completed by another thread. Ensure proper resource management and avoid keeping
      * connections open longer than necessary.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = preparedQuery
      *     .setInt(1, departmentId)
@@ -9365,7 +9365,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * is completed by another thread. Ensure the executor has appropriate thread pool settings
      * to avoid resource exhaustion.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
      * 
@@ -9409,7 +9409,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
      * is completed by another thread.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = preparedQuery
      *     .setString(1, "Processing")
@@ -9450,7 +9450,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
      * is completed by another thread.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
      * 
@@ -9550,7 +9550,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> After calling close(), any attempt to use this query instance
      * will result in an IllegalStateException.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * AbstractQuery<?, ?> query = null;
      * try {

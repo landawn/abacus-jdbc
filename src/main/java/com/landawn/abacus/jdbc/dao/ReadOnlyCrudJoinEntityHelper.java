@@ -21,26 +21,41 @@ import com.landawn.abacus.query.SQLBuilder;
  * A read-only interface for handling join entity operations with CRUD DAOs.
  * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link CrudJoinEntityHelper}
  * to provide read-only access to join entity operations for CRUD-based DAOs.
- * 
+ *
  * <p>This interface is designed for scenarios where you need to read join entity
  * relationships (such as many-to-many relationships) but should not be able to
  * modify them. All delete operations for join entities are disabled and will
  * throw {@link UnsupportedOperationException}.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // For a User-Role many-to-many relationship
- * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder, UserDao> {
- *     // Can load user's roles
- *     List<Role> loadUserRoles(User user) {
- *         return loadJoinEntities(user, Role.class);
- *     }
- *     
- *     // Cannot delete user-role associations
- *     // deleteJoinEntities(user, Role.class) throws UnsupportedOperationException
+ * // Define a read-only CRUD DAO with join entity support
+ * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder.PSC, UserReadOnlyDao> {
+ *     // Inherits both CRUD read operations and join entity loading
+ * }
+ *
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ *
+ * // Get user by ID with join entities loaded
+ * Optional<User> user = userDao.get(1L, Order.class);
+ * User userWithAll = userDao.gett(1L, true);  // Load all join entities
+ *
+ * // Batch get with join entities
+ * List<User> users = userDao.batchGet(Arrays.asList(1L, 2L, 3L), Order.class);
+ *
+ * // Load join entities for existing entities
+ * User user = userDao.gett(1L);
+ * userDao.loadJoinEntities(user, "orders");
+ *
+ * // All delete operations are blocked
+ * try {
+ *     userDao.deleteJoinEntities(user, Order.class);
+ *     // Will throw UnsupportedOperationException
+ * } catch (UnsupportedOperationException e) {
+ *     // Expected - this is a read-only interface
  * }
  * }</pre>
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
  * @param <SB> the SQLBuilder type used for query construction

@@ -18,30 +18,39 @@ package com.landawn.abacus.jdbc.dao;
 import com.landawn.abacus.query.SQLBuilder;
 
 /**
- * A read-only CRUD DAO interface with join entity helper capabilities that uses primitive {@code long} for ID operations.
- * This interface combines read-only access restrictions with join entity loading features and optimized
- * primitive long ID handling.
- * 
+ * A read-only CRUD DAO interface with join entity helper capabilities that uses primitive {@code long} for ID operations
+ * and throws unchecked exceptions. This interface combines read-only access restrictions with join entity loading
+ * features and optimized primitive long ID handling.
+ *
  * <p>This interface is ideal for read-only scenarios where:</p>
  * <ul>
  *   <li>Entities have relationships that need to be loaded</li>
  *   <li>The entity uses long/Long as the ID type</li>
  *   <li>Data should never be modified (read-only access)</li>
  *   <li>Performance is critical (avoiding ID boxing/unboxing)</li>
+ *   <li>Unchecked exception handling is preferred</li>
  * </ul>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
+ * // Define a read-only DAO with primitive long IDs
  * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, SQLBuilder.PSC, ReadOnlyUserDao> {
  *     // Inherits read-only operations with join loading and primitive long ID support
  * }
- * 
+ *
  * ReadOnlyUserDao dao = JdbcUtil.createDao(ReadOnlyUserDao.class, readOnlyDataSource);
- * 
- * // Read operations with join loading using primitive long:
+ *
+ * // Read operations with join loading using primitive long - no checked exceptions
  * Optional<User> user = dao.get(123L, Order.class);  // loads user with orders
  * User userWithAll = dao.gett(123L, true);           // loads all relationships
- * 
+ *
+ * // Batch operations with primitive long IDs
+ * List<Long> ids = Arrays.asList(123L, 456L, 789L);
+ * List<User> users = dao.batchGet(ids, Order.class);
+ *
+ * // Get with selected properties and join entities
+ * User user = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
+ *
  * // All write operations are disabled:
  * // dao.insert(user);              // throws UnsupportedOperationException
  * // dao.update(user);              // throws UnsupportedOperationException

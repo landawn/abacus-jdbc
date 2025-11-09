@@ -78,7 +78,7 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  * 
- * <p><b>Usage Example:</b></p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * try (CallableQuery query = preparedQuery("{call get_employee_info(?, ?, ?)}")) {
  *     query.setInt(1, 1001)  // IN parameter: employee ID
@@ -134,7 +134,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a NULL value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNull("employeeId", Types.INTEGER);
      * }</pre>
@@ -155,7 +155,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a NULL value for the specified parameter with a SQL type name.
      * This method is useful for user-defined or REF types.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNull("customParam", Types.STRUCT, "MY_CUSTOM_TYPE");
      * }</pre>
@@ -176,7 +176,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a boolean value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setBoolean("isActive", true);
      * }</pre>
@@ -196,7 +196,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Boolean value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Boolean isManager = getManagerStatus(); // might return null
      * query.setBoolean("isManager", isManager);
@@ -220,7 +220,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a byte value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setByte("statusCode", (byte) 1);
      * }</pre>
@@ -240,7 +240,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Byte value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Byte level = getUserLevel(); // might return null
      * query.setByte("userLevel", level);
@@ -264,7 +264,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a short value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setShort("departmentId", (short) 100);
      * }</pre>
@@ -284,7 +284,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Short value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Short quantity = getOrderQuantity(); // might return null
      * query.setShort("quantity", quantity);
@@ -308,7 +308,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an int value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt("employeeId", 1001);
      * }</pre>
@@ -328,7 +328,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an Integer value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Integer managerId = getManagerId(); // might return null for CEO
      * query.setInt("managerId", managerId);
@@ -352,7 +352,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a long value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLong("accountNumber", 1234567890L);
      * }</pre>
@@ -372,7 +372,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Long value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Long transactionId = getTransactionId(); // might return null
      * query.setLong("transactionId", transactionId);
@@ -398,7 +398,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The BigInteger must be within the range of a long value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigId = new BigInteger("9876543210");
      * query.setLong("bigId", bigId);
@@ -423,7 +423,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a float value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFloat("discountRate", 0.15f);
      * }</pre>
@@ -443,7 +443,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Float value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Float temperature = getTemperature(); // might return null
      * query.setFloat("temperature", temperature);
@@ -467,7 +467,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a double value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setDouble("salary", 75000.50);
      * }</pre>
@@ -487,7 +487,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Double value for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Double price = getProductPrice(); // might return null
      * query.setDouble("price", price);
@@ -512,7 +512,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a BigDecimal value for the specified parameter.
      * This method is typically used for precise decimal values like currency amounts.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigDecimal amount = new BigDecimal("123.45");
      * query.setBigDecimal("totalAmount", amount);
@@ -533,7 +533,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a BigInteger value as a BigDecimal for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigValue = new BigInteger("12345678901234567890");
      * query.setBigDecimal("bigValue", bigValue);
@@ -559,7 +559,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This method converts the BigInteger to its string representation.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigNumber = new BigInteger("99999999999999999999");
      * query.setBigIntegerAsString("bigNumberStr", bigNumber);
@@ -581,7 +581,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a String value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString("firstName", "John");
      * }</pre>
@@ -600,7 +600,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a CharSequence value as a String for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * StringBuilder sb = new StringBuilder("Hello World");
      * query.setString("message", sb);
@@ -618,7 +618,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a char value as a String for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString("grade", 'A');
      * }</pre>
@@ -636,7 +636,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Character value as a String for the specified parameter.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Character initial = getMiddleInitial(); // might return null
      * query.setString("middleInitial", initial);
@@ -656,7 +656,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The BigInteger is converted to its decimal string representation.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger serialNumber = new BigInteger("123456789012345");
      * query.setString("serialNumber", serialNumber);
@@ -681,7 +681,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a national character string value for the specified parameter.
      * This method is used for NCHAR, NVARCHAR, and LONGNVARCHAR parameters.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setNString("unicodeName", "名前");
      * }</pre>
@@ -700,7 +700,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a java.sql.Date value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Date birthDate = java.sql.Date.valueOf("1990-01-15");
      * query.setDate("birthDate", birthDate);
@@ -721,7 +721,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a java.util.Date value as a java.sql.Date for the specified parameter.
      * The time portion of the date will be truncated.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilDate = new java.util.Date();
      * query.setDate("createdDate", utilDate);
@@ -741,7 +741,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a LocalDate value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDate today = LocalDate.now();
      * query.setDate("reportDate", today);
@@ -761,7 +761,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a java.sql.Time value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Time startTime = java.sql.Time.valueOf("09:00:00");
      * query.setTime("startTime", startTime);
@@ -782,7 +782,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a java.util.Date value as a java.sql.Time for the specified parameter.
      * Only the time portion of the date will be used.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilTime = new java.util.Date();
      * query.setTime("checkInTime", utilTime);
@@ -802,7 +802,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a LocalTime value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalTime meetingTime = LocalTime.of(14, 30);
      * query.setTime("meetingTime", meetingTime);
@@ -822,7 +822,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a java.sql.Timestamp value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Timestamp timestamp = new java.sql.Timestamp(System.currentTimeMillis());
      * query.setTimestamp("lastModified", timestamp);
@@ -842,7 +842,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a java.util.Date value as a java.sql.Timestamp for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date now = new java.util.Date();
      * query.setTimestamp("createdAt", now);
@@ -862,7 +862,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a LocalDateTime value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * LocalDateTime eventTime = LocalDateTime.now();
      * query.setTimestamp("eventTime", eventTime);
@@ -883,7 +883,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a ZonedDateTime value for the specified parameter.
      * The ZonedDateTime is converted to an Instant and then to a Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ZonedDateTime zonedTime = ZonedDateTime.now();
      * query.setTimestamp("scheduledTime", zonedTime);
@@ -904,7 +904,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an OffsetDateTime value for the specified parameter.
      * The OffsetDateTime is converted to an Instant and then to a Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OffsetDateTime offsetTime = OffsetDateTime.now();
      * query.setTimestamp("recordedTime", offsetTime);
@@ -925,7 +925,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an Instant value for the specified parameter.
      * The Instant is converted to a Timestamp.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Instant instant = Instant.now();
      * query.setTimestamp("processedAt", instant);
@@ -946,7 +946,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a byte array for the specified parameter.
      * This method is typically used for BINARY, VARBINARY, or LONGVARBINARY data.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * byte[] imageData = loadImageData();
      * query.setBytes("profileImage", imageData);
@@ -967,7 +967,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an ASCII stream for the specified parameter.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream asciiStream = new FileInputStream("data.txt");
      * query.setAsciiStream("textData", asciiStream);
@@ -987,7 +987,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an ASCII stream for the specified parameter with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream asciiStream = new FileInputStream("data.txt");
      * long fileLength = new File("data.txt").length();
@@ -1010,7 +1010,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a binary stream for the specified parameter.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream binaryStream = new FileInputStream("image.jpg");
      * query.setBinaryStream("imageData", binaryStream);
@@ -1030,7 +1030,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a binary stream for the specified parameter with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream binaryStream = new FileInputStream("document.pdf");
      * long fileLength = new File("document.pdf").length();
@@ -1053,7 +1053,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a character stream for the specified parameter.
      * The JDBC driver will read the data from the stream as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new FileReader("article.txt");
      * query.setCharacterStream("articleContent", reader);
@@ -1073,7 +1073,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a character stream for the specified parameter with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Large text content...");
      * query.setCharacterStream("description", reader, 1000);
@@ -1095,7 +1095,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a national character stream for the specified parameter.
      * This method is used for NCHAR, NVARCHAR, and LONGNVARCHAR columns.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Unicode text content");
      * query.setNCharacterStream("unicodeContent", reader);
@@ -1115,7 +1115,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a national character stream for the specified parameter with a specified length.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Unicode text with special characters");
      * query.setNCharacterStream("unicodeText", reader, 100);
@@ -1136,7 +1136,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Blob object for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Blob blob = connection.createBlob();
      * blob.setBytes(1, imageBytes);
@@ -1158,7 +1158,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Blob value using an InputStream for the specified parameter.
      * The data will be read from the stream as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * InputStream imageStream = new FileInputStream("photo.jpg");
      * query.setBlob("photo", imageStream);
@@ -1178,7 +1178,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Blob value using an InputStream with a specified length for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File file = new File("document.pdf");
      * InputStream stream = new FileInputStream(file);
@@ -1200,7 +1200,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Clob object for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Clob clob = connection.createClob();
      * clob.setString(1, "Large text content...");
@@ -1222,7 +1222,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a Clob value using a Reader for the specified parameter.
      * The data will be read from the Reader as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new FileReader("article.txt");
      * query.setClob("articleText", reader);
@@ -1242,7 +1242,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a Clob value using a Reader with a specified length for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String content = "Long article content...";
      * Reader reader = new StringReader(content);
@@ -1265,7 +1265,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an NClob object for the specified parameter.
      * NClob is used for storing national character large objects.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * NClob nclob = connection.createNClob();
      * nclob.setString(1, "Unicode large text");
@@ -1287,7 +1287,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an NClob value using a Reader for the specified parameter.
      * The data will be read from the Reader as needed until end-of-file is reached.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Reader reader = new StringReader("Unicode text content");
      * query.setNClob("unicodeText", reader);
@@ -1307,7 +1307,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an NClob value using a Reader with a specified length for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String unicodeContent = "Unicode content with special characters";
      * Reader reader = new StringReader(unicodeContent);
@@ -1329,7 +1329,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a URL value for the specified parameter.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * URL website = new URL("https://www.example.com");
      * query.setURL("websiteUrl", website);
@@ -1350,7 +1350,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an SQLXML object for the specified parameter.
      * SQLXML is used for storing XML data in the database.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SQLXML xmlData = connection.createSQLXML();
      * xmlData.setString("<root><data>value</data></root>");
@@ -1372,7 +1372,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets a RowId object for the specified parameter.
      * RowId represents the address of a row in a database table.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowId rowId = resultSet.getRowId("ROWID");
      * query.setRowId("targetRowId", rowId);
@@ -1393,7 +1393,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets an object value for the specified parameter.
      * The JDBC driver will attempt to map the object to the appropriate SQL type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("value", 123);  // Integer
      * query.setObject("name", "John");  // String
@@ -1418,7 +1418,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an object value for the specified parameter with a specified SQL type.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("amount", 123.45, Types.DECIMAL);
      * }</pre>
@@ -1439,7 +1439,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets an object value for the specified parameter with a specified SQL type and scale.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("price", 123.456789, Types.DECIMAL, 2);  // Scale to 2 decimal places
      * }</pre>
@@ -1463,7 +1463,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets multiple parameters from a Map where keys are parameter names and values are parameter values.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> params = new HashMap<>();
      * params.put("employeeId", 1001);
@@ -1496,7 +1496,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Each parameter name in the list should correspond to a property name in the entity object.
      * The appropriate database type is automatically determined based on the property type.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Employee employee = new Employee();
      * employee.setId(1001);
@@ -1543,7 +1543,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>OUT parameters must be registered before the statement is executed. The SQL type
      * specified should match the type of data the stored procedure will return for this parameter.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 100)  // IN parameter
      *      .registerOutParameter(2, Types.VARCHAR)  // OUT parameter
@@ -1577,7 +1577,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The scale parameter is particularly important for fixed-point numeric types to ensure
      * proper precision when retrieving the OUT parameter value.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 1001)
      *      .registerOutParameter(2, Types.DECIMAL, 2)  // For monetary values
@@ -1612,7 +1612,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The typeName parameter should be the fully-qualified SQL type name, which may
      * include the schema name if required by the database.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For a user-defined type
      * query.registerOutParameter(1, Types.STRUCT, "SCHEMA.ADDRESS_TYPE")
@@ -1647,7 +1647,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This method is used with stored procedures that have named parameters, providing
      * better code readability compared to index-based parameter registration.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString("employeeName", "John Doe")
      *      .registerOutParameter("employeeId", Types.INTEGER)
@@ -1678,7 +1678,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This method combines the benefits of named parameters with scale specification for
      * numeric types that require precision control.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt("productId", 100)
      *      .registerOutParameter("price", Types.DECIMAL, 2)
@@ -1711,7 +1711,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This method is ideal for working with complex database types using named parameters
      * for better code maintainability.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For Oracle object types
      * query.registerOutParameter("address", Types.STRUCT, "HR.ADDRESS_TYPE")
@@ -1743,7 +1743,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a parameter as an OUT parameter using the JDBC 4.2 {@link SQLType} interface.
      * This method provides type-safe parameter registration using the standard SQL type enumeration.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * 
      * query.setString(1, "input_value")
@@ -1772,7 +1772,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a parameter as an OUT parameter using {@link SQLType} with scale specification.
      * This method combines the type safety of SQLType with scale control for numeric types.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * 
      * query.registerOutParameter(1, JDBCType.DECIMAL, 2)  // For money
@@ -1802,7 +1802,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a parameter as an OUT parameter using {@link SQLType} with a user-defined type name.
      * This method provides type-safe registration for complex or vendor-specific SQL types.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * 
      * query.registerOutParameter(1, JDBCType.STRUCT, "SCHEMA.CUSTOM_TYPE")
@@ -1832,7 +1832,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a named parameter as an OUT parameter using the JDBC 4.2 {@link SQLType} interface.
      * This method combines the readability of named parameters with type-safe SQL type specification.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * 
      * query.setString("inputParam", "value")
@@ -1861,7 +1861,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Registers a named parameter as an OUT parameter using {@link SQLType} with scale specification.
      * This method is ideal for numeric types that require both name-based access and precision control.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * 
      * query.setInt("orderId", 12345)
@@ -1892,7 +1892,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This method provides the most flexible parameter registration, combining named parameters,
      * type-safe SQL types, and custom type names.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * 
      * query.setInt("customerId", 100)
@@ -1927,7 +1927,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * allowing it to call multiple {@code registerOutParameter} methods. If an exception
      * occurs during registration, the statement is automatically closed.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.registerOutParameters(q -> {
      *     q.registerOutParameter(1, Types.INTEGER);
@@ -1969,7 +1969,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The provided {@link Jdbc.BiParametersSetter} receives both this CallableQuery instance
      * and the supplied parameter, enabling dynamic parameter registration based on the parameter value.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> outputFields = Arrays.asList("total", "count", "average");
      * 
@@ -2067,7 +2067,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The statement will be closed after the function is applied unless
      * {@link #closeAfterExecution(boolean)} has been called with {@code false}.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = query.executeThenApply(stmt -> {
      *     // Custom processing of the executed statement
@@ -2095,7 +2095,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method provides more detailed control over result processing by indicating the type
      * of the first result returned by the stored procedure.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Object result = query.executeThenApply((stmt, isResultSet) -> {
      *     if (isResultSet) {
@@ -2129,7 +2129,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method provides the most comprehensive access to stored procedure results, including
      * the executed statement, registered OUT parameters, and information about the first result type.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> results = query.executeThenApply(
      *     (stmt, outParams, isResultSet) -> {
@@ -2185,7 +2185,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This method is useful when you need to perform side effects with the statement but don't need
      * to return a value.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept(stmt -> {
      *     // Log execution details
@@ -2219,7 +2219,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method is similar to {@link #executeThenApply(Throwables.BiFunction)} but is used
      * for side effects rather than returning a value.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept((stmt, isResultSet) -> {
      *     if (isResultSet) {
@@ -2250,7 +2250,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method provides comprehensive access to the execution results for side-effect
      * operations without returning a value.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.executeThenAccept((stmt, outParams, isResultSet) -> {
      *     // Log OUT parameters
@@ -2300,7 +2300,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The returned {@link Jdbc.OutParamResult} provides convenient methods to retrieve
      * OUT parameter values by index or name with appropriate type conversion.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * CallableQuery query = preparedQuery("{call calculate_totals(?, ?, ?)}");
      * query.setInt(1, 2023)
@@ -2337,7 +2337,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The result set is fully loaded into memory as a {@link Dataset}, which provides
      * a convenient API for working with tabular data.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Dataset, OutParamResult> result = query.queryAndGetOutParameters();
      * 
@@ -2369,7 +2369,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>This method provides flexibility in how the result set is processed and converted
      * to the desired type. The ResultExtractor has full access to the ResultSet for custom processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract to a custom summary object
      * Tuple2<Summary, OutParamResult> result = query.queryAndGetOutParameters(
@@ -2421,7 +2421,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The BiResultExtractor receives the column labels as a second parameter, which can be
      * useful for dynamic result processing or validation.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Map<String, List<Object>>, OutParamResult> result = 
      *     query.queryAndGetOutParameters((rs, columnLabels) -> {
@@ -2473,7 +2473,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>Each result set is converted to a {@link Dataset} and collected in a list. The method
      * processes all available result sets, not just the first one.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<List<Dataset>, OutParamResult> results = 
      *     query.queryAllResultsetsAndGetOutParameters();
@@ -2507,7 +2507,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * the same ResultExtractor to each one. The extractor should not save or return the
      * ResultSet itself as it will be closed after processing.</p>
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract row counts from multiple result sets
      * Tuple2<List<Integer>, OutParamResult> results = 

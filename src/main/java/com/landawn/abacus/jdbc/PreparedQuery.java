@@ -36,7 +36,7 @@ import java.sql.PreparedStatement;
  *   <li>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</li>
  * </ul>
  *
- * <p><b>Usage Example:</b></p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Simple query execution
  * PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?");
@@ -80,7 +80,7 @@ public final class PreparedQuery extends AbstractQuery<PreparedStatement, Prepar
      * <p>The ownership of the {@code PreparedStatement} is transferred to this {@code PreparedQuery} instance,
      * which means this class will be responsible for closing it based on the {@code closeAfterExecution} flag.
      * 
-     * <p><b>Usage Example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM employees WHERE department = ?");

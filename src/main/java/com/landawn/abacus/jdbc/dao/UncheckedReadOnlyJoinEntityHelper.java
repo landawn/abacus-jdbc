@@ -25,27 +25,43 @@ import com.landawn.abacus.query.SQLBuilder;
  * A read-only interface for managing join entity relationships in database operations without checked exceptions.
  * This interface extends both {@link UncheckedJoinEntityHelper} and {@link ReadOnlyJoinEntityHelper} to provide
  * unchecked exception handling for read-only join entity operations.
- * 
+ *
  * <p>All mutation operations (delete operations) in this interface are deprecated and will throw
  * {@link UnsupportedOperationException} when called, enforcing the read-only nature of this interface.</p>
- * 
+ *
  * <p>This interface is designed for scenarios where you need to query and read join entity relationships
- * but want to prevent any accidental modifications to the data.</p>
- * 
+ * but want to prevent any accidental modifications to the data while avoiding checked exception handling.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Assuming we have a UserDao that extends this interface
- * UserDao userDao = daoFactory.getUserDao();
- * // Read operations are allowed
- * User user = userDao.selectJoinEntitiesById(userId, "orders");
- * // Delete operations will throw UnsupportedOperationException
- * // userDao.deleteJoinEntities(user, Order.class); // This will fail
+ * // Define a read-only DAO with unchecked exceptions
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyJoinEntityHelper<User, SQLBuilder.PSC, UserReadOnlyDao> {
+ *     // All load operations work normally with unchecked exceptions
+ *     // All delete operations will throw UnsupportedOperationException
+ * }
+ *
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ *
+ * // Read operations work fine - no checked exceptions
+ * User user = userDao.gett(1L);
+ * userDao.loadJoinEntities(user, "orders");  // Loads successfully
+ *
+ * List<User> users = userDao.list(CF.eq("status", "active"));
+ * userDao.loadAllJoinEntities(users);  // Loads all join entities
+ *
+ * // Delete operations are blocked
+ * try {
+ *     userDao.deleteJoinEntities(user, Order.class);
+ *     // Will throw UnsupportedOperationException
+ * } catch (UnsupportedOperationException e) {
+ *     // Expected - this is a read-only interface
+ * }
  * }</pre>
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <SB> the SQLBuilder type used for query construction
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
- * 
+ *
  * @see UncheckedJoinEntityHelper
  * @see ReadOnlyJoinEntityHelper
  * @see UncheckedSQLException

@@ -25,19 +25,37 @@ import com.landawn.abacus.query.SQLBuilder;
  * A read-only interface for handling join entity operations in a Data Access Object (DAO) pattern.
  * This interface extends {@link JoinEntityHelper} but overrides all mutation methods to throw
  * {@link UnsupportedOperationException}, enforcing read-only behavior for join entity operations.
- * 
+ *
  * <p>This interface is useful when you want to provide read-only access to join entity operations,
  * preventing any modifications to the relationships between entities while still allowing
  * read operations inherited from the parent interface.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public class UserReadOnlyDao implements ReadOnlyJoinEntityHelper<User, SQLBuilder, UserDao> {
+ * // Define a read-only DAO with join entity support
+ * public interface UserReadOnlyDao extends ReadOnlyJoinEntityHelper<User, SQLBuilder.PSC, UserReadOnlyDao> {
+ *     // All load operations work normally
  *     // All delete operations will throw UnsupportedOperationException
- *     // Only read operations from JoinEntityHelper are available
+ * }
+ *
+ * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
+ *
+ * // Read operations work fine
+ * User user = userDao.gett(1L);
+ * userDao.loadJoinEntities(user, Order.class);  // Successfully loads orders
+ *
+ * List<User> users = userDao.list(CF.alwaysTrue());
+ * userDao.loadAllJoinEntities(users);  // Successfully loads all join entities
+ *
+ * // Delete operations are blocked
+ * try {
+ *     userDao.deleteJoinEntities(user, Order.class);
+ *     // Will throw UnsupportedOperationException
+ * } catch (UnsupportedOperationException e) {
+ *     // Expected - this is a read-only interface
  * }
  * }</pre>
- * 
+ *
  * @param <T> the entity type managed by this DAO
  * @param <SB> the SQLBuilder type used for query construction
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
