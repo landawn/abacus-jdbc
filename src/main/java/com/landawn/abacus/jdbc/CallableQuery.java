@@ -80,28 +80,30 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * try (CallableQuery query = preparedQuery("{call get_employee_info(?, ?, ?)}")) {
+ * // Example retrieving only OUT parameters
+ * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_employee_info(?, ?, ?)}")) {
  *     query.setInt(1, 1001)  // IN parameter: employee ID
  *          .registerOutParameter(2, Types.VARCHAR)  // OUT parameter: employee name
  *          .registerOutParameter(3, Types.DECIMAL)  // OUT parameter: salary
- *          .execute();
- *     
- *     String name = query.getString(2);
- *     BigDecimal salary = query.getBigDecimal(3);
+ *          .closeAfterExecution(false);
+ *
+ *     Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
+ *     String name = outParams.getOutParamValue(2);
+ *     BigDecimal salary = outParams.getOutParamValue(3);
  * }
- * 
+ *
  * // Example with result set and OUT parameters
- * try (CallableQuery query = preparedQuery("{call get_department_stats(?, ?, ?)}")) {
+ * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_department_stats(?, ?, ?)}")) {
  *     query.setString("departmentName", "Sales")
  *          .registerOutParameter("totalEmployees", Types.INTEGER)
  *          .registerOutParameter("avgSalary", Types.DECIMAL);
- *     
- *     Tuple2<List<Employee>, OutParamResult> result = 
+ *
+ *     Tuple2<List<Employee>, Jdbc.OutParamResult> result =
  *         query.listAndGetOutParameters(Employee.class);
- *     
+ *
  *     List<Employee> employees = result._1;
- *     int totalEmployees = result._2.getInt("totalEmployees");
- *     BigDecimal avgSalary = result._2.getBigDecimal("avgSalary");
+ *     int totalEmployees = result._2.getOutParamValue("totalEmployees");
+ *     BigDecimal avgSalary = result._2.getOutParamValue("avgSalary");
  * }
  * }</pre>
  *
@@ -2306,11 +2308,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.setInt(1, 2023)
      *      .registerOutParameter(2, Types.DECIMAL)
      *      .registerOutParameter(3, Types.INTEGER);
-     * 
+     *
      * Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
-     * 
-     * BigDecimal totalAmount = outParams.getBigDecimal(2);
-     * int recordCount = outParams.getInt(3);
+     *
+     * BigDecimal totalAmount = outParams.getOutParamValue(2);
+     * int recordCount = outParams.getOutParamValue(3);
      * }</pre>
      *
      * @return a {@link Jdbc.OutParamResult} containing all OUT parameter values
@@ -2339,18 +2341,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<Dataset, OutParamResult> result = query.queryAndGetOutParameters();
-     * 
+     * Tuple2<Dataset, Jdbc.OutParamResult> result = query.queryAndGetOutParameters();
+     *
      * Dataset dataset = result._1;
-     * OutParamResult outParams = result._2;
-     * 
+     * Jdbc.OutParamResult outParams = result._2;
+     *
      * // Process the data set
      * dataset.forEach(row -> {
      *     System.out.println(row.getString("name") + ": " + row.getInt("value"));
      * });
-     * 
+     *
      * // Get OUT parameters
-     * int totalCount = outParams.getInt("totalCount");
+     * int totalCount = outParams.getOutParamValue("totalCount");
      * }</pre>
      *
      * @return a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element)
@@ -2475,20 +2477,20 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<List<Dataset>, OutParamResult> results = 
+     * Tuple2<List<Dataset>, Jdbc.OutParamResult> results =
      *     query.queryAllResultsetsAndGetOutParameters();
-     * 
+     *
      * List<Dataset> datasets = results._1;
-     * OutParamResult outParams = results._2;
-     * 
+     * Jdbc.OutParamResult outParams = results._2;
+     *
      * // Process each result set
      * for (int i = 0; i < datasets.size(); i++) {
      *     System.out.println("Result set " + (i + 1) + ":");
      *     datasets.get(i).println();
      * }
-     * 
+     *
      * // Get OUT parameters
-     * String status = outParams.getString("status");
+     * String status = outParams.getOutParamValue("status");
      * }</pre>
      *
      * @return a {@link Tuple2} containing a list of Datasets (one per result set) and OUT parameters

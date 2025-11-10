@@ -66,8 +66,8 @@ import com.landawn.abacus.util.N;
  * <p>The {@code ResultSet} returned by query will always be closed after execution, even {@code 'closeAfterExecution'} flag is set to {@code false}.
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
- * 
- * <p><b>Example usage:</b>
+ *
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * String sql = "SELECT * FROM users WHERE name = :name AND age > :age";
  * try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, sql)) {

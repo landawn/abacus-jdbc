@@ -157,84 +157,38 @@ import com.landawn.abacus.util.WD;
  *     .addRow("John Doe", 30, "john@example.com")
  *     .addRow("Jane Smith", 25, "jane@example.com");
  *
- * long importedRows = JdbcUtils.importData(dataset, dataSource,
+ * int importedRows = JdbcUtils.importData(dataset, dataSource,
  *     "INSERT INTO users (name, age, email) VALUES (?, ?, ?)");
  *
- * // Export large table to CSV with memory optimization
+ * // Export large table to CSV
  * long exportedRows = JdbcUtils.exportCSV(dataSource,
  *     "SELECT * FROM large_table ORDER BY id",
- *     new File("export.csv"),
- *     CFG.of().setBatchSize(5000).setFetchSize(1000));
+ *     new File("export.csv"));
  *
- * // Copy data between databases with transformation
+ * // Copy data between databases
  * long copiedRows = JdbcUtils.copy(sourceDataSource, targetDataSource,
  *     "SELECT id, UPPER(name) as name, age FROM source_users WHERE active = true",
  *     "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
  *
- * // Import large CSV file with progress monitoring
- * JdbcUtils.importCSV(new File("large_data.csv"), dataSource,
+ * // Import large CSV file with batch configuration
+ * int importedCSVRows = JdbcUtils.importCSV(new File("large_data.csv"), dataSource,
  *     "INSERT INTO products (sku, name, price, category) VALUES (?, ?, ?, ?)",
- *     CFG.of()
- *         .setBatchSize(1000)
- *         .setBatchInterval(100)
- *         .setProgressCallback((processed, total) ->
- *             System.out.printf("Processed: %d/%d (%.1f%%)%n",
- *                 processed, total, (processed * 100.0) / total)));
+ *     5000);  // batch size
  * }</pre>
  *
  * <p><b>Advanced Configuration and Optimization:</b>
  * <pre>{@code
- * // High-performance data migration with custom configuration
- * public class DataMigrationService {
+ * // High-performance data migration with batch processing
+ * long copiedRows = JdbcUtils.copy(sourceDataSource, targetDataSource,
+ *     "SELECT customer_id, first_name, last_name, email FROM legacy_customers",
+ *     "INSERT INTO customers (id, name, email) VALUES (?, ?, ?)",
+ *     10000);  // batch size
+ * System.out.println("Migrated " + copiedRows + " customer records");
  *
- *     public void migrateCustomerData(DataSource source, DataSource target) {
- *         // Configure for large-scale migration
- *         CFG config = CFG.of()
- *             .setBatchSize(10000)           // Large batch for efficiency
- *             .setFetchSize(5000)            // Optimize ResultSet fetching
- *             .setBatchInterval(50)          // Frequent commits for memory
- *             .setParallelThreads(4)         // Parallel processing
- *             .setTransactionMode(TransactionMode.AUTO_COMMIT)
- *             .setErrorHandler(this::handleMigrationError);
- *
- *         // Migrate with data transformation
- *         JdbcUtils.copyWithTransform(source, target,
- *             "SELECT customer_id, first_name, last_name, email, " +
- *             "       phone, created_date, status FROM legacy_customers " +
- *             "WHERE migration_flag IS NULL",
- *
- *             "INSERT INTO customers (id, full_name, email, phone, " +
- *             "                      created_at, is_active) VALUES (?, ?, ?, ?, ?, ?)",
- *
- *             // Custom row transformer
- *             row -> new Object[] {
- *                 row.get("customer_id"),
- *                 row.get("first_name") + " " + row.get("last_name"),
- *                 row.get("email"),
- *                 normalizePhone(row.get("phone")),
- *                 row.get("created_date"),
- *                 "ACTIVE".equals(row.get("status"))
- *             },
- *             config);
- *     }
- *
- *     // Parallel export to multiple files
- *     public void exportPartitionedData(DataSource dataSource, String baseQuery,
- *                                      String partitionColumn, List<String> partitions) {
- *         partitions.parallelStream().forEach(partition -> {
- *             String query = baseQuery + " WHERE " + partitionColumn + " = ?";
- *             String filename = String.format("export_%s.csv", partition);
- *
- *             try {
- *                 JdbcUtils.exportCSV(dataSource, query, new File(filename),
- *                     CFG.of().setFetchSize(2000).setBufferSize(8192),
- *                     partition);
- *             } catch (Exception e) {
- *                 logger.error("Failed to export partition: " + partition, e);
- *             }
- *         });
- *     }
- * }
+ * // Export data to CSV file
+ * long exportedRows = JdbcUtils.exportCSV(dataSource,
+ *     "SELECT * FROM large_table ORDER BY id",
+ *     new File("export.csv"));
  * }</pre>
  *
  * <p><b>Batch Processing and Performance Optimization:</b>
@@ -294,7 +248,7 @@ import com.landawn.abacus.util.WD;
  *
  * <p><b>Integration with Enterprise Frameworks:</b>
  * <ul>
- *   <li><b>Spring Framework:</b> Seamless integration with Spring's transaction management</li>
+ *   <li><b>Spring Framework:</b> Seamless integration with Spring transaction management</li>
  *   <li><b>Hibernate/JPA:</b> Compatible with ORM frameworks for mixed scenarios</li>
  *   <li><b>ETL Tools:</b> Integration points for enterprise ETL platforms</li>
  *   <li><b>Monitoring Systems:</b> Hooks for enterprise monitoring and alerting</li>
@@ -335,69 +289,24 @@ import com.landawn.abacus.util.WD;
  *
  * <p><b>Example: Enterprise Data Warehouse ETL</b>
  * <pre>{@code
- * @Component
  * public class DataWarehouseETL {
  *     private final DataSource sourceDB;
  *     private final DataSource warehouseDB;
- *     private final MetricsCollector metrics;
  *
  *     // Daily ETL process for customer data
- *     @Scheduled(cron = "0 0 2 * * ?")  // Run at 2 AM daily
- *     public void dailyCustomerETL() {
- *         LocalDate yesterday = LocalDate.now().minusDays(1);
- *         String extractQuery = """
- *             SELECT c.customer_id, c.first_name, c.last_name, c.email,
- *                    c.registration_date, c.last_login, c.status,
- *                    COUNT(o.order_id) as total_orders,
- *                    SUM(o.total_amount) as lifetime_value
- *             FROM customers c
- *             LEFT JOIN orders o ON c.customer_id = o.customer_id
- *             WHERE c.updated_date >= ? OR o.order_date >= ?
- *             GROUP BY c.customer_id, c.first_name, c.last_name,
- *                      c.email, c.registration_date, c.last_login, c.status
- *             """;
+ *     public void dailyCustomerETL() throws SQLException {
+ *         String extractQuery = "SELECT customer_id, first_name, last_name, email, " +
+ *                             "registration_date, last_login, status " +
+ *                             "FROM customers WHERE updated_date >= ?";
  *
- *         String loadQuery = """
- *             INSERT INTO dim_customer (customer_id, full_name, email, registration_date,
- *                                     last_login, status, total_orders, lifetime_value, etl_timestamp)
- *             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
- *             ON CONFLICT (customer_id)
- *             DO UPDATE SET full_name = EXCLUDED.full_name,
- *                          email = EXCLUDED.email,
- *                          last_login = EXCLUDED.last_login,
- *                          status = EXCLUDED.status,
- *                          total_orders = EXCLUDED.total_orders,
- *                          lifetime_value = EXCLUDED.lifetime_value,
- *                          etl_timestamp = EXCLUDED.etl_timestamp
- *             """;
+ *         String loadQuery = "INSERT INTO dim_customer (customer_id, first_name, last_name, email, " +
+ *                          "registration_date, last_login, status, etl_timestamp) " +
+ *                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
  *
- *         long processedRows = JdbcUtils.copyWithTransform(sourceDB, warehouseDB,
- *             extractQuery, loadQuery,
- *             this::transformCustomerData,
- *             CFG.of()
- *                 .setBatchSize(5000)
- *                 .setFetchSize(2000)
- *                 .setBatchInterval(20)
- *                 .setProgressCallback(this::logProgress)
- *                 .setErrorHandler(this::handleETLError),
- *             yesterday, yesterday);
+ *         long processedRows = JdbcUtils.copy(sourceDB, warehouseDB,
+ *             extractQuery, loadQuery, 5000, LocalDate.now().minusDays(1));
  *
- *         metrics.recordETLMetrics("customer_daily", processedRows,
- *             System.currentTimeMillis() - startTime);
- *     }
- *
- *     private Object[] transformCustomerData(Map<String, Object> row) {
- *         return new Object[] {
- *             row.get("customer_id"),
- *             row.get("first_name") + " " + row.get("last_name"),
- *             row.get("email"),
- *             row.get("registration_date"),
- *             row.get("last_login"),
- *             row.get("status"),
- *             row.get("total_orders"),
- *             row.get("lifetime_value"),
- *             Timestamp.valueOf(LocalDateTime.now())
- *         };
+ *         System.out.println("Processed " + processedRows + " customer records");
  *     }
  * }
  * }</pre>
@@ -421,7 +330,7 @@ import com.landawn.abacus.util.WD;
  * @see com.landawn.abacus.annotation.Table
  * @see com.landawn.abacus.annotation.Column
  * @see <a href="https://tools.ietf.org/html/rfc4180">RFC 4180: CSV Format Specification</a>
- * @see <a href="https://docs.oracle.com/en/database/oracle/oracle-database/21/jjdbc/">Oracle JDBC Developer's Guide</a>
+ * @see <a href="https://docs.oracle.com/en/database/oracle/oracle-database/21/jjdbc/">Oracle JDBC Developer Guide</a>
  */
 public final class JdbcUtils {
 

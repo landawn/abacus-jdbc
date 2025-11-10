@@ -271,43 +271,48 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *     public Order processOrder(OrderRequest request) {
  *         return JdbcUtil.runInTransaction(dataSource, () -> {
  *             // Validate inventory
- *             boolean available = JdbcUtil.exists(dataSource,
+ *             Dataset inventoryResult = JdbcUtil.executeQuery(dataSource,
  *                 "SELECT 1 FROM inventory WHERE product_id = ? AND quantity >= ?",
  *                 request.getProductId(), request.getQuantity());
  *
- *             if (!available) {
+ *             if (inventoryResult.isEmpty()) {
  *                 throw new InsufficientInventoryException();
  *             }
  *
- *             // Create order
- *             long orderId = JdbcUtil.insert(dataSource,
- *                 "INSERT INTO orders (customer_id, product_id, quantity, order_date) VALUES (?, ?, ?, ?)",
- *                 request.getCustomerId(), request.getProductId(),
- *                 request.getQuantity(), Timestamp.valueOf(LocalDateTime.now()));
+ *             // Create order with auto-generated key
+ *             try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+ *                     "INSERT INTO orders (customer_id, product_id, quantity, order_date) VALUES (?, ?, ?, ?)", true)) {
+ *                 long orderId = query.setLong(1, request.getCustomerId())
+ *                     .setLong(2, request.getProductId())
+ *                     .setInt(3, request.getQuantity())
+ *                     .setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()))
+ *                     .insert()
+ *                     .orElseThrow(() -> new RuntimeException("Failed to get generated ID"));
  *
- *             // Update inventory
- *             JdbcUtil.executeUpdate(dataSource,
- *                 "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
- *                 request.getQuantity(), request.getProductId());
+ *                 // Update inventory
+ *                 JdbcUtil.executeUpdate(dataSource,
+ *                     "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
+ *                     request.getQuantity(), request.getProductId());
  *
- *             // Return created order
- *             return JdbcUtil.queryForEntity(dataSource, Order.class,
- *                 "SELECT * FROM orders WHERE id = ?", orderId);
+ *                 // Return created order
+ *                 return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE id = ?")
+ *                     .setLong(1, orderId)
+ *                     .findFirst(Order.class)
+ *                     .orElse(null);
+ *             }
  *         });
  *     }
  *
- *     // Asynchronous transaction processing
- *     public ContinuableFuture<Void> processOrdersAsync(List<OrderRequest> requests) {
- *         return JdbcUtil.asyncRunInTransaction(dataSource, () -> {
- *             return JdbcUtil.prepareBatch(dataSource,
- *                 "INSERT INTO orders (customer_id, product_id, quantity) VALUES (?, ?, ?)")
- *                 .addBatchParameters(requests, (stmt, request) -> {
- *                     stmt.setLong(1, request.getCustomerId());
- *                     stmt.setLong(2, request.getProductId());
- *                     stmt.setInt(3, request.getQuantity());
- *                 })
- *                 .executeBatch();
- *         });
+ *     // Batch processing in transaction
+ *     public void processOrdersBatch(List<OrderRequest> requests) {
+ *         List<Object[]> batchParams = new ArrayList<>();
+ *         for (OrderRequest request : requests) {
+ *             batchParams.add(new Object[] {request.getCustomerId(),
+ *                 request.getProductId(), request.getQuantity()});
+ *         }
+ *         JdbcUtil.executeBatchUpdate(dataSource,
+ *             "INSERT INTO orders (customer_id, product_id, quantity) VALUES (?, ?, ?)",
+ *             batchParams);
  *     }
  * }
  * }</pre>
@@ -2172,8 +2177,8 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
      *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
-     *     Long generatedId = query.setString(1, "John").setString(2, "john@example.com")
-     *                             .insert().getGeneratedKey(Long.class);
+     *     Optional<Long> generatedId = query.setString(1, "John").setString(2, "john@example.com")
+     *                             .insert();
      * }
      * }</pre>
      *
@@ -2259,7 +2264,7 @@ public final class JdbcUtil {
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
      *         "INSERT INTO users (name, email) VALUES (?, ?)",
      *         new String[] {"id", "created_date"})) {
-     *     OutParamResult result = query.setString(1, "John").setString(2, "john@example.com").insert();
+     *     Optional<Long> generatedId = query.setString(1, "John").setString(2, "john@example.com").insert();
      * }
      * }</pre>
      *
