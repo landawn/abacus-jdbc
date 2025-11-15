@@ -632,7 +632,7 @@ public final class JdbcUtil {
 
     static {
         try {
-            isInSpring = ClassUtil.forClass("org.springframework.datasource.DataSourceUtils") != null;
+            isInSpring = ClassUtil.forClass("org.springframework.jdbc.datasource.DataSourceUtils") != null;
         } catch (final Throwable e) {
             isInSpring = false;
         }
@@ -999,7 +999,7 @@ public final class JdbcUtil {
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
         if (Strings.indexOfIgnoreCase(url, "mysql") >= 0) {
-            driverClass = ClassUtil.forClass("com.mysql.Driver");
+            driverClass = ClassUtil.forClass("com.mysql.cj.jdbc.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
         } else if (Strings.indexOfIgnoreCase(url, "postgresql") >= 0) {
             driverClass = ClassUtil.forClass("org.postgresql.Driver");
@@ -1011,7 +1011,7 @@ public final class JdbcUtil {
             driverClass = ClassUtil.forClass("org.hsqldb.JDBCDriver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
         } else if (Strings.indexOfIgnoreCase(url, "oracle") >= 0) {
-            driverClass = ClassUtil.forClass("oracle.driver.OracleDriver");
+            driverClass = ClassUtil.forClass("oracle.jdbc.driver.OracleDriver");
             // url=jdbc:sqlserver://localhost:1433;Database=abacustest
         } else if (Strings.indexOfIgnoreCase(url, "sqlserver") >= 0) {
             driverClass = ClassUtil.forClass("com.microsoft.sqlserver.SQLServerDriver");
