@@ -83,6 +83,8 @@ public final class DBSequence {
 
     private final String seqName;
 
+    private int incrementBy;
+
     private int seqBufferSize;
 
     private final String querySQL;
@@ -131,18 +133,15 @@ public final class DBSequence {
      * @param tableName the name of the database table used to store sequence metadata. Must not be {@code null} or empty.
      * @param seqName the unique name of this sequence (e.g., "user_id_seq"). Must not be {@code null} or empty.
      * @param startVal the initial value for the sequence. Must be non-negative.
-     * @param seqBufferSize the number of sequence values to pre-fetch and cache in memory. Must be greater than 0.
+     * @param incrementBy the increment step for the sequence values. Must be greater than 0. Default is 1.
+     * @param seqBufferSize the new number of sequence values to pre-fetch and cache in memory. It must be at least {@code incrementBy} x 100.
      * @throws IllegalArgumentException if {@code tableName} or {@code seqName} is empty, {@code startVal} is negative,
      *         or {@code seqBufferSize} is not positive.
      * @throws RuntimeException if the sequence table cannot be created or initialized, or if the sequence
      *         cannot be set to the desired {@code startVal}.
      * @throws UncheckedSQLException if a database access error occurs during initialization.
      */
-    DBSequence(final DataSource ds, final String tableName, final String seqName, final long startVal, final int seqBufferSize) {
-        this.ds = ds;
-        this.seqName = seqName;
-        this.seqBufferSize = seqBufferSize;
-
+    DBSequence(final DataSource ds, final String tableName, final String seqName, final long startVal, final int incrementBy, final int seqBufferSize) {
         if (Strings.isEmpty(tableName)) {
             throw new IllegalArgumentException("Table name can't be null or empty");
         }
@@ -151,17 +150,17 @@ public final class DBSequence {
             throw new IllegalArgumentException("Sequence name can't be null or empty");
         }
 
-        if (startVal < 0) {
-            throw new IllegalArgumentException("startVal can't be negative");
-        }
+        checkParameters(startVal, incrementBy, seqBufferSize);
 
-        if (seqBufferSize <= 0) {
-            throw new IllegalArgumentException("seqBufferSize must be greater than 0");
-        }
+        this.ds = ds;
+        this.seqName = seqName;
+        this.seqBufferSize = seqBufferSize;
+        this.incrementBy = incrementBy;
 
         querySQL = "SELECT next_val FROM " + tableName + " WHERE seq_name = ?"; //NOSONAR
         updateSQL = "UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE next_val = ? AND seq_name = ?"; //NOSONAR
         resetSQL = "UPDATE " + tableName + " SET next_val = ?, update_time = ? WHERE seq_name = ?"; //NOSONAR
+
         lowSeqId = new AtomicLong(startVal);
         highSeqId = new AtomicLong(startVal);
 
@@ -292,7 +291,7 @@ public final class DBSequence {
             }
         }
 
-        return lowSeqId.getAndIncrement();
+        return lowSeqId.getAndAdd(incrementBy);
     }
 
     /**
@@ -335,13 +334,18 @@ public final class DBSequence {
      * }</pre>
      *
      * @param startVal the new starting value for the sequence. Must be non-negative.
-     * @param seqBufferSize the new number of sequence values to pre-fetch and cache in memory. Must be greater than 0.
+     * @param incrementBy the increment step for the sequence values. Must be greater than 0. Default is 1.
+     * @param seqBufferSize the new number of sequence values to pre-fetch and cache in memory. It must be at least {@code incrementBy} x 100.
      * @throws UncheckedSQLException if a database access error occurs during the update of the sequence record.
      * @throws IllegalArgumentException if {@code startVal} is negative or {@code seqBufferSize} is not positive.
      */
     @SuppressWarnings("hiding")
-    public void reset(final long startVal, final int seqBufferSize) {
+    public void reset(final long startVal, final int incrementBy, final int seqBufferSize) {
+
+        checkParameters(startVal, incrementBy, seqBufferSize);
+
         synchronized (seqName) { //NOSONAR
+            this.incrementBy = incrementBy;
             this.seqBufferSize = seqBufferSize;
             this.lowSeqId.set(startVal);
             this.highSeqId.set(startVal);
@@ -351,6 +355,24 @@ public final class DBSequence {
             } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
+        }
+    }
+
+    private void checkParameters(final long startVal, final int incrementBy, final int seqBufferSize) {
+        if (startVal < 0) {
+            throw new IllegalArgumentException("startVal can't be negative");
+        }
+
+        if (incrementBy <= 0) {
+            throw new IllegalArgumentException("incrementBy must be greater than 0");
+        }
+
+        if (seqBufferSize <= 0) {
+            throw new IllegalArgumentException("seqBufferSize must be greater than 0");
+        }
+
+        if (seqBufferSize < incrementBy * 100) {
+            throw new IllegalArgumentException("seqBufferSize must be at least: incrementBy x 100 (" + (incrementBy * 100) + ") to ensure good performance");
         }
     }
 }

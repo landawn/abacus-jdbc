@@ -6866,7 +6866,7 @@ public final class JdbcUtil {
      * @return A new DBSequence instance for generating sequential IDs
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName) {
-        return new DBSequence(ds, tableName, seqName, 0, 1000);
+        return new DBSequence(ds, tableName, seqName, 0, 1, 1000);
     }
 
     /**
@@ -6876,7 +6876,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Start from 1000 with a buffer of 500 IDs
-     * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "order_sequence", "order_id", 1000, 500);
+     * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "order_sequence", "order_id", 1000, 1, 500);
      * long nextId = sequence.next();
      * }</pre>
      *
@@ -6884,12 +6884,13 @@ public final class JdbcUtil {
      * @param tableName The name of the table containing the sequence
      * @param seqName The name of the sequence column
      * @param startVal The starting value of the sequence
-     * @param seqBufferSize The number of IDs to allocate/reserve from the database table when cached numbers are used up
+     * @param incrementBy The increment step for each ID generation. It's must not be negative. Typically it is 1.
+     * @param seqBufferSize the new number of sequence values to pre-fetch and cache in memory. It must be at least {@code incrementBy} x 100.
      * @return A new instance of {@code DBSequence} with the specified configuration
      */
     public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName, final long startVal,
-            final int seqBufferSize) {
-        return new DBSequence(ds, tableName, seqName, startVal, seqBufferSize);
+            final int incrementBy, final int seqBufferSize) {
+        return new DBSequence(ds, tableName, seqName, startVal, incrementBy, seqBufferSize);
     }
 
     /**
