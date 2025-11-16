@@ -803,12 +803,6 @@ public class JdbcUtilTest extends TestBase {
         assertTrue(dropped);
     }
 
-    @Test
-    public void testGetDBSequence() {
-        DBSequence seq = JdbcUtil.getDBSequence(mockDataSource, "seq_table", "seq_name");
-        assertNotNull(seq);
-    }
-
     //    @Test
     //    public void testGetDBSequenceWithConfig() {
     //        DBSequence seq = JdbcUtil.getDBSequence(mockDataSource, "seq_table", "seq_name", 1000L, 500);

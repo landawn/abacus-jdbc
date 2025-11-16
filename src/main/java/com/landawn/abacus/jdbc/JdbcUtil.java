@@ -6850,50 +6850,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns a new instance of {@code DBSequence} for managing database sequences.
-     * The sequence provides thread-safe generation of sequential IDs with default starting value of 0 
-     * and a buffer size of 1000.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "user_sequence", "user_id");
-     * long nextId = sequence.next();
-     * }</pre>
-     *
-     * @param ds The data source to use for database connections
-     * @param tableName The name of the table containing the sequence
-     * @param seqName The name of the sequence column
-     * @return A new DBSequence instance for generating sequential IDs
-     */
-    public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName) {
-        return new DBSequence(ds, tableName, seqName, 0, 1, 1000);
-    }
-
-    /**
-     * Returns a new instance of {@code DBSequence} with custom starting value and buffer size.
-     * The sequence provides thread-safe generation of sequential IDs with the specified configuration.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Start from 1000 with a buffer of 500 IDs
-     * DBSequence sequence = JdbcUtil.getDBSequence(dataSource, "order_sequence", "order_id", 1000, 1, 500);
-     * long nextId = sequence.next();
-     * }</pre>
-     *
-     * @param ds The data source to use for database connections
-     * @param tableName The name of the table containing the sequence
-     * @param seqName The name of the sequence column
-     * @param startVal The starting value of the sequence
-     * @param incrementBy The increment step for each ID generation. It's must not be negative. Typically it is 1.
-     * @param seqBufferSize the new number of sequence values to pre-fetch and cache in memory. It must be at least {@code incrementBy} x 100.
-     * @return A new instance of {@code DBSequence} with the specified configuration
-     */
-    public static DBSequence getDBSequence(final javax.sql.DataSource ds, final String tableName, final String seqName, final long startVal,
-            final int incrementBy, final int seqBufferSize) {
-        return new DBSequence(ds, tableName, seqName, startVal, incrementBy, seqBufferSize);
-    }
-
-    /**
      * Returns a new instance of {@code DBLock} for implementing global locks using a database table.
      * This provides a distributed locking mechanism that works across multiple application instances.
      *

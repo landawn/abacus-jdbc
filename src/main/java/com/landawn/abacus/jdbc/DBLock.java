@@ -426,13 +426,13 @@ public final class DBLock {
      * @param target the unique identifier of the resource to lock. Must not be {@code null} or empty.
      * @param liveTime the duration in milliseconds for which the lock is valid. Must be positive.
      * @param timeout the maximum time in milliseconds to wait for the lock. Must be non-negative.
-     * @param retryPeriod the time in milliseconds to wait between retry attempts. A value of 0 means
+     * @param retryInterval the time in milliseconds to wait between retry attempts. A value of 0 means
      *        immediate retry without delay. Must be non-negative.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the specified timeout.
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      */
-    public String lock(final String target, final long liveTime, final long timeout, final long retryPeriod) throws IllegalStateException {
+    public String lock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
         assertNotClosed();
 
         try {
@@ -451,7 +451,7 @@ public final class DBLock {
         Timestamp now = DateUtil.currentTimestamp();
         final long endTime = now.getTime() + timeout;
         int attempts = 0;
-        final int maxAttempts = (int) (timeout / Math.max(retryPeriod, 1)) + 1000; // Safeguard against infinite loop
+        final int maxAttempts = (int) (timeout / Math.max(retryInterval, 1)) + 1000; // Safeguard against infinite loop
         Exception lastException = null;
 
         do {
@@ -469,8 +469,8 @@ public final class DBLock {
                 lastException = e;
             }
 
-            if (retryPeriod > 0) {
-                N.sleep(retryPeriod);
+            if (retryInterval > 0) {
+                N.sleep(retryInterval);
             }
 
             now = DateUtil.currentTimestamp();
