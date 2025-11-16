@@ -21,38 +21,47 @@ import com.landawn.abacus.util.Strings;
 /**
  * Enumeration representing various database products and their major versions.
  *
- * <p>This enum provides a standardized way to identify different database systems
- * and their versions, which is useful for handling database-specific SQL syntax,
- * features, and optimizations. The enum helps in writing database-portable code
- * while allowing version-specific behavior when necessary.</p>
+ * <p>This enum provides a standardized and type-safe way to identify different
+ * database systems and their versions. It is crucial for developing database-agnostic
+ * applications that can adapt to vendor-specific SQL dialects, features, and
+ * performance optimizations. By using this enum, applications can implement
+ * version-specific logic while maintaining overall code portability.</p>
  *
- * <p>The enum includes entries for popular databases like MySQL, PostgreSQL, Oracle,
- * SQL Server, DB2, and others, with specific version distinctions where behavior
- * differences are significant.</p>
+ * <p>The enum includes constants for widely used relational databases such as
+ * H2, HSQLDB, MySQL (with specific major versions), MariaDB, PostgreSQL (with
+ * specific major versions), Oracle, DB2, and SQL Server, along with generic
+ * {@code _OTHERS} categories for broader compatibility.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Detect database version and use appropriate syntax
- * DBVersion version = DBVersion.MySQL_8;
- * if (version.isMySQL()) {
- *     // Use MySQL-specific syntax
- *     query = "SELECT * FROM users LIMIT 10";
- * } else if (version.isPostgreSQL()) {
- *     // Use PostgreSQL-specific syntax
- *     query = "SELECT * FROM users LIMIT 10";
- * }
+ * // Example: Adapting SQL syntax based on detected database version
+ * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
+ * DBVersion currentDbVersion = dbInfo.version();
  *
- * // Handle version-specific features
- * if (version == DBVersion.MySQL_8) {
- *     // Use MySQL 8.x window functions
- *     query = "SELECT *, ROW_NUMBER() OVER (ORDER BY id) as row_num FROM users";
- * } else if (version == DBVersion.MySQL_5_7) {
- *     // Fall back to MySQL 5.7 compatible syntax
- *     query = "SELECT @row_num := @row_num + 1 as row_num, t.* FROM users t, (SELECT @row_num := 0) r";
+ * String query;
+ * if (currentDbVersion.isMySQL()) {
+ *     query = "SELECT * FROM products LIMIT 10 OFFSET 20";
+ * } else if (currentDbVersion.isPostgreSQL()) {
+ *     query = "SELECT * FROM products OFFSET 20 LIMIT 10";
+ * } else if (currentDbVersion == DBVersion.Oracle) {
+ *     query = "SELECT * FROM (SELECT p.*, ROWNUM rnum FROM products p) WHERE rnum > 20 AND ROWNUM <= 10";
+ * } else {
+ *     query = "SELECT * FROM products"; // Fallback or generic SQL
+ * }
+ * System.out.println("Executing query: " + query);
+ *
+ * // Example: Utilizing version-specific features
+ * if (currentDbVersion == DBVersion.MySQL_8) {
+ *     System.out.println("Using MySQL 8.x specific features like window functions.");
+ *     // Code to use JSON functions or window functions available in MySQL 8
+ * } else if (currentDbVersion.isPostgreSQL()) {
+ *     System.out.println("Using PostgreSQL array types or advanced JSONB features.");
+ *     // Code to leverage PostgreSQL-specific data types
  * }
  * }</pre>
  *
  * @see DBProductInfo
+ * @see JdbcUtil#getDBProductInfo(java.sql.Connection)
  */
 public enum DBVersion {
 
@@ -192,42 +201,54 @@ public enum DBVersion {
     OTHERS;
 
     /**
-     * Checks if this database version represents any variant of MySQL.
-     * 
-     * <p>This method performs a case-insensitive check to determine if the
-     * enum constant's name starts with "MySQL", which includes all MySQL
-     * versions and MySQL_OTHERS.</p>
-     * 
+     * Checks if this {@code DBVersion} enum constant represents any variant of MySQL.
+     * This includes specific MySQL versions (e.g., {@code MySQL_5_7}, {@code MySQL_8})
+     * and the generic {@code MySQL_OTHERS} constant.
+     *
+     * <p>The check is performed by verifying if the enum constant's name starts
+     * with "MySQL" (case-insensitive).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBVersion version = DBVersion.MySQL_8;
-     * if (version.isMySQL()) {
-     *     // Execute MySQL-specific logic
+     * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
+     * DBVersion currentDbVersion = dbInfo.version();
+     *
+     * if (currentDbVersion.isMySQL()) {
+     *     System.out.println("Connected to a MySQL database.");
+     *     // Apply MySQL-specific SQL or optimizations
+     * } else {
+     *     System.out.println("Not a MySQL database.");
      * }
      * }</pre>
      *
-     * @return {@code true} if this is a MySQL database version, {@code false} otherwise
+     * @return {@code true} if this {@code DBVersion} is a MySQL variant, {@code false} otherwise.
      */
     public boolean isMySQL() {
         return Strings.startsWithIgnoreCase(name(), "MySQL");
     }
 
     /**
-     * Checks if this database version represents any variant of PostgreSQL.
-     * 
-     * <p>This method performs a case-insensitive check to determine if the
-     * enum constant's name starts with "postgresql", which includes all PostgreSQL
-     * versions and PostgreSQL_OTHERS.</p>
-     * 
+     * Checks if this {@code DBVersion} enum constant represents any variant of PostgreSQL.
+     * This includes specific PostgreSQL versions (e.g., {@code PostgreSQL_9_6}, {@code PostgreSQL_12})
+     * and the generic {@code PostgreSQL_OTHERS} constant.
+     *
+     * <p>The check is performed by verifying if the enum constant's name starts
+     * with "PostgreSQL" (case-insensitive).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBVersion version = DBVersion.PostgreSQL_12;
-     * if (version.isPostgreSQL()) {
-     *     // Execute PostgreSQL-specific logic
+     * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
+     * DBVersion currentDbVersion = dbInfo.version();
+     *
+     * if (currentDbVersion.isPostgreSQL()) {
+     *     System.out.println("Connected to a PostgreSQL database.");
+     *     // Apply PostgreSQL-specific SQL or features like JSONB
+     * } else {
+     *     System.out.println("Not a PostgreSQL database.");
      * }
      * }</pre>
      *
-     * @return {@code true} if this is a PostgreSQL database version, {@code false} otherwise
+     * @return {@code true} if this {@code DBVersion} is a PostgreSQL variant, {@code false} otherwise.
      */
     public boolean isPostgreSQL() {
         return Strings.startsWithIgnoreCase(name(), "postgresql");

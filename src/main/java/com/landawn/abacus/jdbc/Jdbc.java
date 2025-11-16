@@ -136,36 +136,48 @@ public final class Jdbc {
     }
 
     /**
-     * A functional interface for setting parameters on a prepared query, such as
-     * a {@code PreparedStatement} or {@code CallableStatement}.
+     * A functional interface for setting parameters on a prepared query statement.
+     * Implementations of this interface are responsible for binding values to the
+     * parameters of a {@code PreparedStatement} or {@code CallableStatement}.
+     *
+     * <p>This interface is typically used to encapsulate parameter setting logic,
+     * making it reusable and improving code readability by separating parameter
+     * binding from query execution.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ParametersSetter<PreparedStatement> setter = ps -> {
-     * ps.setString(1, "John Doe");
-     * ps.setInt(2, 30);
+     * // Example: Setting parameters for a PreparedStatement
+     * ParametersSetter<PreparedStatement> userParamSetter = ps -> {
+     *     ps.setString(1, "Alice");
+     *     ps.setInt(2, 30);
+     *     ps.setBoolean(3, true);
      * };
+     *
+     * // Example: Using the setter with a PreparedQuery
+     * // query.setParameters(userParamSetter).update();
      * }</pre>
      *
-     * @param <QS> query statement type (e.g., {@code PreparedStatement}, {@code CallableStatement})
+     * @param <QS> the type of the query statement (e.g., {@code PreparedStatement}, {@code CallableStatement}).
+     * @see BiParametersSetter
+     * @see TriParametersSetter
      */
     @FunctionalInterface
     public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
         /**
          * A no-operation parameter setter that does nothing.
-         * Useful as a default or placeholder when no parameters need to be set.
+         * This constant is useful as a default or placeholder when no parameters need to be set,
+         * avoiding null checks.
          */
         @SuppressWarnings("rawtypes")
         ParametersSetter DO_NOTHING = preparedQuery -> {
-            // Do nothing.
+            // No operation performed.
         };
 
         /**
-         * Sets the parameters on the given prepared query.
+         * Sets the parameters on the given prepared query statement.
          *
-         * @param preparedQuery the prepared query to set parameters on
-         * @throws SQLException if a database access error occurs or this method is
-         * called on a closed {@code PreparedStatement}
+         * @param preparedQuery the prepared query statement (e.g., {@code PreparedStatement}) to set parameters on.
+         * @throws SQLException if a database access error occurs or if the statement is closed.
          */
         @Override
         void accept(QS preparedQuery) throws SQLException;

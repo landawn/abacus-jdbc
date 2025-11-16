@@ -134,17 +134,24 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a NULL value for the specified parameter.
-     * 
+     * Sets the specified named parameter to SQL {@code NULL}.
+     *
+     * <p><b>Note:</b> You must specify the SQL type of the parameter being set to null.
+     * This method is used for stored procedures that accept named parameters.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setNull("employeeId", Types.INTEGER);
+     * // Set a VARCHAR named parameter to NULL
+     * query.setNull("employeeName", java.sql.Types.VARCHAR);
+     *
+     * // Set an INTEGER named parameter to NULL
+     * query.setNull("managerId", java.sql.Types.INTEGER);
      * }</pre>
      *
-     * @param parameterName the name of the parameter
-     * @param sqlType the SQL type code defined in {@link java.sql.Types}
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @param parameterName the name of the parameter to set to {@code NULL}.
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}.
+     * @return {@code this} {@code CallableQuery} instance for method chaining.
+     * @throws SQLException if a database access error occurs or the parameter name is not valid.
      * @see java.sql.Types
      */
     public CallableQuery setNull(final String parameterName, final int sqlType) throws SQLException {
@@ -154,19 +161,23 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a NULL value for the specified parameter with a SQL type name.
-     * This method is useful for user-defined or REF types.
-     * 
+     * Sets the specified named parameter to SQL {@code NULL}. This version is used for user-defined types (UDTs)
+     * or {@code REF} types, where the type name is required by the database.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setNull("customParam", Types.STRUCT, "MY_CUSTOM_TYPE");
+     * // Setting a user-defined STRUCT type to NULL by name
+     * query.setNull("addressParam", java.sql.Types.STRUCT, "MY_ADDRESS_TYPE");
+     *
+     * // Setting a REF type to NULL by name
+     * query.setNull("refParam", java.sql.Types.REF, "MY_REF_TYPE");
      * }</pre>
      *
-     * @param parameterName the name of the parameter
-     * @param sqlType the SQL type code defined in {@link java.sql.Types}
-     * @param typeName the fully-qualified name of an SQL user-defined type
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @param parameterName the name of the parameter to set to {@code NULL}.
+     * @param sqlType the SQL type code from {@link java.sql.Types} (e.g., {@code STRUCT}, {@code REF}).
+     * @param typeName the fully-qualified name of the SQL user-defined type.
+     * @return {@code this} {@code CallableQuery} instance for method chaining.
+     * @throws SQLException if a database access error occurs or the parameter name is not valid.
      * @see java.sql.Types
      */
     public CallableQuery setNull(final String parameterName, final int sqlType, final String typeName) throws SQLException {
@@ -1965,35 +1976,43 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Registers multiple OUT parameters using a bi-functional interface approach with an additional parameter.
-     * This method is useful when the registration logic depends on external data or configuration.
-     * 
-     * <p>The provided {@link Jdbc.BiParametersSetter} receives both this CallableQuery instance
-     * and the supplied parameter, enabling dynamic parameter registration based on the parameter value.</p>
-     * 
+     * Registers multiple OUT parameters using a bi-functional interface and an additional context object.
+     * This method provides flexibility for dynamic registration of OUT parameters where the
+     * registration logic depends on external data or configuration provided by the {@code parameter} object.
+     *
+     * <p>The {@link Jdbc.BiParametersSetter} receives both this {@code CallableQuery} instance
+     * (allowing it to call methods like {@code registerOutParameter()}) and the supplied {@code parameter}
+     * (providing context for dynamic logic).
+     * If an exception occurs during registration, the statement is automatically closed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<String> outputFields = Arrays.asList("total", "count", "average");
-     * 
-     * query.registerOutParameters(outputFields, (q, fields) -> {
-     *     int index = 1;
-     *     for (String field : fields) {
-     *         if ("average".equals(field)) {
-     *             q.registerOutParameter(index++, Types.DECIMAL, 2);
-     *         } else {
-     *             q.registerOutParameter(index++, Types.INTEGER);
-     *         }
+     * class ReportConfig {
+     *     boolean includeTotal;
+     *     boolean includeAvg;
+     *     // getters
+     * }
+     * ReportConfig config = new ReportConfig(true, false);
+     *
+     * query.registerOutParameters(config, (q, cfg) -> {
+     *     int paramIndex = 1;
+     *     q.registerOutParameter(paramIndex++, Types.VARCHAR); // always return a status message
+     *
+     *     if (cfg.includeTotal()) {
+     *         q.registerOutParameter(paramIndex++, Types.DECIMAL);
+     *     }
+     *     if (cfg.includeAvg()) {
+     *         q.registerOutParameter(paramIndex++, Types.DECIMAL, 2);
      *     }
      * }).execute();
      * }</pre>
      *
-     * @param <T> the type of the additional parameter
-     * @param parameter the parameter to be passed to the BiParametersSetter
-     * @param register the {@link Jdbc.BiParametersSetter} that will register the OUT parameters.
-     *                 Must not be null.
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws IllegalArgumentException if register is null
-     * @throws SQLException if a database access error occurs during parameter registration
+     * @param <T> the type of the additional parameter object.
+     * @param parameter the context object to be passed to the {@code BiParametersSetter}.
+     * @param register the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be null.
+     * @return {@code this} {@code CallableQuery} instance for method chaining.
+     * @throws IllegalArgumentException if {@code register} is null.
+     * @throws SQLException if a database access error occurs during parameter registration.
      */
     public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register)
             throws SQLException {
