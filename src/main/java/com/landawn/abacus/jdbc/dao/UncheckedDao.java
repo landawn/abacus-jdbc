@@ -89,7 +89,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.save(user);
      * }</pre>
      *
-     * @param entityToSave
+     * @param entityToSave the entity to save
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -105,7 +105,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.save(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToSave
+     * @param entityToSave the entity to save
      * @param propNamesToSave the properties to save, or {@code null} to save all properties
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -124,7 +124,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param namedInsertSQL the named insert SQL statement
-     * @param entityToSave
+     * @param entityToSave the entity to save
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
