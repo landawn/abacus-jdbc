@@ -1089,20 +1089,21 @@ final class DaoImpl {
 
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Object[]> createParametersSetter(final QueryInfo queryInfo, final String fullClassMethodName,
-            final Method method, final Class<?>[] paramTypes, final int paramLen, final int defineParamLen, final int[] stmtParamIndexes,
+            final Method method, final Class<?>[] paramTypes, final int paramLen, final int fragmentParamLen, final int[] stmtParamIndexes,
             final boolean[] bindListParamFlags, final int stmtParamLen) {
 
         Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter = null;
 
         boolean hasParameterSetter = true;
 
-        if (paramLen - defineParamLen > 0 && Jdbc.ParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen])) {
-            parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters((Jdbc.ParametersSetter) args[defineParamLen]);
-        } else if (paramLen - defineParamLen > 1 && Jdbc.BiParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen + 1])) {
-            parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters(args[defineParamLen], (Jdbc.BiParametersSetter) args[defineParamLen + 1]);
-        } else if (paramLen - defineParamLen > 1 && Jdbc.TriParametersSetter.class.isAssignableFrom(paramTypes[defineParamLen + 1])) {
-            parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[defineParamLen],
-                    (Jdbc.TriParametersSetter) args[defineParamLen + 1]);
+        if (paramLen - fragmentParamLen > 0 && Jdbc.ParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen])) {
+            parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters((Jdbc.ParametersSetter) args[fragmentParamLen]);
+        } else if (paramLen - fragmentParamLen > 1 && Jdbc.BiParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])) {
+            parametersSetter = (preparedQuery, args) -> preparedQuery.settParameters(args[fragmentParamLen],
+                    (Jdbc.BiParametersSetter) args[fragmentParamLen + 1]);
+        } else if (paramLen - fragmentParamLen > 1 && Jdbc.TriParametersSetter.class.isAssignableFrom(paramTypes[fragmentParamLen + 1])) {
+            parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setParameters(args[fragmentParamLen],
+                    (Jdbc.TriParametersSetter) args[fragmentParamLen + 1]);
         } else {
             hasParameterSetter = false;
         }
@@ -1355,16 +1356,16 @@ final class DaoImpl {
 
     @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractQuery prepareQuery(final Dao proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final String fullClassMethodName,
-            final Method method, final Class<?> returnType, final Object[] args, final int[] defineParamIndexes, final Tuple2<Annotation, String>[] defineAnnos,
-            final BiFunction<Annotation, Object, String>[] defineMappers, final boolean returnGeneratedKeys, final String[] returnColumnNames,
+            final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes, final Tuple2<Annotation, String>[] fragmentAnnos,
+            final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys, final String[] returnColumnNames,
             final List<OutParameter> outParameterList, final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter) throws SQLException {
         final OP op = queryInfo.op;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
 
-        if (N.notEmpty(defineAnnos)) {
-            for (int i = 0, len = defineAnnos.length; i < len; i++) {
-                query = Strings.replaceAll(query, defineAnnos[i]._2, defineMappers[i].apply(defineAnnos[i]._1, args[defineParamIndexes[i]]));
+        if (N.notEmpty(fragmentAnnos)) {
+            for (int i = 0, len = fragmentAnnos.length; i < len; i++) {
+                query = Strings.replaceAll(query, fragmentAnnos[i]._2, fragmentMappers[i].apply(fragmentAnnos[i]._1, args[fragmentParamIndexes[i]]));
             }
 
             if (N.notEmpty(parsedSql.getNamedParameters()) || parsedSql.getParameterCount() == 0) {
@@ -5070,44 +5071,44 @@ final class DaoImpl {
                                         + fullClassMethodName);
                     }
 
-                    final int[] defineParamIndexes = IntStreamEx.of(tmp3)
+                    final int[] fragmentParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> N.anyMatch(method.getParameterAnnotations()[i],
                                     it -> it.annotationType().equals(Fragment.class) || it.annotationType().equals(FragmentList.class)
                                             || it.annotationType().equals(BindList.class)))
                             .toArray();
 
-                    final int defineParamLen = N.len(defineParamIndexes);
+                    final int fragmentParamLen = N.len(fragmentParamIndexes);
 
-                    if (defineParamLen > 0) {
-                        //    if (defineParamIndexes[0] != 0 || defineParamIndexes[defineParamLen - 1] - defineParamIndexes[0] + 1 != defineParamLen) {
+                    if (fragmentParamLen > 0) {
+                        //    if (fragmentParamIndexes[0] != 0 || fragmentParamIndexes[fragmentParamLen - 1] - fragmentParamIndexes[0] + 1 != fragmentParamLen) {
                         //        throw new UnsupportedOperationException(
                         //                "Parameters annotated with @Fragment must be at the head of the parameter list of method: " + fullClassMethodName);
                         //    }
 
-                        for (int i = 0; i < defineParamLen; i++) {
-                            if ((paramTypes[defineParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[defineParamIndexes[i]]))
-                                    && N.noneMatch(method.getParameterAnnotations()[defineParamIndexes[i]],
+                        for (int i = 0; i < fragmentParamLen; i++) {
+                            if ((paramTypes[fragmentParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[fragmentParamIndexes[i]]))
+                                    && N.noneMatch(method.getParameterAnnotations()[fragmentParamIndexes[i]],
                                             it -> it.annotationType().equals(FragmentList.class) || it.annotationType().equals(BindList.class))) {
                                 throw new UnsupportedOperationException("Array/Collection type of parameter[" + i
                                         + "] must be annotated with @FragmentList or @BindList, not @Fragment, in method: " + fullClassMethodName);
                             }
                         }
 
-                        if (IntStreamEx.of(defineParamIndexes)
+                        if (IntStreamEx.of(fragmentParamIndexes)
                                 .filter(i -> N.anyMatch(method.getParameterAnnotations()[i], it -> it.annotationType().equals(FragmentList.class)))
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @FragmentList(method: " + fullClassMethodName + ") must be Collection/Array.");
                         }
 
-                        if (IntStreamEx.of(defineParamIndexes)
+                        if (IntStreamEx.of(fragmentParamIndexes)
                                 .filter(i -> N.anyMatch(method.getParameterAnnotations()[i], it -> it.annotationType().equals(BindList.class)))
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
                                     "Type of parameter annotated with @BindList(method: " + fullClassMethodName + ") must be Collection/Array.");
                         }
 
-                        if ((isNamedQuery || isProcedure) && IntStreamEx.of(defineParamIndexes)
+                        if ((isNamedQuery || isProcedure) && IntStreamEx.of(fragmentParamIndexes)
                                 .flatMapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]))
                                 .anyMatch(it -> BindList.class.isAssignableFrom(it.annotationType()))) {
                             throw new UnsupportedOperationException(
@@ -5115,7 +5116,7 @@ final class DaoImpl {
                         }
                     }
 
-                    final BiFunction<Annotation, Object, String> defineParamMapper = (anno, param) -> N.stringOf(param);
+                    final BiFunction<Annotation, Object, String> fragmentParamMapper = (anno, param) -> N.stringOf(param);
                     final BiFunction<Annotation, Object, String> arrayFragmentListParamMapper = (anno,
                             param) -> param == null || Array.getLength(param) == 0 ? "" : N.toJson(param, jsc_no_bracket);
                     final BiFunction<Annotation, Object, String> collFragmentListParamMapper = (anno, param) -> param == null ? ""
@@ -5130,7 +5131,7 @@ final class DaoImpl {
                             : Strings.repeat(WD.QUESTION_MARK, N.size((Collection) param), WD.COMMA_SPACE, ((BindList) anno).prefixForNonEmpty(),
                                     ((BindList) anno).suffixForNonEmpty());
 
-                    final Tuple2<Annotation, String>[] defineAnnos = IntStreamEx.of(defineParamIndexes)
+                    final Tuple2<Annotation, String>[] fragmentAnnos = IntStreamEx.of(fragmentParamIndexes)
                             .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i])
                                     .select(Fragment.class)
                                     .map(it -> Tuple2.of((Annotation) it, it.value()))
@@ -5147,10 +5148,10 @@ final class DaoImpl {
                             .map(tp -> Tuple.of(tp._1, tp._2.charAt(0) == '{' && tp._2.charAt(tp._2.length() - 1) == '}' ? tp._2 : "{" + tp._2 + "}"))
                             .toArray(Tuple2[]::new);
 
-                    final BiFunction<Annotation, Object, String>[] defineMappers = IntStreamEx.of(defineParamIndexes)
+                    final BiFunction<Annotation, Object, String>[] fragmentMappers = IntStreamEx.of(fragmentParamIndexes)
                             .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).map(Annotation::annotationType).map(it -> {
                                 if (Fragment.class.isAssignableFrom(it)) {
-                                    return defineParamMapper;
+                                    return fragmentParamMapper;
                                 } else if (FragmentList.class.isAssignableFrom(it)) {
                                     return Collection.class.isAssignableFrom(paramTypes[i]) ? collFragmentListParamMapper : arrayFragmentListParamMapper;
                                 } else if (BindList.class.isAssignableFrom(it)) {
@@ -5163,8 +5164,8 @@ final class DaoImpl {
                             .map(u.Optional::get)
                             .toArray(BiFunction[]::new);
 
-                    if (N.notEmpty(defineAnnos) && N.anyMatch(defineAnnos, it -> !query.contains(it._2))) {
-                        throw new IllegalArgumentException("Defines: " + N.filter(defineAnnos, it -> !query.contains(it._2))
+                    if (N.notEmpty(fragmentAnnos) && N.anyMatch(fragmentAnnos, it -> !query.contains(it._2))) {
+                        throw new IllegalArgumentException("Fragments: " + N.filter(fragmentAnnos, it -> !query.contains(it._2))
                                 + " are not found in sql annotated in method: " + fullClassMethodName);
                     }
 
@@ -5365,7 +5366,7 @@ final class DaoImpl {
                         //    }
 
                         call = (proxy, args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter),
+                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter),
                                 args);
                     } else if (queryInfo.isInsert) {
                         if (isNoId && !returnType.isAssignableFrom(void.class)) {
@@ -5392,7 +5393,7 @@ final class DaoImpl {
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                        defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                        fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
                                         parametersSetter).insert(keyExtractor, isDefaultIdTester);
 
                                 if (isEntity && id.isPresent()) {
@@ -5431,11 +5432,11 @@ final class DaoImpl {
 
                                     if (isSingleParameter) {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
                                                 parametersSetter).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
                                                 parametersSetter).addBatchParameters(batchParameters);
                                     }
 
@@ -5445,7 +5446,7 @@ final class DaoImpl {
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
-                                                returnType, args, defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames,
+                                                returnType, args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames,
                                                 outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
@@ -5515,7 +5516,7 @@ final class DaoImpl {
                         if (!isBatch) {
                             call = (proxy, args) -> {
                                 final AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType,
-                                        args, defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                        args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
                                         parametersSetter);
 
                                 final long updatedRecordCount = isLargeUpdate ? preparedQuery.largeUpdate() : preparedQuery.update();
@@ -5547,11 +5548,11 @@ final class DaoImpl {
 
                                     if (isSingleParameter) {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
                                                 parametersSetter).addBatchParameters(batchParameters, ColumnOne.SET_OBJECT);
                                     } else {
                                         preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                                defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
+                                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList,
                                                 parametersSetter).addBatchParameters(batchParameters);
                                     }
 
@@ -5565,7 +5566,7 @@ final class DaoImpl {
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
-                                                returnType, args, defineParamIndexes, defineAnnos, defineMappers, returnGeneratedKeys, returnColumnNames,
+                                                returnType, args, fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames,
                                                 outParameterList, parametersSetter).closeAfterExecution(false)) {
 
                                             if (isSingleParameter) {
