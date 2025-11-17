@@ -280,26 +280,25 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *             }
  *
  *             // Create order with auto-generated key
- *             try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
- *                     "INSERT INTO orders (customer_id, product_id, quantity, order_date) VALUES (?, ?, ?, ?)", true)) {
- *                 long orderId = query.setLong(1, request.getCustomerId())
- *                     .setLong(2, request.getProductId())
- *                     .setInt(3, request.getQuantity())
- *                     .setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()))
- *                     .insert()
- *                     .orElseThrow(() -> new RuntimeException("Failed to get generated ID"));
+ *             long orderId = JdbcUtil.prepareQuery(dataSource,
+ *                     "INSERT INTO orders (customer_id, product_id, quantity, order_date) VALUES (?, ?, ?, ?)", true)
+ *                 .setLong(1, request.getCustomerId())
+ *                 .setLong(2, request.getProductId())
+ *                 .setInt(3, request.getQuantity())
+ *                 .setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()))
+ *                 .insert()
+ *                 .orElseThrow(() -> new RuntimeException("Failed to get generated ID"));
  *
- *                 // Update inventory
- *                 JdbcUtil.executeUpdate(dataSource,
- *                     "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
- *                     request.getQuantity(), request.getProductId());
+ *             // Update inventory
+ *             JdbcUtil.executeUpdate(dataSource,
+ *                 "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
+ *                 request.getQuantity(), request.getProductId());
  *
- *                 // Return created order
- *                 return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE id = ?")
- *                     .setLong(1, orderId)
- *                     .findFirst(Order.class)
- *                     .orElse(null);
- *             }
+ *             // Return created order
+ *             return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE id = ?")
+ *                 .setLong(1, orderId)
+ *                 .findFirst(Order.class)
+ *                 .orElse(null);
  *         });
  *     }
  *
@@ -2699,27 +2698,26 @@ public final class JdbcUtil {
      * }
      *
      * // Stream processing for large result sets
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT * FROM transactions WHERE amount > ?")) {
+     * Stream<Transaction> stream = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT * FROM transactions WHERE amount > ?")
+     *     .setDouble(1, 1000.0)
+     *     .stream(Transaction.class);
      *
-     *     Stream<Transaction> stream = query.setDouble(1, 1000.0).stream(Transaction.class);
+     * double totalAmount = stream
+     *     .filter(t -> t.getStatus().equals("COMPLETED"))
+     *     .mapToDouble(Transaction::getAmount)
+     *     .sum();
      *
-     *     double totalAmount = stream
-     *         .filter(t -> t.getStatus().equals("COMPLETED"))
-     *         .mapToDouble(Transaction::getAmount)
-     *         .sum();
-     *
-     *     System.out.println("Total: " + totalAmount);
-     * }
+     * System.out.println("Total: " + totalAmount);
      *
      * // Working with DataSet (column-oriented data structure)
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT name, email, age FROM users WHERE department = ?")) {
-     *     Dataset dataset = query.setString(1, "Engineering").query();
-     *     dataset.forEach(row -> {
-     *         System.out.println(row.get("name") + " - " + row.get("email"));
-     *     });
-     * }
+     * Dataset dataset = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT name, email, age FROM users WHERE department = ?")
+     *     .setString(1, "Engineering")
+     *     .query();
+     * dataset.forEach(row -> {
+     *     System.out.println(row.get("name") + " - " + row.get("email"));
+     * });
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from, must not be {@code null}
@@ -2827,20 +2825,17 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming a table where a trigger generates a UUID and a timestamp on insert.
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "INSERT INTO documents (content) VALUES (?)", new int[]{1, 4})) { // Assuming id is 1, created_at is 4
+     * String insertSql = "INSERT INTO documents (content) VALUES (?)";
      *
-     *     Row row = query.setString(1, "Some content...")
-     *                    .insert()
-     *                    .orElse(null);
+     * Row row = JdbcUtil.prepareQuery(dataSource, insertSql, new int[]{1, 4}) // Assuming id is 1, created_at is 4
+     *     .setString(1, "Some content...")
+     *     .insert()
+     *     .orElse(null);
      *
-     *     if (row != null) {
-     *         String generatedUuid = row.getString(1);
-     *         Timestamp creationTime = row.getTimestamp(2);
-     *         System.out.println("New document created with UUID: " + generatedUuid + " at " + creationTime);
-     *     }
-     * } catch (SQLException e) {
-     *     // Handle exceptions
+     * if (row != null) {
+     *     String generatedUuid = row.getString(1);
+     *     Timestamp creationTime = row.getTimestamp(2);
+     *     System.out.println("New document created with UUID: " + generatedUuid + " at " + creationTime);
      * }
      * }</pre>
      *
@@ -2893,20 +2888,17 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming a table with an auto-incrementing 'id' and a 'created_at' column with a default value.
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "INSERT INTO logs (message) VALUES (?)", new String[]{"id", "created_at"})) {
+     * String query = "INSERT INTO logs (message) VALUES (?)";
      *
-     *     Row generatedValues = query.setString(1, "User logged in")
-     *                                .insert()
-     *                                .orElse(null);
+     * Row generatedValues = JdbcUtil.prepareQuery(dataSource, query, new String[]{"id", "created_at"})
+     *     .setString(1, "User logged in")
+     *     .insert()
+     *     .orElse(null);
      *
-     *     if (generatedValues != null) {
-     *         long newId = generatedValues.getLong("id");
-     *         Timestamp creationTime = generatedValues.getTimestamp("created_at");
-     *         System.out.println("New log entry created with ID: " + newId + " at " + creationTime);
-     *     }
-     * } catch (SQLException e) {
-     *     // Handle exceptions
+     * if (generatedValues != null) {
+     *     long newId = generatedValues.getLong("id");
+     *     Timestamp creationTime = generatedValues.getTimestamp("created_at");
+     *     System.out.println("New log entry created with ID: " + newId + " at " + creationTime);
      * }
      * }</pre>
      *
@@ -2959,14 +2951,9 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Example: Creating a scrollable and updatable ResultSet
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users",
-     *      (conn, sql) -> conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE))) {
-     *
-     *     // The query can now be used with scrollable/updatable features
-     *     List<User> users = query.list(User.class);
-     * } catch (SQLException e) {
-     *     // Handle exceptions
-     * }
+     * List<User> users = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users",
+     *      (conn, sql) -> conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE))
+     *     .list(User.class);
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3044,10 +3031,10 @@ public final class JdbcUtil {
      * try (Connection conn = dataSource.getConnection()) {
      *     // If {@code closeAfterExecution(false)} is not called,
      *     // there is no need to place query instance in a try-catch block for closure.</p>
-     *     PreparedQuery query = JdbcUtil.prepareQuery(conn, "INSERT INTO users (name) VALUES (?)", true)
-     *
-     *     Optional<Long> newId = query.setString(1, "New User").insert();
-     *     System.out.println("New user ID: " + newId.orElse(null)); 
+     *     Optional<Long> newId = JdbcUtil.prepareQuery(conn, "INSERT INTO users (name) VALUES (?)", true)
+     *         .setString(1, "New User")
+     *         .insert();
+     *     System.out.println("New user ID: " + newId.orElse(null));
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3077,14 +3064,14 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Assumes columns 1 ('id') and 4 ('creation_ts') are auto-generated
-     *     try (PreparedQuery query = JdbcUtil.prepareQuery(conn,
-     *             "INSERT INTO events (message) VALUES (?)", new int[]{1, 4})) {
-     *
-     *         Row generated = query.setString(1, "System startup").insert().orElse(null);
-     *         if (generated != null) {
-     *             System.out.println("New event ID: " + generated.get(0));
-     *             System.out.println("Creation timestamp: " + generated.get(1));
-     *         }
+     *     Row generated = JdbcUtil.prepareQuery(conn,
+     *             "INSERT INTO events (message) VALUES (?)", new int[]{1, 4})
+     *         .setString(1, "System startup")
+     *         .insert()
+     *         .orElse(null);
+     *     if (generated != null) {
+     *         System.out.println("New event ID: " + generated.get(0));
+     *         System.out.println("Creation timestamp: " + generated.get(1));
      *     }
      * } catch (SQLException e) {
      *     // Handle exception
@@ -3116,14 +3103,14 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Assumes columns 'id' and 'creation_ts' are auto-generated
-     *     try (PreparedQuery query = JdbcUtil.prepareQuery(conn,
-     *             "INSERT INTO events (message) VALUES (?)", new String[]{"id", "creation_ts"})) {
-     *
-     *         Row generated = query.setString(1, "System shutdown").insert().orElse(null);
-     *         if (generated != null) {
-     *             System.out.println("New event ID: " + generated.getLong("id"));
-     *             System.out.println("Creation timestamp: " + generated.getTimestamp("creation_ts"));
-     *         }
+     *     Row generated = JdbcUtil.prepareQuery(conn,
+     *             "INSERT INTO events (message) VALUES (?)", new String[]{"id", "creation_ts"})
+     *         .setString(1, "System shutdown")
+     *         .insert()
+     *         .orElse(null);
+     *     if (generated != null) {
+     *         System.out.println("New event ID: " + generated.getLong("id"));
+     *         System.out.println("Creation timestamp: " + generated.getTimestamp("creation_ts"));
      *     }
      * } catch (SQLException e) {
      *     // Handle exception
@@ -3155,16 +3142,15 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Create a query with a specific fetch size and timeout
-     *     try (PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
-     *          (c, s) -> {
-     *              PreparedStatement stmt = c.prepareStatement(s);
-     *              stmt.setFetchSize(100);
-     *              stmt.setQueryTimeout(30); // 30 seconds
-     *              return stmt;
-     *          })) {
-     *
-     *         query.stream(Record.class).forEach(System.out::println);
-     *     }
+     *     JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
+     *             (c, s) -> {
+     *                 PreparedStatement stmt = c.prepareStatement(s);
+     *                 stmt.setFetchSize(100);
+     *                 stmt.setQueryTimeout(30); // 30 seconds
+     *                 return stmt;
+     *             })
+     *         .stream(Record.class)
+     *         .forEach(System.out::println);
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3201,14 +3187,11 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Efficiently stream over a large table without loading everything into memory.
-     * try (PreparedQuery query = JdbcUtil.prepareQueryForBigResult(dataSource, "SELECT * FROM event_logs")) {
-     *     long count = query.stream(LogEntry.class)
-     *                       .filter(entry -> entry.getLevel().equals("ERROR"))
-     *                       .count();
-     *     System.out.println("Found " + count + " error entries.");
-     * } catch (SQLException e) {
-     *     // Handle exception
-     * }
+     * long count = JdbcUtil.prepareQueryForBigResult(dataSource, "SELECT * FROM event_logs")
+     *     .stream(LogEntry.class)
+     *     .filter(entry -> entry.getLevel().equals("ERROR"))
+     *     .count();
+     * System.out.println("Found " + count + " error entries.");
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3232,12 +3215,12 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     try (PreparedQuery query = JdbcUtil.prepareQueryForBigResult(conn, "SELECT * FROM audit_trail")) {
-     *         // Stream results without high memory usage
-     *         query.stream(Audit.class).forEach(audit -> {
+     *     // Stream results without high memory usage
+     *     JdbcUtil.prepareQueryForBigResult(conn, "SELECT * FROM audit_trail")
+     *         .stream(Audit.class)
+     *         .forEach(audit -> {
      *             // process audit record
      *         });
-     *     }
      * } catch (SQLException e) {
      *     // Handle exception
      * }

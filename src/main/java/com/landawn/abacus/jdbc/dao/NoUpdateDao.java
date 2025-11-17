@@ -84,10 +84,9 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (PreparedQuery query = dao.prepareQuery("SELECT * FROM users WHERE age > ?")) {
-     *     query.setInt(1, 18);
-     *     List<User> adults = query.list(User.class);
-     * }
+     * List<User> adults = dao.prepareQuery("SELECT * FROM users WHERE age > ?")
+     *         .setInt(1, 18)
+     *         .list(User.class);
      * }</pre>
      *
      * @param query the SQL query string to prepare (must be SELECT or INSERT)
@@ -116,12 +115,14 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (PreparedQuery query = dao.prepareQuery(
-     *         "INSERT INTO users (name, email) VALUES (?, ?)", true)) {
-     *     query.setString(1, "John Doe");
-     *     query.setString(2, "john@example.com");
-     *     query.execute();
-     *     Long generatedId = query.getGeneratedKey(Long.class);
+     * Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", true)
+     *         .setString(1, "John Doe")
+     *         .setString(2, "john@example.com")
+     *         .insert()
+     *         .orElse(null);
+     *
+     * if (generated != null) {
+     *     long generatedId = generated.getLong(1);
      * }
      * }</pre>
      *
@@ -153,13 +154,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Retrieve only the first and third auto-generated columns
-     * try (PreparedQuery query = dao.prepareQuery(
-     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)", 
-     *         new int[] {1, 3})) {
-     *     query.setLong(1, customerId);
-     *     query.setBigDecimal(2, orderTotal);
-     *     query.execute();
-     *     // Retrieve the specified generated columns
+     * Row generated = dao.prepareQuery("INSERT INTO orders (customer_id, total) VALUES (?, ?)", new int[] {1, 3})
+     *         .setLong(1, customerId)
+     *         .setBigDecimal(2, orderTotal)
+     *         .insert()
+     *         .orElse(null);
+     *
+     * if (generated != null) {
+     *     long firstColumn = generated.getLong(1);
+     *     BigDecimal thirdColumn = generated.getBigDecimal(2);
      * }
      * }</pre>
      *
@@ -191,14 +194,16 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (PreparedQuery query = dao.prepareQuery(
-     *         "INSERT INTO users (name, email) VALUES (?, ?)", 
-     *         new String[] {"id", "created_timestamp"})) {
-     *     query.setString(1, "Jane Doe");
-     *     query.setString(2, "jane@example.com");
-     *     query.execute();
-     *     Long id = query.getGeneratedKey("id", Long.class);
-     *     Timestamp created = query.getGeneratedKey("created_timestamp", Timestamp.class);
+     * Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)",
+     *         new String[] {"id", "created_timestamp"})
+     *         .setString(1, "Jane Doe")
+     *         .setString(2, "jane@example.com")
+     *         .insert()
+     *         .orElse(null);
+     *
+     * if (generated != null) {
+     *     long id = generated.getLong("id");
+     *     Timestamp created = generated.getTimestamp("created_timestamp");
      * }
      * }</pre>
      *
