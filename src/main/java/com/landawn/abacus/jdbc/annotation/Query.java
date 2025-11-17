@@ -82,7 +82,7 @@ import com.landawn.abacus.util.RegExUtil;
  *
  *     // Dynamic SQL with template variables
  *     @Query(value = "SELECT * FROM {table} WHERE {column} = :value",
- *            fragmentIncludesNamedParams = true)
+ *            fragmentContainsNamedParameters = true)
  *     List<Map<String, Object>> dynamicQuery(@Fragment("table") String table,
  *                                           @Fragment("column") String column,
  *                                           @Bind("value") Object value);
@@ -148,7 +148,7 @@ public @interface Query {
      * <p>The SQL can include:</p>
      * <ul>
      *   <li>Named parameters using {@code :paramName} syntax for value binding</li>
-     *   <li>Template variables using {@code {variableName}} syntax when {@link #fragmentIncludesNamedParams()} is {@code true}</li>
+     *   <li>Template variables using {@code {variableName}} syntax when {@link #fragmentContainsNamedParameters()} is {@code true}</li>
      *   <li>Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.</li>
      *   <li>Database-specific SQL extensions and functions</li>
      * </ul>
@@ -568,7 +568,7 @@ public @interface Query {
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding currently active records
-     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", fragmentIncludesNamedParams = true)
+     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", fragmentContainsNamedParameters = true)
      * List<Promotion> findActivePromotions(@Fragment("{whereCause}") String whereCause);
      * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
@@ -579,7 +579,7 @@ public @interface Query {
      * @see FragmentList
      */
     @Beta
-    boolean fragmentIncludesNamedParams() default false;
+    boolean fragmentContainsNamedParameters() default false;
 
     /**
      * Enables automatic timestamp parameter injection for the query.

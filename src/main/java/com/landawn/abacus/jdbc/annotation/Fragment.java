@@ -87,7 +87,7 @@ import java.lang.annotation.Target;
  * 
  * @see FragmentList
  * @see Bind
- * @see Query#fragmentIncludesNamedParams()
+ * @see Query#fragmentContainsNamedParameters()
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })
