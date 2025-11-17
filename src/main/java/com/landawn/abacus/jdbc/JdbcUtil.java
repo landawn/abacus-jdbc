@@ -2665,25 +2665,22 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Basic query execution with single result
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT * FROM users WHERE id = ?")) {
-     *     Optional<User> user = query.setLong(1, userId).findFirst(User.class);
-     *     if (user.isPresent()) {
-     *         System.out.println("Found: " + user.get().getName());
-     *     }
-     * }
+     * // If {@code closeAfterExecution(false)} is not called,
+     * // there is no need to place the query instance in a try-catch block for closure.</p> 
+     * Optional<User> user = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")
+     *                                  .setLong(1, userId).findFirst(User.class);
+     * if (user.isPresent()) {
+     *     System.out.println("Found: " + user.get().getName());
+     * } 
      *
-     * // Query with multiple parameters returning a list
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT * FROM orders WHERE customer_id = ? AND status = ? AND order_date > ?")) {
-     *     List<Order> orders = query
+     * // Query with multiple parameters returning a list 
+     * List<Order> orders = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE customer_id = ? AND status = ? AND order_date > ?")
      *         .setLong(1, customerId)
      *         .setString(2, "PENDING")
      *         .setDate(3, Date.valueOf(lastWeek))
      *         .list(Order.class);
      *
-     *     orders.forEach(order -> System.out.println("Order #" + order.getId()));
-     * }
+     *  orders.forEach(order -> System.out.println("Order #" + order.getId())); 
      *
      * // Reusing the same PreparedQuery with different parameters
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
@@ -2771,20 +2768,15 @@ public final class JdbcUtil {
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "INSERT INTO users (first_name, last_name) VALUES (?, ?)", true)) {
-     *
-     *     Optional<Long> newUserId = query.setString(1, "John")
+     * <pre>{@code  
+     * Optional<Long> newUserId = JdbcUtil.prepareQuery(dataSource,
+     *         "INSERT INTO users (first_name, last_name) VALUES (?, ?)", true).setString(1, "John")
      *                                     .setString(2, "Doe")
      *                                     .insert();
      *
-     *     if (newUserId.isPresent()) {
-     *         System.out.println("New user created with ID: " + newUserId.get());
-     *     }
-     * } catch (SQLException e) {
-     *     // Handle exceptions
-     * }
+     * if (newUserId.isPresent()) {
+     *     System.out.println("New user created with ID: " + newUserId.get());
+     * } 
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3019,13 +3011,10 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     // The PreparedQuery should also be in a try-with-resources block
-     *     try (PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")) {
-     *         User user = query.setLong(1, userId).findOnlyOne(User.class);
-     *         // ...
-     *     }
-     *     // You can prepare and execute more queries here on the same connection
-     *
+     *     // If {@code closeAfterExecution(false)} is not called,
+     *     // there is no need to place the query instance in a try-catch block for closure.</p>
+     *     User user = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findOnlyOne(User.class);
+     *     // ...
      * } catch (SQLException e) {
      *     // Handle exceptions
      * } // Connection is automatically closed here
@@ -3053,12 +3042,12 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     try (PreparedQuery query = JdbcUtil.prepareQuery(conn,
-     *             "INSERT INTO users (name) VALUES (?)", true)) {
+     *     // If {@code closeAfterExecution(false)} is not called,
+     *     // there is no need to place query instance in a try-catch block for closure.</p>
+     *     PreparedQuery query = JdbcUtil.prepareQuery(conn, "INSERT INTO users (name) VALUES (?)", true)
      *
-     *         Optional<Long> newId = query.setString(1, "New User").insert();
-     *         System.out.println("New user ID: " + newId.orElse(null));
-     *     }
+     *     Optional<Long> newId = query.setString(1, "New User").insert();
+     *     System.out.println("New user ID: " + newId.orElse(null)); 
      * } catch (SQLException e) {
      *     // Handle exception
      * }

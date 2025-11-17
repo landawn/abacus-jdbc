@@ -100,13 +100,16 @@ import com.landawn.abacus.util.stream.Stream;
  * <li>Index is the key point in a lot of database performance issues.</li>
  * </ul>
  *
- * <p>The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods (which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed,
- * for example, get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
- * Except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
+ * <p>By default, the underlying {@code PreparedStatement} or {@code CallableStatement} is closed
+ * immediately after any execution method is invoked (such as {@code get}, {@code query},
+ * {@code queryForInt}, {@code queryForLong}, {@code findFirst}, {@code findOnlyOne},
+ * {@code list}, {@code execute}, and similar), regardless of whether the call completes
+ * normally or throws an exception. To keep the statement open, invoke
+ * {@code closeAfterExecution(false)}. If {@code closeAfterExecution(false)} is not called,
+ * there is no need to place the {@code AbstractQuery} instance in a try-catch block for closure.</p>
  *
- * <p>Generally, don't cache or reuse the instance of this class,
- * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
+ * <p>In general, do not cache or reuse instances of this class unless
+ * {@code closeAfterExecution(false)} has been explicitly called.</p>
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
