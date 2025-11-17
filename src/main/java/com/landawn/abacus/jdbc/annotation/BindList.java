@@ -48,7 +48,7 @@ import com.landawn.abacus.annotation.Beta;
  *     // With prefix and suffix for conditional SQL
  *     @Query("SELECT * FROM users WHERE active = {@code true} {statusFilter}")
  *     List<User> findActiveUsers(
- *         @BindList(value = "statuses", 
+ *         @BindList(value = "statusFilter", 
  *                   prefixForNonEmpty = "AND status IN (", 
  *                   suffixForNonEmpty = ")")
  *         List<String> statuses
@@ -77,6 +77,8 @@ public @interface BindList {
     /**
      * Specifies the parameter name to be used in the SQL query.
      * If not specified (empty string), the parameter name will be used.
+     * The string passed to {@code value} must exactly match the template variable used in the {@code @Query} SQL
+     * (for example, {@code @BindList("ids")} must correspond to {@code ... WHERE id IN ({ids})}).
      * 
      * <p>The parameter should be referenced in the SQL using curly braces: {@code {paramName}}</p>
      * 
@@ -106,7 +108,7 @@ public @interface BindList {
      * <pre>{@code
      * @Query("SELECT * FROM users WHERE active = {@code true} {statusFilter}")
      * List<User> findUsers(
-     *     @BindList(value = "statuses",
+     *     @BindList(value = "statusFilter",
      *               prefixForNonEmpty = "AND status IN (",
      *               suffixForNonEmpty = ")")
      *     List<String> statuses
@@ -132,7 +134,7 @@ public @interface BindList {
      * <pre>{@code
      * @Query("SELECT * FROM products {categoryFilter} ORDER BY name")
      * List<Product> findProducts(
-     *     @BindList(value = "categories",
+     *     @BindList(value = "categoryFilter",
      *               prefixForNonEmpty = "WHERE category IN (",
      *               suffixForNonEmpty = ")")
      *     Set<String> categories
