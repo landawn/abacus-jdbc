@@ -111,7 +111,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
 
     /**
      * Retrieves an entity by its ID and optionally loads all join entities.
-     * When includeAllJoinEntities is true, all fields annotated with @JoinedBy will be loaded.
+     * When includeAllJoinEntities is {@code true}, all fields annotated with @JoinedBy will be loaded.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -154,7 +154,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                        If null, all properties of the main entity are selected
+     *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of join entities to load
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -181,7 +181,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                        If null, all properties of the main entity are selected
+     *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -207,7 +207,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                        If null, all properties of the main entity are selected
+     *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
@@ -221,7 +221,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID and loads the specified type of join entities, returning null if not found.
+     * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Class)}.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -235,7 +235,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param id the entity ID to retrieve
      * @param joinEntitiesToLoad the class of join entities to load
-     * @return the entity with specified join entities loaded, or null if not found
+     * @return the entity with specified join entities loaded, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -251,7 +251,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID and optionally loads all join entities, returning null if not found.
+     * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, boolean)}.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -266,7 +266,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param id the entity ID to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with join entities loaded as specified, or null if not found
+     * @return the entity with join entities loaded as specified, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -282,14 +282,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties and loads the specified join entities, returning null if not found.
+     * Retrieves an entity by its ID with only selected properties and loads the specified join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, Class)}.
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                        If null, all properties of the main entity are selected
+     *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of join entities to load
-     * @return the entity with selected properties and join entities loaded, or null if not found
+     * @return the entity with selected properties and join entities loaded, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -305,14 +305,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning null if not found.
+     * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, Collection)}.
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                        If null, all properties of the main entity are selected
+     *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
-     * @return the entity with selected properties and specified join entities loaded, or null if not found
+     * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -331,15 +331,15 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning null if not found.
+     * Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, boolean)}.
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                        If null, all properties of the main entity are selected
+     *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with selected properties and join entities as specified, or null if not found
+     * @return the entity with selected properties and join entities as specified, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -416,7 +416,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
-     *                       If null, all properties of the entities are selected
+     *                       If {@code null}, all properties of the entities are selected
      * @param joinEntitiesToLoad the class of join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
@@ -436,13 +436,13 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * <pre>{@code
      * // Get users with orders and profiles loaded
      * List<User> users = userDao.batchGet(userIds,
-     *                                     null,  // Select all user properties
+     *                                     {@code null},  // Select all user properties
      *                                     Arrays.asList(Order.class, UserProfile.class));
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
-     *                       If null, all properties of the entities are selected
+     *                       If {@code null}, all properties of the entities are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
@@ -460,7 +460,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
-     *                       If null, all properties of the entities are selected
+     *                       If {@code null}, all properties of the entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with selected properties and join entities as specified
@@ -488,7 +488,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
-     *                       If null, all properties of the entities are selected
+     *                       If {@code null}, all properties of the entities are selected
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @param joinEntitiesToLoad the class of join entities to load for each entity
@@ -520,14 +520,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * <pre>{@code
      * // Load users with multiple relationships in batches
      * List<User> users = userDao.batchGet(userIds,
-     *                                     null,  // all properties
+     *                                     {@code null},  // all properties
      *                                     50,    // batch size
      *                                     Arrays.asList(Order.class, UserProfile.class, Role.class));
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
-     *                       If null, all properties of the entities are selected
+     *                       If {@code null}, all properties of the entities are selected
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
@@ -572,7 +572,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
-     *                       If null, all properties of the entities are selected
+     *                       If {@code null}, all properties of the entities are selected
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;

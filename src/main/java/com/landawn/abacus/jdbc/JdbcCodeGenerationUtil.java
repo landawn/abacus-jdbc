@@ -229,7 +229,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds The data source to connect to the database
      * @param tableName The name of the table for which to generate the entity class
-     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @param config The configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return The generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -274,7 +274,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds The data source to connect to the database
      * @param entityName The name of the entity class to generate
      * @param query The SQL query to execute for retrieving the table metadata. The query should return an empty result set
-     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @param config The configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return The generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -322,7 +322,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn The database connection to use
      * @param tableName The name of the table for which to generate the entity class
-     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @param config The configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return The generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -367,7 +367,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn The database connection to use
      * @param entityName The name of the entity class to generate
      * @param query The SQL query to execute for retrieving the table metadata. The query should return an empty result set
-     * @param config The configuration for customizing the generated entity class. If null, default configuration is used
+     * @param config The configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return The generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -843,7 +843,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns (MySQL): "SELECT user_id, first_name, last_name, `created-date` FROM user_profile"
+     *     // Returns (MySQL): "SELECT user_id, first_name, last_name, <i>created-date</i> FROM user_profile"
      *     // Returns (PostgreSQL): "SELECT user_id, first_name, last_name, "created-date" FROM user_profile"
      * }
      * }</pre>
@@ -1846,7 +1846,7 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.).
-         * Default is false (uses primitives where possible).
+         * Default is {@code false} (uses primitives where possible).
          */
 
         private boolean useBoxedType;

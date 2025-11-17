@@ -100,7 +100,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param query the SQL query string
-     * @param generateKeys true to retrieve auto-generated keys
+     * @param generateKeys {@code true} to retrieve auto-generated keys
      * @return never returns normally
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
@@ -173,7 +173,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the SQL query string with named parameters
-     * @param generateKeys true to retrieve auto-generated keys
+     * @param generateKeys {@code true} to retrieve auto-generated keys
      * @return never returns normally
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
@@ -245,7 +245,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the parsed SQL query with named parameters
-     * @param generateKeys true to retrieve auto-generated keys
+     * @param generateKeys {@code true} to retrieve auto-generated keys
      * @return never returns normally
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
@@ -298,7 +298,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToSave the entity to save
+     * @param entityToSave
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
@@ -313,7 +313,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToSave the entity to save
+     * @param entityToSave
      * @param propNamesToSave collection of property names to save
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
@@ -330,7 +330,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSQL the named SQL insert statement
-     * @param entityToSave the entity to save
+     * @param entityToSave
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO

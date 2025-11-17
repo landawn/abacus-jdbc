@@ -346,4 +346,40 @@ public final class cs { // NOSONAR
      * Parameter name for functions that extract values from objects or result sets.
      */
     public static final String valueExtractor = "valueExtractor";
+    /**
+     * Parameter name for property names used in select queries.
+     */
+    public static String selectPropName = "selectPropName";
+    /**
+     * Parameter name for specifying the target value type in mapping or conversion operations.
+     */
+    public static final String targetValueType = "targetValueType";
+    /**
+     * Parameter name for identifier fields or properties.
+     */
+    public static final String id = "id";
+    /**
+     * Parameter name for property values used in insert operations.
+     */
+    public static final String propNamesToInsert = "propNamesToInsert";
+    /**
+     * Parameter name for property values used in save operations.
+     */
+    public static final String propNamesToSave = "propNamesToSave";
+    /**
+     * Parameter name for property values used in update operations.
+     */
+    public static final String propNamesToUpdate = "propNamesToUpdate";
+    /**
+     * Parameter name for property values to update, typically a map from property name to its new value, used by update operations to provide partial updates. 
+     */
+    public static final String propsToUpdate = "propsToUpdate";
+    /**
+     * Parameter name for named insert SQL statements.
+     */
+    public static final String namedInsertSQL = "namedInsertSQL";
+    /**
+     * Parameter name for join entity property names used in join operations.
+     */
+    public static final String joinEntityPropName = "joinEntityPropName";
 }

@@ -89,7 +89,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.save(user);
      * }</pre>
      *
-     * @param entityToSave the entity to save
+     * @param entityToSave
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -105,8 +105,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.save(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToSave the entity to save
-     * @param propNamesToSave the properties to save, or null to save all properties
+     * @param entityToSave
+     * @param propNamesToSave the properties to save, or {@code null} to save all properties
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -124,7 +124,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param namedInsertSQL the named insert SQL statement
-     * @param entityToSave the entity to save
+     * @param entityToSave
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -374,7 +374,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return an Optional containing the first matching record, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
@@ -395,7 +395,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
@@ -418,7 +418,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
@@ -497,7 +497,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return an Optional containing the single matching record, or empty if no match found
      * @throws DuplicatedResultException if more than one record is found
@@ -519,7 +519,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
@@ -543,7 +543,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
@@ -832,7 +832,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
 
     /**
      * Returns an {@code Optional} describing the non-null value in the first row/column if it exists.
-     * Unlike queryForSingleResult, this method returns empty Optional for null values.
+     * Unlike queryForSingleResult, this method returns empty Optional for {@code null} values.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -986,7 +986,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return a Dataset containing the selected properties of matching records
      * @throws UncheckedSQLException if a database access error occurs
@@ -1040,7 +1040,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param resultExtractor the function to extract results from the ResultSet
      * @return the extracted result
@@ -1101,7 +1101,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param resultExtractor the function to extract results with column labels
      * @return the extracted result
@@ -1222,7 +1222,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return a list of entities with selected properties
      * @throws UncheckedSQLException if a database access error occurs
@@ -1243,7 +1243,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map each result set row
      * @return a list of mapped results
@@ -1265,7 +1265,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowMapper the function to map each row with column labels
      * @return a list of mapped results
@@ -1289,7 +1289,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowFilter the predicate to filter rows before mapping
      * @param rowMapper the function to map filtered rows
@@ -1314,7 +1314,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param <R> the result type
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowFilter the bi-predicate to filter rows with column labels
      * @param rowMapper the function to map filtered rows with column labels
@@ -1494,7 +1494,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowConsumer the consumer to process each row
      * @throws UncheckedSQLException if a database access error occurs
@@ -1514,7 +1514,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowConsumer the bi-consumer to process each row with column labels
      * @throws UncheckedSQLException if a database access error occurs
@@ -1535,7 +1535,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowFilter the predicate to filter rows
      * @param rowConsumer the consumer to process filtered rows
@@ -1558,7 +1558,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties (columns) to be selected, or null to select all
+     * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @param rowFilter the bi-predicate to filter rows with column labels
      * @param rowConsumer the bi-consumer to process filtered rows with column labels

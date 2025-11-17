@@ -214,7 +214,7 @@ import com.landawn.abacus.util.WD;
  * <ul>
  *   <li><b>Automatic Type Mapping:</b> Intelligent mapping between CSV strings and database types</li>
  *   <li><b>Custom Converters:</b> Support for custom type conversion functions</li>
- *   <li><b>Null Handling:</b> Robust null value processing and validation</li>
+ *   <li><b>Null Handling:</b> Robust {@code null} value processing and validation</li>
  *   <li><b>Data Validation:</b> Built-in validation for data integrity and constraints</li>
  *   <li><b>Error Recovery:</b> Configurable error handling with skip/retry options</li>
  * </ul>
@@ -494,7 +494,7 @@ public final class JdbcUtils {
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
-     * @param filter a predicate to filter the rows; only rows returning true will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param conn the Connection to the database
      * @param insertSQL the SQL insert statement with placeholders; column order must match the selected columns
      * @param batchSize the number of rows to be inserted in each batch
@@ -613,7 +613,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning true will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param conn the Connection to the database
      * @param insertSQL the SQL insert statement with placeholders; column order must match the Dataset
      * @param batchSize the number of rows to be inserted in each batch
@@ -712,7 +712,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning true will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param conn the Connection to the database
      * @param insertSQL the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch
@@ -837,7 +837,7 @@ public final class JdbcUtils {
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
-     * @param filter a predicate to filter the rows; only rows returning true will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
@@ -942,7 +942,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning true will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
@@ -1081,7 +1081,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
-     * @param filter a predicate to filter the rows; only rows returning true will be imported
+     * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
@@ -1154,7 +1154,7 @@ public final class JdbcUtils {
      * @param file the file containing the data to be imported
      * @param sourceDataSource the DataSource to obtain database connections
      * @param insertSQL the SQL insert statement with placeholders
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
@@ -1193,7 +1193,7 @@ public final class JdbcUtils {
      * @param insertSQL the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
@@ -1226,7 +1226,7 @@ public final class JdbcUtils {
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
@@ -1258,7 +1258,7 @@ public final class JdbcUtils {
      * @param reader the Reader containing the data to be imported
      * @param sourceDataSource the DataSource to obtain database connections
      * @param insertSQL the SQL insert statement with placeholders
-     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
@@ -1300,7 +1300,7 @@ public final class JdbcUtils {
      * @param insertSQL the SQL insert statement with placeholders
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param func a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
@@ -1340,7 +1340,7 @@ public final class JdbcUtils {
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns null to skip the line
+     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
@@ -1784,7 +1784,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that filter may throw
      * @param file the CSV file containing the data to be imported
-     * @param filter a predicate to filter rows; only rows returning true will be imported
+     * @param filter a predicate to filter rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions
@@ -1972,7 +1972,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that filter may throw
      * @param reader the Reader to read the CSV data from
-     * @param filter a predicate to filter rows; only rows returning true will be imported
+     * @param filter a predicate to filter rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be >= 0)
@@ -2444,7 +2444,7 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param rs the ResultSet containing the data to be exported
-     * @param selectColumnNames the collection of column names to be selected for export; if null, all columns are exported
+     * @param selectColumnNames the collection of column names to be selected for export; if {@code null}, all columns are exported
      * @param output the Writer to write the CSV data to
      * @return the number of rows exported
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
@@ -3932,7 +3932,7 @@ public final class JdbcUtils {
      * // Create a setter that converts all nulls to empty strings
      * ColumnGetter<Object> getter = (rs, columnIndex) -> {
      *     Object value = rs.getObject(columnIndex);
-     *     return (value == null && rs.getMetaData().getColumnType(columnIndex) == Types.VARCHAR) 
+     *     return (value == {@code null} && rs.getMetaData().getColumnType(columnIndex) == Types.VARCHAR) 
      *            ? "" : value;
      * };
      *

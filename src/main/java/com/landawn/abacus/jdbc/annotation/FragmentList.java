@@ -22,17 +22,17 @@ import java.lang.annotation.Target;
 import java.util.Collection;
 
 /**
- * Defines a named SQL template variable from a collection or array parameter.
+ * Defines a named query template variable from a collection or array parameter.
  * This annotation converts the elements of a collection or array into a comma-separated string
- * that can be used to dynamically construct SQL queries.
+ * that can be used to dynamically construct query queries.
  * 
- * <p>Unlike {@link BindList} which binds values as parameters, {@code DefineList} performs
- * string substitution in the SQL template. This is useful for dynamic SQL construction where
+ * <p>Unlike {@link BindList} which binds values as parameters, {@code FragmentList} performs
+ * string substitution in the query template. This is useful for dynamic query construction where
  * the structure of the query itself needs to change based on input.</p>
  * 
  * <p><strong>Security Warning:</strong> Since this performs direct string substitution,
- * be extremely careful to validate and sanitize input to prevent SQL injection attacks.
- * Only use this with trusted input or when dynamic SQL structure is absolutely necessary.</p>
+ * be extremely careful to validate and sanitize input to prevent query injection attacks.
+ * Only use this with trusted input or when dynamic query structure is absolutely necessary.</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -40,7 +40,7 @@ import java.util.Collection;
  *     // Dynamic column selection
  *     @Query("SELECT {columns} FROM users WHERE id = :id")
  *     Map<String, Object> findColumnsById(
- *         @DefineList("columns") List<String> columns,
+ *         @FragmentList("columns") List<String> columns,
  *         @Bind("id") long id
  *     );
  *     
@@ -50,7 +50,7 @@ import java.util.Collection;
  *     // Dynamic table names (be very careful with this!)
  *     @Query("SELECT * FROM {tables} WHERE status = :status")
  *     List<Map<String, Object>> findFromTables(
- *         @DefineList("tables") String[] tables,
+ *         @FragmentList("tables") String[] tables,
  *         @Bind("status") String status
  *     );
  *     
@@ -68,31 +68,31 @@ import java.util.Collection;
  * <p>The elements are converted to strings using their {@code toString()} method
  * and joined with commas. Null elements are converted to the string "null".</p>
  *
- * @see Define
+ * @see Fragment
  * @see BindList
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })
-public @interface DefineList {
+public @interface FragmentList {
 
     /**
-     * Specifies the name of the SQL template variable to be replaced.
+     * Specifies the name of the query template variable to be replaced.
      * If not specified (empty string), the parameter name will be used.
      * 
-     * <p>The variable should be referenced in the SQL template using curly braces: {@code {variableName}}</p>
+     * <p>The variable should be referenced in the query template using curly braces: {@code {variableName}}</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT {cols} FROM users")
-     * List<User> findWithColumns(@DefineList("cols") List<String> columnList);
+     * List<User> findWithColumns(@FragmentList("cols") List<String> columnList);
      * 
      * // Using parameter name (when value is not specified)
      * @Query("SELECT {columns} FROM users")
-     * List<User> findWithColumns(@DefineList List<String> columns);
+     * List<User> findWithColumns(@FragmentList List<String> columns);
      * }</pre>
      *
-     * @return the name of the SQL template variable, or empty string if using the parameter name
+     * @return the name of the query template variable, or empty string if using the parameter name
      */
     String value() default "";
 }

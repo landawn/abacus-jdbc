@@ -1076,7 +1076,7 @@ public final class JdbcUtil {
      * This method analyzes the URL pattern to determine which JDBC driver should be used.
      *
      * @param url the JDBC URL to analyze
-     * @return the driver class corresponding to the URL, or null if not found
+     * @return the driver class corresponding to the URL, or {@code null} if not found
      */
     private static Class<? extends Driver> getDriverClassByUrl(final String url) {
         N.checkArgNotEmpty(url, cs.url);
@@ -1181,7 +1181,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param conn The {@link Connection} to be released. Can be null, in which case the method does nothing.
+     * @param conn The {@link Connection} to be released. Can be {@code null}, in which case the method does nothing.
      * @param ds The {@link javax.sql.DataSource} from which the connection was obtained.
      * @see #getConnection(javax.sql.DataSource)
      * @see org.springframework.jdbc.datasource.DataSourceUtils#releaseConnection(Connection, javax.sql.DataSource)
@@ -1239,7 +1239,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. If null, the method does nothing.
+     * @param rs The {@link ResultSet} to close. If {@code null}, the method does nothing.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #closeQuietly(ResultSet)
      */
@@ -1270,7 +1270,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. If null, no action is taken.
+     * @param rs The {@link ResultSet} to close. If {@code null}, no action is taken.
      * @param closeStatement If {@code true}, the {@link Statement} that created the {@code ResultSet} will also be closed.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #close(ResultSet, boolean, boolean)
@@ -1297,15 +1297,15 @@ public final class JdbcUtil {
      *     // ... process results
      * } finally {
      *     // Closes rs, stmt, and conn
-     *     JdbcUtil.close(rs, true, true);
+     *     JdbcUtil.close(rs, {@code true}, true);
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the {@link Statement} from the {@code ResultSet} is also closed.
      * @param closeConnection If {@code true}, the {@link Connection} from the {@code Statement} is also closed.
      *        This requires {@code closeStatement} to be {@code true}.
-     * @throws IllegalArgumentException If {@code closeConnection} is true but {@code closeStatement} is false.
+     * @throws IllegalArgumentException If {@code closeConnection} is {@code true} but {@code closeStatement} is {@code false}.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #closeQuietly(ResultSet, boolean, boolean)
      */
@@ -1359,7 +1359,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param stmt The {@link Statement} to close. If null, the method does nothing.
+     * @param stmt The {@link Statement} to close. If {@code null}, the method does nothing.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #closeQuietly(Statement)
      */
@@ -1394,7 +1394,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param conn The {@link Connection} to close. If null, the method does nothing.
+     * @param conn The {@link Connection} to close. If {@code null}, the method does nothing.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #closeQuietly(Connection)
@@ -1435,8 +1435,8 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
-     * @param stmt The {@link Statement} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #closeQuietly(ResultSet, Statement)
      */
@@ -1478,8 +1478,8 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param stmt The {@link Statement} to close. Can be null.
-     * @param conn The {@link Connection} to close. Can be null.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
+     * @param conn The {@link Connection} to close. Can be {@code null}.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #closeQuietly(Statement, Connection)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -1524,9 +1524,9 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
-     * @param stmt The {@link Statement} to close. Can be null.
-     * @param conn The {@link Connection} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
+     * @param conn The {@link Connection} to close. Can be {@code null}.
      * @throws UncheckedSQLException If a database access error occurs during closing.
      * @see #closeQuietly(ResultSet, Statement, Connection)
      */
@@ -1575,7 +1575,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @see #close(ResultSet)
      */
     public static void closeQuietly(final ResultSet rs) {
@@ -1602,7 +1602,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the {@link Statement} associated with the {@code ResultSet} will also be closed quietly.
      * @throws UncheckedSQLException If retrieving the {@code Statement} from the {@code ResultSet} fails.
      * @see #close(ResultSet, boolean)
@@ -1630,15 +1630,15 @@ public final class JdbcUtil {
      *     // ...
      * } finally {
      *     // Quietly closes all three resources.
-     *     JdbcUtil.closeQuietly(rs, true, true);
+     *     JdbcUtil.closeQuietly(rs, {@code true}, true);
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the associated {@link Statement} is also closed quietly.
      * @param closeConnection If {@code true}, the associated {@link Connection} is also closed quietly.
      *        Requires {@code closeStatement} to be {@code true}.
-     * @throws IllegalArgumentException If {@code closeConnection} is true but {@code closeStatement} is false.
+     * @throws IllegalArgumentException If {@code closeConnection} is {@code true} but {@code closeStatement} is {@code false}.
      * @see #close(ResultSet, boolean, boolean)
      */
     public static void closeQuietly(final ResultSet rs, final boolean closeStatement, final boolean closeConnection) throws IllegalArgumentException {
@@ -1686,7 +1686,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param stmt The {@link Statement} to close. Can be null.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @see #close(Statement)
      */
     public static void closeQuietly(final Statement stmt) {
@@ -1715,7 +1715,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param conn The {@link Connection} to close. Can be null.
+     * @param conn The {@link Connection} to close. Can be {@code null}.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #close(Connection)
      */
@@ -1744,8 +1744,8 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
-     * @param stmt The {@link Statement} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @see #close(ResultSet, Statement)
      */
     public static void closeQuietly(final ResultSet rs, final Statement stmt) {
@@ -1772,8 +1772,8 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param stmt The {@link Statement} to close. Can be null.
-     * @param conn The {@link Connection} to close. Can be null.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
+     * @param conn The {@link Connection} to close. Can be {@code null}.
      * @see #close(Statement, Connection)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -1803,9 +1803,9 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to close. Can be null.
-     * @param stmt The {@link Statement} to close. Can be null.
-     * @param conn The {@link Connection} to close. Can be null.
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
+     * @param conn The {@link Connection} to close. Can be {@code null}.
      * @see #close(ResultSet, Statement, Connection)
      */
     public static void closeQuietly(final ResultSet rs, final Statement stmt, final Connection conn) {
@@ -2020,7 +2020,7 @@ public final class JdbcUtil {
 
     /**
      * Returns the column label for a specified column index from {@link ResultSetMetaData}.
-     * This method prioritizes the column label, but falls back to the column name if the label is null or empty.
+     * This method prioritizes the column label, but falls back to the column name if the label is {@code null} or empty.
      * This is useful for consistently getting a meaningful name for a column, especially when aliases are used.
      *
      * <p><b>Usage Examples:</b></p>
@@ -2790,7 +2790,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare (usually an {@code INSERT} statement).
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link PreparedQuery} instance configured to handle auto-generated keys.
-     * @throws IllegalArgumentException If {@code ds} or {@code sql} is null or empty.
+     * @throws IllegalArgumentException If {@code ds} or {@code sql} is {@code null} or empty.
      * @throws SQLException If a database access error occurs or the driver does not support auto-generated keys.
      * @see Statement#RETURN_GENERATED_KEYS
      */
@@ -2855,7 +2855,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param returnColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If any of the arguments are null or empty.
+     * @throws IllegalArgumentException If any of the arguments are {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      * @see Connection#prepareStatement(String, int[])
      */
@@ -2921,7 +2921,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param returnColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If any of the arguments are null or empty.
+     * @throws IllegalArgumentException If any of the arguments are {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      * @see Connection#prepareStatement(String, String[])
      */
@@ -2980,7 +2980,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance wrapping the custom-created statement.
-     * @throws IllegalArgumentException If any of the arguments are null.
+     * @throws IllegalArgumentException If any of the arguments are {@code null}.
      * @throws SQLException If a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
@@ -3033,7 +3033,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use for the query. It will not be closed by this method.
      * @param sql The SQL query to prepare.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If {@code conn} or {@code sql} is null or empty.
+     * @throws IllegalArgumentException If {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      * @see #prepareQuery(javax.sql.DataSource, String)
      */
@@ -3067,7 +3067,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param autoGeneratedKeys If {@code true}, generated keys will be available for retrieval.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If {@code conn} or {@code sql} is null or empty.
+     * @throws IllegalArgumentException If {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final boolean autoGeneratedKeys)
@@ -3105,7 +3105,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param returnColumnIndexes An array of 1-based column indexes of generated keys to return.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If any argument is null or empty.
+     * @throws IllegalArgumentException If any argument is {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] returnColumnIndexes)
@@ -3144,7 +3144,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param returnColumnNames An array of column names of generated keys to return.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If any argument is null or empty.
+     * @throws IllegalArgumentException If any argument is {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] returnColumnNames)
@@ -3184,7 +3184,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A factory function to create the {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If any argument is null.
+     * @throws IllegalArgumentException If any argument is {@code null}.
      * @throws SQLException If a database access error occurs.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
@@ -3292,7 +3292,7 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param namedSql The SQL query with named parameters (e.g., {@code :paramName}).
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException If {@code ds} or {@code namedSql} is null or empty.
+     * @throws IllegalArgumentException If {@code ds} or {@code namedSql} is {@code null} or empty.
      * @throws SQLException If a database access error occurs.
      * @see NamedQuery
      * @see #prepareNamedQuery(Connection, String)
@@ -3336,7 +3336,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param autoGeneratedKeys Whether auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource or named SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or named SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3381,7 +3381,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL string, or returnColumnIndexes is null or empty
+     * @throws IllegalArgumentException If the DataSource, named SQL string, or returnColumnIndexes is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3427,7 +3427,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL string, or returnColumnNames is null or empty
+     * @throws IllegalArgumentException If the DataSource, named SQL string, or returnColumnNames is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3473,7 +3473,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL string, or stmtCreator is null or empty
+     * @throws IllegalArgumentException If the DataSource, named SQL string, or stmtCreator is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3526,7 +3526,7 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the query
      * @param namedSql The named SQL string to prepare
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection or named SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or named SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
@@ -3547,7 +3547,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param autoGeneratedKeys Whether auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection or named SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or named SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys)
@@ -3569,7 +3569,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL string, or returnColumnIndexes is null or empty
+     * @throws IllegalArgumentException If the Connection, named SQL string, or returnColumnIndexes is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] returnColumnIndexes)
@@ -3592,7 +3592,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL string, or returnColumnNames is null or empty
+     * @throws IllegalArgumentException If the Connection, named SQL string, or returnColumnNames is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] returnColumnNames)
@@ -3615,7 +3615,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL string, or stmtCreator is null or empty
+     * @throws IllegalArgumentException If the Connection, named SQL string, or stmtCreator is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
@@ -3642,7 +3642,7 @@ public final class JdbcUtil {
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource or named SQL is null or invalid
+     * @throws IllegalArgumentException If the DataSource or named SQL is {@code null} or invalid
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3687,7 +3687,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param autoGeneratedKeys Whether auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource or named SQL is null or invalid
+     * @throws IllegalArgumentException If the DataSource or named SQL is {@code null} or invalid
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3733,7 +3733,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL, or returnColumnIndexes is null or empty
+     * @throws IllegalArgumentException If the DataSource, named SQL, or returnColumnIndexes is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3780,7 +3780,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL, or returnColumnNames is null or empty
+     * @throws IllegalArgumentException If the DataSource, named SQL, or returnColumnNames is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3827,7 +3827,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL, or stmtCreator is null or empty
+     * @throws IllegalArgumentException If the DataSource, named SQL, or stmtCreator is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3868,7 +3868,7 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection or named SQL is null or invalid
+     * @throws IllegalArgumentException If the Connection or named SQL is {@code null} or invalid
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
@@ -3888,7 +3888,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param autoGeneratedKeys Whether auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection or named SQL is null or invalid
+     * @throws IllegalArgumentException If the Connection or named SQL is {@code null} or invalid
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final boolean autoGeneratedKeys)
@@ -3909,7 +3909,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnIndexes The column indexes for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL, or returnColumnIndexes is null or empty
+     * @throws IllegalArgumentException If the Connection, named SQL, or returnColumnIndexes is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] returnColumnIndexes)
@@ -3931,7 +3931,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param returnColumnNames The column names for which auto-generated keys should be returned
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL, or returnColumnNames is null or empty
+     * @throws IllegalArgumentException If the Connection, named SQL, or returnColumnNames is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] returnColumnNames)
@@ -3953,7 +3953,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL, or stmtCreator is null or empty
+     * @throws IllegalArgumentException If the Connection, named SQL, or stmtCreator is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
@@ -4052,7 +4052,7 @@ public final class JdbcUtil {
      * @param ds The DataSource to use for the query
      * @param sql The SQL string for the stored procedure call
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4096,7 +4096,7 @@ public final class JdbcUtil {
      * @param sql The SQL string for the stored procedure call
      * @param stmtCreator A function to create a CallableStatement with custom configuration
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If the DataSource, SQL string, or stmtCreator is null or empty
+     * @throws IllegalArgumentException If the DataSource, SQL string, or stmtCreator is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4136,7 +4136,7 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the query
      * @param sql The SQL string for the stored procedure call
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
@@ -4155,7 +4155,7 @@ public final class JdbcUtil {
      * @param sql The SQL string for the stored procedure call
      * @param stmtCreator A function to create a CallableStatement with custom configuration
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If the Connection, SQL string, or stmtCreator is null or empty
+     * @throws IllegalArgumentException If the Connection, SQL string, or stmtCreator is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
@@ -4520,7 +4520,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param parameters Optional parameters for the SQL query
      * @return A Dataset object containing the result of the query
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the query
      * @see PreparedStatement#executeQuery()
      */
@@ -4656,7 +4656,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param parameters Optional parameters for the SQL update
      * @return The number of rows affected by the update
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the update
      * @see PreparedStatement#executeUpdate()
      */
@@ -4695,7 +4695,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */
@@ -4713,7 +4713,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */
@@ -4758,7 +4758,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */
@@ -4776,7 +4776,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */
@@ -4853,7 +4853,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
      */
@@ -4871,7 +4871,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
      */
@@ -4916,7 +4916,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
      */
@@ -4934,7 +4934,7 @@ public final class JdbcUtil {
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
      * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
      */
@@ -5011,7 +5011,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param parameters Optional parameters for the SQL statement
      * @return {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
+     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the statement
      * @see PreparedStatement#execute()
      */
@@ -5042,7 +5042,7 @@ public final class JdbcUtil {
      * @param sql The SQL string to execute
      * @param parameters Optional parameters for the SQL statement
      * @return {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
-     * @throws IllegalArgumentException If the Connection or SQL string is null or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while executing the statement
      * @see PreparedStatement#execute()
      */
@@ -6107,7 +6107,7 @@ public final class JdbcUtil {
      * // Stream all email addresses
      * JdbcUtil.stream(resultSet, "email")
      *     .onClose(Fn.closeQuietly(resultSet))
-     *     .filter(email -> email != null && email.contains("@"))
+     *     .filter(email -> email != {@code null} && email.contains("@"))
      *     .forEach(email -> sendNewsletter(email));
      * }</pre>
      *
@@ -7467,7 +7467,7 @@ public final class JdbcUtil {
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findFirst(User.class).orElse(null);
      * });
      *
-     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
+     * future.thenAccept(user -> System.out.println("Found user: " + (user != {@code null} ? user.getName() : "none")));
      * }</pre>
      *
      * @param <R> The type of the result
@@ -7563,7 +7563,7 @@ public final class JdbcUtil {
      *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).queryForSingleResult(User.class).orElse(null)
      * );
      *
-     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
+     * future.thenAccept(user -> System.out.println("Found user: " + (user != {@code null} ? user.getName() : "none")));
      * }</pre>
      *
      * @param <T> The type of the parameter
@@ -8064,7 +8064,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Include properties of related entities (e.g., user.address.street)
-     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, true, null);
+     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, {@code true}, null);
      * // Returns property names including sub-entity properties
      * }</pre>
      *
@@ -8250,21 +8250,21 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if the given value is null or equals the default value for its type.
+     * Checks if the given value is {@code null} or equals the default value for its type.
      * Default values are: 0 for numeric types, {@code false} for boolean, empty for collections/maps,
-     * and null for reference types.
+     * and {@code null} for reference types.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.isNullOrDefault(null);        // true
      * JdbcUtil.isNullOrDefault(0);           // true
      * JdbcUtil.isNullOrDefault(false);       // true
-     * JdbcUtil.isNullOrDefault("");          // false (empty string is not default)
+     * JdbcUtil.isNullOrDefault("");          // {@code false} (empty string is not default)
      * JdbcUtil.isNullOrDefault(1);           // false
      * }</pre>
      *
      * @param value the value to check
-     * @return {@code true} if the value is null or the default value for its type, {@code false} otherwise
+     * @return {@code true} if the value is {@code null} or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
         return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b)
@@ -8579,7 +8579,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @return the current SQL log handler, or null if none is set
+     * @return the current SQL log handler, or {@code null} if none is set
      */
     public static TriConsumer<String, Long, Long> getSqlLogHandler() {
         return _sqlLogHandler;

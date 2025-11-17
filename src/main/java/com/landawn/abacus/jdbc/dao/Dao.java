@@ -238,7 +238,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Creates a PreparedQuery with the option to generate keys for INSERT statements.
-     * When generateKeys is true, auto-generated keys can be retrieved after execution.
+     * When generateKeys is {@code true}, auto-generated keys can be retrieved after execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -247,7 +247,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param query the SQL query string
-     * @param generateKeys true to return generated keys, {@code false} otherwise
+     * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -344,7 +344,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * );
      * }</pre>
      *
-     * @param selectPropNames the property names to select, or null to select all
+     * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
@@ -389,7 +389,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a SELECT query for specific columns optimized for large result sets.
      * Combines column selection with cursor-based fetching for memory-efficient processing.
      *
-     * @param selectPropNames the property names to select, or null to select all
+     * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
@@ -429,7 +429,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines named parameters with auto-generated key retrieval.
      *
      * @param namedQuery the named SQL query string
-     * @param generateKeys true to return generated keys
+     * @param generateKeys {@code true} to return generated keys
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -503,7 +503,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a NamedQuery from a pre-parsed SQL object with key generation option.
      *
      * @param namedSql the pre-parsed named query
-     * @param generateKeys true to return generated keys
+     * @param generateKeys {@code true} to return generated keys
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -574,7 +574,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a named SELECT query for specific columns based on the specified condition.
      * Generates a named parameter query with selected columns and WHERE clause.
      *
-     * @param selectPropNames the property names to select, or null for all
+     * @param selectPropNames the property names to select, or {@code null} for all
      * @param cond the condition for the WHERE clause
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
@@ -630,7 +630,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a named SELECT query for specific columns optimized for large result sets.
      * Combines column selection with cursor-based fetching and named parameters.
      *
-     * @param selectPropNames the property names to select, or null for all
+     * @param selectPropNames the property names to select, or {@code null} for all
      * @param cond the condition for the WHERE clause
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
@@ -929,7 +929,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return Optional containing the first matching entity
      * @throws SQLException if a database access error occurs
@@ -941,7 +941,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines property selection with custom result mapping.
      *
      * @param <R> the result type after applying the mapping function
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped result
@@ -956,7 +956,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Provides maximum flexibility for property selection and result mapping.
      *
      * @param <R> the result type after applying the mapping function
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
      * @return Optional containing the mapped result
@@ -1017,7 +1017,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Finds exactly one record with specified properties, throwing if multiple found.
      * Combines property selection with uniqueness constraint.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return Optional containing the single matching entity
      * @throws DuplicatedResultException if more than one record matches
@@ -1030,7 +1030,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Ensures both property selection and uniqueness with custom mapping.
      *
      * @param <R> the result type after applying the mapping function
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped result
@@ -1046,7 +1046,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Maximum flexibility with property selection, uniqueness, and custom mapping.
      *
      * @param <R> the result type after applying the mapping function
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
      * @return Optional containing the mapped result
@@ -1161,7 +1161,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Queries for a String value from a single column.
-     * Returns a Nullable containing the value, which can be null.
+     * Returns a Nullable containing the value, which can be {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1222,7 +1222,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Queries for a single value of the specified type from a column.
-     * Returns a Nullable that can contain null values.
+     * Returns a Nullable that can contain {@code null} values.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1244,7 +1244,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Queries for a single non-null value of the specified type.
-     * Returns an Optional, empty if no value found or if the value is null.
+     * Returns an Optional, empty if no value found or if the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1282,7 +1282,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Queries for a unique single value, throwing if multiple rows found.
-     * Returns a Nullable that can contain null values.
+     * Returns a Nullable that can contain {@code null} values.
      *
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
@@ -1348,7 +1348,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Executes a query for specific columns and returns results as a Dataset.
      * Only the specified properties will be included in the result.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return Dataset containing the query results
      * @throws SQLException if a database access error occurs
@@ -1386,7 +1386,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines column selection with custom result processing.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param resultExtractor function to process the ResultSet
      * @return the extracted result
@@ -1411,7 +1411,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Maximum flexibility for column selection and result processing.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param resultExtractor bi-function to process the ResultSet
      * @return the extracted result
@@ -1516,7 +1516,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * );
      * }</pre>
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return list of partially loaded entities
      * @throws SQLException if a database access error occurs
@@ -1528,7 +1528,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines property selection with custom mapping.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper function to map each row
      * @return list of mapped results
@@ -1541,7 +1541,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * The mapper receives column labels for the selected properties.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper bi-function to map each row
      * @return list of mapped results
@@ -1554,7 +1554,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines property selection, filtering, and mapping.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowFilter predicate to filter rows
      * @param rowMapper function to map filtered rows
@@ -1569,7 +1569,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Maximum flexibility for property selection, filtering, and mapping.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowFilter bi-predicate to filter rows
      * @param rowMapper bi-function to map filtered rows
@@ -1716,7 +1716,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a lazy Stream of entities with selected properties.
      * Only specified properties are loaded for each entity.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return lazy stream of partially loaded entities
      */
@@ -1728,7 +1728,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines property selection with custom mapping in a lazy stream.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper function to map each row
      * @return lazy stream of mapped results
@@ -1741,7 +1741,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * The mapper receives column labels for the selected properties.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowMapper bi-function to map each row
      * @return lazy stream of mapped results
@@ -1754,7 +1754,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines property selection, filtering, and mapping in a lazy stream.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowFilter predicate to filter rows
      * @param rowMapper function to map filtered rows
@@ -1768,7 +1768,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines all features: property selection, bi-function filtering and mapping.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowFilter bi-predicate to filter rows
      * @param rowMapper bi-function to map filtered rows
@@ -1846,7 +1846,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *     CF.criteria().where(CF.gt("id", 0)).orderBy("id"),
      *     100,
      *     (query, lastPageResult) -> {
-     *         if (lastPageResult != null && lastPageResult.size() > 0) {
+     *         if (lastPageResult != {@code null} && lastPageResult.size() > 0) {
      *             long lastId = lastPageResult.getLong(lastPageResult.size() - 1, "id");
      *             query.setLong(1, lastId);
      *         }
@@ -1899,7 +1899,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Returns a paginated Stream with selected properties as Dataset pages.
      * Only specified properties are included in each page.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page
@@ -1915,7 +1915,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Combines property selection with custom page processing.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page
@@ -1932,7 +1932,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Maximum flexibility for paginated queries with custom processing.
      *
      * @param <R> the result type
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition with required orderBy clause
      * @param pageSize the number of records per page
      * @param paramSetter function to set parameters for next page
@@ -1998,7 +1998,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Iterates over selected properties, applying the consumer to each row.
      * Only specified properties are retrieved and processed.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowConsumer consumer to process each row
      * @throws SQLException if a database access error occurs
@@ -2009,7 +2009,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Iterates over selected properties with a bi-consumer.
      * The consumer receives column labels for the selected properties.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowConsumer bi-consumer to process each row
      * @throws SQLException if a database access error occurs
@@ -2020,7 +2020,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Iterates over filtered results of selected properties.
      * Combines property selection, filtering, and processing.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowFilter predicate to filter rows
      * @param rowConsumer consumer for filtered rows
@@ -2033,7 +2033,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Iterates over filtered results with maximum flexibility.
      * All parameters support bi-function interfaces.
      *
-     * @param selectPropNames the properties to select, null for all
+     * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @param rowFilter bi-predicate to filter rows
      * @param rowConsumer bi-consumer for filtered rows
@@ -2128,7 +2128,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Updates records matching the condition with all non-null properties from the entity.
-     * This updates all properties except those with null values.
+     * This updates all properties except those with {@code null} values.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2318,7 +2318,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * dao.asyncRun(d -> {
      *     d.delete(CF.lt("createdDate", oneYearAgo));
-     *     d.update("archived", true, CF.lt("lastAccess", sixMonthsAgo));
+     *     d.update("archived", {@code true}, CF.lt("lastAccess", sixMonthsAgo));
      * });
      * }</pre>
      *

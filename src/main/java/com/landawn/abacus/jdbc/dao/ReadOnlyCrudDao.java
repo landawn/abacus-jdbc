@@ -49,7 +49,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  * 
  * // Usage:
- * Report report = reportDao.gett(123L); // Works (returns null if not found)
+ * Report report = reportDao.gett(123L); // Works (returns {@code null} if not found)
  * List<Report> reports = reportDao.list(CF.alwaysTrue()); // Works
  * reportDao.insert(new Report()); // Throws UnsupportedOperationException
  * reportDao.update(report); // Throws UnsupportedOperationException
@@ -92,7 +92,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @param propNamesToInsert the property names to include in the INSERT statement.
-     *                          If null or empty, all properties will be inserted
+     *                          If {@code null} or empty, all properties will be inserted
      * @return never returns normally
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported

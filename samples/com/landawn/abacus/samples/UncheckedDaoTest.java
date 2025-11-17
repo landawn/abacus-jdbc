@@ -63,7 +63,7 @@ import com.landawn.abacus.util.stream.Stream;
 public class UncheckedDaoTest {
 
     @Test
-    public void test_define() throws SQLException {
+    public void test_fragment() throws SQLException {
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
@@ -72,22 +72,22 @@ public class UncheckedDaoTest {
         final List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        assertNotNull(uncheckedUserDao.selectByIdWithDefine("user1", N.asList("last_name", "first_name"), ids.get(0)));
-        assertNotNull(uncheckedUserDao.selectByIdWithDefine2("user1", N.asArray("last_name", "first_name"), ids.get(0)));
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
+        assertNotNull(uncheckedUserDao.selectByIdWithFragment("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertNotNull(uncheckedUserDao.selectByIdWithFragment2("user1", N.asArray("last_name", "first_name"), ids.get(0)));
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithFragment_2("user1", "id", ids.get(0)).size());
 
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithFragment_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithDefine_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithFragment_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
         assertTrue(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
         assertTrue(uncheckedUserDao.isThere("user1", "last_name", ids.get(0)));
 
-        assertEquals(1, uncheckedUserDao.deleteByIdWithDefine("user1", ids.get(0)));
-        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithDefine("user1", ids));
+        assertEquals(1, uncheckedUserDao.deleteByIdWithFragment("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithFragment("user1", ids));
 
-        assertNull(uncheckedUserDao.selectByIdWithDefine("user1", N.asList("last_name", "first_name"), ids.get(0)));
-        assertEquals(0, uncheckedUserDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
+        assertNull(uncheckedUserDao.selectByIdWithFragment("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertEquals(0, uncheckedUserDao.selectByIdWithFragment_2("user1", "id", ids.get(0)).size());
 
         assertFalse(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
         assertFalse(uncheckedUserDao.isThere("user1", "last_name", ids.get(0)));

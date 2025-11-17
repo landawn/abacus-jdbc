@@ -101,7 +101,7 @@ final class ResultSetProxy implements ResultSet {
 
     /**
      * Creates a ResultSetProxy wrapper for the specified ResultSet.
-     * Returns null if the input ResultSet is null.
+     * Returns {@code null} if the input ResultSet is {@code null}.
      *
      * <p>This factory method is the recommended way to create ResultSetProxy instances.
      * It provides null-safety by returning {@code null} when given a {@code null} ResultSet.</p>
@@ -128,11 +128,11 @@ final class ResultSetProxy implements ResultSet {
     }
 
     /**
-     * Returns true if this proxy wraps an object that implements the given interface.
+     * Returns {@code true} if this proxy wraps an object that implements the given interface.
      * Delegates to the underlying ResultSet's isWrapperFor method.
      *
      * @param iface a Class defining an interface
-     * @return true if this implements the interface or directly or indirectly wraps an object that does
+     * @return {@code true} if this implements the interface or directly or indirectly wraps an object that does
      * @throws SQLException if an error occurs while determining whether this is a wrapper for an object with the given interface
      */
     @Override

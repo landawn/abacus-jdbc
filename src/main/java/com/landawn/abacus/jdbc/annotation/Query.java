@@ -72,7 +72,7 @@ import com.landawn.abacus.util.RegExUtil;
  * public interface AdvancedDao {
  *     // Batch operation with custom batch size
  *     @Query(value = "INSERT INTO logs (timestamp, message) VALUES (:timestamp, :message)",
- *            isBatch = true, batchSize = 500)
+ *            isBatch = {@code true}, batchSize = 500)
  *     int[] batchInsertLogs(@Bind("timestamp") List<Date> timestamps,
  *                          @Bind("message") List<String> messages);
  *
@@ -80,11 +80,11 @@ import com.landawn.abacus.util.RegExUtil;
  *     @Query(value = "SELECT * FROM large_table", fetchSize = 1000)
  *     Stream<Record> streamLargeTable();
  *
- *     // Dynamic SQL with Define parameters
+ *     // Dynamic SQL with template variables
  *     @Query(value = "SELECT * FROM {table} WHERE {column} = :value",
- *            defineIncludesNamedParams = true)
- *     List<Map<String, Object>> dynamicQuery(@Define("table") String table,
- *                                           @Define("column") String column,
+ *            fragmentIncludesNamedParams = true)
+ *     List<Map<String, Object>> dynamicQuery(@Fragment("table") String table,
+ *                                           @Fragment("column") String column,
  *                                           @Bind("value") Object value);
  *
  *     // Query with timeout for long-running operations
@@ -110,7 +110,7 @@ import com.landawn.abacus.util.RegExUtil;
  *   <li>Use {@link Bind} annotation to map method parameters to SQL parameters</li>
  *   <li>Entity properties are automatically bound when passing entity objects</li>
  *   <li>Nested property access via dot notation (e.g., {@code :user.email})</li>
- *   <li>Template variables using {@code {variableName}} with {@link Define} annotation</li>
+ *   <li>Template variables using {@code {variableName}} with {@link Fragment} annotation</li>
  * </ul>
  *
  * <p>Return type handling:</p>
@@ -128,8 +128,8 @@ import com.landawn.abacus.util.RegExUtil;
  * </ul>
  *
  * @see Bind
- * @see Define
- * @see DefineList
+ * @see Fragment
+ * @see FragmentList
  * @see SqlMapper
  * @see Handler
  * @see OP
@@ -148,7 +148,7 @@ public @interface Query {
      * <p>The SQL can include:</p>
      * <ul>
      *   <li>Named parameters using {@code :paramName} syntax for value binding</li>
-     *   <li>Template variables using {@code {variableName}} syntax when {@link #defineIncludesNamedParams()} is {@code true}</li>
+     *   <li>Template variables using {@code {variableName}} syntax when {@link #fragmentIncludesNamedParams()} is {@code true}</li>
      *   <li>Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.</li>
      *   <li>Database-specific SQL extensions and functions</li>
      * </ul>
@@ -384,7 +384,7 @@ public @interface Query {
      * // Batch insert with parallel parameter lists
      * @Query(value = "INSERT INTO products (code, name, price) " +
      *               "VALUES (:code, :name, :price)",
-     *        isBatch = true, batchSize = 500)
+     *        isBatch = {@code true}, batchSize = 500)
      * int[] batchInsertProducts(@Bind("code") List<String> codes,
      *                          @Bind("name") List<String> names,
      *                          @Bind("price") List<BigDecimal> prices);
@@ -416,14 +416,14 @@ public @interface Query {
      * // Large batch with custom batch size
      * @Query(value = "INSERT INTO event_log (timestamp, event_type, data) " +
      *               "VALUES (:timestamp, :eventType, :data)",
-     *        isBatch = true, batchSize = 1000)
+     *        isBatch = {@code true}, batchSize = 1000)
      * int[] batchLogEvents(List<EventLog> events);
      * // Processes 1000 records per database round trip
      *
      * // Batch with timeout for large operations
      * @Query(value = "INSERT INTO historical_data (date, metric, value) " +
      *               "VALUES (:date, :metric, :value)",
-     *        isBatch = true, batchSize = 5000, queryTimeout = 300)
+     *        isBatch = {@code true}, batchSize = 5000, queryTimeout = 300)
      * int[] importHistoricalData(@Bind("date") List<Date> dates,
      *                           @Bind("metric") List<String> metrics,
      *                           @Bind("value") List<Double> values);
@@ -562,24 +562,24 @@ public @interface Query {
     boolean isSingleParameter() default false;
 
     /**
-     * Indicates whether the SQL statement contains template variables defined by the {@link Define} or {@link DefineList} annotations
+     * Indicates whether the SQL statement contains template variables defined by the {@link Fragment} or {@link FragmentList} annotations
      * that will be replaced with query fragments containing named parameters.
      * 
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding currently active records
-     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", defineIncludesNamedParams = true)
-     * List<Promotion> findActivePromotions(@Define("{whereCause}") String whereCause);
+     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", fragmentIncludesNamedParams = true)
+     * List<Promotion> findActivePromotions(@Fragment("{whereCause}") String whereCause);
      * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
      *
-     * @return {@code true} if template variables defined by {@link Define} or {@link DefineList} will be replaced with query fragments
+     * @return {@code true} if template variables defined by {@link Fragment} or {@link FragmentList} will be replaced with query fragments
      *         containing named parameters; {@code false} otherwise
-     * @see Define
-     * @see DefineList
+     * @see Fragment
+     * @see FragmentList
      */
     @Beta
-    boolean defineIncludesNamedParams() default false;
+    boolean fragmentIncludesNamedParams() default false;
 
     /**
      * Enables automatic timestamp parameter injection for the query.
@@ -763,7 +763,7 @@ public @interface Query {
      *   <li><strong>Performance:</strong> Larger fetch sizes reduce network round trips but increase memory usage</li>
      *   <li><strong>Memory:</strong> Higher fetch size means more rows buffered in memory</li>
      *   <li><strong>Latency:</strong> Smaller fetch sizes may increase latency for large result sets</li>
-     *   <li><strong>Streaming:</strong> Important for {@link java.util.stream.Stream} return types to enable true lazy loading</li>
+     *   <li><strong>Streaming:</strong> Important for {@link java.util.stream.Stream} return types to enable {@code true} lazy loading</li>
      * </ul>
      *
      * <p>Fetch size guidelines (number of rows):</p>
@@ -841,7 +841,7 @@ public @interface Query {
      *   <li>Fetch size is a hint; drivers may ignore or adjust it</li>
      *   <li>Very large fetch sizes can cause OutOfMemoryError if rows are large</li>
      *   <li>Optimal fetch size depends on network latency, row size, and available memory</li>
-     *   <li>For {@code Stream} return types, fetch size enables true lazy loading</li>
+     *   <li>For {@code Stream} return types, fetch size enables {@code true} lazy loading</li>
      *   <li>Profile and test with realistic data to find optimal values</li>
      *   <li>Consider using different fetch sizes for different environments (dev vs. production)</li>
      * </ul>
@@ -890,13 +890,13 @@ public @interface Query {
      *
      * // Small batch size for memory-constrained environment
      * @Query(value = "INSERT INTO large_documents (title, content) VALUES (:title, :content)",
-     *        isBatch = true, batchSize = 50)
+     *        isBatch = {@code true}, batchSize = 50)
      * int[] insertDocuments(List<Document> documents);
      * // Processes 50 documents per round trip
      *
      * // Large batch size for bulk import
      * @Query(value = "INSERT INTO event_log (timestamp, type, data) VALUES (:timestamp, :type, :data)",
-     *        isBatch = true, batchSize = 5000)
+     *        isBatch = {@code true}, batchSize = 5000)
      * int[] importEvents(List<Event> events);
      * // Processes 5000 events per round trip
      * }</pre>
@@ -905,17 +905,17 @@ public @interface Query {
      * <pre>{@code
      * // Optimize for network latency (high latency, use larger batches)
      * @Query(value = "INSERT INTO metrics (name, value, timestamp) VALUES (:name, :value, :timestamp)",
-     *        isBatch = true, batchSize = 2000)
+     *        isBatch = {@code true}, batchSize = 2000)
      * int[] insertMetrics(List<Metric> metrics);
      *
      * // Optimize for low memory (small row size but many rows)
      * @Query(value = "INSERT INTO simple_logs (timestamp, message) VALUES (:timestamp, :message)",
-     *        isBatch = true, batchSize = 10000)
+     *        isBatch = {@code true}, batchSize = 10000)
      * int[] insertLogs(List<LogEntry> logs);
      *
      * // Optimize for large rows (documents, blobs)
      * @Query(value = "INSERT INTO files (filename, content) VALUES (:filename, :content)",
-     *        isBatch = true, batchSize = 10)
+     *        isBatch = {@code true}, batchSize = 10)
      * int[] insertFiles(List<FileData> files);
      * }</pre>
      *
@@ -923,13 +923,13 @@ public @interface Query {
      * <pre>{@code
      * // Batch with timeout for very large operations
      * @Query(value = "INSERT INTO archive_data SELECT * FROM staging WHERE batch_id = :batchId",
-     *        isBatch = true, batchSize = 1000, queryTimeout = 600)
+     *        isBatch = {@code true}, batchSize = 1000, queryTimeout = 600)
      * int[] archiveData(@Bind("batchId") List<String> batchIds);
      *
      * // Balance batch size with transaction scope
      * @Transactional
      * @Query(value = "UPDATE inventory SET quantity = quantity - :amount WHERE product_id = :productId",
-     *        isBatch = true, batchSize = 500)
+     *        isBatch = {@code true}, batchSize = 500)
      * int[] decrementInventory(@Bind("productId") List<Long> productIds,
      *                         @Bind("amount") List<Integer> amounts);
      * }</pre>

@@ -53,7 +53,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  *
  * // Usage with primitive long IDs:
- * Report report = reportDao.gett(123L); // Works - returns null if not found
+ * Report report = reportDao.gett(123L); // Works - returns {@code null} if not found
  * Optional<Report> optReport = reportDao.get(456L); // Works - returns Optional
  * boolean exists = reportDao.exists(789L); // Works
  * List<Report> reports = reportDao.batchGet(Arrays.asList(1L, 2L, 3L)); // Works

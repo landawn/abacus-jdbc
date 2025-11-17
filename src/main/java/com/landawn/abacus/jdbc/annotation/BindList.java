@@ -46,7 +46,7 @@ import com.landawn.abacus.annotation.Beta;
  *     List<User> findByStatuses(@BindList("statuses") String[] statuses);
  *     
  *     // With prefix and suffix for conditional SQL
- *     @Query("SELECT * FROM users WHERE active = true {statusFilter}")
+ *     @Query("SELECT * FROM users WHERE active = {@code true} {statusFilter}")
  *     List<User> findActiveUsers(
  *         @BindList(value = "statuses", 
  *                   prefixForNonEmpty = "AND status IN (", 
@@ -55,7 +55,7 @@ import com.landawn.abacus.annotation.Beta;
  *     );
  *     
  *     // If statuses is empty: SELECT * FROM users WHERE active = true
- *     // If statuses has values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
+ *     // If statuses has values: SELECT * FROM users WHERE active = {@code true} AND status IN (?, ?)
  * }
  * }</pre>
  * 
@@ -68,7 +68,7 @@ import com.landawn.abacus.annotation.Beta;
  * </ul>
  *
  * @see Bind
- * @see DefineList
+ * @see FragmentList
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
@@ -100,11 +100,11 @@ public @interface BindList {
      * This is useful for conditionally including SQL fragments based on whether the collection has values.
      *
      * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
-     * Consider using {@link Define} annotation for complex dynamic SQL construction.</p>
+     * Consider using {@link Fragment} annotation for complex dynamic SQL construction.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query("SELECT * FROM users WHERE active = true {statusFilter}")
+     * @Query("SELECT * FROM users WHERE active = {@code true} {statusFilter}")
      * List<User> findUsers(
      *     @BindList(value = "statuses",
      *               prefixForNonEmpty = "AND status IN (",
@@ -113,7 +113,7 @@ public @interface BindList {
      * );
      * 
      * // With empty list: SELECT * FROM users WHERE active = true
-     * // With values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
+     * // With values: SELECT * FROM users WHERE active = {@code true} AND status IN (?, ?)
      * }</pre>
      *
      * @return the prefix to add when collection is non-empty
@@ -126,7 +126,7 @@ public @interface BindList {
      * This is used in conjunction with {@link #prefixForNonEmpty()} to wrap the parameter placeholders.
      *
      * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
-     * Consider using {@link Define} annotation for complex dynamic SQL construction.</p>
+     * Consider using {@link Fragment} annotation for complex dynamic SQL construction.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

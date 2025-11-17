@@ -146,10 +146,10 @@ public enum OP {
 
     /**
      * Retrieves a unique single value from the query result.
-     * Similar to queryForSingle but returns null if no result is found instead of throwing exception.
+     * Similar to queryForSingle but returns {@code null} if no result is found instead of throwing exception.
      * 
      * <p>Use this operation when the result might be empty and you want to handle it
-     * gracefully with a null return value rather than an exception.</p>
+     * gracefully with a {@code null} return value rather than an exception.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -240,7 +240,7 @@ public enum OP {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
+     * @Query(value = "UPDATE users SET active = {@code false} WHERE last_login < ?", op = OP.update)
      * int deactivateInactiveUsers(Date threshold);
      * 
      * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)

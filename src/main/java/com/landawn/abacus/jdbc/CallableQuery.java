@@ -136,7 +136,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to SQL {@code NULL}.
      *
-     * <p><b>Note:</b> You must specify the SQL type of the parameter being set to null.
+     * <p><b>Note:</b> You must specify the SQL type of the parameter being set to {@code null}.
      * This method is used for stored procedures that accept named parameters.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -343,7 +343,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Integer managerId = getManagerId(); // might return null for CEO
+     * Integer managerId = getManagerId(); // might return {@code null} for CEO
      * query.setInt("managerId", managerId);
      * }</pre>
      *
@@ -1521,7 +1521,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *      .execute();
      * }</pre>
      *
-     * @param entity the entity object containing the parameter values. Must not be null.
+     * @param entity the entity object containing the parameter values. Must not be {@code null}.
      * @param parameterNames a list of parameter names corresponding to properties in the entity.
      *                       Each name should match a property name in the entity class.
      * @return this CallableQuery instance for method chaining
@@ -1771,7 +1771,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType)
      * @see java.sql.JDBCType
-     * @since JDBC 4.2
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType);
@@ -1801,7 +1800,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
      * @see java.sql.JDBCType#NUMERIC
-     * @since JDBC 4.2
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
@@ -1831,7 +1829,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
      * @see java.sql.JDBCType#ARRAY
-     * @since JDBC 4.2
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
@@ -1860,7 +1857,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType)
      * @see java.sql.JDBCType
-     * @since JDBC 4.2
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType);
@@ -1890,7 +1886,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
-     * @since JDBC 4.2
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final int scale) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, scale);
@@ -1921,7 +1916,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
-     * @since JDBC 4.2
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final String typeName) throws SQLException {
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
@@ -1952,7 +1946,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param register the {@link Jdbc.ParametersSetter} that will register the OUT parameters.
-     *                 Must not be null.
+     *                 Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if register is null
      * @throws SQLException if a database access error occurs during parameter registration
@@ -2009,9 +2003,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <T> the type of the additional parameter object.
      * @param parameter the context object to be passed to the {@code BiParametersSetter}.
-     * @param register the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be null.
+     * @param register the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code register} is null.
+     * @throws IllegalArgumentException if {@code register} is {@code null}.
      * @throws SQLException if a database access error occurs during parameter registration.
      */
     public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> register)
@@ -2055,7 +2049,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p>The fetch direction is set to FETCH_FORWARD if not explicitly set by the user.</p>
      *
-     * @return the first {@link ResultSet} if available, or null if the stored procedure
+     * @return the first {@link ResultSet} if available, or {@code null} if the stored procedure
      *         doesn't return any result sets
      * @throws SQLException if a database access error occurs
      */
@@ -2132,7 +2126,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <R> the type of the result returned by the function
      * @param getter the bi-function to apply. The first parameter is the executed CallableStatement,
-     *               the second parameter is true if the first result is a ResultSet, {@code false} otherwise
+     *               the second parameter is {@code true} if the first result is a ResultSet, {@code false} otherwise
      * @return the result of applying the bi-function
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -2255,7 +2249,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param consumer the bi-consumer to apply. The first parameter is the executed CallableStatement,
-     *                 the second parameter is true if the first result is a ResultSet
+     *                 the second parameter is {@code true} if the first result is a ResultSet
      * @throws SQLException if a database access error occurs or the consumer throws an exception
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      */
@@ -2410,7 +2404,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param <R> the type of object the result set will be converted to
      * @param resultExtractor the {@link Jdbc.ResultExtractor} to process the result set
      * @return a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element).
-     *         The first element may be null if no result set is returned.
+     *         The first element may be {@code null} if no result set is returned.
      * @throws IllegalArgumentException if resultExtractor is null
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs
@@ -2615,7 +2609,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <R> The type of object that each result set will be converted to
      * @param resultExtractor The {@code BiResultExtractor} used to convert each result set to type R.
-     *                        Must not be null. The extractor receives the ResultSet and column labels.
+     *                        Must not be {@code null}. The extractor receives the ResultSet and column labels.
      *                        Warning: Do not save or return the ResultSet reference as it will be closed.
      * @return A {@code Tuple2} containing:
      *         <ul>
@@ -2690,8 +2684,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <R1> The type for the first result set
      * @param <R2> The type for the second result set
-     * @param resultExtractor1 The extractor for the first result set. Must not be null.
-     * @param resultExtractor2 The extractor for the second result set. Must not be null.
+     * @param resultExtractor1 The extractor for the first result set. Must not be {@code null}.
+     * @param resultExtractor2 The extractor for the second result set. Must not be {@code null}.
      * @return A {@code Tuple3} containing:
      *         <ul>
      *           <li>First element: Extracted result from the first result set (or null)</li>
@@ -2774,9 +2768,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param <R1> The type for the first result set
      * @param <R2> The type for the second result set
      * @param <R3> The type for the third result set
-     * @param resultExtractor1 The extractor for the first result set. Must not be null.
-     * @param resultExtractor2 The extractor for the second result set. Must not be null.
-     * @param resultExtractor3 The extractor for the third result set. Must not be null.
+     * @param resultExtractor1 The extractor for the first result set. Must not be {@code null}.
+     * @param resultExtractor2 The extractor for the second result set. Must not be {@code null}.
+     * @param resultExtractor3 The extractor for the third result set. Must not be {@code null}.
      * @return A {@code Tuple4} containing:
      *         <ul>
      *           <li>First element: Extracted result from the first result set (or null)</li>
@@ -2866,7 +2860,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping
-     * @param targetType The class of type T to map each row to. Must not be null.
+     * @param targetType The class of type T to map each row to. Must not be {@code null}.
      *                   The class must have a default constructor.
      * @return A {@code Tuple2} containing:
      *         <ul>
@@ -2917,7 +2911,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping
-     * @param rowMapper The {@code RowMapper} to convert each row to type T. Must not be null.
+     * @param rowMapper The {@code RowMapper} to convert each row to type T. Must not be {@code null}.
      *                  The mapper is called once per row with the ResultSet positioned at that row.
      * @return A {@code Tuple2} containing:
      *         <ul>
@@ -2980,9 +2974,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping
-     * @param rowFilter The {@code RowFilter} to test each row. Must not be null.
+     * @param rowFilter The {@code RowFilter} to test each row. Must not be {@code null}.
      *                  Only rows where the filter returns {@code true} are mapped.
-     * @param rowMapper The {@code RowMapper} to convert filtered rows to type T. Must not be null.
+     * @param rowMapper The {@code RowMapper} to convert filtered rows to type T. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from filtered rows</li>
@@ -3047,7 +3041,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping
-     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be null.
+     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
@@ -3124,8 +3118,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping
-     * @param rowFilter The {@code BiRowFilter} that receives ResultSet and column labels. Must not be null.
-     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be null.
+     * @param rowFilter The {@code BiRowFilter} that receives ResultSet and column labels. Must not be {@code null}.
+     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from filtered rows</li>
@@ -3190,7 +3184,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping across all result sets
-     * @param targetType The class to map each row to. Must not be null.
+     * @param targetType The class to map each row to. Must not be {@code null}.
      *                   Applied to all result sets.
      * @return A {@code Tuple2} containing:
      *         <ul>
@@ -3252,7 +3246,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping across all result sets
-     * @param rowMapper The {@code RowMapper} to apply to each row in all result sets. Must not be null.
+     * @param rowMapper The {@code RowMapper} to apply to each row in all result sets. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
@@ -3315,8 +3309,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping across all result sets
-     * @param rowFilter The {@code RowFilter} to apply to each row in all result sets. Must not be null.
-     * @param rowMapper The {@code RowMapper} to apply to filtered rows. Must not be null.
+     * @param rowFilter The {@code RowFilter} to apply to each row in all result sets. Must not be {@code null}.
+     * @param rowMapper The {@code RowMapper} to apply to filtered rows. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists of filtered and mapped objects</li>
@@ -3385,7 +3379,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping across all result sets
-     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be null.
+     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
@@ -3467,8 +3461,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> The target type for row mapping across all result sets
-     * @param rowFilter The {@code BiRowFilter} that receives ResultSet and column labels. Must not be null.
-     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be null.
+     * @param rowFilter The {@code BiRowFilter} that receives ResultSet and column labels. Must not be {@code null}.
+     * @param rowMapper The {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists of filtered and mapped objects</li>

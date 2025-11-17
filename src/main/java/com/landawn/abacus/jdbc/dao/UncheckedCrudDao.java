@@ -150,7 +150,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @param propNamesToInsert the property names to include in the INSERT statement.
-     *                          If null or empty, all properties will be inserted
+     *                          If {@code null} or empty, all properties will be inserted
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -606,7 +606,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
-     * Unlike queryForSingleResult, this method returns empty Optional for null values.
+     * Unlike queryForSingleResult, this method returns empty Optional for {@code null} values.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -764,7 +764,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param id the entity ID
-     * @param selectPropNames the properties to select, or null to select all
+     * @param selectPropNames the properties to select, or {@code null} to select all
      * @return an Optional containing the entity with selected properties if found, otherwise empty
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
@@ -775,7 +775,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
     }
 
     /**
-     * Retrieves the entity with the specified ID. Returns the entity directly or null if not found.
+     * Retrieves the entity with the specified ID. Returns the entity directly or {@code null} if not found.
      * The 'gett' naming convention indicates this method returns T directly.
      *
      * <p><b>Usage Examples:</b></p>
@@ -796,18 +796,18 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Retrieves the entity with the specified ID, selecting only the specified properties.
-     * Returns the entity directly or null if not found.
+     * Returns the entity directly or {@code null} if not found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId, Arrays.asList("id", "email", "status"));
-     * if (user != null && "ACTIVE".equals(user.getStatus())) {
+     * if (user != {@code null} && "ACTIVE".equals(user.getStatus())) {
      *     sendEmail(user.getEmail());
      * }
      * }</pre>
      *
      * @param id the entity ID
-     * @param selectPropNames the properties to select, or null to select all
+     * @param selectPropNames the properties to select, or {@code null} to select all
      * @return the entity with selected properties if found, otherwise null
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
@@ -867,7 +867,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param ids the collection of entity IDs
-     * @param selectPropNames the properties to select, or null to select all
+     * @param selectPropNames the properties to select, or {@code null} to select all
      * @return a list of found entities with selected properties
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
@@ -891,7 +891,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param ids the collection of entity IDs
-     * @param selectPropNames the properties to select, or null to select all
+     * @param selectPropNames the properties to select, or {@code null} to select all
      * @param batchSize the size of each batch
      * @return a list of found entities with selected properties
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
@@ -979,7 +979,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
-     * @param entityToUpdate the entity to update
+     * @param entityToUpdate
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws UncheckedSQLException if a database access error occurs
      */

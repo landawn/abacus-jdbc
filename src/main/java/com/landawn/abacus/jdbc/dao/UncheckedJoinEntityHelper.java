@@ -100,14 +100,14 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Find user and load their orders
      * Optional<User> user = userDao.findFirst(
-     *     null,  // select all user properties
+     *     {@code null},  // select all user properties
      *     Order.class,  // also load orders
      *     CF.eq("email", "john@example.com")
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
@@ -139,7 +139,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
@@ -166,14 +166,14 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Find user and load all related entities
      * Optional<User> user = userDao.findFirst(
-     *     null,  // select all properties
-     *     true,  // load all join entities
+     *     {@code null},  // select all properties
+     *     {@code true},  // load all join entities
      *     CF.eq("id", 1)
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -200,14 +200,14 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Find unique user by email and load profile
      * Optional<User> user = userDao.findOnlyOne(
-     *     null,
+     *     {@code null},
      *     UserProfile.class,
      *     CF.eq("email", "unique@example.com")
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
@@ -240,7 +240,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
@@ -269,13 +269,13 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "name", "email"),
-     *     true,  // load all join entities
+     *     {@code true},  // load all join entities
      *     CF.eq("accountNumber", "ACC-12345")
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -303,14 +303,14 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Get all active users with their orders loaded
      * List<User> users = userDao.list(
-     *     null,  // select all user properties
+     *     {@code null},  // select all user properties
      *     Order.class,  // load orders for each user
      *     CF.eq("status", "ACTIVE")
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return a list of entities with loaded join entities
@@ -347,7 +347,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return a list of entities with loaded join entities
@@ -384,14 +384,14 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Get all premium users with all relationships loaded
      * List<User> users = userDao.list(
-     *     null,
-     *     true,  // load all join entities
+     *     {@code null},
+     *     {@code true},  // load all join entities
      *     CF.eq("accountType", "PREMIUM")
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
@@ -452,7 +452,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entity the entity to load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -505,7 +505,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entities the collection of entities to load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -565,7 +565,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entity the entity to load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -607,7 +607,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entities the collection of entities to load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -652,7 +652,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * userDao.loadJoinEntities(
      *     user,
      *     Arrays.asList("orders", "reviews", "wishlist"),
-     *     true  // load in parallel
+     *     {@code true}  // load in parallel
      * );
      * }</pre>
      *
@@ -746,7 +746,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * userDao.loadJoinEntities(
      *     users,
      *     Arrays.asList("orders", "reviews", "addresses"),
-     *     true  // load in parallel
+     *     {@code true}  // load in parallel
      * );
      * }</pre>
      *
@@ -951,7 +951,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities of the specified class only if they are currently null.
+     * Loads join entities of the specified class only if they are currently {@code null}.
      * This is useful for lazy loading scenarios.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -971,7 +971,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities of the specified class with selected properties only if they are currently null.
+     * Loads join entities of the specified class with selected properties only if they are currently {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -987,7 +987,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1004,7 +1004,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities of the specified class for multiple entities only where they are null.
+     * Loads join entities of the specified class for multiple entities only where they are {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1023,7 +1023,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities of the specified class with selected properties for multiple entities only where they are null.
+     * Loads join entities of the specified class with selected properties for multiple entities only where they are {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1039,7 +1039,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entities the collection of entities to conditionally load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1065,7 +1065,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities for a specific property only if it is currently null.
+     * Loads join entities for a specific property only if it is currently {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1084,7 +1084,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities for a specific property with selected fields only if the property is null.
+     * Loads join entities for a specific property with selected fields only if the property is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1100,7 +1100,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1115,7 +1115,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities for a specific property for multiple entities only where the property is null.
+     * Loads join entities for a specific property for multiple entities only where the property is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1134,7 +1134,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads join entities for a specific property with selected fields for multiple entities only where null.
+     * Loads join entities for a specific property with selected fields for multiple entities only where {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1150,7 +1150,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param entities the collection of entities to conditionally load join entities for
      * @param joinEntityPropName the property name of the join entities to load
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If null, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1170,7 +1170,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads multiple join properties only if they are null for a single entity.
+     * Loads multiple join properties only if they are {@code null} for a single entity.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1198,7 +1198,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads multiple join properties only if they are null, optionally in parallel.
+     * Loads multiple join properties only if they are {@code null}, optionally in parallel.
      * This is a beta API for conditional parallel loading.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1208,7 +1208,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * userDao.loadJoinEntitiesIfNull(
      *     user,
      *     Arrays.asList("orders", "reviews", "wishlist"),
-     *     true  // parallel loading
+     *     {@code true}  // parallel loading
      * );
      * }</pre>
      *
@@ -1229,7 +1229,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads multiple join properties only if they are null using a custom executor.
+     * Loads multiple join properties only if they are {@code null} using a custom executor.
      * This is a beta API for advanced conditional parallel loading.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1265,7 +1265,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads multiple join properties for multiple entities only where they are null.
+     * Loads multiple join properties for multiple entities only where they are {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1293,7 +1293,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads multiple join properties for multiple entities only where null, optionally in parallel.
+     * Loads multiple join properties for multiple entities only where {@code null}, optionally in parallel.
      * This is a beta API for batch conditional parallel loading.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1325,7 +1325,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads multiple join properties for multiple entities only where null using a custom executor.
+     * Loads multiple join properties for multiple entities only where {@code null} using a custom executor.
      * This is a beta API for advanced batch conditional parallel loading.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1361,7 +1361,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads all join entities only if they are null for a single entity.
+     * Loads all join entities only if they are {@code null} for a single entity.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1380,7 +1380,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads all join entities only if they are null, optionally in parallel.
+     * Loads all join entities only if they are {@code null}, optionally in parallel.
      * This is a beta API for conditional loading of all relationships.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1406,7 +1406,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads all join entities only if they are null using a custom executor.
+     * Loads all join entities only if they are {@code null} using a custom executor.
      * This is a beta API for advanced conditional loading of all relationships.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1429,7 +1429,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads all join entities only if they are null for multiple entities.
+     * Loads all join entities only if they are {@code null} for multiple entities.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1452,7 +1452,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads all join entities only if they are null for multiple entities, optionally in parallel.
+     * Loads all join entities only if they are {@code null} for multiple entities, optionally in parallel.
      * This is a beta API for batch conditional loading of all relationships.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1478,7 +1478,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     }
 
     /**
-     * Loads all join entities only if they are null for multiple entities using a custom executor.
+     * Loads all join entities only if they are {@code null} for multiple entities using a custom executor.
      * This is a beta API for advanced batch conditional loading of all relationships.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1724,7 +1724,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * int deleted = userDao.deleteJoinEntities(
      *     user,
      *     Arrays.asList("orders", "reviews", "notifications"),
-     *     true  // parallel deletion
+     *     {@code true}  // parallel deletion
      * );
      * }</pre>
      *
@@ -1801,7 +1801,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * int deleted = userDao.deleteJoinEntities(
      *     users,
      *     Arrays.asList("orders", "transactions"),
-     *     true  // parallel deletion
+     *     {@code true}  // parallel deletion
      * );
      * }</pre>
      *

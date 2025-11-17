@@ -166,7 +166,7 @@ public final class Jdbc {
         /**
          * A no-operation parameter setter that does nothing.
          * This constant is useful as a default or placeholder when no parameters need to be set,
-         * avoiding null checks.
+         * avoiding {@code null} checks.
          */
         @SuppressWarnings("rawtypes")
         ParametersSetter DO_NOTHING = preparedQuery -> {
@@ -247,7 +247,7 @@ public final class Jdbc {
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is null or empty, or if {@code entityClass} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
          */
         @Beta
         @SequentialOnly
@@ -308,7 +308,7 @@ public final class Jdbc {
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is null or empty, or if {@code entityClass} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
          */
         @Beta
         @SequentialOnly
@@ -415,7 +415,7 @@ public final class Jdbc {
 
         /**
          * A pre-defined {@code ResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
-         * If the {@code ResultSet} is null, it returns an empty {@code Dataset}.
+         * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}.
          */
         ResultExtractor<Dataset> TO_DATA_SET = rs -> {
             if (rs == null) {
@@ -434,7 +434,7 @@ public final class Jdbc {
          * framework immediately after this method completes. Do not return the {@code ResultSet}
          * or any resources tied to it that might become invalid after closing.</p>
          *
-         * @param rs the {@code ResultSet} to extract data from; may be null.
+         * @param rs the {@code ResultSet} to extract data from; may be {@code null}.
          * @return the extracted result.
          * @throws SQLException if a database access error occurs.
          */
@@ -1147,7 +1147,7 @@ public final class Jdbc {
 
         /**
          * A pre-defined {@code BiResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
-         * If the {@code ResultSet} is null, it returns an empty {@code Dataset}.
+         * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}.
          */
         BiResultExtractor<Dataset> TO_DATA_SET = (rs, columnLabels) -> {
             if (rs == null) {
@@ -3202,9 +3202,9 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * // Creates a TreeMap excluding internal columns and null values.
+         * // Creates a TreeMap excluding internal columns and {@code null} values.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         * (key, value) -> !key.startsWith("_") && value != null,
+         * (key, value) -> !key.startsWith("_") && value != {@code null},
          * (size) -> new TreeMap<>()
          * );
          * }</pre>
@@ -4070,7 +4070,7 @@ public final class Jdbc {
          *
          * @param after the operation to perform after this operation.
          * @return a composed {@code RowConsumer} that performs in sequence this operation followed by the {@code after} operation.
-         * @throws IllegalArgumentException if {@code after} is null.
+         * @throws IllegalArgumentException if {@code after} is {@code null}.
          */
         default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) {
             N.checkArgNotNull(after);
@@ -4281,7 +4281,7 @@ public final class Jdbc {
          *
          * @param after the operation to perform after this operation.
          * @return a composed {@code BiRowConsumer} that performs in sequence this operation followed by the {@code after} operation.
-         * @throws IllegalArgumentException if {@code after} is null.
+         * @throws IllegalArgumentException if {@code after} is {@code null}.
          */
         default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after) {
             N.checkArgNotNull(after);
@@ -4482,7 +4482,7 @@ public final class Jdbc {
          *
          * @param other a {@code RowFilter} that will be logically-ANDed with this filter.
          * @return a new composed {@code RowFilter}.
-         * @throws IllegalArgumentException if {@code other} is null.
+         * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
             N.checkArgNotNull(other);
@@ -4548,7 +4548,7 @@ public final class Jdbc {
          *
          * @param other a {@code BiRowFilter} that will be logically-ANDed with this filter.
          * @return a new composed {@code BiRowFilter}.
-         * @throws IllegalArgumentException if {@code other} is null.
+         * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
             N.checkArgNotNull(other);
@@ -4635,7 +4635,7 @@ public final class Jdbc {
          * or in parallel streams.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
-         * @param columnLabels an optional list of column labels to use for mapping. If null, they are discovered from the {@code ResultSet}.
+         * @param columnLabels an optional list of column labels to use for mapping. If {@code null}, they are discovered from the {@code ResultSet}.
          * @param prefixAndFieldNameMap an optional map for mapping column prefixes to field name prefixes.
          * @return a new stateful {@code RowExtractor}.
          */
@@ -4911,7 +4911,7 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column.
              * @param columnGetter the custom {@code ColumnGetter} to use for this column.
              * @return this builder instance for fluent chaining.
-             * @throws IllegalArgumentException if {@code columnIndex} is not positive or {@code columnGetter} is null.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive or {@code columnGetter} is {@code null}.
              */
             public RowExtractorBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, cs.columnIndex);
@@ -5654,7 +5654,7 @@ public final class Jdbc {
          *
          * @param handlerClass the handler class to instantiate and register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
-         * @throws IllegalArgumentException if {@code handlerClass} is null.
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -5667,7 +5667,7 @@ public final class Jdbc {
          *
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
-         * @throws IllegalArgumentException if {@code handler} is null.
+         * @throws IllegalArgumentException if {@code handler} is {@code null}.
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, cs.handler);
@@ -5681,7 +5681,7 @@ public final class Jdbc {
          * @param qualifier the unique identifier for the handler.
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
-         * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is null.
+         * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}.
          */
         public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotEmpty(qualifier, cs.qualifier);
@@ -5789,7 +5789,7 @@ public final class Jdbc {
          * @param <E> exception type that action can throw
          * @param beforeInvokeAction the action to perform before the method is called.
          * @return a new {@code Handler} instance.
-         * @throws IllegalArgumentException if {@code beforeInvokeAction} is null.
+         * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction)
@@ -5811,7 +5811,7 @@ public final class Jdbc {
          * @param <E> exception type that action can throw
          * @param afterInvokeAction the action to perform after the method returns.
          * @return a new {@code Handler} instance.
-         * @throws IllegalArgumentException if {@code afterInvokeAction} is null.
+         * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction)
@@ -5836,7 +5836,7 @@ public final class Jdbc {
          * @param beforeInvokeAction the action to perform before the method is called.
          * @param afterInvokeAction the action to perform after the method returns.
          * @return a new {@code Handler} instance.
-         * @throws IllegalArgumentException if either action is null.
+         * @throws IllegalArgumentException if either action is {@code null}.
          */
         public static <T, E extends RuntimeException> Handler<T> create(
                 final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction,

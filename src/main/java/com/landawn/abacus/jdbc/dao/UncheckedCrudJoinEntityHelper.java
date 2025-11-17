@@ -131,7 +131,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the entity with selected properties and loaded join entities
      * @throws DuplicatedResultException if more than one record is found
@@ -160,7 +160,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and loaded join entities
      * @throws DuplicatedResultException if more than one record is found
@@ -183,13 +183,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * Optional<User> user = userDao.get(
      *     userId,
      *     Arrays.asList("id", "name", "email", "status"),
-     *     true  // load all join entities
+     *     {@code true}  // load all join entities
      * );
      * }</pre>
      *
      * @param id the entity ID
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the entity with selected properties and loaded join entities
@@ -205,11 +205,11 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
 
     /**
      * Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.
-     * This is a beta API that returns null if the entity is not found.
+     * This is a beta API that returns {@code null} if the entity is not found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Get user with orders, returns null if not found
+     * // Get user with orders, returns {@code null} if not found
      * User user = userDao.gett(userId, Order.class);
      * if (user != null) {
      *     // Process user with loaded orders
@@ -218,7 +218,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return the entity with loaded join entities, or null if not found
+     * @return the entity with loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -236,7 +236,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
 
     /**
      * Retrieves an entity by ID and optionally loads all join entities, returning the entity directly.
-     * This is a beta API that returns null if the entity is not found.
+     * This is a beta API that returns {@code null} if the entity is not found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -250,7 +250,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param id the entity ID
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with loaded join entities, or null if not found
+     * @return the entity with loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -282,9 +282,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return the entity with selected properties and loaded join entities, or null if not found
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -317,9 +317,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param id the entity ID
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
-     * @return the entity with selected properties and loaded join entities, or null if not found
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -348,16 +348,16 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * User user = userDao.gett(
      *     userId,
      *     Arrays.asList("id", "name", "email", "verified"),
-     *     true  // load all join entities
+     *     {@code true}  // load all join entities
      * );
      * }</pre>
      *
      * @param id the entity ID
      * @param selectPropNames the properties (columns) to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the entity with selected properties and loaded join entities, or null if not found
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -408,7 +408,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * // Get multiple users with all their relationships
      * List<User> users = userDao.batchGet(
      *     userIds,
-     *     true  // load all join entities
+     *     {@code true}  // load all join entities
      * );
      * }</pre>
      *
@@ -441,7 +441,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If null, all properties of the main entities are selected
+     *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
      * @return a list of entities with selected properties and loaded join entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
@@ -470,7 +470,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If null, all properties of the main entities are selected
+     *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return a list of entities with selected properties and loaded join entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
@@ -493,13 +493,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * List<User> users = userDao.batchGet(
      *     userIds,
      *     Arrays.asList("id", "name", "email", "active"),
-     *     true  // load all join entities
+     *     {@code true}  // load all join entities
      * );
      * }</pre>
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If null, all properties of the main entities are selected
+     *                       If {@code null}, all properties of the main entities are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with selected properties and loaded join entities
@@ -530,7 +530,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If null, all properties of the main entities are selected
+     *                       If {@code null}, all properties of the main entities are selected
      * @param batchSize the size of each batch for processing
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
      * @return a list of entities with selected properties and loaded join entities
@@ -571,7 +571,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If null, all properties of the main entities are selected
+     *                       If {@code null}, all properties of the main entities are selected
      * @param batchSize the size of each batch for processing
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return a list of entities with selected properties and loaded join entities
@@ -612,13 +612,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *     veryLargeIdCollection,
      *     Arrays.asList("id", "name", "email", "createdDate"),
      *     2000,  // large batch size
-     *     true   // load all join entities
+     *     {@code true}   // load all join entities
      * );
      * }</pre>
      *
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select from the main entities, excluding join entity properties.
-     *                       If null, all properties of the main entities are selected
+     *                       If {@code null}, all properties of the main entities are selected
      * @param batchSize the size of each batch for processing
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded

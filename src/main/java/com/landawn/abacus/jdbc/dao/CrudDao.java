@@ -172,7 +172,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @param propNamesToInsert the property names to include in the INSERT statement.
-     *                          If null or empty, all properties will be inserted
+     *                          If {@code null} or empty, all properties will be inserted
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      */
@@ -467,7 +467,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -487,7 +487,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a Date value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -507,7 +507,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a Time value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
@@ -521,7 +521,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -541,7 +541,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * This is typically used for BLOB data.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -584,7 +584,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
-     * Returns an empty Optional if no record is found or if the value is null.
+     * Returns an empty Optional if no record is found or if the value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -656,7 +656,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a unique non-null result of the specified type.
      * Throws DuplicatedResultException if more than one record is found.
-     * Returns empty Optional if no record found or value is null.
+     * Returns empty Optional if no record found or value is {@code null}.
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
@@ -732,7 +732,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Retrieves an entity by its ID, returning null if not found.
+     * Retrieves an entity by its ID, returning {@code null} if not found.
      * This is a convenience method that returns the entity directly instead of wrapped in Optional.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -751,7 +751,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     T gett(final ID id) throws DuplicatedResultException, SQLException;
 
     /**
-     * Retrieves an entity by its ID with only selected properties populated, returning null if not found.
+     * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
      * This is useful for performance optimization when you only need specific fields.
      *
      * @param id the entity ID to retrieve
@@ -925,7 +925,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entityToUpdate the entity containing the values to update
-     * @param propNamesToUpdate the property names to update. If null or empty, all properties will be updated
+     * @param propNamesToUpdate the property names to update. If {@code null} or empty, all properties will be updated
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
      */

@@ -146,7 +146,7 @@ public class CodeHelper {
 
         if (parameterNamesToAdd.size() > 0 || fieldNames.size() > 0) {
 
-            final File file = new File("./src/main/java/com/landawn/abacus/jdbc/s.java");
+            final File file = new File("./src/main/java/com/landawn/abacus/jdbc/cs.java");
 
             final List<String> lines = IOUtil.readAllLines(file);
 

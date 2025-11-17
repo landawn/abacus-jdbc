@@ -98,7 +98,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     /**
      * Retrieves an entity by its ID with the option to load all associated join entities.
      * 
-     * <p>When {@code includeAllJoinEntities} is true, all mapped relationships will be loaded.
+     * <p>When {@code includeAllJoinEntities} is {@code true}, all mapped relationships will be loaded.
      * This is useful when you need the complete object graph but should be used carefully
      * to avoid performance issues with large datasets.</p>
      * 
@@ -141,7 +141,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames The properties (columns) to select from the main entity. 
-     *                        If null, all properties are selected
+     *                        If {@code null}, all properties are selected
      * @param joinEntitiesToLoad The class of the join entities to load
      * @return An {@link Optional} containing the entity with selected properties and loaded join entities
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -171,7 +171,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames The properties (columns) to select from the main entity.
-     *                        If null, all properties are selected
+     *                        If {@code null}, all properties are selected
      * @param joinEntitiesToLoad Collection of join entity classes to load
      * @return An {@link Optional} containing the entity with selected properties and loaded join entities
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -199,13 +199,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * 
      * // Fetch complete user data without relationships  
      * Optional<User> userOnly = userDao.get(123L,
-     *     null, // Select all properties
+     *     {@code null}, // Select all properties
      *     false); // Don't load join entities
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames The properties (columns) to select from the main entity.
-     *                        If null, all properties are selected
+     *                        If {@code null}, all properties are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return An {@link Optional} containing the entity with selected properties
@@ -270,7 +270,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
-     * @param includeAllJoinEntities If true, loads all mapped join entities
+     * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
      * @return The entity, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found
@@ -303,7 +303,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad The class of the join entities to load
      * @return The entity with selected properties and loaded join entities, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -342,7 +342,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
+     *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad Collection of join entity classes to load
      * @return The entity with selected properties and loaded join entities, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
@@ -378,14 +378,14 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * 
      * // Get complete user data without any relationships
      * User userOnly = userDao.gett(123L,
-     *     null, // All fields
+     *     {@code null}, // All fields
      *     false); // No join entities
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
-     *                       If null, all properties of the main entity are selected
-     * @param includeAllJoinEntities If true, loads all mapped join entities
+     *                       If {@code null}, all properties of the main entity are selected
+     * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
      * @return The entity with selected properties, never null
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found

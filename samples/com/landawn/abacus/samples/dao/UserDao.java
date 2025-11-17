@@ -28,7 +28,7 @@ import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.Config;
-import com.landawn.abacus.jdbc.annotation.Define;
+import com.landawn.abacus.jdbc.annotation.Fragment;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
@@ -148,30 +148,30 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     }
 
     @Query("DELETE FROM {tableName} where id = :id")
-    int deleteByIdWithDefine(@Define("tableName") String tableName, @Bind("id") long id) throws SQLException;
+    int deleteByIdWithFragment(@Fragment("tableName") String tableName, @Bind("id") long id) throws SQLException;
 
     @Query(value = "DELETE FROM {tableName} where id = :id", isBatch = true, batchSize = 10000)
-    int deleteByIdsWithDefine(@Define("tableName") String tableName, List<Long> userIds) throws SQLException;
+    int deleteByIdsWithFragment(@Fragment("tableName") String tableName, List<Long> userIds) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    User selectByIdWithDefine(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+    User selectByIdWithFragment(@Fragment("tableName") String tableName, @Fragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
-    List<User> selectByIdWithDefine_2(@Define("tableName") String tableName, @Define("{whatever -> orderBy{{P}}") String orderBy, long id) throws SQLException;
+    List<User> selectByIdWithFragment_2(@Fragment("tableName") String tableName, @Fragment("{whatever -> orderBy{{P}}") String orderBy, long id) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id >= ? AND first_name != ? ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
-    List<User> selectByIdWithDefine_3(@Define("tableName") String tableName, long id, @Define("{whatever -> orderBy{{P}}") String orderBy,
-            @Define("{count}") long count, String firstName) throws SQLException;
+    List<User> selectByIdWithFragment_3(@Fragment("tableName") String tableName, long id, @Fragment("{whatever -> orderBy{{P}}") String orderBy,
+            @Fragment("{count}") long count, String firstName) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id >= :id AND first_name != :firstName ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
-    List<User> selectByIdWithDefine_4(@Define("tableName") String tableName, @Bind("id") long id, @Define("{whatever -> orderBy{{P}}") String orderBy,
-            @Define("{count}") long count, @Bind("firstName") String firstName) throws SQLException;
+    List<User> selectByIdWithFragment_4(@Fragment("tableName") String tableName, @Bind("id") long id, @Fragment("{whatever -> orderBy{{P}}") String orderBy,
+            @Fragment("{count}") long count, @Bind("firstName") String firstName) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    boolean exists(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+    boolean exists(@Fragment("tableName") String tableName, @Fragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
     @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
-    boolean isThere(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+    boolean isThere(@Fragment("tableName") String tableName, @Fragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
     @Query(id = "sql_listToSet")
     Set<User> listToSet(int id) throws SQLException;

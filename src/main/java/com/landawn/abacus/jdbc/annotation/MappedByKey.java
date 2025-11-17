@@ -63,7 +63,7 @@ import java.util.Map;
  * <p>Important considerations:</p>
  * <ul>
  *   <li>The key field must exist in the query results</li>
- *   <li>Null key values will be included in the map (if the Map implementation supports null keys)</li>
+ *   <li>Null key values will be included in the map (if the Map implementation supports {@code null} keys)</li>
  *   <li>Duplicate keys will result in later values overwriting earlier ones</li>
  *   <li>The return type must be a Map or a subtype of Map</li>
  * </ul>

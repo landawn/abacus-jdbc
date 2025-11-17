@@ -178,7 +178,7 @@ public @interface Handler {
      *     
      *     default User findActiveById(Long id) {
      *         User user = findById(id);  // TransactionHandler NOT applied here
-     *         return user != null && user.isActive() ? user : null;
+     *         return user != {@code null} && user.isActive() ? user : null;
      *     }
      * }
      * 

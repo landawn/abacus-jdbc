@@ -55,7 +55,7 @@ import com.landawn.abacus.query.condition.Condition;
  * // Usage:
  * Transaction txn = new Transaction();
  * String id = transactionDao.insert(txn); // Works
- * Transaction retrieved = transactionDao.gett(id); // Works (returns null if not found)
+ * Transaction retrieved = transactionDao.gett(id); // Works (returns {@code null} if not found)
  * transactionDao.update(txn); // Throws UnsupportedOperationException
  * transactionDao.deleteById(id); // Throws UnsupportedOperationException
  * }</pre>
@@ -95,7 +95,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entityToUpdate the entity containing the values to update
-     * @param propNamesToUpdate the property names to update. If null or empty, all properties will be updated
+     * @param propNamesToUpdate the property names to update. If {@code null} or empty, all properties will be updated
      * @return never returns normally
      * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported

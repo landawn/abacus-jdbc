@@ -26,19 +26,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.util.ClassUtil;
-import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.ExceptionUtil;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Result;
+import com.landawn.abacus.query.AbstractQueryBuilder.SP;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLBuilder.NAC;
 import com.landawn.abacus.query.SQLBuilder.NLC;
@@ -48,7 +44,12 @@ import com.landawn.abacus.query.SQLBuilder.PAC;
 import com.landawn.abacus.query.SQLBuilder.PLC;
 import com.landawn.abacus.query.SQLBuilder.PSB;
 import com.landawn.abacus.query.SQLBuilder.PSC;
-import com.landawn.abacus.query.AbstractQueryBuilder.SP;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.ExceptionUtil;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
@@ -131,7 +132,7 @@ final class DaoUtil {
      */
     @SuppressWarnings("deprecation")
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
-        N.checkArgNotNull(entity, "entity");
+        N.checkArgNotNull(entity, cs.entity);
 
         if (idPropNameList.size() == 1) {
             return entityInfo.getPropInfo(idPropNameList.get(0)).getPropValue(entity);

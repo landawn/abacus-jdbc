@@ -449,7 +449,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_define() throws Exception {
+    public void test_fragment() throws Exception {
 
         final List<User> users = IntStream.range(1, 1000)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
@@ -458,21 +458,21 @@ public class DaoTest {
         final List<Long> ids = userDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        assertNotNull(userDao.selectByIdWithDefine("user1", "last_name", ids.get(0)));
-        assertEquals(ids.size(), userDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
+        assertNotNull(userDao.selectByIdWithFragment("user1", "last_name", ids.get(0)));
+        assertEquals(ids.size(), userDao.selectByIdWithFragment_2("user1", "id", ids.get(0)).size());
 
-        assertEquals(ids.size(), userDao.selectByIdWithDefine_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), userDao.selectByIdWithFragment_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertEquals(ids.size(), userDao.selectByIdWithDefine_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), userDao.selectByIdWithFragment_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
         assertTrue(userDao.exists("user1", "last_name", ids.get(0)));
         assertTrue(userDao.isThere("user1", "last_name", ids.get(0)));
 
-        assertEquals(1, userDao.deleteByIdWithDefine("user1", ids.get(0)));
-        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user1", ids));
+        assertEquals(1, userDao.deleteByIdWithFragment("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, userDao.deleteByIdsWithFragment("user1", ids));
 
-        assertNull(userDao.selectByIdWithDefine("user1", "last_name", ids.get(0)));
-        assertEquals(0, userDao.selectByIdWithDefine_2("user1", "id", ids.get(0)).size());
+        assertNull(userDao.selectByIdWithFragment("user1", "last_name", ids.get(0)));
+        assertEquals(0, userDao.selectByIdWithFragment_2("user1", "id", ids.get(0)).size());
 
         assertFalse(userDao.exists("user1", "last_name", ids.get(0)));
         assertFalse(userDao.isThere("user1", "last_name", ids.get(0)));
@@ -502,8 +502,8 @@ public class DaoTest {
 
         assertEquals(ids.size(), userDao.listByIds_04(N.emptyList(), N.asList("xxx")).size());
 
-        assertEquals(1, userDao.deleteByIdWithDefine("user1", ids.get(0)));
-        assertEquals(ids.size() - 1, userDao.deleteByIdsWithDefine("user1", ids));
+        assertEquals(1, userDao.deleteByIdWithFragment("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, userDao.deleteByIdsWithFragment("user1", ids));
 
         userDao.delete(CB.where(CF.ge("id", 0)).limit(10000));
     }

@@ -75,11 +75,11 @@ import java.lang.annotation.Target;
  *   <li>Be consistent with naming conventions</li>
  *   <li>Consider using explicit names for better refactoring support</li>
  *   <li>For collections, use {@link BindList} instead</li>
- *   <li>For dynamic SQL structure, use {@link Define} instead</li>
+ *   <li>For dynamic SQL structure, use {@link Fragment} instead</li>
  * </ul>
  *
  * @see BindList
- * @see Define
+ * @see Fragment
  * @see Query
  */
 @Retention(RetentionPolicy.RUNTIME)

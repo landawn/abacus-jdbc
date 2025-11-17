@@ -31,14 +31,14 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * <ul>
  *   <li>Automatic LIMIT clause addition for single-result queries</li>
  *   <li>ID generation behavior for insert operations</li>
- *   <li>Join condition handling with null values</li>
+ *   <li>Join condition handling with {@code null} values</li>
  *   <li>Column fetching strategies for Dataset queries</li>
  * </ul>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Config(
- *     addLimitForSingleQuery = true,
+ *     addLimitForSingleQuery = {@code true},
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
  * public interface UserDao extends CrudDao<User, Long> {
@@ -46,7 +46,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);  // LIMIT 1 added automatically
  *     
- *     // ID generation will be called if user.id is null or 0
+ *     // ID generation will be called if user.id is {@code null} or 0
  *     default User createUser(String name, String email) {
  *         User user = new User(name, email);
  *         insert(user);  // generateId() called automatically if needed
@@ -102,8 +102,8 @@ public @interface Config {
      * when the ID field is not set or has a default value.
      * 
      * <p>This applies to {@code CrudDao.insert(T entity)} and {@code CrudDao.batchInsert(Collection<T> entities)}
-     * methods. The ID is considered "not set" when it's null or has the default value for its type
-     * (0 for numeric types, null for objects).</p>
+     * methods. The ID is considered "not set" when it's {@code null} or has the default value for its type
+     * (0 for numeric types, {@code null} for objects).</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -150,11 +150,11 @@ public @interface Config {
     boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
 
     /**
-     * Controls whether joins can be performed using null or default values in join conditions.
-     * When {@code false} (default), joins with null values are skipped for safety.
-     * When {@code true}, allows joins even when the joining column contains null.
+     * Controls whether joins can be performed using {@code null} or default values in join conditions.
+     * When {@code false} (default), joins with {@code null} values are skipped for safety.
+     * When {@code true}, allows joins even when the joining column contains {@code null}.
      * 
-     * <p>This is useful for outer joins where null values are expected and valid.</p>
+     * <p>This is useful for outer joins where {@code null} values are expected and valid.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

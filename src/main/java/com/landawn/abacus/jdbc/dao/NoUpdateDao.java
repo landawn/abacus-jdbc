@@ -111,7 +111,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * This method is primarily useful for INSERT statements where you need to retrieve
      * the auto-generated primary key or other generated column values after insertion.
      * 
-     * <p>When {@code generateKeys} is true, the prepared statement will be configured
+     * <p>When {@code generateKeys} is {@code true}, the prepared statement will be configured
      * to return auto-generated keys which can be retrieved after executing an INSERT.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -126,7 +126,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * }</pre>
      *
      * @param query the SQL query string to prepare (must be SELECT or INSERT)
-     * @param generateKeys true to enable retrieval of auto-generated keys
+     * @param generateKeys {@code true} to enable retrieval of auto-generated keys
      * @return a PreparedQuery object configured for key generation if applicable
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
@@ -290,7 +290,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * }</pre>
      *
      * @param namedQuery the SQL query string with named parameters (must be SELECT or INSERT)
-     * @param generateKeys true to enable retrieval of auto-generated keys
+     * @param generateKeys {@code true} to enable retrieval of auto-generated keys
      * @return a NamedQuery object configured for key generation if applicable
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
@@ -444,7 +444,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * }</pre>
      *
      * @param namedQuery the pre-parsed SQL query object (must represent SELECT or INSERT)
-     * @param generateKeys true to enable retrieval of auto-generated keys
+     * @param generateKeys {@code true} to enable retrieval of auto-generated keys
      * @return a NamedQuery object configured for key generation if applicable
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if the query is not a SELECT or INSERT statement

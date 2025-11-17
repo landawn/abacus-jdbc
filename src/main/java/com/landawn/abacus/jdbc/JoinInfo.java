@@ -175,7 +175,7 @@ public final class JoinInfo {
      *     Employee.class,
      *     "employees",
      *     "projects",
-     *     false  // Don't allow null join values
+     *     {@code false}  // Don't allow {@code null} join values
      * );
      *
      * // Many-to-many join example
@@ -185,14 +185,14 @@ public final class JoinInfo {
      *     Employee.class,
      *     "employees",
      *     "projects",
-     *     true  // Allow null join values
+     *     {@code true}  // Allow {@code null} join values
      * );
      * }</pre>
      *
      * @param entityClass the entity class containing the join property, must not be {@code null}
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}
-     * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are null or default;
+     * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
      *                                         if {@code false}, throws IllegalArgumentException for null/default join values.
      *                                         This flag is typically controlled by the {@code @Config} annotation on the DAO class
      * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid
@@ -790,7 +790,7 @@ public final class JoinInfo {
      *
      * List<Employee> employees = getEmployeesToDelete();
      * String deleteSql = batchDelete._1.apply(employees.size());  // Main delete SQL
-     * String middleTableDeleteSql = batchDelete._2 != null ? batchDelete._2.apply(employees.size()) : null;
+     * String middleTableDeleteSql = batchDelete._2 != {@code null} ? batchDelete._2.apply(employees.size()) : null;
      * BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDelete._3;
      * }</pre>
      *

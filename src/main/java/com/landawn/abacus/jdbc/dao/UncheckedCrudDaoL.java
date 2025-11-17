@@ -506,7 +506,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @param selectPropNames the properties to select, or null to select all
+     * @param selectPropNames the properties to select, or {@code null} to select all
      * @return an Optional containing the entity with selected properties if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -516,7 +516,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Retrieves the entity with the specified ID, returning it directly or null if not found.
+     * Retrieves the entity with the specified ID, returning it directly or {@code null} if not found.
      * This method accepts a primitive long ID for convenience.
      *
      * <p><b>Usage Examples:</b></p>
@@ -537,7 +537,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Retrieves the entity with the specified ID and selected properties, returning it directly or null if not found.
+     * Retrieves the entity with the specified ID and selected properties, returning it directly or {@code null} if not found.
      * This method accepts a primitive long ID for convenience.
      *
      * <p><b>Usage Examples:</b></p>
@@ -546,7 +546,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @param selectPropNames the properties to select, or null to select all
+     * @param selectPropNames the properties to select, or {@code null} to select all
      * @return the entity with selected properties if found, otherwise null
      * @throws UncheckedSQLException if a database access error occurs
      */

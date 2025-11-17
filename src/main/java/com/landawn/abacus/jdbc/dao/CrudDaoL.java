@@ -246,7 +246,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a Time value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
@@ -279,7 +279,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be null if the database value is null.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * This is typically used for BLOB data.
      *
      * <p><b>Usage Examples:</b></p>
@@ -323,7 +323,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
      * This is a convenience method that accepts a primitive long ID.
-     * Returns an empty Optional if no record is found or if the value is null.
+     * Returns an empty Optional if no record is found or if the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -397,7 +397,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a unique non-null result of the specified type.
      * This is a convenience method that accepts a primitive long ID.
      * Throws DuplicatedResultException if more than one record is found.
-     * Returns empty Optional if no record found or value is null.
+     * Returns empty Optional if no record found or value is {@code null}.
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
@@ -472,7 +472,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Retrieves an entity by its ID, returning null if not found.
+     * Retrieves an entity by its ID, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive long ID.
      * This is a convenience method that returns the entity directly instead of wrapped in Optional.
      *
@@ -493,7 +493,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties populated, returning null if not found.
+     * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive long ID.
      * This is useful for performance optimization when you only need specific fields.
      *
