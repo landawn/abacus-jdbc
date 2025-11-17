@@ -979,7 +979,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
-     * @param entityToUpdate
+     * @param entityToUpdate the entity containing the values to update
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws UncheckedSQLException if a database access error occurs
      */
