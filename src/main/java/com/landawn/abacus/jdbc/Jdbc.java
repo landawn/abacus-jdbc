@@ -5462,6 +5462,9 @@ public final class Jdbc {
     /**
      * Represents an output parameter for a stored procedure call. This class encapsulates all
      * necessary information to register an output parameter with a {@code CallableStatement}.
+     *
+     * <p>This class provides both a no-argument constructor and an all-arguments constructor
+     * for flexible instantiation.</p>
      */
     @NoArgsConstructor
     @AllArgsConstructor

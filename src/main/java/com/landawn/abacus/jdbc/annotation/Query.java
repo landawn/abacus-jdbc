@@ -83,8 +83,8 @@ import com.landawn.abacus.util.RegExUtil;
  *     // Dynamic SQL with template variables
  *     @Query(value = "SELECT * FROM {table} WHERE {column} = :value",
  *            fragmentContainsNamedParameters = true)
- *     List<Map<String, Object>> dynamicQuery(@Fragment("table") String table,
- *                                           @Fragment("column") String column,
+ *     List<Map<String, Object>> dynamicQuery(@SqlFragment("table") String table,
+ *                                           @SqlFragment("column") String column,
  *                                           @Bind("value") Object value);
  *
  *     // Query with timeout for long-running operations
@@ -110,7 +110,7 @@ import com.landawn.abacus.util.RegExUtil;
  *   <li>Use {@link Bind} annotation to map method parameters to SQL parameters</li>
  *   <li>Entity properties are automatically bound when passing entity objects</li>
  *   <li>Nested property access via dot notation (e.g., {@code :user.email})</li>
- *   <li>Template variables using {@code {variableName}} with {@link Fragment} annotation</li>
+ *   <li>Template variables using {@code {variableName}} with {@link SqlFragment} annotation</li>
  * </ul>
  *
  * <p>Return type handling:</p>
@@ -128,8 +128,8 @@ import com.landawn.abacus.util.RegExUtil;
  * </ul>
  *
  * @see Bind
- * @see Fragment
- * @see FragmentList
+ * @see SqlFragment
+ * @see SqlFragmentList
  * @see SqlMapper
  * @see Handler
  * @see OP
@@ -562,21 +562,21 @@ public @interface Query {
     boolean isSingleParameter() default false;
 
     /**
-     * Indicates whether the SQL statement contains template variables defined by the {@link Fragment} or {@link FragmentList} annotations
+     * Indicates whether the SQL statement contains template variables defined by the {@link SqlFragment} or {@link SqlFragmentList} annotations
      * that will be replaced with query fragments containing named parameters.
      * 
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding currently active records
      * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", fragmentContainsNamedParameters = true)
-     * List<Promotion> findActivePromotions(@Fragment("{whereCause}") String whereCause);
+     * List<Promotion> findActivePromotions(@SqlFragment("{whereCause}") String whereCause);
      * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
      *
-     * @return {@code true} if template variables defined by {@link Fragment} or {@link FragmentList} will be replaced with query fragments
+     * @return {@code true} if template variables defined by {@link SqlFragment} or {@link SqlFragmentList} will be replaced with query fragments
      *         containing named parameters; {@code false} otherwise
-     * @see Fragment
-     * @see FragmentList
+     * @see SqlFragment
+     * @see SqlFragmentList
      */
     @Beta
     boolean fragmentContainsNamedParameters() default false;

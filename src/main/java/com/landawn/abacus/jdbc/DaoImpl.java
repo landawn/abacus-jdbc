@@ -53,8 +53,8 @@ import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.Config;
 import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
-import com.landawn.abacus.jdbc.annotation.Fragment;
-import com.landawn.abacus.jdbc.annotation.FragmentList;
+import com.landawn.abacus.jdbc.annotation.SqlFragment;
+import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.HandlerList;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
@@ -66,7 +66,7 @@ import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
-import com.landawn.abacus.jdbc.annotation.SqlField;
+import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.SqlMapper;
 import com.landawn.abacus.jdbc.annotation.Transactional;
@@ -179,7 +179,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p><b>Key Features:</b></p>
  * <ul>
  *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query}, {@code @Insert}, {@code @Update}, {@code @Delete}, {@code @Select}
- *       with flexible parameter binding using {@code @Bind}, {@code @BindList}, {@code @SqlField}</li>
+ *       with flexible parameter binding using {@code @Bind}, {@code @BindList}, {@code @SqlScript}</li>
  *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., :paramName)</li>
  *   <li><b>Collection Parameter Expansion:</b> Handles IN clauses by expanding collection parameters</li>
  *   <li><b>Entity Mapping:</b> Automatic mapping between database result sets and entity classes</li>
@@ -188,7 +188,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li><b>Result Caching:</b> Method-level caching with {@code @CacheResult} and {@code @RefreshCache}</li>
  *   <li><b>Batch Operations:</b> Support for batch inserts, updates, and deletes</li>
  *   <li><b>Stored Procedures:</b> Execution of database stored procedures with OUT parameters</li>
- *   <li><b>SQL Fragments:</b> Reusable SQL snippets through {@code @Fragment} and {@code @FragmentList}</li>
+ *   <li><b>SQL SqlFragments:</b> Reusable SQL snippets through {@code @SqlFragment} and {@code @SqlFragmentList}</li>
  * </ul>
  *
  * <p><b>Design Pattern:</b></p>
@@ -1403,9 +1403,10 @@ final class DaoImpl {
 
     @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractQuery prepareQuery(final Dao proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final String fullClassMethodName,
-            final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes, final Tuple2<Annotation, String>[] fragmentAnnos,
-            final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys, final String[] returnColumnNames,
-            final List<OutParameter> outParameterList, final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter) throws SQLException {
+            final Method method, final Class<?> returnType, final Object[] args, final int[] fragmentParamIndexes,
+            final Tuple2<Annotation, String>[] fragmentAnnos, final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys,
+            final String[] returnColumnNames, final List<OutParameter> outParameterList,
+            final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter) throws SQLException {
         final OP op = queryInfo.op;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
@@ -1753,35 +1754,35 @@ final class DaoImpl {
                 .first()
                 .orElse(true);
 
-        final Map<String, String> sqlFieldMap = StreamEx.of(allInterfaces)
+        final Map<String, String> sqlScriptMap = StreamEx.of(allInterfaces)
                 .flattmap(Class::getDeclaredFields)
                 .append(StreamEx.of(allInterfaces).flattmap(Class::getDeclaredClasses).flattmap(Class::getDeclaredFields))
-                .filter(it -> it.isAnnotationPresent(SqlField.class))
+                .filter(it -> it.isAnnotationPresent(SqlScript.class))
                 .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
-                        "Field annotated with @SqlField must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
+                        "Field annotated with @SqlScript must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
                 .onEach(it -> ClassUtil.setAccessibleQuietly(it, true))
-                .map(it -> Tuple.of(it.getAnnotation(SqlField.class), it))
+                .map(it -> Tuple.of(it.getAnnotation(SqlScript.class), it))
                 .map(it -> Tuple.of(Strings.isEmpty(it._1.id()) ? it._2.getName() : it._1.id(), it._2))
                 .onEach(it -> N.checkArgument(Strings.isNotEmpty(it._1) && !Strings.containsWhitespace(it._1),
                         "Sql id {} is empty or contains whitespace characters defined by field in Dao class {}.", it._1, daoInterface))
                 .distinctBy(it -> it._1, (a, b) -> {
                     throw new IllegalArgumentException(
-                            "Two fields annotated with @SqlField have the same id (or name): " + a + "," + b + " in Dao class: " + daoClassName);
+                            "Two fields annotated with @SqlScript have the same id (or name): " + a + "," + b + " in Dao class: " + daoClassName);
                 })
                 .toMap(it -> it._1, Fn.ff(it -> (String) (it._2.get(null))));
 
         // Print out the embedded sqls because most of them may be generated by SQLBuilder.
-        if (daoLogger.isInfoEnabled() && N.notEmpty(sqlFieldMap)) {
+        if (daoLogger.isInfoEnabled() && N.notEmpty(sqlScriptMap)) {
             daoLogger.info("Embedded sqls defined in declared classes for Dao interface: " + daoClassName);
-            sqlFieldMap.forEach((key, value) -> daoLogger.info(key + " = " + value));
+            sqlScriptMap.forEach((key, value) -> daoLogger.info(key + " = " + value));
         }
 
-        if (!N.disjoint(newSQLMapper.keySet(), sqlFieldMap.keySet())) {
-            throw new IllegalArgumentException("Duplicated sql keys: " + N.commonSet(newSQLMapper.keySet(), sqlFieldMap.keySet())
-                    + " defined by both SQLMapper and SqlField for Dao interface: " + daoClassName);
+        if (!N.disjoint(newSQLMapper.keySet(), sqlScriptMap.keySet())) {
+            throw new IllegalArgumentException("Duplicated sql keys: " + N.commonSet(newSQLMapper.keySet(), sqlScriptMap.keySet())
+                    + " defined by both SQLMapper and SqlScript for Dao interface: " + daoClassName);
         }
 
-        for (final Map.Entry<String, String> entry : sqlFieldMap.entrySet()) {
+        for (final Map.Entry<String, String> entry : sqlScriptMap.entrySet()) {
             newSQLMapper.add(entry.getKey(), ParsedSql.parse(entry.getValue()));
         }
 
@@ -5120,7 +5121,7 @@ final class DaoImpl {
 
                     final int[] fragmentParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> N.anyMatch(method.getParameterAnnotations()[i],
-                                    it -> it.annotationType().equals(Fragment.class) || it.annotationType().equals(FragmentList.class)
+                                    it -> it.annotationType().equals(SqlFragment.class) || it.annotationType().equals(SqlFragmentList.class)
                                             || it.annotationType().equals(BindList.class)))
                             .toArray();
 
@@ -5129,23 +5130,23 @@ final class DaoImpl {
                     if (fragmentParamLen > 0) {
                         //    if (fragmentParamIndexes[0] != 0 || fragmentParamIndexes[fragmentParamLen - 1] - fragmentParamIndexes[0] + 1 != fragmentParamLen) {
                         //        throw new UnsupportedOperationException(
-                        //                "Parameters annotated with @Fragment must be at the head of the parameter list of method: " + fullClassMethodName);
+                        //                "Parameters annotated with @SqlFragment must be at the head of the parameter list of method: " + fullClassMethodName);
                         //    }
 
                         for (int i = 0; i < fragmentParamLen; i++) {
                             if ((paramTypes[fragmentParamIndexes[i]].isArray() || Collection.class.isAssignableFrom(paramTypes[fragmentParamIndexes[i]]))
                                     && N.noneMatch(method.getParameterAnnotations()[fragmentParamIndexes[i]],
-                                            it -> it.annotationType().equals(FragmentList.class) || it.annotationType().equals(BindList.class))) {
+                                            it -> it.annotationType().equals(SqlFragmentList.class) || it.annotationType().equals(BindList.class))) {
                                 throw new UnsupportedOperationException("Array/Collection type of parameter[" + i
-                                        + "] must be annotated with @FragmentList or @BindList, not @Fragment, in method: " + fullClassMethodName);
+                                        + "] must be annotated with @SqlFragmentList or @BindList, not @SqlFragment, in method: " + fullClassMethodName);
                             }
                         }
 
                         if (IntStreamEx.of(fragmentParamIndexes)
-                                .filter(i -> N.anyMatch(method.getParameterAnnotations()[i], it -> it.annotationType().equals(FragmentList.class)))
+                                .filter(i -> N.anyMatch(method.getParameterAnnotations()[i], it -> it.annotationType().equals(SqlFragmentList.class)))
                                 .anyMatch(i -> !(Collection.class.isAssignableFrom(paramTypes[i]) || paramTypes[i].isArray()))) {
                             throw new UnsupportedOperationException(
-                                    "Type of parameter annotated with @FragmentList(method: " + fullClassMethodName + ") must be Collection/Array.");
+                                    "Type of parameter annotated with @SqlFragmentList(method: " + fullClassMethodName + ") must be Collection/Array.");
                         }
 
                         if (IntStreamEx.of(fragmentParamIndexes)
@@ -5164,9 +5165,9 @@ final class DaoImpl {
                     }
 
                     final BiFunction<Annotation, Object, String> fragmentParamMapper = (anno, param) -> N.stringOf(param);
-                    final BiFunction<Annotation, Object, String> arrayFragmentListParamMapper = (anno,
+                    final BiFunction<Annotation, Object, String> arraySqlFragmentListParamMapper = (anno,
                             param) -> param == null || Array.getLength(param) == 0 ? "" : N.toJson(param, jsc_no_bracket);
-                    final BiFunction<Annotation, Object, String> collFragmentListParamMapper = (anno, param) -> param == null ? ""
+                    final BiFunction<Annotation, Object, String> collSqlFragmentListParamMapper = (anno, param) -> param == null ? ""
                             : N.toJson(param, jsc_no_bracket);
 
                     final BiFunction<Annotation, Object, String> arrayBindListParamMapper = (anno, param) -> param == null || Array.getLength(param) == 0 ? ""
@@ -5180,11 +5181,11 @@ final class DaoImpl {
 
                     final Tuple2<Annotation, String>[] fragmentAnnos = IntStreamEx.of(fragmentParamIndexes)
                             .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i])
-                                    .select(Fragment.class)
+                                    .select(SqlFragment.class)
                                     .map(it -> Tuple2.of((Annotation) it, it.value()))
                                     .first()
                                     .orElseGet(() -> StreamEx.of(method.getParameterAnnotations()[i])
-                                            .select(FragmentList.class)
+                                            .select(SqlFragmentList.class)
                                             .map(it -> Tuple2.of((Annotation) it, it.value()))
                                             .first()
                                             .orElseGet(() -> StreamEx.of(method.getParameterAnnotations()[i])
@@ -5197,10 +5198,10 @@ final class DaoImpl {
 
                     final BiFunction<Annotation, Object, String>[] fragmentMappers = IntStreamEx.of(fragmentParamIndexes)
                             .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).map(Annotation::annotationType).map(it -> {
-                                if (Fragment.class.isAssignableFrom(it)) {
+                                if (SqlFragment.class.isAssignableFrom(it)) {
                                     return fragmentParamMapper;
-                                } else if (FragmentList.class.isAssignableFrom(it)) {
-                                    return Collection.class.isAssignableFrom(paramTypes[i]) ? collFragmentListParamMapper : arrayFragmentListParamMapper;
+                                } else if (SqlFragmentList.class.isAssignableFrom(it)) {
+                                    return Collection.class.isAssignableFrom(paramTypes[i]) ? collSqlFragmentListParamMapper : arraySqlFragmentListParamMapper;
                                 } else if (BindList.class.isAssignableFrom(it)) {
                                     return Collection.class.isAssignableFrom(paramTypes[i]) ? collBindListParamMapper : arrayBindListParamMapper;
                                 } else {
@@ -5212,13 +5213,13 @@ final class DaoImpl {
                             .toArray(BiFunction[]::new);
 
                     if (N.notEmpty(fragmentAnnos) && N.anyMatch(fragmentAnnos, it -> !query.contains(it._2))) {
-                        throw new IllegalArgumentException("Fragments: " + N.filter(fragmentAnnos, it -> !query.contains(it._2))
+                        throw new IllegalArgumentException("SqlFragments: " + N.filter(fragmentAnnos, it -> !query.contains(it._2))
                                 + " are not found in sql annotated in method: " + fullClassMethodName);
                     }
 
                     final int[] stmtParamIndexes = IntStreamEx.of(tmp3)
                             .filter(i -> StreamEx.of(method.getParameterAnnotations()[i])
-                                    .noneMatch(it -> it.annotationType().equals(Fragment.class) || it.annotationType().equals(FragmentList.class)))
+                                    .noneMatch(it -> it.annotationType().equals(SqlFragment.class) || it.annotationType().equals(SqlFragmentList.class)))
                             .toArray();
 
                     final boolean[] bindListParamFlags = IntStreamEx.of(stmtParamIndexes)
@@ -5412,9 +5413,11 @@ final class DaoImpl {
                         //        }
                         //    }
 
-                        call = (proxy, args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args,
-                                fragmentParamIndexes, fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter),
-                                args);
+                        call = (proxy,
+                                args) -> queryFunc.apply(
+                                        prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method, returnType, args, fragmentParamIndexes,
+                                                fragmentAnnos, fragmentMappers, returnGeneratedKeys, returnColumnNames, outParameterList, parametersSetter),
+                                        args);
                     } else if (queryInfo.isInsert) {
                         if (isNoId && !returnType.isAssignableFrom(void.class)) {
                             throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName

@@ -69,7 +69,7 @@ import java.lang.annotation.Target;
  * }</pre>
  * 
  * @see Query#id()
- * @see SqlField
+ * @see SqlScript
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
@@ -93,10 +93,9 @@ public @interface SqlMapper {
      * @SqlMapper("sql/UserDao.xml")              // In sql directory
      * @SqlMapper("com/example/dao/UserDao.xml")  // Package-based path
      * @SqlMapper("mappers/user-queries.xml")     // Custom naming
-     * @SqlMapper("")                             // Use default location
      * }</pre>
      *
-     * @return the classpath-relative path to the SQL mapper XML file, or empty string if using default location
+     * @return the classpath-relative path to the SQL mapper XML file.
      */
     String value() default "";
 }

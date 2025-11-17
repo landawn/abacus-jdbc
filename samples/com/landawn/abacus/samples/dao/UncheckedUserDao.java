@@ -20,8 +20,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.OP;
 import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
-import com.landawn.abacus.jdbc.annotation.Fragment;
-import com.landawn.abacus.jdbc.annotation.FragmentList;
+import com.landawn.abacus.jdbc.annotation.SqlFragment;
+import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.Query;
@@ -118,32 +118,32 @@ public interface UncheckedUserDao
     }
 
     @Query("DELETE FROM {tableName} where id = :id")
-    int deleteByIdWithFragment(@Fragment("tableName") String tableName, @Bind("id") long id);
+    int deleteByIdWithSqlFragment(@SqlFragment("tableName") String tableName, @Bind("id") long id);
 
     @Query(value = "DELETE FROM {tableName} where id = :id", isBatch = true, batchSize = 10000)
-    int deleteByIdsWithFragment(@Fragment("tableName") String tableName, List<Long> userIds);
+    int deleteByIdsWithSqlFragment(@SqlFragment("tableName") String tableName, List<Long> userIds);
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    User selectByIdWithFragment(@Fragment("tableName") String tableName, @FragmentList("{{orderBy}}") List<String> orderByFields, @Bind("id") long id);
+    User selectByIdWithSqlFragment(@SqlFragment("tableName") String tableName, @SqlFragmentList("{{orderBy}}") List<String> orderByFields, @Bind("id") long id);
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    User selectByIdWithFragment2(@Fragment("tableName") String tableName, @FragmentList("{{orderBy}}") String[] orderByFields, @Bind("id") long id);
+    User selectByIdWithSqlFragment2(@SqlFragment("tableName") String tableName, @SqlFragmentList("{{orderBy}}") String[] orderByFields, @Bind("id") long id);
 
     @Query("SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
-    List<User> selectByIdWithFragment_2(@Fragment("tableName") String tableName, @Fragment("{whatever -> orderBy{{P}}") String orderBy, long id);
+    List<User> selectByIdWithSqlFragment_2(@SqlFragment("tableName") String tableName, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy, long id);
 
     @Query("SELECT * FROM {tableName} where id >= ? AND first_name != ? ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
-    List<User> selectByIdWithFragment_3(@Fragment("tableName") String tableName, long id, @Fragment("{whatever -> orderBy{{P}}") String orderBy,
-            @Fragment("{count}") long count, String firstName);
+    List<User> selectByIdWithSqlFragment_3(@SqlFragment("tableName") String tableName, long id, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy,
+            @SqlFragment("{count}") long count, String firstName);
 
     @Query("SELECT * FROM {tableName} where id >= :id AND first_name != :firstName ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
-    List<User> selectByIdWithFragment_4(@Fragment("tableName") String tableName, @Bind("id") long id, @Fragment("{whatever -> orderBy{{P}}") String orderBy,
-            @Fragment("{count}") long count, @Bind("firstName") String firstName);
+    List<User> selectByIdWithSqlFragment_4(@SqlFragment("tableName") String tableName, @Bind("id") long id, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy,
+            @SqlFragment("{count}") long count, @Bind("firstName") String firstName);
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    boolean exists(@Fragment("tableName") String tableName, @Fragment("{{orderBy}}") String orderBy, @Bind("id") long id);
+    boolean exists(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id);
 
     @Query(value = "SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}", op = OP.exists)
-    boolean isThere(@Fragment("tableName") String tableName, @Fragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+    boolean isThere(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
 
 }

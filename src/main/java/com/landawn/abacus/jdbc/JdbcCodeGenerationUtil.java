@@ -1765,7 +1765,10 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Configuration class for customizing entity code generation.
      * This class provides extensive options for controlling how entity classes are generated from database tables.
-     * 
+     *
+     * <p>This class supports builder pattern, no-argument constructor, and all-arguments constructor
+     * for flexible instantiation and configuration.</p>
+     *
      * <p>A sample configuration example:</p>
      * <pre>{@code
      * EntityCodeConfig ecc = EntityCodeConfig.builder()

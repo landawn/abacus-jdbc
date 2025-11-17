@@ -26,7 +26,7 @@ import java.util.Collection;
  * This annotation converts the elements of a collection or array into a comma-separated string
  * that can be used to dynamically construct SQL queries.
  * 
- * <p>Unlike {@link BindList} which binds values as parameters, {@code FragmentList} performs
+ * <p>Unlike {@link BindList} which binds values as parameters, {@code SqlFragmentList} performs
  * string substitution in the query template. This is useful for dynamic query construction where
  * the structure of the query itself needs to change based on input.</p>
  * 
@@ -40,7 +40,7 @@ import java.util.Collection;
  *     // Dynamic column selection
  *     @Query("SELECT {columns} FROM users WHERE id = :id")
  *     Map<String, Object> findColumnsById(
- *         @FragmentList("columns") List<String> columns,
+ *         @SqlFragmentList("columns") List<String> columns,
  *         @Bind("id") long id
  *     );
  *     
@@ -50,7 +50,7 @@ import java.util.Collection;
  *     // Dynamic table names (be very careful with this!)
  *     @Query("SELECT * FROM {tables} WHERE status = :status")
  *     List<Map<String, Object>> findFromTables(
- *         @FragmentList("tables") String[] tables,
+ *         @SqlFragmentList("tables") String[] tables,
  *         @Bind("status") String status
  *     );
  *     
@@ -68,12 +68,12 @@ import java.util.Collection;
  * <p>The elements are converted to strings using their {@code toString()} method
  * and joined with commas. Null elements are converted to the string "null".</p>
  *
- * @see Fragment
+ * @see SqlFragment
  * @see BindList
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.PARAMETER })
-public @interface FragmentList {
+public @interface SqlFragmentList {
 
     /**
      * Specifies the name of the query template variable to be replaced.
@@ -85,11 +85,11 @@ public @interface FragmentList {
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT {cols} FROM users")
-     * List<User> findWithColumns(@FragmentList("cols") List<String> columnList);
+     * List<User> findWithColumns(@SqlFragmentList("cols") List<String> columnList);
      * 
      * // Using parameter name (when value is not specified)
      * @Query("SELECT {columns} FROM users")
-     * List<User> findWithColumns(@FragmentList List<String> columns);
+     * List<User> findWithColumns(@SqlFragmentList List<String> columns);
      * }</pre>
      *
      * @return the name of the query template variable, or empty string if using the parameter name

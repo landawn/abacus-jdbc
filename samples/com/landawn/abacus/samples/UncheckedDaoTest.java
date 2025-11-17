@@ -72,22 +72,22 @@ public class UncheckedDaoTest {
         final List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
         assertEquals(users.size(), ids.size());
 
-        assertNotNull(uncheckedUserDao.selectByIdWithFragment("user1", N.asList("last_name", "first_name"), ids.get(0)));
-        assertNotNull(uncheckedUserDao.selectByIdWithFragment2("user1", N.asArray("last_name", "first_name"), ids.get(0)));
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithFragment_2("user1", "id", ids.get(0)).size());
+        assertNotNull(uncheckedUserDao.selectByIdWithSqlFragment("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertNotNull(uncheckedUserDao.selectByIdWithSqlFragment2("user1", N.asArray("last_name", "first_name"), ids.get(0)));
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithSqlFragment_2("user1", "id", ids.get(0)).size());
 
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithFragment_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithSqlFragment_3("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
-        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithFragment_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
+        assertEquals(ids.size(), uncheckedUserDao.selectByIdWithSqlFragment_4("user1", ids.get(0), "id", 1000000001, "xxxyyyyzzz").size());
 
         assertTrue(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
         assertTrue(uncheckedUserDao.isThere("user1", "last_name", ids.get(0)));
 
-        assertEquals(1, uncheckedUserDao.deleteByIdWithFragment("user1", ids.get(0)));
-        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithFragment("user1", ids));
+        assertEquals(1, uncheckedUserDao.deleteByIdWithSqlFragment("user1", ids.get(0)));
+        assertEquals(ids.size() - 1, uncheckedUserDao.deleteByIdsWithSqlFragment("user1", ids));
 
-        assertNull(uncheckedUserDao.selectByIdWithFragment("user1", N.asList("last_name", "first_name"), ids.get(0)));
-        assertEquals(0, uncheckedUserDao.selectByIdWithFragment_2("user1", "id", ids.get(0)).size());
+        assertNull(uncheckedUserDao.selectByIdWithSqlFragment("user1", N.asList("last_name", "first_name"), ids.get(0)));
+        assertEquals(0, uncheckedUserDao.selectByIdWithSqlFragment_2("user1", "id", ids.get(0)).size());
 
         assertFalse(uncheckedUserDao.exists("user1", "last_name", ids.get(0)));
         assertFalse(uncheckedUserDao.isThere("user1", "last_name", ids.get(0)));

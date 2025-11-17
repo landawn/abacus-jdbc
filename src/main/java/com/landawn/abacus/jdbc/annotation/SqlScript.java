@@ -44,14 +44,14 @@ import java.lang.annotation.Target;
  *
  *     static final class SqlTable {
  *
- *         @SqlField
+ *         @SqlScript
  *         static final String listUserWithBiggerId =
  *                 PSC.selectFrom(User.class)
  *                    .where(CF.gt("id"))
  *                    .sql();
  *
  *         // Complex SQL query defined using a Java text block:
- *         @SqlField
+ *         @SqlScript
  *         static final String listActiveUsersWithOrders = """
  *             SELECT u.id,
  *                    u.name,
@@ -76,7 +76,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface SqlField {
+public @interface SqlScript {
 
     /**
      * Supplies an optional identifier that overrides the annotated field name when the SQL is
@@ -86,7 +86,7 @@ public @interface SqlField {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @SqlField(id = "sql_listUserWithBiggerId")
+     * @SqlScript(id = "sql_listUserWithBiggerId")
      * static final String listUserWithBiggerId =
      *         PSC.selectFrom(User.class).where(CF.gt("id")).sql();
      * }</pre>
