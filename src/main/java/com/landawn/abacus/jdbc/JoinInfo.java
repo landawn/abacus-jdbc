@@ -28,7 +28,7 @@ import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.ConditionFactory.CF;
-import com.landawn.abacus.jdbc.annotation.Config;
+import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -194,14 +194,14 @@ public final class JoinInfo {
      * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}
      * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
      *                                         if {@code false}, throws IllegalArgumentException for null/default join values.
-     *                                         This flag is typically controlled by the {@code @Config} annotation on the DAO class
+     *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class
      * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid
      * @throws IllegalArgumentException if the referenced entity type is not a valid bean/entity class
      * @throws IllegalArgumentException if join column types are incompatible between source and referenced entities
      * @throws IllegalArgumentException if the many-to-many intermediate entity class is not found or improperly configured
      *
      * @see JoinedBy
-     * @see com.landawn.abacus.jdbc.annotation.Config
+     * @see com.landawn.abacus.jdbc.annotation.DaoConfig
      * @see #isManyToManyJoin()
      */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
@@ -929,7 +929,7 @@ public final class JoinInfo {
 
         if (!allowJoiningByNullOrDefaultValue && JdbcUtil.isNullOrDefault(value)) {
             throw new IllegalArgumentException("The join property value can't be null or default for property: " + propInfo.name
-                    + ". Annotated the Dao class of " + entityClass + " with @Config{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
+                    + ". Annotated the Dao class of " + entityClass + " with @DaoConfig{allowJoiningByNullOrDefaultValue = true} to avoid this exception");
         }
 
         return value;
@@ -974,7 +974,7 @@ public final class JoinInfo {
      * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist
      *
      * @see JoinedBy
-     * @see Config
+     * @see DaoConfig
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
         Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.computeIfAbsent(daoClass,
@@ -985,7 +985,7 @@ public final class JoinInfo {
         Map<String, JoinInfo> joinInfoMap = entityJoinInfoMap.get(key);
 
         if (joinInfoMap == null) {
-            final Config anno = daoClass.getAnnotation(Config.class);
+            final DaoConfig anno = daoClass.getAnnotation(DaoConfig.class);
             final boolean allowJoiningByNullOrDefaultValue = !(anno == null || !anno.allowJoiningByNullOrDefaultValue());
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 

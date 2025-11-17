@@ -27,7 +27,7 @@ import com.landawn.abacus.jdbc.OP;
 import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
-import com.landawn.abacus.jdbc.annotation.Config;
+import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
@@ -57,7 +57,7 @@ import com.landawn.abacus.util.stream.Stream;
 @Handler(type = UserDaoHandlerA.class)
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
-@Config(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
+@DaoConfig(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
 @SqlMapper("./samples/userSqlMapper.xml")
 // @SqlLogEnabled(true)
 public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {

@@ -60,7 +60,7 @@ import java.lang.annotation.Target;
  * <p>Note: This annotation only affects methods that return Dataset or similar collection
  * types. It has no effect on methods that return entity objects directly.</p>
  *
- * @see Config#fetchColumnByEntityClassForDatasetQuery()
+ * @see DaoConfig#fetchColumnByEntityClassForDatasetQuery()
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

@@ -35,7 +35,7 @@ import org.springframework.context.ApplicationContext;
  *
  * <p><b>Spring Configuration Example:</b></p>
  * <pre>{@code
- * @Configuration
+ * @DaoConfiguration
  * public class JdbcConfig {
  *     @Bean
  *     public SpringApplicationContext springApplicationContext() {

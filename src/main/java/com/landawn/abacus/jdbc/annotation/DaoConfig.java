@@ -37,7 +37,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * @Config(
+ * @DaoConfig(
  *     addLimitForSingleQuery = true,
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
@@ -54,7 +54,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     }
  * }
  * 
- * @Config(allowJoiningByNullOrDefaultValue = true)
+ * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
  * public interface OrderDao extends CrudDao<Order, Long> {
  *     // Allows joins even when foreign key might be null
  *     @Query("SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.id")
@@ -66,7 +66,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
-public @interface Config {
+public @interface DaoConfig {
 
     /**
      * Controls whether to automatically add LIMIT clause to single-result query methods.
@@ -85,7 +85,7 @@ public @interface Config {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Config(addLimitForSingleQuery = true)
+     * @DaoConfig(addLimitForSingleQuery = true)
      * public interface ProductDao extends CrudDao<Product, Long> {
      *     @Query("SELECT * FROM products WHERE code = :code")
      *     Product findByCode(@Bind("code") String code);
@@ -107,7 +107,7 @@ public @interface Config {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Config(callGenerateIdForInsertIfIdNotSet = true)
+     * @DaoConfig(callGenerateIdForInsertIfIdNotSet = true)
      * public interface UserDao extends CrudDao<User, Long> {
      *     @Override
      *     default Long generateId() {
@@ -135,7 +135,7 @@ public @interface Config {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Config(callGenerateIdForInsertWithSqlIfIdNotSet = true)
+     * @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true)
      * public interface OrderDao extends CrudDao<Order, Long> {
      *     default void insertWithAudit(Order order) {
      *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
@@ -158,7 +158,7 @@ public @interface Config {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Config(allowJoiningByNullOrDefaultValue = true)
+     * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
      * public interface CustomerDao extends CrudDao<Customer, Long> {
      *     // Allows join even if preferred_contact_id is null
      *     @Query("SELECT c.*, p.* FROM customers c " +
@@ -182,7 +182,7 @@ public @interface Config {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Config(fetchColumnByEntityClassForDatasetQuery = false)
+     * @DaoConfig(fetchColumnByEntityClassForDatasetQuery = false)
      * public interface ReportDao extends CrudDao<Report, Long> {
      *     // Will fetch all columns including calculated ones
      *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +

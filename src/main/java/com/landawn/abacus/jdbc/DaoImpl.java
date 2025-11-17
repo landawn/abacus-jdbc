@@ -51,7 +51,7 @@ import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
-import com.landawn.abacus.jdbc.annotation.Config;
+import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
@@ -1728,29 +1728,29 @@ final class DaoImpl {
 
         final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
                 .flattmap(Class::getAnnotations)
-                .select(Config.class)
-                .map(Config::addLimitForSingleQuery)
+                .select(DaoConfig.class)
+                .map(DaoConfig::addLimitForSingleQuery)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
                 .flattmap(Class::getAnnotations)
-                .select(Config.class)
-                .map(Config::callGenerateIdForInsertIfIdNotSet)
+                .select(DaoConfig.class)
+                .map(DaoConfig::callGenerateIdForInsertIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
                 .flattmap(Class::getAnnotations)
-                .select(Config.class)
-                .map(Config::callGenerateIdForInsertWithSqlIfIdNotSet)
+                .select(DaoConfig.class)
+                .map(DaoConfig::callGenerateIdForInsertWithSqlIfIdNotSet)
                 .first()
                 .orElse(false);
 
         final boolean fetchColumnByEntityClassForDatasetQuery = StreamEx.of(allInterfaces)
                 .flattmap(Class::getAnnotations)
-                .select(Config.class)
-                .map(Config::fetchColumnByEntityClassForDatasetQuery)
+                .select(DaoConfig.class)
+                .map(DaoConfig::fetchColumnByEntityClassForDatasetQuery)
                 .first()
                 .orElse(true);
 
