@@ -95,7 +95,7 @@ public @interface Define {
 
     /**
      * Specifies the name of the SQL template variable to be replaced.
-     * If not specified (empty string), the parameter name will be used as the variable name.
+     * If not specified (empty string), the parameter name will be used.
      * 
      * <p>The value can be:</p>
      * <ul>
@@ -131,7 +131,7 @@ public @interface Define {
      * // The parameter name "columns" is used as the placeholder name
      * }</pre>
      *
-     * @return the SQL template variable name, or empty string to use parameter name
+     * @return the SQL template variable name, or empty string if using the parameter name
      */
     String value() default "";
 }

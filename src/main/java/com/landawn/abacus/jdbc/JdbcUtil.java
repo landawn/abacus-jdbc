@@ -2643,33 +2643,95 @@ public final class JdbcUtil {
     };
 
     /**
-     * Prepares a SQL query for execution, returning a {@link PreparedQuery} object.
+     * Prepares a SQL query for execution, returning a {@link PreparedQuery} object that can be reused
+     * multiple times with different parameters. This is more efficient than creating new prepared statements
+     * for each execution, especially when the same query is executed repeatedly with different parameters.
      *
-     * <p>
-     * This method intelligently manages connections: if a transaction is active on the current thread
+     * <p>This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
-     * </p>
+     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.</p>
+     *
+     * <p><b>Key Features:</b></p>
+     * <ul>
+     *   <li>Automatic resource management when used with try-with-resources</li>
+     *   <li>Support for method chaining with fluent parameter setting API</li>
+     *   <li>Integration with transaction context for transactional operations</li>
+     *   <li>Type-safe result mapping to Java objects, Lists, Maps, and more</li>
+     *   <li>Stream support for memory-efficient processing of large result sets</li>
+     * </ul>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Use try-with-resources to ensure the PreparedQuery and its underlying resources are closed.
-     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE status = ?")) {
-     *     List<User> activeUsers = query.setString(1, "ACTIVE").list(User.class);
-     *     // ...
-     * } catch (SQLException e) {
-     *     // Handle exceptions
+     * // Basic query execution with single result
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT * FROM users WHERE id = ?")) {
+     *     Optional<User> user = query.setLong(1, userId).findFirst(User.class);
+     *     if (user.isPresent()) {
+     *         System.out.println("Found: " + user.get().getName());
+     *     }
+     * }
+     *
+     * // Query with multiple parameters returning a list
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT * FROM orders WHERE customer_id = ? AND status = ? AND order_date > ?")) {
+     *     List<Order> orders = query
+     *         .setLong(1, customerId)
+     *         .setString(2, "PENDING")
+     *         .setDate(3, Date.valueOf(lastWeek))
+     *         .list(Order.class);
+     *
+     *     orders.forEach(order -> System.out.println("Order #" + order.getId()));
+     * }
+     *
+     * // Reusing the same PreparedQuery with different parameters
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT COUNT(*) FROM products WHERE category = ?")) {
+     *
+     *     long electronicsCount = query.setString(1, "Electronics")
+     *                                  .queryForSingleResult(Long.class)
+     *                                  .orElse(0L);
+     *
+     *     long clothingCount = query.setString(1, "Clothing")
+     *                               .queryForSingleResult(Long.class)
+     *                               .orElse(0L);
+     *
+     *     System.out.println("Electronics: " + electronicsCount);
+     *     System.out.println("Clothing: " + clothingCount);
+     * }
+     *
+     * // Stream processing for large result sets
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT * FROM transactions WHERE amount > ?")) {
+     *
+     *     Stream<Transaction> stream = query.setDouble(1, 1000.0).stream(Transaction.class);
+     *
+     *     double totalAmount = stream
+     *         .filter(t -> t.getStatus().equals("COMPLETED"))
+     *         .mapToDouble(Transaction::getAmount)
+     *         .sum();
+     *
+     *     System.out.println("Total: " + totalAmount);
+     * }
+     *
+     * // Working with DataSet (column-oriented data structure)
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT name, email, age FROM users WHERE department = ?")) {
+     *     Dataset dataset = query.setString(1, "Engineering").query();
+     *     dataset.forEach(row -> {
+     *         System.out.println(row.get("name") + " - " + row.get("email"));
+     *     });
      * }
      * }</pre>
      *
-     * @param ds The {@link javax.sql.DataSource} to get the connection from.
-     * @param sql The SQL query to prepare.
-     * @return A new {@link PreparedQuery} instance.
-     * @throws IllegalArgumentException If {@code ds} or {@code sql} is null or empty.
-     * @throws SQLException If a database access error occurs during preparation.
+     * @param ds The {@link javax.sql.DataSource} to get the connection from, must not be {@code null}
+     * @param sql The SQL query to prepare with optional {@code ?} parameter placeholders, must not be {@code null} or empty
+     * @return A new {@link PreparedQuery} instance ready for parameter setting and execution
+     * @throws IllegalArgumentException If {@code ds} or {@code sql} is {@code null} or empty
+     * @throws SQLException If a database access error occurs during preparation
      * @see PreparedQuery
      * @see #prepareQuery(Connection, String)
+     * @see #executeQuery(javax.sql.DataSource, String, Object...)
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -4357,23 +4419,66 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL query using the provided DataSource and SQL string with optional parameters.
-     * If a transaction is started in the current thread, the Connection from the transaction will be used.
-     * 
+     * Executes a SQL query immediately with the provided parameters and returns all results as a {@link Dataset}.
+     * This is a convenience method for one-time query execution where the result set is loaded entirely into memory.
+     * For reusable queries or streaming large result sets, consider using {@link #prepareQuery(javax.sql.DataSource, String)} instead.
+     *
+     * <p>If a transaction is active in the current thread (started via {@link #beginTransaction(javax.sql.DataSource)}
+     * or Spring's transactional support), the transaction's Connection will be used. Otherwise, a new Connection is
+     * obtained from the DataSource and automatically released after query execution.</p>
+     *
+     * <p><b>Key Differences from prepareQuery():</b></p>
+     * <ul>
+     *   <li><b>executeQuery():</b> One-time execution, loads all results into memory, closes resources immediately</li>
+     *   <li><b>prepareQuery():</b> Reusable statement, supports streaming, requires manual resource cleanup</li>
+     * </ul>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset result = JdbcUtil.executeQuery(dataSource, 
-     *     "SELECT * FROM users WHERE age > ? AND city = ?", 
+     * // Simple query with parameters
+     * Dataset result = JdbcUtil.executeQuery(dataSource,
+     *     "SELECT * FROM users WHERE age > ? AND city = ?",
      *     18, "New York");
+     *
+     * result.forEach(row -> {
+     *     System.out.println(row.get("name") + " - " + row.get("email"));
+     * });
+     *
+     * // Query returning single value
+     * Dataset countResult = JdbcUtil.executeQuery(dataSource,
+     *     "SELECT COUNT(*) as total FROM orders WHERE status = ?",
+     *     "PENDING");
+     * long totalOrders = countResult.getRow(0).getLong("total");
+     *
+     * // Query with IN clause using multiple parameters
+     * Dataset products = JdbcUtil.executeQuery(dataSource,
+     *     "SELECT * FROM products WHERE category IN (?, ?, ?)",
+     *     "Electronics", "Books", "Clothing");
+     *
+     * // Iterate through results
+     * for (int i = 0; i < products.size(); i++) {
+     *     System.out.println(products.get(i, "product_name"));
+     * }
+     *
+     * // Query with no parameters
+     * Dataset allUsers = JdbcUtil.executeQuery(dataSource,
+     *     "SELECT id, name, email FROM users ORDER BY created_at DESC");
+     *
+     * // Working with column names
+     * List<String> columnNames = allUsers.columnNameList();
+     * columnNames.forEach(System.out::println);
      * }</pre>
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string to execute
-     * @param parameters Optional parameters for the SQL query
-     * @return A Dataset object containing the result of the query
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
-     * @throws SQLException If a SQL exception occurs while executing the query
+     * @param ds The {@link javax.sql.DataSource} to obtain a connection from, must not be {@code null}
+     * @param sql The SQL SELECT statement to execute with optional {@code ?} parameter placeholders, must not be {@code null} or empty
+     * @param parameters Variable number of parameters to bind to the SQL statement, matching the {@code ?} placeholders in order.
+     *                   Can be empty if the SQL has no parameters. Supports primitive types, Strings, Dates, and other JDBC-compatible types
+     * @return A {@link Dataset} object containing all query results loaded into memory with row and column access methods
+     * @throws IllegalArgumentException If {@code ds} or {@code sql} is {@code null} or empty
+     * @throws SQLException If a database access error occurs, the SQL is invalid, or parameter types are incompatible
      * @see PreparedStatement#executeQuery()
+     * @see #prepareQuery(javax.sql.DataSource, String)
+     * @see Dataset
      */
     public static Dataset executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
             throws IllegalArgumentException, SQLException {
@@ -4440,23 +4545,77 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL update using the provided DataSource and SQL string with optional parameters.
-     * This includes INSERT, UPDATE, DELETE, and DDL statements.
-     * 
+     * Executes a SQL data modification statement (INSERT, UPDATE, DELETE) or DDL statement immediately
+     * with the provided parameters and returns the number of affected rows.
+     * This is a convenience method for one-time update execution. For reusable update statements,
+     * consider using {@link #prepareQuery(javax.sql.DataSource, String)} instead.
+     *
+     * <p>If a transaction is active in the current thread (started via {@link #beginTransaction(javax.sql.DataSource)}
+     * or Spring's transactional support), the transaction's Connection will be used. Otherwise, a new Connection is
+     * obtained from the DataSource and automatically released after update execution.</p>
+     *
+     * <p><b>Supported SQL Operations:</b></p>
+     * <ul>
+     *   <li><b>INSERT:</b> Adds new rows to a table</li>
+     *   <li><b>UPDATE:</b> Modifies existing rows based on WHERE conditions</li>
+     *   <li><b>DELETE:</b> Removes rows based on WHERE conditions</li>
+     *   <li><b>DDL:</b> Data Definition Language statements (CREATE, ALTER, DROP, etc.)</li>
+     * </ul>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int rowsUpdated = JdbcUtil.executeUpdate(dataSource, 
-     *     "UPDATE users SET status = ? WHERE last_login < ?", 
+     * // UPDATE: Modify existing records
+     * int rowsUpdated = JdbcUtil.executeUpdate(dataSource,
+     *     "UPDATE users SET status = ? WHERE last_login < ?",
      *     "INACTIVE", thirtyDaysAgo);
+     * System.out.println("Deactivated " + rowsUpdated + " users");
+     *
+     * // INSERT: Add new record
+     * int rowsInserted = JdbcUtil.executeUpdate(dataSource,
+     *     "INSERT INTO audit_log (user_id, action, timestamp) VALUES (?, ?, ?)",
+     *     userId, "LOGIN", new Timestamp(System.currentTimeMillis()));
+     *
+     * // DELETE: Remove records
+     * int rowsDeleted = JdbcUtil.executeUpdate(dataSource,
+     *     "DELETE FROM sessions WHERE expired_at < ?",
+     *     new Date(System.currentTimeMillis()));
+     *
+     * // UPDATE with multiple conditions
+     * int updated = JdbcUtil.executeUpdate(dataSource,
+     *     "UPDATE products SET price = price * ? WHERE category = ? AND stock > ?",
+     *     0.9, "Electronics", 100);
+     *
+     * // INSERT with multiple values
+     * int inserted = JdbcUtil.executeUpdate(dataSource,
+     *     "INSERT INTO user_preferences (user_id, theme, language, notifications) VALUES (?, ?, ?, ?)",
+     *     userId, "DARK", "en_US", true);
+     *
+     * // DELETE all records (use with caution!)
+     * int allDeleted = JdbcUtil.executeUpdate(dataSource,
+     *     "DELETE FROM temp_data");  // No parameters needed
+     *
+     * // Conditional update
+     * if (needsUpdate) {
+     *     int count = JdbcUtil.executeUpdate(dataSource,
+     *         "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ? AND quantity >= ?",
+     *         orderQuantity, productId, orderQuantity);
+     *
+     *     if (count == 0) {
+     *         throw new InsufficientInventoryException("Not enough stock");
+     *     }
+     * }
      * }</pre>
      *
-     * @param ds The DataSource to use for the update
-     * @param sql The SQL string to execute
-     * @param parameters Optional parameters for the SQL update
-     * @return The number of rows affected by the update
-     * @throws IllegalArgumentException If the DataSource or SQL string is null or empty
-     * @throws SQLException If a SQL exception occurs while executing the update
+     * @param ds The {@link javax.sql.DataSource} to obtain a connection from, must not be {@code null}
+     * @param sql The SQL INSERT, UPDATE, DELETE, or DDL statement with optional {@code ?} parameter placeholders,
+     *            must not be {@code null} or empty
+     * @param parameters Variable number of parameters to bind to the SQL statement, matching the {@code ?} placeholders in order.
+     *                   Can be empty if the SQL has no parameters. Supports primitive types, Strings, Dates, and other JDBC-compatible types
+     * @return The number of rows affected by the statement. Returns 0 for DDL statements or when no rows match the WHERE clause
+     * @throws IllegalArgumentException If {@code ds} or {@code sql} is {@code null} or empty
+     * @throws SQLException If a database access error occurs, the SQL is invalid, or parameter types are incompatible
      * @see PreparedStatement#executeUpdate()
+     * @see #prepareQuery(javax.sql.DataSource, String)
      */
     public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(ds, cs.dataSource);
@@ -8620,25 +8779,96 @@ public final class JdbcUtil {
     }
 
     /**
-     * Begins a new transaction with default isolation level for the given DataSource.
-     * The transaction must be explicitly committed or rolled back.
+     * Begins a new database transaction with the default isolation level for the specified DataSource.
+     * All subsequent JDBC operations in the same thread using this DataSource will participate in this transaction
+     * until it is committed or rolled back. This provides ACID guarantees for multi-statement operations.
+     *
+     * <p>The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back
+     * via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes. Always use a try-finally
+     * block to ensure the transaction is properly completed even if exceptions occur.</p>
+     *
+     * <p><b>Transaction Scope and Sharing:</b></p>
+     * <p>The transaction is bound to the current thread and DataSource. All JDBC operations executed through
+     * methods like {@code prepareQuery()}, {@code executeUpdate()}, etc. in the same thread with the same
+     * DataSource will automatically use this transaction's connection. This includes operations in called methods,
+     * enabling transactional behavior across method boundaries.</p>
+     *
+     * <p><b>Spring Integration:</b></p>
+     * <p>If Spring's transaction management is active, JdbcUtil will automatically participate in the Spring
+     * transaction instead of creating a new one. This ensures seamless integration with Spring's {@code @Transactional}
+     * annotation and declarative transaction management.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Basic transaction usage
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
-     *     // Perform database operations
-     *     preparedQuery.executeUpdate();
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)",
+     *         customerId, total);
+     *
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
+     *         quantity, productId);
+     *
      *     tran.commit();
      * } finally {
      *     tran.rollbackIfNotCommitted();
      * }
+     *
+     * // Transaction with conditional rollback
+     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     int updatedRows = JdbcUtil.executeUpdate(dataSource,
+     *         "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
+     *         amount, accountId, amount);
+     *
+     *     if (updatedRows == 0) {
+     *         throw new InsufficientFundsException("Insufficient balance");
+     *     }
+     *
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)",
+     *         accountId, amount, "DEBIT");
+     *
+     *     tran.commit();
+     * } catch (Exception e) {
+     *     // Transaction automatically rolled back in finally block
+     *     logger.error("Transaction failed: " + e.getMessage());
+     *     throw e;
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     *
+     * // Transaction shared across method calls
+     * public void processOrder(Order order) {
+     *     SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     *     try {
+     *         createOrder(order);      // Shares this transaction
+     *         updateInventory(order);  // Shares this transaction
+     *         sendNotification(order); // Shares this transaction
+     *         tran.commit();
+     *     } finally {
+     *         tran.rollbackIfNotCommitted();
+     *     }
+     * }
+     *
+     * private void createOrder(Order order) {
+     *     // This automatically uses the transaction from processOrder()
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)",
+     *         order.getId(), order.getCustomerId(), order.getTotal());
+     * }
      * }</pre>
      *
-     * @param dataSource the DataSource for which to begin the transaction
-     * @return a SQLTransaction object representing the new transaction
-     * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
+     * @param dataSource the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
+     * @return a {@link SQLTransaction} object representing the new transaction that must be committed or rolled back
+     * @throws UncheckedSQLException if a database access error occurs while beginning the transaction
+     * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
+     * @see SQLTransaction#commit()
+     * @see SQLTransaction#rollback()
+     * @see SQLTransaction#rollbackIfNotCommitted()
      */
     public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException {
         return beginTransaction(dataSource, IsolationLevel.DEFAULT);
@@ -9513,19 +9743,126 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a DAO instance for the specified interface and DataSource.
-     * Uses the default async executor for asynchronous operations.
+     * Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.
+     * This method generates a runtime proxy that implements all methods in the DAO interface, automatically
+     * handling CRUD operations, query execution, and transaction management based on method signatures and annotations.
+     *
+     * <p>The created DAO provides type-safe database access with automatic SQL generation for standard CRUD operations,
+     * custom query support via annotations or SQL files, and seamless integration with the JdbcUtil transaction management.
+     * All CRUD operations are automatically implemented based on the entity class and its annotations.</p>
+     *
+     * <p><b>Key Features of Generated DAOs:</b></p>
+     * <ul>
+     *   <li>Automatic CRUD operations (save, update, delete, findById, list, etc.)</li>
+     *   <li>Custom query methods defined by annotations or external SQL files</li>
+     *   <li>Batch operation support for high-throughput processing</li>
+     *   <li>Transaction-aware operations that participate in active transactions</li>
+     *   <li>Type-safe parameter binding and result mapping</li>
+     *   <li>Asynchronous operation support with CompletableFuture return types</li>
+     *   <li>Stream-based result processing for large datasets</li>
+     * </ul>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Define a DAO interface extending CrudDao or Dao
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+     *     // Automatic CRUD methods are inherited:
+     *     // - save(User user)
+     *     // - batchSave(Collection<User> users)
+     *     // - getsById(Long id)
+     *     // - update(User user)
+     *     // - deleteById(Long id)
+     *     // - list()
+     *     // - findFirst(Condition where)
+     *
+     *     // Custom query methods
+     *     @Select("SELECT * FROM users WHERE email = ?")
+     *     Optional<User> findByEmail(String email);
+     *
+     *     @Select("SELECT * FROM users WHERE status = ? ORDER BY created_at DESC")
+     *     List<User> findByStatus(String status);
+     *
+     *     @NamedSelect("SELECT * FROM users WHERE age >= :minAge AND city = :city")
+     *     Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city);
+     * }
+     *
+     * // Create and use the DAO
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
-     * List<User> users = userDao.findAll();
+     *
+     * // Use inherited CRUD operations
+     * User newUser = new User("john@example.com", "John Doe");
+     * userDao.save(newUser);
+     *
+     * // Use custom query methods
+     * Optional<User> user = userDao.findByEmail("john@example.com");
+     * if (user.isPresent()) {
+     *     System.out.println("Found: " + user.get().getName());
+     * }
+     *
+     * // List all active users
+     * List<User> activeUsers = userDao.findByStatus("ACTIVE");
+     *
+     * // Stream results for large datasets
+     * try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) {
+     *     long count = stream
+     *         .filter(u -> u.getEmail().endsWith("@company.com"))
+     *         .count();
+     * }
+     *
+     * // Batch operations
+     * List<User> users = Arrays.asList(user1, user2, user3);
+     * userDao.batchSave(users);
+     *
+     * // Update operations
+     * user.get().setStatus("INACTIVE");
+     * userDao.update(user.get());
+     *
+     * // Delete operations
+     * userDao.deleteById(userId);
      * }</pre>
      *
-     * @param <TD> the type of the DAO
-     * @param daoInterface the DAO interface class to implement
-     * @param ds the DataSource to use for database operations
-     * @return a DAO instance implementing the specified interface
+     * <p><b>Advanced DAO Features:</b></p>
+     * <pre>{@code
+     * // Define a DAO with complex queries
+     * public interface OrderDao extends CrudDao<Order, Long, SQLBuilder.PSC, OrderDao> {
+     *     // Aggregate queries
+     *     @Select("SELECT COUNT(*) FROM orders WHERE status = ?")
+     *     long countByStatus(String status);
+     *
+     *     @Select("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?")
+     *     Optional<BigDecimal> getTotalByCustomer(Long customerId);
+     *
+     *     // Complex joins (SQL defined externally in SQL mapper file)
+     *     @NamedSelect("findOrdersWithCustomerDetails")
+     *     List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start);
+     *
+     *     // Async operations
+     *     @Select("SELECT * FROM orders WHERE id = ?")
+     *     CompletableFuture<Optional<Order>> findByIdAsync(Long id);
+     * }
+     *
+     * OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource);
+     *
+     * // Use aggregate queries
+     * long pendingCount = orderDao.countByStatus("PENDING");
+     *
+     * // Async operations
+     * CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId);
+     * future.thenAccept(order -> {
+     *     order.ifPresent(o -> System.out.println("Order: " + o.getId()));
+     * });
+     * }</pre>
+     *
+     * @param <TD> the type parameter of the DAO interface, must extend {@link Dao}
+     * @param daoInterface the DAO interface class to implement, must not be {@code null}. The interface should
+     *                     extend {@link Dao} or {@link CrudDao} and define the entity type and ID type
+     * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
+     * @return a dynamically generated DAO instance implementing the specified interface with full CRUD capabilities
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
+     * @see Dao
+     * @see CrudDao
+     * @see #createDao(Class, javax.sql.DataSource, SQLMapper)
+     * @see #createDao(Class, javax.sql.DataSource, Executor)
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {

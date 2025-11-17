@@ -28,8 +28,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * This annotation provides fine-grained control over caching behavior, including
  * time-to-live, idle timeout, size restrictions, and serialization strategies.
  * 
- * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may undergo changes.
- * Consider carefully whether caching at the DAO layer is appropriate for your use case,
+ * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
+ *
+ * <p>Consider carefully whether caching at the DAO layer is appropriate for your use case,
  * as it can lead to stale data issues if not managed properly.</p>
  * 
  * <p>The cache key is automatically generated based on the method name and parameters.
@@ -100,7 +101,7 @@ public @interface CacheResult {
      * After this time expires, the entry is removed from cache and the next
      * request will execute the query again.
      * 
-     * <p>Common time values:</p>
+     * <p>Common time duration values:</p>
      * <ul>
      *   <li>5 minutes: {@code 300000}</li>
      *   <li>30 minutes: {@code 1800000}</li>
@@ -213,17 +214,13 @@ public @interface CacheResult {
     String transfer() default "none";
 
     /**
-     * Specifies method name patterns to apply caching when used at type level.
-     * Only methods matching these patterns will have caching enabled.
-     * 
-     * <p>Patterns can be:</p>
-     * <ul>
-     *   <li>Exact method names (case-insensitive contains match)</li>
-     *   <li>Regular expressions</li>
-     *   <li>Multiple patterns are joined with OR logic</li>
-     * </ul>
-     * 
-     * <p>This attribute is ignored when the annotation is applied at method level.</p>
+     * Specifies filter patterns for methods when the annotation is applied at the class level.
+     * Only methods whose names match at least one of these patterns will be cached.
+     *
+     * <p>The patterns support case-insensitive substring matching and regular expressions.
+     * Multiple patterns are combined with OR logic.</p>
+     *
+     * <p>This filter is ignored when the annotation is applied at the method level.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

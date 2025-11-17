@@ -221,15 +221,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * This method is not supported in NoUpdateDao as it allows custom statement creation
-     * which could potentially bypass the read-only restrictions.
-     * 
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
+     *
      * @param query the SQL query string
      * @param stmtCreator custom statement creator function
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown to prevent usage
-     * @deprecated This operation is not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as custom statement creation operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @NonDBOperation
@@ -375,15 +375,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * This method is not supported in NoUpdateDao as it allows custom statement creation
-     * which could potentially bypass the read-only restrictions.
-     * 
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
+     *
      * @param namedQuery the SQL query string with named parameters
      * @param stmtCreator custom statement creator function
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown to prevent usage
-     * @deprecated This operation is not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as custom statement creation operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @NonDBOperation
@@ -531,15 +531,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * This method is not supported in NoUpdateDao as it allows custom statement creation
-     * which could potentially bypass the read-only restrictions.
-     * 
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
+     *
      * @param namedQuery the pre-parsed SQL query object
      * @param stmtCreator custom statement creator function
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown to prevent usage
-     * @deprecated This operation is not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as custom statement creation operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @NonDBOperation
@@ -550,14 +550,14 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Callable queries (stored procedures) are not supported in NoUpdateDao as they
-     * could potentially perform update or delete operations within the database.
-     * 
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
+     *
      * @param query the stored procedure call string
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown to prevent usage
-     * @deprecated Stored procedures are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as callable query operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @NonDBOperation
@@ -567,15 +567,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Callable queries (stored procedures) with custom statement creators are not supported
-     * in NoUpdateDao as they could potentially perform update or delete operations.
-     * 
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
+     *
      * @param query the stored procedure call string
      * @param stmtCreator custom statement creator function
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown to prevent usage
-     * @deprecated Stored procedures are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as callable query operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @NonDBOperation
@@ -586,18 +586,16 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Update operations are not supported in NoUpdateDao. This method will always
-     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
-     * 
-     * <p>If you need to perform updates, use a regular DAO implementation instead.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param propName the name of the property to update
      * @param propValue the new value for the property
      * @param cond the condition to identify records to update
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as updates are not allowed
-     * @deprecated Update operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
@@ -606,17 +604,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Update operations are not supported in NoUpdateDao. This method will always
-     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
-     * 
-     * <p>If you need to perform updates, use a regular DAO implementation instead.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param updateProps a map of property names to their new values
      * @param cond the condition to identify records to update
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as updates are not allowed
-     * @deprecated Update operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -625,17 +621,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Update operations are not supported in NoUpdateDao. This method will always
-     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
-     * 
-     * <p>If you need to perform updates, use a regular DAO implementation instead.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity containing values to update
      * @param cond the condition to identify records to update
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as updates are not allowed
-     * @deprecated Update operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -644,18 +638,16 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Update operations are not supported in NoUpdateDao. This method will always
-     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
-     * 
-     * <p>If you need to perform updates, use a regular DAO implementation instead.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity containing values to update
      * @param propNamesToUpdate collection of property names to update from the entity
      * @param cond the condition to identify records to update
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as updates are not allowed
-     * @deprecated Update operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -664,19 +656,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Upsert (INSERT or UPDATE) operations are not supported in NoUpdateDao. This method
-     * will always throw an UnsupportedOperationException because it involves UPDATE operations
-     * which are prohibited in this read-only DAO.
-     * 
-     * <p>If you need to perform upserts, use a regular DAO implementation instead.
-     * For insert-only operations, use the standard insert methods.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity to be upserted
      * @param uniquePropNamesForQuery the list of property names to determine uniqueness
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as upserts involve updates
-     * @deprecated Upsert operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as upsert operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -685,19 +673,15 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Upsert (INSERT or UPDATE) operations are not supported in NoUpdateDao. This method
-     * will always throw an UnsupportedOperationException because it involves UPDATE operations
-     * which are prohibited in this read-only DAO.
-     * 
-     * <p>If you need to perform upserts, use a regular DAO implementation instead.
-     * For insert-only operations, use the standard insert methods.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity to be upserted
      * @param cond the condition to check if the record exists
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as upserts involve updates
-     * @deprecated Upsert operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as upsert operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -706,18 +690,14 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
-     * Delete operations are not supported in NoUpdateDao. This method will always
-     * throw an UnsupportedOperationException to maintain the read-only nature of this DAO.
-     * 
-     * <p>NoUpdateDao is designed for scenarios where data integrity must be preserved
-     * and existing records should never be deleted. If you need to perform deletions,
-     * use a regular DAO implementation instead.
+     * This operation is not supported in no-update DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param cond the condition to identify records to delete
-     * @return never returns, always throws exception
-     * @throws SQLException never thrown, included for interface compatibility
-     * @throws UnsupportedOperationException always thrown as deletions are not allowed
-     * @deprecated Delete operations are not supported in NoUpdateDao
+     * @return never returns normally
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override

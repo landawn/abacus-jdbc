@@ -76,7 +76,7 @@ public @interface BindList {
 
     /**
      * Specifies the parameter name to be used in the SQL query.
-     * If not specified (empty string), the actual parameter name will be used.
+     * If not specified (empty string), the parameter name will be used.
      * 
      * <p>The parameter should be referenced in the SQL using curly braces: {@code {paramName}}</p>
      * 
@@ -91,15 +91,15 @@ public @interface BindList {
      * List<User> find(@BindList List<Long> ids);
      * }</pre>
      *
-     * @return the parameter name, or empty string to use the actual parameter name
+     * @return the parameter name, or empty string if using the actual parameter name
      */
     String value() default "";
 
     /**
      * Specifies a prefix to add before the parameter placeholder when the collection is non-empty.
      * This is useful for conditionally including SQL fragments based on whether the collection has values.
-     * 
-     * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.
+     *
+     * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
      * Consider using {@link Define} annotation for complex dynamic SQL construction.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -124,8 +124,8 @@ public @interface BindList {
     /**
      * Specifies a suffix to add after the parameter placeholder when the collection is non-empty.
      * This is used in conjunction with {@link #prefixForNonEmpty()} to wrap the parameter placeholders.
-     * 
-     * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.
+     *
+     * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may undergo changes in future versions.
      * Consider using {@link Define} annotation for complex dynamic SQL construction.</p>
      * 
      * <p><b>Usage Examples:</b></p>

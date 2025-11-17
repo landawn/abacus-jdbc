@@ -96,15 +96,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param query the SQL query string
      * @param generateKeys true to retrieve auto-generated keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -114,15 +114,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param query the SQL query string
      * @param returnColumnIndexes an array of column indexes for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -132,15 +132,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param query the SQL query string
      * @param returnColumnNames an array of column names for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -169,15 +169,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param generateKeys true to retrieve auto-generated keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -187,15 +187,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -205,15 +205,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnNames an array of column names for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -241,15 +241,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param generateKeys true to retrieve auto-generated keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -259,15 +259,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -277,15 +277,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnNames an array of column names for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as only SELECT queries are supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as key generation operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
@@ -295,13 +295,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave the entity to save
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -310,14 +310,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave the entity to save
      * @param propNamesToSave collection of property names to save
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -326,14 +326,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSQL the named SQL insert statement
      * @param entityToSave the entity to save
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -342,13 +342,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave collection of entities to save
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -357,14 +357,15 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave collection of entities to save
-     * @param batchSize the batch size for batch execution
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -373,14 +374,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave collection of entities to save
      * @param propNamesToSave collection of property names to save
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -390,15 +391,16 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave collection of entities to save
      * @param propNamesToSave collection of property names to save
-     * @param batchSize the batch size for batch execution
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -408,14 +410,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSQL the named SQL insert statement
      * @param entitiesToSave collection of entities to save
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -424,15 +426,16 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * This operation is not supported in read-only mode.
+     * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSQL the named SQL insert statement
      * @param entitiesToSave collection of entities to save
-     * @param batchSize the batch size for batch execution
-     * @throws SQLException never thrown due to UnsupportedOperationException
-     * @throws UnsupportedOperationException always thrown as saves are not supported
-     * @deprecated This operation is not supported in read-only mode
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
+     * @throws SQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as save operations are not supported
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override

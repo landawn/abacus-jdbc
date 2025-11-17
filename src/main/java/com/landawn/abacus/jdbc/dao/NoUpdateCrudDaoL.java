@@ -95,7 +95,7 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
         extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**
-     * This operation is not supported for no-update DAOs.
+     * This operation is not supported in no-update DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param propName the property name to update
@@ -104,7 +104,7 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported for no-update DAOs
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -113,7 +113,7 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
     }
 
     /**
-     * This operation is not supported for no-update DAOs.
+     * This operation is not supported in no-update DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param updateProps a map of property names to their new values
@@ -121,7 +121,7 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported for no-update DAOs
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -130,14 +130,14 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
     }
 
     /**
-     * This operation is not supported for no-update DAOs.
+     * This operation is not supported in no-update DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param id the primitive long ID of the entity to delete
      * @return never returns normally
      * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported for no-update DAOs
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override

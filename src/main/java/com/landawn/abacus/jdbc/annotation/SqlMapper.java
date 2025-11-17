@@ -78,9 +78,8 @@ public @interface SqlMapper {
     /**
      * Specifies the path to the SQL mapper XML file.
      * The path is relative to the classpath root and should include the file extension.
-     * 
-     * <p>If not specified (empty string), the framework may look for a default mapper file
-     * based on the DAO interface name and package.</p>
+     *
+     * <p>If not specified (empty string), the default mapper file location will be used.</p>
      * 
      * <p>Common conventions:</p>
      * <ul>
@@ -97,7 +96,7 @@ public @interface SqlMapper {
      * @SqlMapper("")                             // Use default location
      * }</pre>
      *
-     * @return the classpath-relative path to the SQL mapper XML file, or empty string for default
+     * @return the classpath-relative path to the SQL mapper XML file, or empty string if using default location
      */
     String value() default "";
 }

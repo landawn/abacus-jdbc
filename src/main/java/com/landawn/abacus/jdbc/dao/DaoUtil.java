@@ -56,17 +56,79 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.function.Function;
 
+/**
+ * Internal utility class providing helper methods for DAO operations.
+ * <p>
+ * This class contains static utility methods used internally by the DAO framework to support
+ * various operations including:
+ * <ul>
+ *   <li>ID extraction from entities (single and composite IDs)</li>
+ *   <li>DAO type casting and validation</li>
+ *   <li>Asynchronous operation completion and result aggregation</li>
+ *   <li>Query preparation and SQL type detection</li>
+ *   <li>Join entity information retrieval</li>
+ * </ul>
+ * </p>
+ * <p>
+ * This class is marked as {@link Internal} and is not intended for direct use by application code.
+ * It is designed to support the internal implementation of DAO interfaces and should only be
+ * used by the framework itself.
+ * </p>
+ *
+ * @see Dao
+ * @see CrudDao
+ * @see UncheckedDao
+ * @see UncheckedCrudDao
+ */
 @Internal
 final class DaoUtil {
     private DaoUtil() {
         // singleton.
     }
 
+    /**
+     * A consumer that configures a PreparedStatement for handling large query results efficiently.
+     * Sets the fetch direction to FETCH_FORWARD and fetch size to the default for big results.
+     */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
         stmt.setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     };
 
+    /**
+     * Extracts the ID value(s) from an entity instance.
+     * <p>
+     * If the entity has a single ID property, returns the value directly.
+     * If the entity has a composite ID (multiple ID properties), returns a {@link Seid} instance
+     * containing all ID property values.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Single ID property
+     * User user = new User();
+     * user.setId(123L);
+     * List<String> idPropNames = Arrays.asList("id");
+     * Long id = DaoUtil.extractId(user, idPropNames, userBeanInfo);
+     * // id = 123L
+     *
+     * // Composite ID (multiple properties)
+     * OrderLine orderLine = new OrderLine();
+     * orderLine.setOrderId(100);
+     * orderLine.setLineNumber(5);
+     * List<String> idPropNames = Arrays.asList("orderId", "lineNumber");
+     * Seid compositeId = DaoUtil.extractId(orderLine, idPropNames, orderLineBeanInfo);
+     * // compositeId contains both orderId=100 and lineNumber=5
+     * }</pre>
+     *
+     * @param <T> the entity type
+     * @param <ID> the ID type (either a simple type or {@link Seid} for composite IDs)
+     * @param entity the entity instance from which to extract the ID. Must not be {@code null}
+     * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
+     * @param entityInfo the bean information for the entity class
+     * @return the extracted ID value (simple value for single ID, {@link Seid} for composite ID)
+     * @throws IllegalArgumentException if entity is {@code null}
+     */
     @SuppressWarnings("deprecation")
     static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
         N.checkArgNotNull(entity, "entity");
@@ -84,6 +146,36 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * Creates a function that extracts ID value(s) from entity instances.
+     * <p>
+     * This method returns a reusable function that can extract IDs from multiple entities.
+     * For single ID properties, it returns the value directly. For composite IDs, it returns
+     * a {@link Seid} instance containing all ID property values.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Create an ID extractor for single ID
+     * List<String> idPropNames = Arrays.asList("id");
+     * Function<User, Long> idExtractor = DaoUtil.createIdExtractor(idPropNames, userBeanInfo);
+     *
+     * // Use the extractor on multiple entities
+     * List<User> users = Arrays.asList(user1, user2, user3);
+     * List<Long> ids = users.stream().map(idExtractor).collect(Collectors.toList());
+     *
+     * // Create an extractor for composite ID
+     * List<String> compositeIdPropNames = Arrays.asList("orderId", "lineNumber");
+     * Function<OrderLine, Seid> compositeIdExtractor = DaoUtil.createIdExtractor(compositeIdPropNames, orderLineBeanInfo);
+     * Seid id = compositeIdExtractor.apply(orderLine);
+     * }</pre>
+     *
+     * @param <T> the entity type
+     * @param <ID> the ID type (either a simple type or {@link Seid} for composite IDs)
+     * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
+     * @param entityInfo the bean information for the entity class
+     * @return a function that extracts ID values from entities
+     */
     @SuppressWarnings("deprecation")
     static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo) {
         if (idPropNameList.size() == 1) {
@@ -105,6 +197,34 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * Ensures that ID properties are included in the set of properties to be selected for refresh operations.
+     * <p>
+     * When refreshing an entity, the ID properties must always be included in the SELECT statement
+     * to properly identify the entity. This method checks if all ID properties are present in the
+     * requested properties to refresh, and if not, creates a new collection that includes them.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // ID properties already included - returns the same collection
+     * Collection<String> propsToRefresh = Arrays.asList("id", "name", "email");
+     * List<String> idProps = Arrays.asList("id");
+     * Collection<String> result = DaoUtil.getRefreshSelectPropNames(propsToRefresh, idProps);
+     * // result == propsToRefresh (same reference)
+     *
+     * // ID properties not included - creates new collection with IDs added
+     * Collection<String> propsToRefresh = Arrays.asList("name", "email");
+     * List<String> idProps = Arrays.asList("id");
+     * Collection<String> result = DaoUtil.getRefreshSelectPropNames(propsToRefresh, idProps);
+     * // result contains: "name", "email", "id"
+     * }</pre>
+     *
+     * @param propNamesToRefresh the collection of property names to refresh
+     * @param idPropNameList the list of ID property names that must be included
+     * @return the original collection if it contains all ID properties, otherwise a new collection
+     *         containing both the requested properties and all ID properties
+     */
     static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
         if (propNamesToRefresh.containsAll(idPropNameList)) {
             return propNamesToRefresh;
@@ -115,6 +235,35 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * Casts a {@link CrudJoinEntityHelper} to a {@link CrudDao} instance.
+     * <p>
+     * This method is used internally to ensure type safety when working with DAO instances
+     * that implement both CrudJoinEntityHelper and CrudDao interfaces. It validates that
+     * the provided DAO actually extends CrudDao before performing the cast.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Typical usage in internal DAO operations
+     * class UserDaoImpl implements CrudDao<User, Long, PSC, UserDaoImpl>,
+     *                              CrudJoinEntityHelper<User, Long, PSC, UserDaoImpl> {
+     *     // ... implementation
+     * }
+     *
+     * UserDaoImpl dao = new UserDaoImpl();
+     * CrudDao<User, Long, PSC, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
+     * // Successfully casts to CrudDao
+     * }</pre>
+     *
+     * @param <T> the entity type
+     * @param <ID> the ID type
+     * @param <SB> the SQL builder type
+     * @param <TD> the DAO type
+     * @param dao the CrudJoinEntityHelper instance to cast
+     * @return the DAO instance cast to CrudDao
+     * @throws UnsupportedOperationException if the DAO doesn't implement CrudDao interface
+     */
     static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> TD getCrudDao(final CrudJoinEntityHelper<T, ID, SB, TD> dao) {
         if (dao instanceof CrudDao) {
             return (TD) dao;
@@ -123,6 +272,34 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * Casts a {@link JoinEntityHelper} to a {@link Dao} instance.
+     * <p>
+     * This method is used internally to ensure type safety when working with DAO instances
+     * that implement both JoinEntityHelper and Dao interfaces. It validates that the provided
+     * DAO actually extends Dao before performing the cast.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Typical usage in internal DAO operations
+     * class ProductDaoImpl implements Dao<Product, PSC, ProductDaoImpl>,
+     *                                 JoinEntityHelper<Product, PSC, ProductDaoImpl> {
+     *     // ... implementation
+     * }
+     *
+     * ProductDaoImpl dao = new ProductDaoImpl();
+     * Dao<Product, PSC, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
+     * // Successfully casts to Dao
+     * }</pre>
+     *
+     * @param <T> the entity type
+     * @param <SB> the SQL builder type
+     * @param <TD> the DAO type
+     * @param dao the JoinEntityHelper instance to cast
+     * @return the DAO instance cast to Dao
+     * @throws UnsupportedOperationException if the DAO doesn't implement Dao interface
+     */
     static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD getDao(final JoinEntityHelper<T, SB, TD> dao) {
         if (dao instanceof Dao) {
             return (TD) dao;
@@ -131,6 +308,34 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * Casts an {@link UncheckedJoinEntityHelper} to an {@link UncheckedDao} instance.
+     * <p>
+     * This method is used internally to ensure type safety when working with unchecked DAO instances
+     * that implement both UncheckedJoinEntityHelper and UncheckedDao interfaces. It validates that
+     * the provided DAO actually extends UncheckedDao before performing the cast.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Typical usage in internal DAO operations
+     * class ProductDaoImpl implements UncheckedDao<Product, PSC, ProductDaoImpl>,
+     *                                 UncheckedJoinEntityHelper<Product, PSC, ProductDaoImpl> {
+     *     // ... implementation
+     * }
+     *
+     * ProductDaoImpl dao = new ProductDaoImpl();
+     * UncheckedDao<Product, PSC, ProductDaoImpl> daoInstance = DaoUtil.getDao(dao);
+     * // Successfully casts to UncheckedDao
+     * }</pre>
+     *
+     * @param <T> the entity type
+     * @param <SB> the SQL builder type
+     * @param <TD> the DAO type
+     * @param dao the UncheckedJoinEntityHelper instance to cast
+     * @return the DAO instance cast to UncheckedDao
+     * @throws UnsupportedOperationException if the DAO doesn't implement UncheckedDao interface
+     */
     static <T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> TD getDao(final UncheckedJoinEntityHelper<T, SB, TD> dao) {
         if (dao instanceof UncheckedDao) {
             return (TD) dao;
@@ -139,6 +344,35 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * Casts an {@link UncheckedCrudJoinEntityHelper} to an {@link UncheckedCrudDao} instance.
+     * <p>
+     * This method is used internally to ensure type safety when working with unchecked CRUD DAO instances
+     * that implement both UncheckedCrudJoinEntityHelper and UncheckedCrudDao interfaces. It validates that
+     * the provided DAO actually extends UncheckedCrudDao before performing the cast.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Typical usage in internal DAO operations
+     * class UserDaoImpl implements UncheckedCrudDao<User, Long, PSC, UserDaoImpl>,
+     *                              UncheckedCrudJoinEntityHelper<User, Long, PSC, UserDaoImpl> {
+     *     // ... implementation
+     * }
+     *
+     * UserDaoImpl dao = new UserDaoImpl();
+     * UncheckedCrudDao<User, Long, PSC, UserDaoImpl> crudDao = DaoUtil.getCrudDao(dao);
+     * // Successfully casts to UncheckedCrudDao
+     * }</pre>
+     *
+     * @param <T> the entity type
+     * @param <ID> the ID type
+     * @param <SB> the SQL builder type
+     * @param <TD> the DAO type
+     * @param dao the UncheckedCrudJoinEntityHelper instance to cast
+     * @return the DAO instance cast to UncheckedCrudDao
+     * @throws UnsupportedOperationException if the DAO doesn't implement UncheckedCrudDao interface
+     */
     static <T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>> TD getCrudDao(final UncheckedCrudJoinEntityHelper<T, ID, SB, TD> dao) {
         if (dao instanceof UncheckedCrudDao) {
             return (TD) dao;
@@ -147,6 +381,15 @@ final class DaoUtil {
         }
     }
 
+    /**
+     * A consumer that converts exceptions to {@link UncheckedSQLException}.
+     * <p>
+     * This consumer is used to handle exceptions in asynchronous operations, converting SQL-related
+     * exceptions into unchecked exceptions. If the exception is a {@link SQLException} or has a
+     * SQLException as its cause, it wraps it in an UncheckedSQLException. Otherwise, it converts
+     * the exception to a runtime exception.
+     * </p>
+     */
     static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> {
         if (e instanceof SQLException) {
             throw new UncheckedSQLException((SQLException) e);
@@ -157,6 +400,14 @@ final class DaoUtil {
         }
     };
 
+    /**
+     * A consumer that throws {@link SQLException} or converts exceptions to runtime exceptions.
+     * <p>
+     * This consumer is used to handle exceptions in synchronous operations. If the exception is a
+     * {@link SQLException} or has a SQLException as its cause, it re-throws the SQLException.
+     * Otherwise, it converts the exception to a runtime exception.
+     * </p>
+     */
     static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
         if (e instanceof SQLException) {
             throw (SQLException) e;
@@ -167,12 +418,63 @@ final class DaoUtil {
         }
     };
 
+    /**
+     * Completes all futures in the list and throws {@link UncheckedSQLException} if any fail.
+     * <p>
+     * This method waits for all futures to complete and checks for failures. If any future fails,
+     * the exception is converted to an UncheckedSQLException and thrown. This is typically used
+     * for batch operations where all operations must complete successfully.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Execute multiple async operations and wait for completion
+     * List<ContinuableFuture<Void>> futures = new ArrayList<>();
+     * futures.add(asyncExecutor.execute(() -> dao.insert(entity1)));
+     * futures.add(asyncExecutor.execute(() -> dao.insert(entity2)));
+     * futures.add(asyncExecutor.execute(() -> dao.insert(entity3)));
+     *
+     * // Wait for all operations to complete
+     * DaoUtil.uncheckedComplete(futures);
+     * // Throws UncheckedSQLException if any operation failed
+     * }</pre>
+     *
+     * @param futures the list of futures to complete. Must not be {@code null}
+     * @throws UncheckedSQLException if any future fails with a SQL-related exception
+     */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
         for (final ContinuableFuture<Void> f : futures) {
             f.gett().ifFailure(throwUncheckedSQLException);
         }
     }
 
+    /**
+     * Completes all futures in the list, sums their integer results, and throws {@link UncheckedSQLException} if any fail.
+     * <p>
+     * This method waits for all futures to complete, collecting their integer results and summing them.
+     * If any future fails, the exception is converted to an UncheckedSQLException and thrown.
+     * This is typically used for batch update/insert/delete operations where the return value indicates
+     * the number of affected rows.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Execute multiple async update operations and sum affected rows
+     * List<ContinuableFuture<Integer>> futures = new ArrayList<>();
+     * futures.add(asyncExecutor.execute(() -> dao.update(entity1)));
+     * futures.add(asyncExecutor.execute(() -> dao.update(entity2)));
+     * futures.add(asyncExecutor.execute(() -> dao.update(entity3)));
+     *
+     * // Wait for all operations and get total affected rows
+     * int totalAffectedRows = DaoUtil.uncheckedCompleteSum(futures);
+     * // totalAffectedRows = sum of all affected rows
+     * // Throws UncheckedSQLException if any operation failed
+     * }</pre>
+     *
+     * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}
+     * @return the sum of all integer results from the futures
+     * @throws UncheckedSQLException if any future fails with a SQL-related exception
+     */
     static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures) throws UncheckedSQLException {
         int result = 0;
         Result<Integer, Exception> ret = null;
@@ -190,12 +492,63 @@ final class DaoUtil {
         return result;
     }
 
+    /**
+     * Completes all futures in the list and throws {@link SQLException} if any fail.
+     * <p>
+     * This method waits for all futures to complete and checks for failures. If any future fails,
+     * the exception is thrown as a checked SQLException. This is the checked exception variant
+     * of {@link #uncheckedComplete(List)}, typically used in methods that declare SQLException.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Execute multiple async operations and wait for completion (checked exception)
+     * List<ContinuableFuture<Void>> futures = new ArrayList<>();
+     * futures.add(asyncExecutor.execute(() -> dao.insert(entity1)));
+     * futures.add(asyncExecutor.execute(() -> dao.insert(entity2)));
+     * futures.add(asyncExecutor.execute(() -> dao.insert(entity3)));
+     *
+     * // Wait for all operations to complete
+     * DaoUtil.complete(futures);
+     * // Throws SQLException if any operation failed
+     * }</pre>
+     *
+     * @param futures the list of futures to complete. Must not be {@code null}
+     * @throws SQLException if any future fails with a SQL-related exception
+     */
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
         for (final ContinuableFuture<Void> f : futures) {
             f.gett().ifFailure(throwSQLExceptionAction);
         }
     }
 
+    /**
+     * Completes all futures in the list, sums their integer results, and throws {@link SQLException} if any fail.
+     * <p>
+     * This method waits for all futures to complete, collecting their integer results and summing them.
+     * If any future fails, the exception is thrown as a checked SQLException. This is the checked
+     * exception variant of {@link #uncheckedCompleteSum(List)}, typically used for batch operations
+     * where the return value indicates the total number of affected rows.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Execute multiple async update operations and sum affected rows (checked exception)
+     * List<ContinuableFuture<Integer>> futures = new ArrayList<>();
+     * futures.add(asyncExecutor.execute(() -> dao.update(entity1)));
+     * futures.add(asyncExecutor.execute(() -> dao.update(entity2)));
+     * futures.add(asyncExecutor.execute(() -> dao.update(entity3)));
+     *
+     * // Wait for all operations and get total affected rows
+     * int totalAffectedRows = DaoUtil.completeSum(futures);
+     * // totalAffectedRows = sum of all affected rows
+     * // Throws SQLException if any operation failed
+     * }</pre>
+     *
+     * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}
+     * @return the sum of all integer results from the futures
+     * @throws SQLException if any future fails with a SQL-related exception
+     */
     static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
         int result = 0;
         Result<Integer, Exception> ret = null;
@@ -213,9 +566,53 @@ final class DaoUtil {
         return result;
     }
 
+    /**
+     * A cache of query preparation functions for DAO interfaces.
+     * <p>
+     * Maps each DAO class to a tuple containing two functions: one for creating PreparedQuery instances
+     * and one for creating NamedQuery instances. This cache avoids the overhead of reflection-based
+     * type analysis on every query preparation.
+     * </p>
+     */
     @SuppressWarnings("rawtypes")
     static final Map<Class<? extends Dao>, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
 
+    /**
+     * Retrieves or creates the query preparation functions for a given DAO instance.
+     * <p>
+     * This method returns a tuple containing two functions: one for creating PreparedQuery instances
+     * and one for creating NamedQuery instances. The functions are determined based on the SQLBuilder
+     * type parameter of the DAO interface (PSC, PAC, PLC, or PSB). The results are cached to avoid
+     * repeated reflection-based type analysis.
+     * </p>
+     * <p>
+     * The returned functions can be used to build and prepare SQL queries based on select property
+     * names and conditions.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get the query preparation functions for a DAO
+     * Dao<User, PSC, UserDao> userDao = ...;
+     * Tuple2<BiFunction, BiFunction> funcs = DaoUtil.getDaoPreparedQueryFunc(userDao);
+     *
+     * // Use the PreparedQuery function
+     * BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> preparedQueryFunc = funcs._1;
+     * Collection<String> selectProps = Arrays.asList("id", "name", "email");
+     * Condition condition = CF.eq("status", "active");
+     * PreparedQuery query = preparedQueryFunc.apply(selectProps, condition);
+     *
+     * // Use the NamedQuery function
+     * BiFunction<Collection<String>, Condition, NamedQuery, SQLException> namedQueryFunc = funcs._2;
+     * NamedQuery namedQuery = namedQueryFunc.apply(selectProps, condition);
+     * }</pre>
+     *
+     * @param dao the DAO instance for which to get query preparation functions
+     * @return a tuple containing two bi-functions: the first for creating PreparedQuery instances,
+     *         the second for creating NamedQuery instances
+     * @throws IllegalArgumentException if the DAO's SQLBuilder type parameter is not one of
+     *         PSC, PAC, PLC, or PSB
+     */
     @SuppressWarnings("rawtypes")
     static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
             final Dao dao) {
@@ -346,18 +743,146 @@ final class DaoUtil {
         return tp;
     }
 
+    /**
+     * Checks if the given SQL statement is a SELECT query.
+     * <p>
+     * This method performs a case-insensitive check to determine if the SQL statement starts
+     * with the "SELECT" keyword, allowing for leading whitespace. It checks for "select " prefix
+     * in lowercase, uppercase, and mixed case formats.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Valid SELECT queries
+     * boolean result1 = DaoUtil.isSelectQuery("SELECT * FROM users");
+     * // result1 = true
+     *
+     * boolean result2 = DaoUtil.isSelectQuery("select id, name from products");
+     * // result2 = true
+     *
+     * boolean result3 = DaoUtil.isSelectQuery("  SELECT count(*) FROM orders");
+     * // result3 = true
+     *
+     * // Non-SELECT queries
+     * boolean result4 = DaoUtil.isSelectQuery("UPDATE users SET name = 'John'");
+     * // result4 = false
+     *
+     * boolean result5 = DaoUtil.isSelectQuery("INSERT INTO users VALUES (1, 'John')");
+     * // result5 = false
+     * }</pre>
+     *
+     * @param sql the SQL statement to check. Must not be {@code null}
+     * @return {@code true} if the SQL is a SELECT query, {@code false} otherwise
+     * @throws UnsupportedOperationException if the operation is not supported
+     */
     static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
         return sql.startsWith("select ") || sql.startsWith("SELECT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "select ");
     }
 
+    /**
+     * Checks if the given SQL statement is an INSERT query.
+     * <p>
+     * This method performs a case-insensitive check to determine if the SQL statement starts
+     * with the "INSERT" keyword, allowing for leading whitespace. It checks for "insert " prefix
+     * in lowercase, uppercase, and mixed case formats.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Valid INSERT queries
+     * boolean result1 = DaoUtil.isInsertQuery("INSERT INTO users VALUES (1, 'John')");
+     * // result1 = true
+     *
+     * boolean result2 = DaoUtil.isInsertQuery("insert into products (name, price) values ('Widget', 9.99)");
+     * // result2 = true
+     *
+     * boolean result3 = DaoUtil.isInsertQuery("  INSERT INTO orders (order_id) VALUES (100)");
+     * // result3 = true
+     *
+     * // Non-INSERT queries
+     * boolean result4 = DaoUtil.isInsertQuery("UPDATE users SET name = 'John'");
+     * // result4 = false
+     *
+     * boolean result5 = DaoUtil.isInsertQuery("SELECT * FROM users");
+     * // result5 = false
+     * }</pre>
+     *
+     * @param sql the SQL statement to check. Must not be {@code null}
+     * @return {@code true} if the SQL is an INSERT query, {@code false} otherwise
+     * @throws UnsupportedOperationException if the operation is not supported
+     */
     static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {
         return sql.startsWith("insert ") || sql.startsWith("INSERT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "insert ");
     }
 
+    /**
+     * Retrieves the join information for an entity class.
+     * <p>
+     * This method delegates to {@link JoinInfo#getEntityJoinInfo(Class, Class, String)} to retrieve
+     * metadata about join relationships for the target entity. The returned map contains property names
+     * as keys and their corresponding {@link JoinInfo} objects as values, which describe how to join
+     * related entities.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get join info for a User entity with DAO interface
+     * Map<String, JoinInfo> joinInfo = DaoUtil.getEntityJoinInfo(
+     *     UserDao.class,
+     *     User.class,
+     *     "users"
+     * );
+     *
+     * // Access join information for specific properties
+     * JoinInfo addressJoinInfo = joinInfo.get("address");
+     * JoinInfo ordersJoinInfo = joinInfo.get("orders");
+     * }</pre>
+     *
+     * @param targetDaoInterface the DAO interface class for the target entity
+     * @param targetEntityClass the entity class to get join information for
+     * @param targetTableName the database table name for the entity
+     * @return a map of property names to their corresponding {@link JoinInfo} objects
+     */
     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
     }
 
+    /**
+     * Retrieves the property names for join entities of a specific type.
+     * <p>
+     * This method delegates to {@link JoinInfo#getJoinEntityPropNamesByType(Class, Class, String, Class)}
+     * to find all properties in the target entity class that represent joins to entities of the specified
+     * type. This is useful when you need to identify which properties should be populated when loading
+     * related entities of a particular type.
+     * </p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get property names for all Address-type join entities in User
+     * List<String> addressPropNames = DaoUtil.getJoinEntityPropNamesByType(
+     *     UserDao.class,
+     *     User.class,
+     *     "users",
+     *     Address.class
+     * );
+     * // Returns: ["homeAddress", "workAddress"] if User has multiple Address properties
+     *
+     * // Get property names for Order-type join entities
+     * List<String> orderPropNames = DaoUtil.getJoinEntityPropNamesByType(
+     *     UserDao.class,
+     *     User.class,
+     *     "users",
+     *     Order.class
+     * );
+     * // Returns: ["orders"] if User has a List<Order> property
+     * }</pre>
+     *
+     * @param targetDaoInterface the DAO interface class for the target entity
+     * @param targetEntityClass the entity class to search for join properties
+     * @param targetTableName the database table name for the target entity
+     * @param joinEntityClass the class of the join entity to find properties for
+     * @return a list of property names that represent joins to the specified entity type
+     */
     static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName,
             final Class<?> joinEntityClass) {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, targetTableName, joinEntityClass);

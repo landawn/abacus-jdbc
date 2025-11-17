@@ -44,7 +44,7 @@ import com.landawn.abacus.util.Strings;
  * to ensure exclusive access to shared resources, thereby preventing race conditions
  * and data corruption in distributed environments.
  *
- * <p>The locking mechanism relies on a database table with the following essential columns:
+ * <p>The locking mechanism relies on a database table with the following essential columns:</p>
  * <ul>
  *   <li>{@code host_name}: Identifies the host that currently holds the lock.</li>
  *   <li>{@code target}: The unique identifier of the resource being locked (enforced by a unique constraint).</li>
@@ -54,7 +54,6 @@ import com.landawn.abacus.util.Strings;
  *   <li>{@code update_time}: The last time the lock was refreshed or updated.</li>
  *   <li>{@code create_time}: The timestamp when the lock was initially acquired.</li>
  * </ul>
- * </p>
  *
  * <p>Key features and benefits:</p>
  * <ul>

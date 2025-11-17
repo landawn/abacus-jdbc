@@ -126,7 +126,7 @@ public @interface MergedById {
      * // OrderItem class should have @Id annotations on orderId and productId fields
      * }</pre>
      *
-     * @return comma-separated list of ID field names, or empty string for automatic detection
+     * @return comma-separated list of ID field names, or empty string if using automatic detection
      * @deprecated The framework automatically detects ID fields from entity metadata. Use {@code @MergedById} without the value parameter.
      */
     @Deprecated

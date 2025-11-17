@@ -77,7 +77,7 @@ public @interface DefineList {
 
     /**
      * Specifies the name of the SQL template variable to be replaced.
-     * If not specified (empty string), the parameter name will be used as the variable name.
+     * If not specified (empty string), the parameter name will be used.
      * 
      * <p>The variable should be referenced in the SQL template using curly braces: {@code {variableName}}</p>
      * 
@@ -92,7 +92,7 @@ public @interface DefineList {
      * List<User> findWithColumns(@DefineList List<String> columns);
      * }</pre>
      *
-     * @return the name of the SQL template variable, or empty string to use parameter name
+     * @return the name of the SQL template variable, or empty string if using the parameter name
      */
     String value() default "";
 }

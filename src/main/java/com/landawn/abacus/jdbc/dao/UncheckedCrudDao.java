@@ -212,7 +212,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -246,7 +247,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -281,7 +283,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param namedInsertSQL the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */

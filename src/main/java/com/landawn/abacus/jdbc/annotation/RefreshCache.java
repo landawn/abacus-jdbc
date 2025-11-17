@@ -104,16 +104,12 @@ public @interface RefreshCache {
     /**
      * Specifies filter patterns for methods when the annotation is applied at the class level.
      * Only methods whose names match at least one of these patterns will trigger cache refresh.
-     * 
-     * <p>The patterns support:</p>
-     * <ul>
-     *   <li>Case-insensitive substring matching</li>
-     *   <li>Regular expression matching</li>
-     * </ul>
-     * 
-     * <p>Multiple patterns are combined with OR logic - a method needs to match only one pattern.
-     * This filter is ignored when the annotation is applied at the method level.</p>
-     * 
+     *
+     * <p>The patterns support case-insensitive substring matching and regular expressions.
+     * Multiple patterns are combined with OR logic.</p>
+     *
+     * <p>This filter is ignored when the annotation is applied at the method level.</p>
+     *
      * <p>The default filter includes common data-modifying method names to automatically
      * refresh cache after operations that typically change data.</p>
      * 

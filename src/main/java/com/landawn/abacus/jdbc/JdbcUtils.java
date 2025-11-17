@@ -640,10 +640,10 @@ public final class JdbcUtils {
      * <pre>{@code
      * Dataset dataset = Dataset.of("name", "age").addRow("John", 25).addRow("Jane", 30);
      * String insertSQL = "INSERT INTO users (name, age, created_date) VALUES (?, ?, ?)";
-     * BiConsumer<PreparedQuery, Object[]> setter = (stmt, row) -> {
-     *     stmt.setString(1, (String) row[0]);
-     *     stmt.setInt(2, (Integer) row[1]);
-     *     stmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+     * Throwables.BiConsumer<PreparedQuery, Object[], SQLException> setter = (query, row) -> {
+     *     query.setString(1, (String) row[0]);
+     *     query.setInt(2, (Integer) row[1]);
+     *     query.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
      * };
      * int rowsImported = JdbcUtils.importData(dataset, connection, insertSQL, setter);
      * }</pre>

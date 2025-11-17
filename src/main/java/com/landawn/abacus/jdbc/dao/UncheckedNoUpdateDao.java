@@ -72,10 +72,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param propName the property name to update (ignored)
      * @param propValue the new value (ignored)
      * @param cond the condition to match records (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
@@ -89,10 +89,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      *
      * @param updateProps the properties to update (ignored)
      * @param cond the condition to match records (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -106,10 +106,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      *
      * @param entity the entity containing values to update (ignored)
      * @param cond the condition to match records (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -124,10 +124,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param entity the entity containing values to update (ignored)
      * @param propNamesToUpdate the properties to update (ignored)
      * @param cond the condition to match records (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -143,10 +143,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      *
      * @param entity the entity to upsert (ignored)
      * @param uniquePropNamesForQuery the unique properties for query (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -161,10 +161,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      *
      * @param entity the entity to upsert (ignored)
      * @param cond the condition to verify existence (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as update operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as update operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
@@ -177,10 +177,10 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * Always throws {@code UnsupportedOperationException}.
      *
      * @param cond the condition to match records to delete (ignored)
-     * @return never returns, always throws exception
-     * @throws UncheckedSQLException never thrown
-     * @throws UnsupportedOperationException always thrown as delete operations are not allowed
-     * @deprecated unsupported Operation
+     * @return never returns normally
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override

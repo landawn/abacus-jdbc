@@ -136,6 +136,74 @@ public final class JoinInfo {
 
     private final Map<Class<? extends SQLBuilder>, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSQLBuilderAndParamSetterForPool = new HashMap<>();
 
+    /**
+     * Constructs a new JoinInfo instance for managing join relationships between entities.
+     * This constructor performs comprehensive validation and initialization of join metadata,
+     * including parsing the {@code @JoinedBy} annotation, determining join type (one-to-many or many-to-many),
+     * and building optimized SQL statements for join operations.
+     *
+     * <p>The constructor processes the join configuration and creates cached SQL builders and parameter setters
+     * for different SQL builder types (PSC, PAC, PLC). It supports two main join patterns:</p>
+     * <ul>
+     *   <li><b>One-to-Many Join:</b> Direct foreign key relationship (e.g., "employeeId" or "employeeId = id")</li>
+     *   <li><b>Many-to-Many Join:</b> Relationship through intermediate table (e.g., "employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")</li>
+     * </ul>
+     *
+     * <p><b>Validation Performed:</b></p>
+     * <ul>
+     *   <li>Verifies the join property exists in the entity class</li>
+     *   <li>Ensures the property is annotated with {@code @JoinedBy}</li>
+     *   <li>Validates that the property is not annotated with {@code @Column} (join properties should not be persisted directly)</li>
+     *   <li>Checks that the referenced type is a valid entity class</li>
+     *   <li>Validates join column pairs and their type compatibility</li>
+     *   <li>For many-to-many joins, verifies the intermediate entity class exists and is properly configured</li>
+     * </ul>
+     *
+     * <p><b>Implementation Notes:</b></p>
+     * <ul>
+     *   <li>The constructor caches SQL builders for performance optimization</li>
+     *   <li>Key extractors are created for efficient entity grouping during join operations</li>
+     *   <li>Parameter setters are optimized based on the number of join columns</li>
+     *   <li>For many-to-many joins, both main entity and intermediate table SQL statements are generated</li>
+     * </ul>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // One-to-many join example
+     * // Entity: Employee has a property annotated with @JoinedBy("employeeId")
+     * JoinInfo oneToManyJoinInfo = new JoinInfo(
+     *     Employee.class,
+     *     "employees",
+     *     "projects",
+     *     false  // Don't allow null join values
+     * );
+     *
+     * // Many-to-many join example
+     * // Entity: Employee has a property annotated with
+     * // @JoinedBy("employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")
+     * JoinInfo manyToManyJoinInfo = new JoinInfo(
+     *     Employee.class,
+     *     "employees",
+     *     "projects",
+     *     true  // Allow null join values
+     * );
+     * }</pre>
+     *
+     * @param entityClass the entity class containing the join property, must not be {@code null}
+     * @param tableName the database table name for the entity, must not be {@code null}
+     * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}
+     * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are null or default;
+     *                                         if {@code false}, throws IllegalArgumentException for null/default join values.
+     *                                         This flag is typically controlled by the {@code @Config} annotation on the DAO class
+     * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid
+     * @throws IllegalArgumentException if the referenced entity type is not a valid bean/entity class
+     * @throws IllegalArgumentException if join column types are incompatible between source and referenced entities
+     * @throws IllegalArgumentException if the many-to-many intermediate entity class is not found or improperly configured
+     *
+     * @see JoinedBy
+     * @see com.landawn.abacus.jdbc.annotation.Config
+     * @see #isManyToManyJoin()
+     */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowJoiningByNullOrDefaultValue) {
         this.allowJoiningByNullOrDefaultValue = allowJoiningByNullOrDefaultValue;
         this.entityClass = entityClass;

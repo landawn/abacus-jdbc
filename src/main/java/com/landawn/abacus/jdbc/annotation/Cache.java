@@ -30,8 +30,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * This annotation is typically used for DAOs that interact with static or rarely-changing tables,
  * where caching can significantly improve performance by reducing database queries.
  * 
- * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and should be used with caution.
- * Implementing cache at the Data Access Layer (DAL) can lead to data consistency issues if not
+ * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
+ *
+ * <p>Implementing cache at the Data Access Layer (DAL) can lead to data consistency issues if not
  * managed properly. Consider whether caching should be implemented at a higher layer instead.</p>
  * 
  * <p>When applied to a DAO interface, all eligible query methods will have their results cached
@@ -92,8 +93,8 @@ public @interface Cache {
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY}. Set this based on
      * how frequently the underlying data changes. For static reference data, use longer delays;
      * for more dynamic data, use shorter delays.</p>
-     * 
-     * <p>Common time values:</p>
+     *
+     * <p>Common time duration values:</p>
      * <ul>
      *   <li>5 minutes: {@code 300000}</li>
      *   <li>30 minutes: {@code 1800000}</li>

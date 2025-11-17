@@ -91,7 +91,7 @@ public @interface MappedByKey {
      * Map<Long, User> getUserMap();
      * }</pre>
      *
-     * @return the field name to use as map key
+     * @return the field name to use as map key, or empty string if using {@link #keyName()} instead
      * @deprecated Use {@link #keyName()} for explicit and clear field name declaration
      */
     @Deprecated
@@ -127,7 +127,7 @@ public @interface MappedByKey {
      * Map<BigDecimal, Product> getProductsByDiscountPrice();
      * }</pre>
      *
-     * @return the field name to use as map key
+     * @return the field name to use as map key, or empty string if using the deprecated {@link #value()} instead
      */
     String keyName() default "";
 

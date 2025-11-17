@@ -756,7 +756,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param entitiesToSave the collection of entities to insert
-     * @param batchSize the number of entities to insert in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
@@ -779,7 +780,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param entitiesToSave the collection of entities to insert
      * @param propNamesToSave the property names to include
-     * @param batchSize the number of entities per batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
@@ -803,7 +805,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param namedInsertSQL the named INSERT SQL statement
      * @param entitiesToSave the entities providing parameter values
-     * @param batchSize the number of entities per batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
     @Beta

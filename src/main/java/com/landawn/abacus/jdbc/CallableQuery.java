@@ -150,8 +150,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter to set to {@code NULL}.
      * @param sqlType the SQL type code defined in {@link java.sql.Types}.
-     * @return {@code this} {@code CallableQuery} instance for method chaining.
-     * @throws SQLException if a database access error occurs or the parameter name is not valid.
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setNull(final String parameterName, final int sqlType) throws SQLException {
@@ -176,8 +176,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter to set to {@code NULL}.
      * @param sqlType the SQL type code from {@link java.sql.Types} (e.g., {@code STRUCT}, {@code REF}).
      * @param typeName the fully-qualified name of the SQL user-defined type.
-     * @return {@code this} {@code CallableQuery} instance for method chaining.
-     * @throws SQLException if a database access error occurs or the parameter name is not valid.
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setNull(final String parameterName, final int sqlType, final String typeName) throws SQLException {
@@ -187,8 +187,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a boolean value for the specified parameter.
-     * 
+     * Sets the specified named parameter to a boolean value.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setBoolean("isActive", true);
@@ -196,8 +196,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the boolean value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBoolean(final String parameterName, final boolean x) throws SQLException {
         cstmt.setBoolean(parameterName, x);
@@ -206,7 +206,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a Boolean value for the specified parameter.
+     * Sets the specified named parameter to a Boolean value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -217,8 +217,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Boolean value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBoolean(final String parameterName, final Boolean x) throws SQLException {
         if (x == null) {
@@ -231,7 +231,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a byte value for the specified parameter.
+     * Sets the specified named parameter to a byte value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -240,8 +240,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the byte value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setByte(final String parameterName, final byte x) throws SQLException {
         cstmt.setByte(parameterName, x);
@@ -250,7 +250,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a Byte value for the specified parameter.
+     * Sets the specified named parameter to a Byte value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -261,8 +261,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Byte value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setByte(final String parameterName, final Byte x) throws SQLException {
         if (x == null) {
@@ -275,7 +275,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a short value for the specified parameter.
+     * Sets the specified named parameter to a short value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -284,8 +284,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the short value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setShort(final String parameterName, final short x) throws SQLException {
         cstmt.setShort(parameterName, x);
@@ -294,7 +294,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a Short value for the specified parameter.
+     * Sets the specified named parameter to a Short value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -305,8 +305,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Short value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setShort(final String parameterName, final Short x) throws SQLException {
         if (x == null) {
@@ -319,7 +319,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets an int value for the specified parameter.
+     * Sets the specified named parameter to an int value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -328,8 +328,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the int value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setInt(final String parameterName, final int x) throws SQLException {
         cstmt.setInt(parameterName, x);
@@ -338,7 +338,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets an Integer value for the specified parameter.
+     * Sets the specified named parameter to an Integer value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -349,8 +349,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Integer value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setInt(final String parameterName, final Integer x) throws SQLException {
         if (x == null) {
@@ -363,7 +363,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a long value for the specified parameter.
+     * Sets the specified named parameter to a long value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -372,8 +372,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the long value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setLong(final String parameterName, final long x) throws SQLException {
         cstmt.setLong(parameterName, x);
@@ -382,7 +382,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a Long value for the specified parameter.
+     * Sets the specified named parameter to a Long value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -393,8 +393,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Long value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setLong(final String parameterName, final Long x) throws SQLException {
         if (x == null) {
@@ -419,8 +419,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the BigInteger value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @throws ArithmeticException if the BigInteger value is outside the range of a long
      */
     public CallableQuery setLong(final String parameterName, final BigInteger x) throws SQLException {
@@ -434,7 +434,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a float value for the specified parameter.
+     * Sets the specified named parameter to a float value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -443,8 +443,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the float value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setFloat(final String parameterName, final float x) throws SQLException {
         cstmt.setFloat(parameterName, x);
@@ -453,7 +453,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a Float value for the specified parameter.
+     * Sets the specified named parameter to a Float value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -464,8 +464,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Float value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setFloat(final String parameterName, final Float x) throws SQLException {
         if (x == null) {
@@ -478,7 +478,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a double value for the specified parameter.
+     * Sets the specified named parameter to a double value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -487,8 +487,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the double value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDouble(final String parameterName, final double x) throws SQLException {
         cstmt.setDouble(parameterName, x);
@@ -497,7 +497,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a Double value for the specified parameter.
+     * Sets the specified named parameter to a Double value.
      * If the value is {@code null}, the parameter will be set to SQL NULL.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -508,8 +508,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Double value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDouble(final String parameterName, final Double x) throws SQLException {
         if (x == null) {
@@ -522,7 +522,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a BigDecimal value for the specified parameter.
+     * Sets the specified named parameter to a BigDecimal value.
      * This method is typically used for precise decimal values like currency amounts.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -533,8 +533,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the BigDecimal value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBigDecimal(final String parameterName, final BigDecimal x) throws SQLException {
         cstmt.setBigDecimal(parameterName, x);
@@ -554,8 +554,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the BigInteger value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBigDecimal(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
@@ -580,8 +580,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the BigInteger value to set as string, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @see #setString(String, BigInteger)
      * @see #setBigDecimal(String, BigInteger)
      * @see #setLong(String, BigInteger)
@@ -592,7 +592,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a String value for the specified parameter.
+     * Sets the specified named parameter to a String value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -601,8 +601,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the String value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final String x) throws SQLException {
         cstmt.setString(parameterName, x);
@@ -621,8 +621,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the CharSequence value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final CharSequence x) throws SQLException {
         return setString(parameterName, x == null ? null : x.toString());
@@ -638,8 +638,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the char value to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final char x) throws SQLException {
         return setString(parameterName, String.valueOf(x));
@@ -657,8 +657,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Character value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final Character x) throws SQLException {
         return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
@@ -677,8 +677,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the BigInteger value to set as string, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final BigInteger x) throws SQLException {
         if (x == null) {
@@ -691,7 +691,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a national character string value for the specified parameter.
+     * Sets the specified named parameter to a national character string value.
      * This method is used for NCHAR, NVARCHAR, and LONGNVARCHAR parameters.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -701,8 +701,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the String value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setNString(final String parameterName, final String x) throws SQLException {
         cstmt.setNString(parameterName, x);
@@ -711,7 +711,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a java.sql.Date value for the specified parameter.
+     * Sets the specified named parameter to a java.sql.Date value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -721,8 +721,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.sql.Date value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDate(final String parameterName, final java.sql.Date x) throws SQLException {
         cstmt.setDate(parameterName, x);
@@ -742,8 +742,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.util.Date value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDate(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setDate(parameterName, x == null ? null : x instanceof java.sql.Date ? (java.sql.Date) x : new java.sql.Date(x.getTime()));
@@ -752,7 +752,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a LocalDate value for the specified parameter.
+     * Sets the specified named parameter to a LocalDate value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -762,8 +762,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the LocalDate value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setDate(final String parameterName, final LocalDate x) throws SQLException {
         setDate(parameterName, x == null ? null : java.sql.Date.valueOf(x));
@@ -772,7 +772,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a java.sql.Time value for the specified parameter.
+     * Sets the specified named parameter to a java.sql.Time value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -782,8 +782,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.sql.Time value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTime(final String parameterName, final java.sql.Time x) throws SQLException {
         cstmt.setTime(parameterName, x);
@@ -803,8 +803,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.util.Date value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTime(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setTime(parameterName, x == null ? null : x instanceof java.sql.Time ? (java.sql.Time) x : new java.sql.Time(x.getTime()));
@@ -813,7 +813,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a LocalTime value for the specified parameter.
+     * Sets the specified named parameter to a LocalTime value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -823,8 +823,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the LocalTime value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTime(final String parameterName, final LocalTime x) throws SQLException {
         setTime(parameterName, x == null ? null : java.sql.Time.valueOf(x));
@@ -833,7 +833,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a java.sql.Timestamp value for the specified parameter.
+     * Sets the specified named parameter to a java.sql.Timestamp value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -843,8 +843,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.sql.Timestamp value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final java.sql.Timestamp x) throws SQLException {
         cstmt.setTimestamp(parameterName, x);
@@ -863,8 +863,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.util.Date value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final java.util.Date x) throws SQLException {
         cstmt.setTimestamp(parameterName, x == null ? null : x instanceof java.sql.Timestamp ? (java.sql.Timestamp) x : new java.sql.Timestamp(x.getTime()));
@@ -873,7 +873,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a LocalDateTime value for the specified parameter.
+     * Sets the specified named parameter to a LocalDateTime value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -883,8 +883,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the LocalDateTime value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final LocalDateTime x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.valueOf(x));
@@ -893,7 +893,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a ZonedDateTime value for the specified parameter.
+     * Sets the specified named parameter to a ZonedDateTime value.
      * The ZonedDateTime is converted to an Instant and then to a Timestamp.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -904,8 +904,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the ZonedDateTime value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
@@ -914,7 +914,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets an OffsetDateTime value for the specified parameter.
+     * Sets the specified named parameter to an OffsetDateTime value.
      * The OffsetDateTime is converted to an Instant and then to a Timestamp.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -925,8 +925,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the OffsetDateTime value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x.toInstant()));
@@ -935,7 +935,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets an Instant value for the specified parameter.
+     * Sets the specified named parameter to an Instant value.
      * The Instant is converted to a Timestamp.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -946,8 +946,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the Instant value to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final Instant x) throws SQLException {
         setTimestamp(parameterName, x == null ? null : Timestamp.from(x));
@@ -967,8 +967,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the byte array to set, or {@code null} to set SQL NULL
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBytes(final String parameterName, final byte[] x) throws SQLException {
         cstmt.setBytes(parameterName, x);
@@ -988,8 +988,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param inputStream the java input stream which contains the ASCII parameter value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setAsciiStream(final String parameterName, final InputStream inputStream) throws SQLException {
         cstmt.setAsciiStream(parameterName, inputStream);
@@ -1010,8 +1010,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param inputStream the java input stream which contains the ASCII parameter value
      * @param length the number of bytes in the stream
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setAsciiStream(final String parameterName, final InputStream inputStream, final long length) throws SQLException {
         cstmt.setAsciiStream(parameterName, inputStream, length);
@@ -1031,8 +1031,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param inputStream the java input stream which contains the binary parameter value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBinaryStream(final String parameterName, final InputStream inputStream) throws SQLException {
         cstmt.setBinaryStream(parameterName, inputStream);
@@ -1053,8 +1053,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param inputStream the java input stream which contains the binary parameter value
      * @param length the number of bytes in the stream
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBinaryStream(final String parameterName, final InputStream inputStream, final long length) throws SQLException {
         cstmt.setBinaryStream(parameterName, inputStream, length);
@@ -1074,8 +1074,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param reader the java.io.Reader object that contains the Unicode data
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setCharacterStream(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setCharacterStream(parameterName, reader);
@@ -1095,8 +1095,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param reader the java.io.Reader object that contains the Unicode data
      * @param length the number of characters in the stream
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setCharacterStream(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setCharacterStream(parameterName, reader, length);
@@ -1116,8 +1116,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param reader the java.io.Reader object that contains the Unicode data
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setNCharacterStream(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setNCharacterStream(parameterName, reader);
@@ -1137,8 +1137,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param reader the java.io.Reader object that contains the Unicode data
      * @param length the number of characters in the stream
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setNCharacterStream(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setNCharacterStream(parameterName, reader, length);
@@ -1158,8 +1158,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x a Blob object that maps to a SQL BLOB value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBlob(final String parameterName, final java.sql.Blob x) throws SQLException {
         cstmt.setBlob(parameterName, x);
@@ -1179,8 +1179,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param inputStream an InputStream object that contains the data to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBlob(final String parameterName, final InputStream inputStream) throws SQLException {
         cstmt.setBlob(parameterName, inputStream);
@@ -1201,8 +1201,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param inputStream an InputStream object that contains the data to set
      * @param length the number of bytes in the parameter data
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setBlob(final String parameterName, final InputStream inputStream, final long length) throws SQLException {
         cstmt.setBlob(parameterName, inputStream, length);
@@ -1222,8 +1222,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x a Clob object that maps to a SQL CLOB value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setClob(final String parameterName, final java.sql.Clob x) throws SQLException {
         cstmt.setClob(parameterName, x);
@@ -1243,8 +1243,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param reader a Reader object that contains the data to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setClob(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setClob(parameterName, reader);
@@ -1265,8 +1265,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param reader a Reader object that contains the data to set
      * @param length the number of characters in the parameter data
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setClob(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setClob(parameterName, reader, length);
@@ -1287,8 +1287,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x an NClob object that maps to a SQL NCLOB value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setNClob(final String parameterName, final java.sql.NClob x) throws SQLException {
         cstmt.setNClob(parameterName, x);
@@ -1308,8 +1308,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param reader a Reader object that contains the Unicode data to set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setNClob(final String parameterName, final Reader reader) throws SQLException {
         cstmt.setNClob(parameterName, reader);
@@ -1330,8 +1330,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param reader a Reader object that contains the Unicode data to set
      * @param length the number of characters in the parameter data
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setNClob(final String parameterName, final Reader reader, final long length) throws SQLException {
         cstmt.setNClob(parameterName, reader, length);
@@ -1340,7 +1340,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a URL value for the specified parameter.
+     * Sets the specified named parameter to a URL value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1350,8 +1350,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the java.net.URL object to be set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setURL(final String parameterName, final URL x) throws SQLException {
         cstmt.setURL(parameterName, x);
@@ -1372,8 +1372,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x an SQLXML object that maps to a SQL XML value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws SQLException {
         cstmt.setSQLXML(parameterName, x);
@@ -1393,8 +1393,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the RowId object to be set
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setRowId(final String parameterName, final java.sql.RowId x) throws SQLException {
         cstmt.setRowId(parameterName, x);
@@ -1403,7 +1403,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets an object value for the specified parameter.
+     * Sets the specified named parameter to an object value.
      * The JDBC driver will attempt to map the object to the appropriate SQL type.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1415,8 +1415,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter
      * @param x the object containing the input parameter value
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setObject(final String parameterName, final Object x) throws SQLException {
         if (x == null) {
@@ -1439,8 +1439,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param x the object containing the input parameter value
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setObject(final String parameterName, final Object x, final int sqlType) throws SQLException {
@@ -1463,8 +1463,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param scaleOrLength for {@code java.sql.Types.DECIMAL} or {@code java.sql.Types.NUMERIC} types,
      *                      this is the number of digits after the decimal point. For all other types,
      *                      this value will be ignored
-     * @return this {@code CallableQuery} instance for method chaining
-     * @throws SQLException if a database access error occurs or the parameter name is not valid
+     * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
     public CallableQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws SQLException {
@@ -1486,7 +1486,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameters a map containing parameter names as keys and their corresponding values
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if the parameters map is {@code null}
      * @throws SQLException if a database access error occurs or any parameter name is not valid
      */
@@ -1524,7 +1524,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param entity the entity object containing the parameter values. Must not be null.
      * @param parameterNames a list of parameter names corresponding to properties in the entity.
      *                       Each name should match a property name in the entity class.
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if the entity or parameterNames is null
      * @throws SQLException if a database access error occurs or if a parameter name doesn't
      *                      correspond to a valid property in the entity
@@ -1569,7 +1569,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, int)
      * @see java.sql.Types
@@ -1603,7 +1603,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param scale the number of digits to the right of the decimal point.
      *              Used for DECIMAL and NUMERIC types.
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, int, int)
      * @see java.sql.Types#DECIMAL
@@ -1640,7 +1640,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param typeName the fully-qualified SQL type name. For user-defined types,
      *                 this should include the schema name if required.
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, int, String)
      * @see java.sql.Types#STRUCT
@@ -1673,7 +1673,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, int)
      * @see java.sql.Types
@@ -1705,7 +1705,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param scale the number of digits to the right of the decimal point
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, int, int)
      * @see java.sql.Types#DECIMAL
@@ -1738,7 +1738,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param typeName the fully-qualified SQL type name
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, int, String)
      * @see java.sql.Types#STRUCT
@@ -1767,7 +1767,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType)
      * @see java.sql.JDBCType
@@ -1796,7 +1796,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation
      * @param scale the number of digits to the right of the decimal point
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
@@ -1826,7 +1826,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation
      * @param typeName the fully-qualified SQL type name
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterIndex is invalid
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
@@ -1856,7 +1856,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType)
      * @see java.sql.JDBCType
@@ -1886,7 +1886,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation
      * @param scale the number of digits to the right of the decimal point
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, int)
      * @see java.sql.JDBCType#DECIMAL
@@ -1917,7 +1917,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation
      * @param typeName the fully-qualified SQL type name
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs or if parameterName is invalid
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType, String)
      * @see java.sql.JDBCType#STRUCT
@@ -1953,7 +1953,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param register the {@link Jdbc.ParametersSetter} that will register the OUT parameters.
      *                 Must not be null.
-     * @return this {@code CallableQuery} instance for method chaining
+     * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if register is null
      * @throws SQLException if a database access error occurs during parameter registration
      */
@@ -2010,7 +2010,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param <T> the type of the additional parameter object.
      * @param parameter the context object to be passed to the {@code BiParametersSetter}.
      * @param register the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be null.
-     * @return {@code this} {@code CallableQuery} instance for method chaining.
+     * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code register} is null.
      * @throws SQLException if a database access error occurs during parameter registration.
      */

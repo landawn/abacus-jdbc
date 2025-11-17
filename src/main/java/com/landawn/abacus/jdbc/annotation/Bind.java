@@ -88,7 +88,7 @@ public @interface Bind {
 
     /**
      * Specifies the parameter name to be used in the SQL query.
-     * If not specified (empty string), the actual parameter name will be used.
+     * If not specified (empty string), the parameter name will be used.
      * 
      * <p>The parameter is referenced in SQL using colon notation: {@code :paramName}</p>
      * 
@@ -114,7 +114,7 @@ public @interface Bind {
      *   <li>Consider using explicit names for better refactoring support</li>
      * </ul>
      *
-     * @return the parameter name, or empty string to use the actual parameter name
+     * @return the parameter name, or empty string if using the actual parameter name
      */
     String value() default "";
 }

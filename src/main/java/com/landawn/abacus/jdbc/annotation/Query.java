@@ -595,7 +595,7 @@ public @interface Query {
      *   <li>Reducing boilerplate code for time-related queries</li>
      * </ul>
      *
-     * <p><strong>Note:</strong> This feature is marked as {@link Beta} and may evolve in future versions.</p>
+     * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
      *
      * <p>Basic examples:</p>
      * <pre>{@code
@@ -704,13 +704,13 @@ public @interface Query {
      *   <li>Preventing connection pool starvation</li>
      * </ul>
      *
-     * <p>Timeout guidelines:</p>
+     * <p>Timeout guidelines (in seconds):</p>
      * <ul>
      *   <li>{@code -1} (default) - Uses the default timeout configured in the connection or DataSource</li>
      *   <li>{@code 0} - No timeout (wait indefinitely - not recommended)</li>
-     *   <li>{@code 1-5} seconds - For simple, well-indexed queries that should be very fast</li>
-     *   <li>{@code 10-30} seconds - For complex queries with joins or aggregations</li>
-     *   <li>{@code 60+} seconds - For batch operations, data migrations, or reporting queries</li>
+     *   <li>{@code 1-5} - For simple, well-indexed queries that should be very fast</li>
+     *   <li>{@code 10-30} - For complex queries with joins or aggregations</li>
+     *   <li>{@code 60+} - For batch operations, data migrations, or reporting queries</li>
      * </ul>
      *
      * <p>Usage examples:</p>
@@ -766,7 +766,7 @@ public @interface Query {
      *   <li><strong>Streaming:</strong> Important for {@link java.util.stream.Stream} return types to enable true lazy loading</li>
      * </ul>
      *
-     * <p>Fetch size guidelines:</p>
+     * <p>Fetch size guidelines (number of rows):</p>
      * <ul>
      *   <li>{@code -1} (default) - Uses the JDBC driver's default fetch size (often 10-50 rows)</li>
      *   <li>{@code 0} - Database-specific behavior; some drivers disable fetch size optimization</li>
@@ -869,7 +869,7 @@ public @interface Query {
      *   <li><strong>Error recovery:</strong> Smaller batches may be easier to retry on failure</li>
      * </ul>
      *
-     * <p>Batch size selection guidelines:</p>
+     * <p>Batch size selection guidelines (items per batch):</p>
      * <ul>
      *   <li>{@code 50-100} - Small batches, good for high-frequency operations or limited memory</li>
      *   <li>{@code 100-500} - Medium batches, good default for most use cases (framework default)</li>

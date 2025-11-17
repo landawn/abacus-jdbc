@@ -110,15 +110,11 @@ public @interface PerfLog {
     /**
      * Specifies filter patterns for methods when the annotation is applied at the class level.
      * Only methods whose names match at least one of these patterns will have performance logging enabled.
-     * 
-     * <p>The patterns support:</p>
-     * <ul>
-     *   <li>Case-insensitive substring matching</li>
-     *   <li>Regular expression matching</li>
-     * </ul>
-     * 
-     * <p>Multiple patterns are combined with OR logic - a method needs to match only one pattern.
-     * This filter is ignored when the annotation is applied at the method level.</p>
+     *
+     * <p>The patterns support case-insensitive substring matching and regular expressions.
+     * Multiple patterns are combined with OR logic.</p>
+     *
+     * <p>This filter is ignored when the annotation is applied at the method level.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

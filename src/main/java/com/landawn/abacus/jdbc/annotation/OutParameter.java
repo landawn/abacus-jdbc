@@ -98,7 +98,7 @@ public @interface OutParameter {
      * );
      * }</pre>
      *
-     * @return the parameter name, or empty string if using position
+     * @return the parameter name, or empty string if using {@link #position()}
      * @see CallableStatement#registerOutParameter(String, int)
      */
     String name() default "";
@@ -126,7 +126,7 @@ public @interface OutParameter {
      * Map<String, Object> analyzeCustomer(@Bind long customerId);
      * }</pre>
      *
-     * @return the parameter position (1-based), or -1 if using name
+     * @return the parameter position (1-based), or -1 if using {@link #name()}
      * @see CallableStatement#registerOutParameter(int, int)
      */
     int position() default -1;

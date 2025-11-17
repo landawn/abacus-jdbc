@@ -489,7 +489,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If null, all properties of the entities are selected
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @param joinEntitiesToLoad the class of join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
@@ -527,7 +528,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If null, all properties of the entities are selected
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
@@ -571,7 +573,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If null, all properties of the entities are selected
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with selected properties and join entities as specified

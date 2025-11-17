@@ -45,18 +45,18 @@ import com.landawn.abacus.util.Throwables;
 /**
  * A proxy wrapper for {@link ResultSet} that provides optimized column value retrieval
  * with intelligent type handling and caching.
- * 
+ *
  * <p>This class wraps a {@link ResultSet} and enhances performance by caching column getter
  * strategies based on the actual data types encountered. It provides special handling for
  * Oracle-specific data types (oracle.sql.TIMESTAMP, oracle.sql.DATE, etc.) and automatically
  * converts them to standard Java SQL types.</p>
- * 
+ *
  * <p>The proxy uses two caching mechanisms:</p>
  * <ul>
  *   <li>Index-based caching: {@code columnGetters} array for column index access</li>
  *   <li>Label-based caching: {@code columnGettersByLabel} map for column label access</li>
  * </ul>
- * 
+ *
  * <p>Key features:</p>
  * <ul>
  *   <li>Automatic detection and conversion of Oracle SQL types to standard Java types</li>
@@ -64,11 +64,22 @@ import com.landawn.abacus.util.Throwables;
  *   <li>Transparent delegation of all {@link ResultSet} operations</li>
  *   <li>Special handling for DATE/TIMESTAMP type disambiguation</li>
  * </ul>
- * 
+ *
+ * <p><b>Method Delegation:</b></p>
+ * <p>All standard {@link ResultSet} methods are transparently delegated to the underlying
+ * ResultSet instance without modification. Only the {@link #getObject(int)} and
+ * {@link #getObject(String)} methods provide enhanced functionality with Oracle-specific
+ * type conversion and performance optimization through caching.</p>
+ *
+ * <p>This delegation pattern allows the proxy to be used as a drop-in replacement for any
+ * {@link ResultSet} without requiring changes to existing JDBC code. Methods such as {@code next()},
+ * {@code getString()}, {@code getInt()}, {@code close()}, and all other standard ResultSet operations
+ * are transparently forwarded to the wrapped ResultSet.</p>
+ *
  * <p>This class is marked as {@link Internal} and is intended for framework use only.</p>
- * 
+ *
  * @see ResultSet
- * @see ColumnGetter 
+ * @see ColumnGetter
  */
 @Internal
 final class ResultSetProxy implements ResultSet {
@@ -79,8 +90,10 @@ final class ResultSetProxy implements ResultSet {
 
     /**
      * Constructs a new ResultSetProxy wrapping the specified ResultSet.
+     * The proxy will enhance the performance of {@code getObject()} calls through caching
+     * while transparently delegating all other operations to the underlying ResultSet.
      *
-     * @param delegate the ResultSet to be wrapped
+     * @param delegate the ResultSet to be wrapped, must not be {@code null}
      */
     ResultSetProxy(ResultSet delegate) {
         this.delegate = delegate;
@@ -90,28 +103,61 @@ final class ResultSetProxy implements ResultSet {
      * Creates a ResultSetProxy wrapper for the specified ResultSet.
      * Returns null if the input ResultSet is null.
      *
-     * @param rs the ResultSet to wrap
-     * @return a new ResultSetProxy wrapping the ResultSet, or null if rs is null
+     * <p>This factory method is the recommended way to create ResultSetProxy instances.
+     * It provides null-safety by returning {@code null} when given a {@code null} ResultSet.</p>
+     *
+     * @param rs the ResultSet to wrap, may be {@code null}
+     * @return a new ResultSetProxy wrapping the ResultSet, or {@code null} if rs is {@code null}
      */
     static ResultSetProxy wrap(ResultSet rs) {
         return (rs == null) ? null : new ResultSetProxy(rs);
     }
 
+    /**
+     * Unwraps this proxy to return an object that implements the given interface.
+     * Delegates to the underlying ResultSet's unwrap method.
+     *
+     * @param <T> the type of the object to be returned
+     * @param iface a Class defining an interface that the result must implement
+     * @return an object that implements the interface, may be a proxy
+     * @throws SQLException if no object implementing the interface is found
+     */
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         return delegate.unwrap(iface);
     }
 
+    /**
+     * Returns true if this proxy wraps an object that implements the given interface.
+     * Delegates to the underlying ResultSet's isWrapperFor method.
+     *
+     * @param iface a Class defining an interface
+     * @return true if this implements the interface or directly or indirectly wraps an object that does
+     * @throws SQLException if an error occurs while determining whether this is a wrapper for an object with the given interface
+     */
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return delegate.isWrapperFor(iface);
     }
 
+    /**
+     * Moves the cursor forward one row from its current position.
+     * Delegates to the underlying ResultSet.
+     *
+     * @return {@code true} if the new current row is valid; {@code false} if there are no more rows
+     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     */
     @Override
     public boolean next() throws SQLException {
         return delegate.next();
     }
 
+    /**
+     * Releases this ResultSet object's database and JDBC resources immediately.
+     * Delegates to the underlying ResultSet.
+     *
+     * @throws SQLException if a database access error occurs
+     */
     @Override
     public void close() throws SQLException {
         delegate.close();

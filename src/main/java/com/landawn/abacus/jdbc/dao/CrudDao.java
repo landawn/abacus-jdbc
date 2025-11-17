@@ -153,7 +153,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entityToInsert the entity to insert (must not be null)
-     * @return the generated ID of the inserted entity
+     * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs or the entity is null
      */
     ID insert(final T entityToInsert) throws SQLException;
@@ -173,7 +173,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param entityToInsert the entity to insert (must not be null)
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If null or empty, all properties will be inserted
-     * @return the generated ID of the inserted entity
+     * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      */
     ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws SQLException;
@@ -191,7 +191,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param namedInsertSQL the named parameter SQL insert statement
      * @param entityToInsert the entity whose properties will be bound to the named parameters
-     * @return the generated ID of the inserted entity
+     * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      */
     ID insert(final String namedInsertSQL, final T entityToInsert) throws SQLException;
@@ -228,7 +228,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities
      * @throws SQLException if a database access error occurs
      */
@@ -260,7 +261,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities
      * @throws SQLException if a database access error occurs
      */
@@ -293,7 +295,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param namedInsertSQL the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of generated IDs in the same order as the input entities
      * @throws SQLException if a database access error occurs
      */
@@ -784,7 +787,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Large ID collections will be processed in batches to avoid database query size limits.
      *
      * @param ids the collection of IDs to retrieve
-     * @param batchSize the number of IDs to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of found entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -821,7 +825,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities. 
      *                        All properties will be selected if null
-     * @param batchSize the number of IDs to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of found entities
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
@@ -993,7 +998,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Large collections will be processed in batches of the specified size.
      *
      * @param entities the collection of entities to update
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
      * @throws SQLException if a database access error occurs
      */
@@ -1028,7 +1034,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
      * @throws SQLException if a database access error occurs
      */
@@ -1122,7 +1129,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Large collections will be processed in batches of the specified size.
      *
      * @param entities the collection of entities to upsert
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated)
      * @throws SQLException if a database access error occurs
      */
@@ -1167,7 +1175,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated)
      * @throws SQLException if a database access error occurs
      */
@@ -1348,7 +1357,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Large collections will be processed in batches of the specified size.
      *
      * @param entities the collection of entities to refresh
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities successfully refreshed
      * @throws SQLException if a database access error occurs
      */
@@ -1390,7 +1400,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param entities the collection of entities to refresh
      * @param propNamesToRefresh the properties to refresh from the database
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities successfully refreshed
      * @throws SQLException if a database access error occurs
      */
@@ -1493,7 +1504,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Large collections will be processed in batches of the specified size.
      *
      * @param entities the collection of entities to delete
-     * @param batchSize the number of entities to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws SQLException if a database access error occurs
      */
@@ -1546,7 +1558,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Large ID collections will be processed in batches to avoid database query size limits.
      *
      * @param ids the collection of IDs to delete
-     * @param batchSize the number of IDs to process in each batch
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws SQLException if a database access error occurs
      */

@@ -69,7 +69,7 @@ public @interface SqlField {
 
     /**
      * Specifies the SQL column name or identifier that this field maps to.
-     * If not specified (empty string), the field name itself will be used as the column identifier.
+     * If not specified (empty string), the field name will be used.
      *
      * <p>This is useful when the database column naming convention differs from Java field naming
      * conventions, such as when the database uses snake_case while Java uses camelCase.</p>

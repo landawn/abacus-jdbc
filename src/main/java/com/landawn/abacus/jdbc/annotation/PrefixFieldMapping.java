@@ -111,7 +111,7 @@ public @interface PrefixFieldMapping {
      * // ship_street -> shipping.address.street
      * }</pre>
      * 
-     * @return the prefix-to-field mapping string, or empty string if not specified
+     * @return the prefix-to-field mapping string, or empty string if using default mapping
      * @deprecated This entire annotation is deprecated. Use explicit column mapping with {@link MergedById}
      *             or modern ORM features for nested object mapping instead.
      */

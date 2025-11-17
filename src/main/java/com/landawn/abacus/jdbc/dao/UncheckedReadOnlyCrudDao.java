@@ -64,9 +64,9 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      *
      * @param entityToInsert the entity to insert (operation will fail)
      * @return never returns normally
-     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported and will always throw an exception
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -81,9 +81,9 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entityToInsert the entity to insert (operation will fail)
      * @param propNamesToInsert the properties to insert (operation will fail)
      * @return never returns normally
-     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported and will always throw an exception
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
@@ -98,9 +98,9 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param namedInsertSQL the named insert SQL (operation will fail)
      * @param entityToSave the entity to save (operation will fail)
      * @return never returns normally
-     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
+     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported and will always throw an exception
+     * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override

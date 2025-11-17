@@ -32,8 +32,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * of DAO method invocations, useful for cross-cutting concerns like logging,
  * performance monitoring, security checks, or result transformation.
  * 
- * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may undergo
- * changes in future versions.</p>
+ * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
  * 
  * <p>Handlers can be applied at two levels:</p>
  * <ul>
@@ -100,7 +99,7 @@ public @interface Handler {
      * }
      * }</pre>
      *
-     * @return the qualifier string, empty by default
+     * @return the qualifier string, or empty string if not specified
      */
     String qualifier() default "";
 
@@ -141,17 +140,13 @@ public @interface Handler {
     Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class; //NOSONAR
 
     /**
-     * Specifies filter patterns to determine which methods this handler applies to.
-     * Only applicable when the annotation is used at the type (interface) level.
-     * 
-     * <p>Filters can be:</p>
-     * <ul>
-     *   <li>Regular expressions (e.g., {@code "find.*"} matches all methods starting with "find")</li>
-     *   <li>Exact method names (case-insensitive contains match)</li>
-     *   <li>Default {@code ".*"} matches all methods</li>
-     * </ul>
-     * 
-     * <p>Multiple filters are joined with OR logic - a method matches if it matches ANY filter.</p>
+     * Specifies filter patterns for methods when the annotation is applied at the class level.
+     * Only methods whose names match at least one of these patterns will be intercepted by this handler.
+     *
+     * <p>The patterns support case-insensitive substring matching and regular expressions.
+     * Multiple patterns are combined with OR logic.</p>
+     *
+     * <p>This filter is ignored when the annotation is applied at the method level.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
