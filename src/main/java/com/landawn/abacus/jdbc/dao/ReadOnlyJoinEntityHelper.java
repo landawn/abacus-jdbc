@@ -15,7 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
@@ -72,13 +71,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entity the entity whose join entities should be deleted
      * @param joinEntityClass the class of the join entity to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -89,13 +87,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entities the collection of entities whose join entities should be deleted
      * @param joinEntityClass the class of the join entity to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -106,13 +103,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entity the entity whose join entities should be deleted
      * @param joinEntityPropName the property name of the join entity to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -123,13 +119,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entities the collection of entities whose join entities should be deleted
      * @param joinEntityPropName the property name of the join entity to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -140,13 +135,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entity the entity whose join entities should be deleted
      * @param joinEntityPropNames the collection of property names of join entities to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -158,14 +152,13 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param joinEntityPropNames the collection of property names of join entities to delete
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -177,14 +170,13 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param joinEntityPropNames the collection of property names of join entities to delete
      * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -195,14 +187,13 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entities the collection of entities whose join entities should be deleted
      * @param joinEntityPropNames the collection of property names of join entities to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -214,14 +205,13 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param joinEntityPropNames the collection of property names of join entities to delete
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -233,14 +223,13 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param joinEntityPropNames the collection of property names of join entities to delete
      * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -250,13 +239,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      *
      * @param entity the entity whose all join entities should be deleted
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity) throws SQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -267,13 +255,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entity the entity whose all join entities should be deleted
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws SQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -284,13 +271,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entity the entity whose all join entities should be deleted
      * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity, final Executor executor) throws SQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final T entity, final Executor executor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -300,13 +286,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      *
      * @param entities the collection of entities whose all join entities should be deleted
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities) throws SQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final Collection<T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -317,13 +302,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entities the collection of entities whose all join entities should be deleted
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -334,13 +318,12 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      * @param entities the collection of entities whose all join entities should be deleted
      * @param executor the {@code Executor} to use for parallel execution
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as this is a read-only interface
      * @deprecated This operation is not supported in read-only mode
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

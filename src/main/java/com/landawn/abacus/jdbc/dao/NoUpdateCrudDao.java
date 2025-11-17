@@ -15,7 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -80,13 +79,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param entityToUpdate the entity with updated values
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final T entityToUpdate) throws SQLException, UnsupportedOperationException {
+    default int update(final T entityToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -97,13 +95,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param entityToUpdate the entity containing the values to update
      * @param propNamesToUpdate the property names to update. If {@code null} or empty, all properties will be updated
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws SQLException, UnsupportedOperationException {
+    default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -115,13 +112,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param propValue the new value for the property
      * @param id the entity ID to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
-    default int update(final String propName, final Object propValue, final ID id) throws SQLException, UnsupportedOperationException {
+    default int update(final String propName, final Object propValue, final ID id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -132,13 +128,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param updateProps a map of property names to their new values
      * @param id the entity ID to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final ID id) throws SQLException, UnsupportedOperationException {
+    default int update(final Map<String, Object> updateProps, final ID id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -148,13 +143,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param entities the collection of entities to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int batchUpdate(final Collection<? extends T> entities) throws SQLException, UnsupportedOperationException {
+    default int batchUpdate(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -166,13 +160,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws SQLException, UnsupportedOperationException {
+    default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -183,14 +176,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -203,14 +195,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -220,13 +211,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param entity the entity to upsert
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity) throws SQLException, UnsupportedOperationException {
+    default T upsert(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -237,13 +227,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param entity the entity to insert or update
      * @param cond the condition to check if the entity exists
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final Condition cond) throws SQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -254,13 +243,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the property names that uniquely identify the entity
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -270,13 +258,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param entities the collection of entities to upsert
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
-    default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -288,13 +275,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
-    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -305,14 +291,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -325,14 +310,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upserts are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -342,13 +326,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param entity the entity to delete (must have ID populated)
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int delete(final T entity) throws SQLException, UnsupportedOperationException {
+    default int delete(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -358,13 +341,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param id the entity ID to delete
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int deleteById(final ID id) throws SQLException, UnsupportedOperationException {
+    default int deleteById(final ID id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -374,13 +356,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param entities the collection of entities to delete
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int batchDelete(final Collection<? extends T> entities) throws SQLException, UnsupportedOperationException {
+    default int batchDelete(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -392,13 +373,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws SQLException, UnsupportedOperationException {
+    default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -408,13 +388,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      *
      * @param ids the collection of IDs to delete
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int batchDeleteByIds(final Collection<? extends ID> ids) throws SQLException, UnsupportedOperationException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -425,13 +404,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      * @param ids the collection of IDs to delete
      * @param batchSize the number of IDs to process in each batch
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws SQLException, UnsupportedOperationException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

@@ -15,7 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
@@ -76,13 +75,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default ID insert(final T entityToInsert) throws SQLException, UnsupportedOperationException {
+    default ID insert(final T entityToInsert) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -94,13 +92,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If {@code null} or empty, all properties will be inserted
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws SQLException, UnsupportedOperationException {
+    default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -111,13 +108,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param namedInsertSQL the named parameter SQL insert statement
      * @param entityToSave the entity whose properties will be bound to the named parameters
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default ID insert(final String namedInsertSQL, final T entityToSave) throws SQLException, UnsupportedOperationException {
+    default ID insert(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -127,13 +123,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      *
      * @param entities the collection of entities to insert
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException, UnsupportedOperationException {
+    default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -145,13 +140,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws SQLException, UnsupportedOperationException {
+    default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -162,14 +156,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -182,14 +175,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -200,13 +192,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param namedInsertSQL the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws SQLException, UnsupportedOperationException {
+    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -219,14 +210,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
     default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

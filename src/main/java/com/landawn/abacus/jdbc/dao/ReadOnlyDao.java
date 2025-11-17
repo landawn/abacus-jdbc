@@ -101,15 +101,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param query the SQL query string
      * @param generateKeys {@code true} to retrieve auto-generated keys
-     * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
+     * @return never returns normally 
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
+    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -120,14 +119,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param query the SQL query string
      * @param returnColumnIndexes an array of column indexes for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
+    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -138,14 +136,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param query the SQL query string
      * @param returnColumnNames an array of column names for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
+    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -175,14 +172,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the SQL query string with named parameters
      * @param generateKeys {@code true} to retrieve auto-generated keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -193,14 +189,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -211,14 +206,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the SQL query string with named parameters
      * @param returnColumnNames an array of column names for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
+    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -247,14 +241,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the parsed SQL query with named parameters
      * @param generateKeys {@code true} to retrieve auto-generated keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -265,14 +258,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnIndexes an array of column indexes for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -283,14 +275,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param namedQuery the parsed SQL query with named parameters
      * @param returnColumnNames an array of column names for returned keys
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as key generation operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -299,13 +290,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave) throws SQLException, UnsupportedOperationException {
+    default void save(final T entityToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -315,13 +305,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param entityToSave
      * @param propNamesToSave collection of property names to save
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws SQLException, UnsupportedOperationException {
+    default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -331,13 +320,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedInsertSQL the named SQL insert statement
      * @param entityToSave
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void save(final String namedInsertSQL, final T entityToSave) throws SQLException, UnsupportedOperationException {
+    default void save(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -346,13 +334,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave collection of entities to save
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave) throws SQLException, UnsupportedOperationException {
+    default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -363,13 +350,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param entitiesToSave collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException, UnsupportedOperationException {
+    default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -379,14 +365,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param entitiesToSave collection of entities to save
      * @param propNamesToSave collection of property names to save
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -398,14 +383,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param propNamesToSave collection of property names to save
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
     default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -415,13 +399,12 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      *
      * @param namedInsertSQL the named SQL insert statement
      * @param entitiesToSave collection of entities to save
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException, UnsupportedOperationException {
+    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -433,14 +416,13 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * @param entitiesToSave collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
     default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

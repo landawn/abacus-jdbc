@@ -15,7 +15,6 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import java.sql.SQLException;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
@@ -102,13 +101,12 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
      * @param propValue the new value for the property
      * @param id the primitive long ID of the entity to update
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final String propName, final Object propValue, final long id) throws SQLException, UnsupportedOperationException {
+    default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -119,13 +117,12 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
      * @param updateProps a map of property names to their new values
      * @param id the primitive long ID of the entity to update
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as updates are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final long id) throws SQLException, UnsupportedOperationException {
+    default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -135,13 +132,12 @@ public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateC
      *
      * @param id the primitive long ID of the entity to delete
      * @return never returns normally
-     * @throws SQLException never thrown due to UnsupportedOperationException
      * @throws UnsupportedOperationException always thrown as deletes are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int deleteById(final long id) throws SQLException, UnsupportedOperationException {
+    default int deleteById(final long id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

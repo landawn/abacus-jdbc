@@ -224,7 +224,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * // PreparedQuery for reusable statements
  * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
- *         "SELECT * FROM orders WHERE customer_id = ? AND order_date > ?")) {
+ *         "SELECT * FROM orders WHERE customer_id = ? AND order_date > ?").closeAfterExecution(false)) {
  *
  *     List<Order> recentOrders = query.setLong(1, customerId)
  *         .setDate(2, lastWeek)
@@ -2644,7 +2644,8 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query for execution, returning a {@link PreparedQuery} object that can be reused
-     * multiple times with different parameters. This is more efficient than creating new prepared statements
+     * multiple times with different parameters({@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}).
+     * This is more efficient than creating new prepared statements
      * for each execution, especially when the same query is executed repeatedly with different parameters.
      *
      * <p>This method intelligently manages connections: if a transaction is active on the current thread
@@ -2686,7 +2687,7 @@ public final class JdbcUtil {
      *
      * // Reusing the same PreparedQuery with different parameters
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT COUNT(*) FROM products WHERE category = ?")) {
+     *         "SELECT COUNT(*) FROM products WHERE category = ?").closeAfterExecution(false)) {
      *
      *     long electronicsCount = query.setString(1, "Electronics")
      *                                  .queryForSingleResult(Long.class)

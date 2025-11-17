@@ -227,7 +227,6 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param query the SQL query string
      * @param stmtCreator custom statement creator function
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as custom statement creation operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
@@ -235,7 +234,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default PreparedQuery prepareQuery(final String query, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -381,7 +380,6 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery the SQL query string with named parameters
      * @param stmtCreator custom statement creator function
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as custom statement creation operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
@@ -389,7 +387,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -537,7 +535,6 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param namedQuery the pre-parsed SQL query object
      * @param stmtCreator custom statement creator function
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as custom statement creation operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
@@ -545,7 +542,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException, UnsupportedOperationException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -555,14 +552,13 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param query the stored procedure call string
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as callable query operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default CallableQuery prepareCallableQuery(final String query) throws SQLException, UnsupportedOperationException {
+    default CallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -573,7 +569,6 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param query the stored procedure call string
      * @param stmtCreator custom statement creator function
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as callable query operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
@@ -581,7 +576,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default CallableQuery prepareCallableQuery(final String query, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-            throws SQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -593,13 +588,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param propValue the new value for the property
      * @param cond the condition to identify records to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
-    default int update(final String propName, final Object propValue, final Condition cond) throws SQLException, UnsupportedOperationException {
+    default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -610,13 +604,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param updateProps a map of property names to their new values
      * @param cond the condition to identify records to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException, UnsupportedOperationException {
+    default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -627,13 +620,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param entity the entity containing values to update
      * @param cond the condition to identify records to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Condition cond) throws SQLException, UnsupportedOperationException {
+    default int update(final T entity, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -645,13 +637,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param propNamesToUpdate collection of property names to update from the entity
      * @param cond the condition to identify records to update
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException, UnsupportedOperationException {
+    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -662,13 +653,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param entity the entity to be upserted
      * @param uniquePropNamesForQuery the list of property names to determine uniqueness
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upsert operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -679,13 +669,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * @param entity the entity to be upserted
      * @param cond the condition to check if the record exists
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as upsert operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final Condition cond) throws SQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -695,13 +684,12 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *
      * @param cond the condition to identify records to delete
      * @return never returns normally
-     * @throws SQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as delete operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int delete(final Condition cond) throws SQLException, UnsupportedOperationException {
+    default int delete(final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }
