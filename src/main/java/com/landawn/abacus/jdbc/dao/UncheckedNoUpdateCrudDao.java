@@ -83,13 +83,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param entityToUpdate The entity to update (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int update(final T entityToUpdate) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final T entityToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -111,13 +110,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entityToUpdate The entity containing updated values (operation will fail)
      * @param propNamesToUpdate Collection of property names to update (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -137,13 +135,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param propValue The new value for the property (operation will fail)
      * @param id The ID of the entity to update (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Override
     @Deprecated
-    default int update(final String propName, final Object propValue, final ID id) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final String propName, final Object propValue, final ID id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -165,13 +162,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param updateProps Map of property names to their new values (operation will fail)
      * @param id The ID of the entity to update (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final ID id) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final Map<String, Object> updateProps, final ID id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -183,13 +179,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param entities Collection of entities to update (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int batchUpdate(final Collection<? extends T> entities) throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchUpdate(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -202,13 +197,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entities Collection of entities to update (operation will fail)
      * @param batchSize The batch size for the operation (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -221,14 +215,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entities Collection of entities to update (operation will fail)
      * @param propNamesToUpdate Properties to update in each entity (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
-            throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -242,14 +234,13 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param propNamesToUpdate Properties to update in each entity (operation will fail)
      * @param batchSize The batch size for the operation (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
-            throws UncheckedSQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -270,13 +261,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param entity The entity to insert or update (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default T upsert(final T entity) throws UncheckedSQLException, UnsupportedOperationException {
+    default T upsert(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -289,13 +279,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entity The entity to insert or update (operation will fail)
      * @param uniquePropNamesForQuery Property names used to check for existing records (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -308,13 +297,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entity The entity to insert or update (operation will fail)
      * @param cond Condition to check for existing records (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -326,13 +314,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param entities Collection of entities to upsert (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Override
     @Deprecated
-    default List<T> batchUpsert(final Collection<? extends T> entities) throws UncheckedSQLException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -345,13 +332,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entities Collection of entities to upsert (operation will fail)
      * @param batchSize The batch size for the operation (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Override
     @Deprecated
-    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -364,14 +350,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entities Collection of entities to upsert (operation will fail)
      * @param uniquePropNamesForQuery Property names for conflict detection (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Override
     @Deprecated
-    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery)
-            throws UncheckedSQLException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -385,14 +369,13 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param uniquePropNamesForQuery Property names for conflict detection (operation will fail)
      * @param batchSize The batch size for the operation (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Override
     @Deprecated
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize)
-            throws UncheckedSQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -410,13 +393,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param entity The entity to delete (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown to maintain API consistency
      * @deprecated Use {@link #deleteById(Object)} or other delete methods instead
      */
     @Deprecated
     @Override
-    default int delete(final T entity) throws UncheckedSQLException, UnsupportedOperationException {
+    default int delete(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -437,13 +419,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param id The ID of the entity to delete (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown to maintain API consistency
      * @deprecated Use other delete methods that are not deprecated
      */
     @Deprecated
     @Override
-    default int deleteById(final ID id) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteById(final ID id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -455,13 +436,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param entities Collection of entities to delete (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown to maintain API consistency
      * @deprecated Use {@link #batchDeleteByIds(Collection)} or condition-based delete methods
      */
     @Deprecated
     @Override
-    default int batchDelete(final Collection<? extends T> entities) throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchDelete(final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -474,13 +454,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param entities Collection of entities to delete (operation will fail)
      * @param batchSize The batch size for the operation (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown to maintain API consistency
      * @deprecated Use {@link #batchDeleteByIds(Collection, int)} or condition-based delete methods
      */
     @Deprecated
     @Override
-    default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -498,13 +477,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * 
      * @param ids Collection of IDs to delete (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown to maintain API consistency
      * @deprecated Use condition-based delete methods instead
      */
     @Deprecated
     @Override
-    default int batchDeleteByIds(final Collection<? extends ID> ids) throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -517,13 +495,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * @param ids Collection of IDs to delete (operation will fail)
      * @param batchSize The batch size for the operation (operation will fail)
      * @return Never returns normally
-     * @throws UncheckedSQLException If any SQL error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException Always thrown to maintain API consistency
      * @deprecated Use condition-based delete methods instead
      */
     @Deprecated
     @Override
-    default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UncheckedSQLException, UnsupportedOperationException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

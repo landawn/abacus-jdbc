@@ -73,13 +73,12 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
      * @param propValue the new value (operation will fail)
      * @param id the entity ID as primitive long (operation will fail)
      * @return never returns normally
-     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int update(final String propName, final Object propValue, final long id) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -93,13 +92,12 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
      * @param updateProps the properties to update (operation will fail)
      * @param id the entity ID as primitive long (operation will fail)
      * @return never returns normally
-     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final long id) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -112,13 +110,12 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends 
      *
      * @param id the entity ID as primitive long (operation will fail)
      * @return never returns normally
-     * @throws UncheckedSQLException if a database access error occurs (will not be thrown as operation fails earlier)
      * @throws UnsupportedOperationException always thrown as delete operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
-    default int deleteById(final long id) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteById(final long id) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

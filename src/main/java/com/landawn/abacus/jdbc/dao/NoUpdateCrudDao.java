@@ -181,8 +181,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      */
     @Deprecated
     @Override
-    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
-            throws UnsupportedOperationException {
+    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -296,8 +295,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpda
      */
     @Override
     @Deprecated
-    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery)
-            throws UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

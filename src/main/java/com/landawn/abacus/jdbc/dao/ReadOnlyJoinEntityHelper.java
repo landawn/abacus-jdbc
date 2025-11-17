@@ -175,8 +175,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -192,8 +191,7 @@ public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends D
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
-            throws UnsupportedOperationException {
+    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

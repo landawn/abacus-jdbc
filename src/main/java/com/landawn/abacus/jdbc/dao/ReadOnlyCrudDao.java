@@ -161,8 +161,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
-            throws UnsupportedOperationException {
+    default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

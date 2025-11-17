@@ -370,8 +370,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      */
     @Deprecated
     @Override
-    default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave)
-            throws UnsupportedOperationException {
+    default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 

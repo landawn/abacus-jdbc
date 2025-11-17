@@ -83,13 +83,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityClass the class of the join entities to delete
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -107,13 +106,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityClass the class of the join entities to delete
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -131,13 +129,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropName the property name identifying the join entities to delete
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -155,13 +152,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropName the property name identifying the join entities to delete
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -179,13 +175,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entity the entity whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -204,14 +199,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
      * @param inParallel whether to execute the deletions in parallel
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws UncheckedSQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -231,14 +225,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -256,14 +248,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entities the collection of entities whose related join entities should be deleted
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
-            throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -282,14 +272,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
      * @param inParallel whether to execute the deletions in parallel
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws UncheckedSQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -309,14 +298,13 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param joinEntityPropNames the collection of property names identifying the join entities to delete
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws UncheckedSQLException, UnsupportedOperationException {
+            throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -333,13 +321,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * @param entity the entity whose all related join entities should be deleted
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final T entity) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -357,13 +344,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entity the entity whose all related join entities should be deleted
      * @param inParallel whether to execute the deletions in parallel
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -382,13 +368,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entity the entity whose all related join entities should be deleted
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final T entity, final Executor executor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -405,13 +390,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * @param entities the collection of entities whose all related join entities should be deleted
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final Collection<T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -429,13 +413,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entities the collection of entities whose all related join entities should be deleted
      * @param inParallel whether to execute the deletions in parallel
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -454,13 +437,12 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * @param entities the collection of entities whose all related join entities should be deleted
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of updated/deleted records (never returned, always throws exception)
-     * @throws UncheckedSQLException if a database error occurs (wrapped SQLException)
      * @throws UnsupportedOperationException always thrown as this is a read-only operation
      * @deprecated unsupported Operation - this interface is read-only
      */
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException, UnsupportedOperationException {
+    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }

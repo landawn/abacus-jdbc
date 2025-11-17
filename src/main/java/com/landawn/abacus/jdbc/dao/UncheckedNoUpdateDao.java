@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
@@ -73,13 +72,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param propValue the new value (ignored)
      * @param cond the condition to match records (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Override
     @Deprecated
-    default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -90,13 +88,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param updateProps the properties to update (ignored)
      * @param cond the condition to match records (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -107,13 +104,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param entity the entity containing values to update (ignored)
      * @param cond the condition to match records (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final T entity, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -125,14 +121,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param propNamesToUpdate the properties to update (ignored)
      * @param cond the condition to match records (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
-            throws UncheckedSQLException, UnsupportedOperationException {
+    default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -144,13 +138,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param entity the entity to upsert (ignored)
      * @param uniquePropNamesForQuery the unique properties for query (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UncheckedSQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -162,13 +155,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      * @param entity the entity to upsert (ignored)
      * @param cond the condition to verify existence (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -178,13 +170,12 @@ public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends Unche
      *
      * @param cond the condition to match records to delete (ignored)
      * @return never returns normally
-     * @throws UncheckedSQLException never thrown (included for interface compatibility)
      * @throws UnsupportedOperationException always thrown as delete operations are not supported
      * @deprecated This operation is not supported in no-update DAO
      */
     @Deprecated
     @Override
-    default int delete(final Condition cond) throws UncheckedSQLException, UnsupportedOperationException {
+    default int delete(final Condition cond) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 }
