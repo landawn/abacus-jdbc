@@ -158,16 +158,63 @@ import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
- * Internal implementation class for DAO (Data Access Object) functionality.
- * This class provides the core implementation for dynamic proxy-based DAO interfaces
- * using the {@code @Query} annotation for defining SQL operations.
+ * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
  *
- * <p>This is an internal class and should not be used directly by application code.
- * Use the public DAO interfaces and JdbcUtil methods instead.</p>
+ * <p>This class serves as the {@link InvocationHandler} for DAO proxies created by {@link JdbcUtil#createDao(Class, javax.sql.DataSource)},
+ * implementing the method interception and execution logic for SQL operations defined through annotations like {@code @Query},
+ * {@code @Insert}, {@code @Update}, {@code @Delete}, and {@code @Select}.</p>
+ *
+ * <p>The DaoImpl class is responsible for:</p>
+ * <ul>
+ *   <li>Parsing and caching method-level SQL annotations and their configurations</li>
+ *   <li>Building and executing SQL statements based on annotation metadata</li>
+ *   <li>Managing parameter binding for named parameters, collections, and entities</li>
+ *   <li>Handling result set mapping to entities, primitives, collections, and custom types</li>
+ *   <li>Supporting transactional behavior through {@code @Transactional} annotations</li>
+ *   <li>Implementing cache management for {@code @CacheResult} annotated methods</li>
+ *   <li>Managing join entity relationships through {@code @JoinedBy} annotations</li>
+ *   <li>Providing SQL logging and performance monitoring capabilities</li>
+ * </ul>
+ *
+ * <p><b>Key Features:</b></p>
+ * <ul>
+ *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query}, {@code @Insert}, {@code @Update}, {@code @Delete}, {@code @Select}
+ *       with flexible parameter binding using {@code @Bind}, {@code @BindList}, {@code @SqlField}</li>
+ *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., :paramName)</li>
+ *   <li><b>Collection Parameter Expansion:</b> Handles IN clauses by expanding collection parameters</li>
+ *   <li><b>Entity Mapping:</b> Automatic mapping between database result sets and entity classes</li>
+ *   <li><b>Join Support:</b> Loads related entities through {@code @JoinedBy} relationships</li>
+ *   <li><b>Transaction Management:</b> Declarative transactions via {@code @Transactional}</li>
+ *   <li><b>Result Caching:</b> Method-level caching with {@code @CacheResult} and {@code @RefreshCache}</li>
+ *   <li><b>Batch Operations:</b> Support for batch inserts, updates, and deletes</li>
+ *   <li><b>Stored Procedures:</b> Execution of database stored procedures with OUT parameters</li>
+ *   <li><b>SQL Fragments:</b> Reusable SQL snippets through {@code @Fragment} and {@code @FragmentList}</li>
+ * </ul>
+ *
+ * <p><b>Design Pattern:</b></p>
+ * <p>This class implements the Proxy pattern combined with the Template Method pattern, where each DAO method
+ * invocation is intercepted and processed according to its annotation metadata. The implementation uses method
+ * handle caching, prepared SQL parsing, and type-safe result mapping to achieve high performance.</p>
+ *
+ * <p><b>Thread Safety:</b></p>
+ * <p>This class is thread-safe. Method metadata and SQL parsing results are cached in concurrent maps.
+ * However, the underlying database connections and transactions are managed per-thread through
+ * {@link SQLExecutor} and connection pooling.</p>
+ *
+ * <p><b>Important Notes:</b></p>
+ * <ul>
+ *   <li>This is an internal framework class marked with {@code @Internal}</li>
+ *   <li>Application code should never directly instantiate or use this class</li>
+ *   <li>Always use public DAO interfaces ({@link Dao}, {@link CrudDao}, etc.) instead</li>
+ *   <li>DAOs are created via {@link JdbcUtil#createDao(Class, javax.sql.DataSource)}</li>
+ * </ul>
  *
  * @see Dao
  * @see CrudDao
  * @see JdbcUtil#createDao(Class, javax.sql.DataSource)
+ * @see Query
+ * @see Transactional
+ * @see CacheResult
  */
 @Internal
 @SuppressWarnings({ "deprecation", "java:S1192", "resource" })

@@ -60,7 +60,7 @@ import java.lang.annotation.Target;
  *     // Utility method that doesn't interact with database
  *     @NonDBOperation
  *     default boolean isValidEmail(String email) {
- *         return email != {@code null} && email.contains("@");
+ *         return email != null && email.contains("@");
  *     }
  * }
  * }</pre>

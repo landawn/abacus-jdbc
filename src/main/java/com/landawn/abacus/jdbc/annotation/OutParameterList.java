@@ -44,9 +44,9 @@ import java.lang.annotation.Target;
  *     // Equivalent using OutParameterList directly (not recommended)
  *     @Query(value = "{call get_employee_stats(?, ?, ?, ?)}", isProcedure = true)
  *     @OutParameterList({
- *         @OutParameter(name = "total_sales", position = 2, sqlType = Types.DECIMAL),
- *         @OutParameter(name = "avg_rating", position = 3, sqlType = Types.DECIMAL),
- *         @OutParameter(name = "rank", position = 4, sqlType = Types.INTEGER)
+ *         @OutParameter(position = 2, sqlType = Types.DECIMAL),
+ *         @OutParameter(position = 3, sqlType = Types.DECIMAL),
+ *         @OutParameter(position = 4, sqlType = Types.INTEGER)
  *     })
  *     Map<String, Object> getEmployeeStats(@Bind("employeeId") long employeeId);
  * }

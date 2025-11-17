@@ -63,7 +63,7 @@ import java.sql.Types;
  *     @OutParameter(position = 2, sqlType = Types.INTEGER) // total_count
  *     @OutParameter(position = 3, sqlType = Types.DECIMAL) // average_salary
  *     @OutParameter(position = 4, sqlType = Types.VARCHAR) // department_name
- *     Map<String, Object> getDepartmentStats(@Bind long departmentId);
+ *     Map<String, Object> getDepartmentStats(@Bind("departmentId") long departmentId);
  * }
  * }</pre>
  * 

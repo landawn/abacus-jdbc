@@ -43,10 +43,10 @@ import java.util.Map;
  *     @Query("SELECT * FROM users WHERE created_date > :date")
  *     @MappedByKey(keyName = "email")
  *     Map<String, User> findRecentUsersByEmail(@Bind("date") Date date);
- *     
+ *
  *     // Using custom map implementation
  *     @Query("SELECT * FROM users WHERE department = :dept")
- *     @MappedByKey(keyName = "id", mapClass = LinkedHashMap.class)
+ *     @MappedByKey(keyName = "id", mapClass = java.util.LinkedHashMap.class)
  *     Map<Long, User> findUsersByDepartment(@Bind("dept") String dept);
  *     
  *     // Map with composite objects

@@ -24,7 +24,7 @@ import java.util.Collection;
 /**
  * Defines a named query template variable from a collection or array parameter.
  * This annotation converts the elements of a collection or array into a comma-separated string
- * that can be used to dynamically construct query queries.
+ * that can be used to dynamically construct SQL queries.
  * 
  * <p>Unlike {@link BindList} which binds values as parameters, {@code FragmentList} performs
  * string substitution in the query template. This is useful for dynamic query construction where

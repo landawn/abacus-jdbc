@@ -90,7 +90,7 @@ public @interface FetchColumnByEntityClass {
      *     private Long id;
      *     private String name;
      *     private String email;
-     *     // getters and setters
+     *     // Getters and setters
      * }
      * 
      * // DAO method

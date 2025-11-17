@@ -106,16 +106,16 @@ public @interface BindList {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query("SELECT * FROM users WHERE active = {@code true} {statusFilter}")
+     * @Query("SELECT * FROM users WHERE active = true {statusFilter}")
      * List<User> findUsers(
      *     @BindList(value = "statusFilter",
      *               prefixForNonEmpty = "AND status IN (",
      *               suffixForNonEmpty = ")")
      *     List<String> statuses
      * );
-     * 
+     *
      * // With empty list: SELECT * FROM users WHERE active = true
-     * // With values: SELECT * FROM users WHERE active = {@code true} AND status IN (?, ?)
+     * // With values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
      * }</pre>
      *
      * @return the prefix to add when collection is non-empty

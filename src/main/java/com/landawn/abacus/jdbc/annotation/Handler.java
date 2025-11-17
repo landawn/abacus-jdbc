@@ -175,10 +175,10 @@ public @interface Handler {
      * public interface UserDao extends CrudDao<User, Long> {
      *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id);
-     *     
+     *
      *     default User findActiveById(Long id) {
      *         User user = findById(id);  // TransactionHandler NOT applied here
-     *         return user != {@code null} && user.isActive() ? user : null;
+     *         return user != null && user.isActive() ? user : null;
      *     }
      * }
      * 

@@ -38,15 +38,15 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Config(
- *     addLimitForSingleQuery = {@code true},
+ *     addLimitForSingleQuery = true,
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Single query methods will automatically add LIMIT 1
  *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);  // LIMIT 1 added automatically
- *     
- *     // ID generation will be called if user.id is {@code null} or 0
+ *
+ *     // ID generation will be called if user.id is null or 0
  *     default User createUser(String name, String email) {
  *         User user = new User(name, email);
  *         insert(user);  // generateId() called automatically if needed
@@ -102,8 +102,8 @@ public @interface Config {
      * when the ID field is not set or has a default value.
      * 
      * <p>This applies to {@code CrudDao.insert(T entity)} and {@code CrudDao.batchInsert(Collection<T> entities)}
-     * methods. The ID is considered "not set" when it's {@code null} or has the default value for its type
-     * (0 for numeric types, {@code null} for objects).</p>
+     * methods. The ID is considered "not set" when it's null or has the default value for its type
+     * (0 for numeric types, null for objects).</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -150,9 +150,9 @@ public @interface Config {
     boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
 
     /**
-     * Controls whether joins can be performed using {@code null} or default values in join conditions.
-     * When {@code false} (default), joins with {@code null} values are skipped for safety.
-     * When {@code true}, allows joins even when the joining column contains {@code null}.
+     * Controls whether joins can be performed using null or default values in join conditions.
+     * When false (default), joins with null values are skipped for safety.
+     * When true, allows joins even when the joining column contains null.
      * 
      * <p>This is useful for outer joins where {@code null} values are expected and valid.</p>
      * 
@@ -174,7 +174,7 @@ public @interface Config {
 
     /**
      * Controls whether Dataset queries should fetch only columns that match entity class properties.
-     * When {@code true} (default), Dataset queries will only include columns that correspond
+     * When true (default), Dataset queries will only include columns that correspond
      * to properties in the target entity class, similar to {@link FetchColumnByEntityClass}.
      * 
      * <p>This provides consistency between entity queries and Dataset queries,

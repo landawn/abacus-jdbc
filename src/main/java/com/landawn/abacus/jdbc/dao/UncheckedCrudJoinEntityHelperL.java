@@ -220,27 +220,25 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     }
 
     /**
-     * Retrieves an entity by its ID and loads the specified join entity class, throwing an exception if not found.
-     * 
+     * Retrieves an entity by its ID and loads the specified join entity class, returning {@code null} if not found.
+     *
      * <p>This method is similar to {@link #get(long, Class)} but returns the entity directly
-     * instead of an Optional. It throws an exception if the entity is not found, making it
-     * suitable for cases where the entity is expected to exist.</p>
-     * 
+     * instead of an Optional. It returns {@code null} if the entity is not found.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Get a user that must exist, with orders loaded
+     * // Get a user with orders loaded
      * User user = userDao.gett(123L, Order.class);
-     * List<Order> orders = user.getOrders(); // Orders are already loaded
-     * 
-     * // This will throw an exception if user 999 doesn't exist
-     * User missingUser = userDao.gett(999L, Order.class); // Throws exception
+     * if (user != null) {
+     *     List<Order> orders = user.getOrders(); // Orders are already loaded
+     * }
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
      * @param joinEntitiesToLoad The class of the join entities to load
-     * @return The entity with loaded join entities, never null
+     * @return The entity with loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found
+     * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
@@ -255,25 +253,27 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     }
 
     /**
-     * Retrieves an entity by its ID with the option to load all join entities, throwing an exception if not found.
-     * 
-     * <p>This method provides a non-Optional alternative to {@link #get(long, boolean)},
-     * suitable for cases where the entity is expected to exist.</p>
-     * 
+     * Retrieves an entity by its ID with the option to load all join entities, returning {@code null} if not found.
+     *
+     * <p>This method provides a non-Optional alternative to {@link #get(long, boolean)}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get a complete user object graph
      * User fullUser = userDao.gett(123L, true);
-     * 
+     * if (fullUser != null) {
+     *     // All relationships are loaded
+     * }
+     *
      * // Get just the user without relationships
      * User userOnly = userDao.gett(123L, false);
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
      * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
-     * @return The entity, never null
+     * @return The entity, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found
+     * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
@@ -288,26 +288,28 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     }
 
     /**
-     * Retrieves an entity by its ID with specific properties and loads the specified join entity, throwing an exception if not found.
-     * 
-     * <p>This method combines property selection with join loading, providing optimized
-     * data fetching while ensuring the entity exists.</p>
-     * 
+     * Retrieves an entity by its ID with specific properties and loads the specified join entity, returning {@code null} if not found.
+     *
+     * <p>This method combines property selection with join loading, providing optimized data fetching.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get essential user data with orders
      * User user = userDao.gett(123L,
      *     Arrays.asList("id", "name", "email"),
      *     Order.class);
+     * if (user != null) {
+     *     // Process user with orders
+     * }
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad The class of the join entities to load
-     * @return The entity with selected properties and loaded join entities, never null
+     * @return The entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found
+     * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
@@ -323,30 +325,32 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     }
 
     /**
-     * Retrieves an entity by its ID with specific properties and loads multiple join entity types, throwing an exception if not found.
-     * 
+     * Retrieves an entity by its ID with specific properties and loads multiple join entity types, returning {@code null} if not found.
+     *
      * <p>This method provides maximum control over data fetching, allowing precise specification
-     * of what data to retrieve while ensuring the entity exists.</p>
-     * 
+     * of what data to retrieve.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with specific fields and multiple relationships
      * User user = userDao.gett(123L,
      *     Arrays.asList("id", "name", "email", "createdDate"),
      *     Arrays.asList(Order.class, Address.class, Preference.class));
-     * 
-     * // Now user has limited fields but all specified relationships are loaded
-     * List<Order> orders = user.getOrders();
-     * List<Address> addresses = user.getAddresses();
+     *
+     * if (user != null) {
+     *     // User has limited fields but all specified relationships are loaded
+     *     List<Order> orders = user.getOrders();
+     *     List<Address> addresses = user.getAddresses();
+     * }
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad Collection of join entity classes to load
-     * @return The entity with selected properties and loaded join entities, never null
+     * @return The entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found
+     * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
@@ -364,18 +368,22 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
     }
 
     /**
-     * Retrieves an entity by its ID with specific properties and optionally loads all join entities, throwing an exception if not found.
-     * 
+     * Retrieves an entity by its ID with specific properties and optionally loads all join entities, returning {@code null} if not found.
+     *
      * <p>This method provides complete flexibility in controlling what data is fetched,
      * combining property selection with optional loading of all relationships.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get minimal user data but with all relationships
      * User user = userDao.gett(123L,
      *     Arrays.asList("id", "name"), // Only these fields
      *     true); // But load all join entities
-     * 
+     *
+     * if (user != null) {
+     *     // Process user with all relationships
+     * }
+     *
      * // Get complete user data without any relationships
      * User userOnly = userDao.gett(123L,
      *     {@code null}, // All fields
@@ -386,9 +394,9 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
-     * @return The entity with selected properties, never null
+     * @return The entity with selected properties, or {@code null} if not found
      * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation or if the entity is not found
+     * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
