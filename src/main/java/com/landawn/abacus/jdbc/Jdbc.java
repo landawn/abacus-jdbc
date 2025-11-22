@@ -48,12 +48,13 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
-import com.landawn.abacus.cache.CacheFactory;
-import com.landawn.abacus.cache.LocalCache;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.pool.KeyedObjectPool;
+import com.landawn.abacus.pool.PoolFactory;
+import com.landawn.abacus.pool.PoolableWrapper;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
@@ -3010,7 +3011,9 @@ public final class Jdbc {
                             return targetType.get(rs, 1);
                         }
                     };
-                } else {
+                } else
+
+                {
                     throw new IllegalArgumentException(
                             "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
                 }
@@ -3944,7 +3947,9 @@ public final class Jdbc {
                             return (T) m;
                         }
                     };
-                } else if (Beans.isBeanClass(targetClass)) {
+                } else if (Beans.isBeanClass(targetClass))
+
+                {
                     return new BiRowMapper<>() {
                         private final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
@@ -5975,7 +5980,7 @@ public final class Jdbc {
      * with support for time-to-live (TTL) and idle time-based eviction.
      */
     public static final class DefaultDaoCache implements DaoCache {
-        protected final LocalCache<String, Object> cache;
+        private final KeyedObjectPool<String, PoolableWrapper<Object>> pool;
 
         /**
          * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay.
@@ -5984,27 +5989,33 @@ public final class Jdbc {
          * @param evictDelay the interval in milliseconds for the background eviction thread.
          */
         public DefaultDaoCache(final int capacity, final long evictDelay) {
-            cache = CacheFactory.createLocalCache(capacity, evictDelay);
+            pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay);
         }
 
         @Override
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.gett(defaultCacheKey);
+            final PoolableWrapper<Object> w = pool.get(defaultCacheKey);
+
+            return w == null ? null : w.value();
         }
 
         @Override
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.put(defaultCacheKey, result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME);
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
+            return pool.put(defaultCacheKey, PoolableWrapper.of(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME));
         }
 
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            return cache.put(defaultCacheKey, result, liveTime, maxIdleTime);
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
+            return pool.put(defaultCacheKey, PoolableWrapper.of(result, liveTime, maxIdleTime));
         }
 
         /**
@@ -6027,9 +6038,9 @@ public final class Jdbc {
             final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
 
             if (Strings.isEmpty(updatedTableName)) {
-                cache.clear();
+                pool.clear();
             } else {
-                cache.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(cache::remove);
+                pool.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(pool::remove);
             }
         }
     }

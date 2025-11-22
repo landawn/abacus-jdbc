@@ -5,7 +5,7 @@
 
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>3.26.3</version>
+	<version>3.26.4</version>
 	<packaging>jar</packaging>
 	<name>abacus-jdbc</name>
 	<description>abacus jdbc</description>
@@ -54,21 +54,14 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>6.26.2</version>
+			<version>6.26.3</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>3.26.2</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>com.landawn</groupId>
-			<artifactId>abacus-cache</artifactId>
-			<version>1.26.2</version>
+			<version>3.26.3</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -279,7 +272,7 @@
 				<configuration>
 					<doctitle>abacus-jdbc</doctitle>
 					<show>public</show>
-			        <source>25</source>
+			        <source>17</source>
 			        <encoding>UTF-8</encoding>
 			        <doclint>all</doclint>    
 					<source>${maven.compiler.source}</source>

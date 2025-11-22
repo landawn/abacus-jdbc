@@ -1080,6 +1080,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a char value from a single column.
      * Returns an OptionalChar containing the value if found.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalChar grade = dao.queryForChar("grade", CF.eq("student_id", 123));
+     * if (grade.isPresent()) {
+     *     System.out.println("Grade: " + grade.getAsChar());
+     * }
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @return OptionalChar containing the value
@@ -1091,6 +1099,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a byte value from a single column.
      * Returns an OptionalByte containing the value if found.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalByte status = dao.queryForByte("status", CF.eq("id", 1));
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @return OptionalByte containing the value
@@ -1101,6 +1114,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Queries for a short value from a single column.
      * Returns an OptionalShort containing the value if found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalShort year = dao.queryForShort("year", CF.eq("id", 1));
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
@@ -1130,6 +1148,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a long value from a single column.
      * Returns an OptionalLong containing the value if found.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalLong count = dao.queryForLong("count", CF.eq("category", "A"));
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @return OptionalLong containing the value
@@ -1141,6 +1164,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a float value from a single column.
      * Returns an OptionalFloat containing the value if found.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalFloat temperature = dao.queryForFloat("temperature", CF.eq("city", "London"));
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @return OptionalFloat containing the value
@@ -1151,6 +1179,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Queries for a double value from a single column.
      * Returns an OptionalDouble containing the value if found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalDouble average = dao.queryForDouble("average", CF.eq("group_id", 1));
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
@@ -1180,6 +1213,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a Date value from a single column.
      * Returns a Nullable containing the java.sql.Date value.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<java.sql.Date> birthDate = dao.queryForDate("birth_date", CF.eq("id", 1));
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @return Nullable containing the Date value
@@ -1190,6 +1228,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Queries for a Time value from a single column.
      * Returns a Nullable containing the java.sql.Time value.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<java.sql.Time> startTime = dao.queryForTime("start_time", CF.eq("id", 1));
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
@@ -1202,6 +1245,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a Timestamp value from a single column.
      * Returns a Nullable containing the java.sql.Timestamp value.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<java.sql.Timestamp> createdAt = dao.queryForTimestamp("created_at", CF.eq("id", 1));
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @return Nullable containing the Timestamp value
@@ -1212,6 +1260,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Queries for a byte array from a single column.
      * Returns a Nullable containing the byte array value.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<byte[]> data = dao.queryForBytes("data", CF.eq("id", 1));
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param cond the search condition

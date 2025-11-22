@@ -642,7 +642,6 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param creator the transaction creator type, must not be {@code null}
      * @return a unique transaction identifier string, never {@code null}
      */
-    @SuppressWarnings("deprecation")
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
         return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", Thread.currentThread().getName(), "_", creator.ordinal());
     }
