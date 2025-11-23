@@ -5976,7 +5976,7 @@ public final class Jdbc {
     }
 
     /**
-     * The default implementation of {@link DaoCache}, using a {@link LocalCache} for in-memory caching
+     * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching
      * with support for time-to-live (TTL) and idle time-based eviction.
      */
     public static final class DefaultDaoCache implements DaoCache {
