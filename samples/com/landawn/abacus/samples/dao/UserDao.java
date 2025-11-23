@@ -28,7 +28,6 @@ import com.landawn.abacus.jdbc.Propagation;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
-import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
@@ -36,9 +35,10 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Query;
-import com.landawn.abacus.jdbc.annotation.SqlScript;
+import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.SqlMapper;
+import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
@@ -97,8 +97,8 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     @Query(value = "DELETE FROM user1 where id = :id", isBatch = true, batchSize = 10000)
     int batchDeleteByIds(List<Long> userIds) throws SQLException;
 
-    @Query(value = "DELETE FROM user1 where id = ?", isBatch = true, batchSize = 10000)
-    int batchDeleteByIds_1(List<Long> userIds) throws SQLException;
+    @Query(value = "DELETE FROM user1 where id in ({ids})")
+    int batchDeleteByIds_1(@BindList("ids") List<Long> userIds) throws SQLException;
 
     default int[] batchDeleteByIds_2(final List<Long> userIds) throws SQLException {
         return prepareNamedQuery("DELETE FROM user1 where id = :id").addBatchParameters(userIds, long.class).batchUpdate();
