@@ -107,6 +107,7 @@ public enum OP {
      *
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code @Query}.
      */
+    @Deprecated
     query,
 
     /**
@@ -124,6 +125,7 @@ public enum OP {
      *
      * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code @Query}.
      */
+    @Deprecated
     stream,
 
     /**

@@ -77,10 +77,10 @@ public @interface OnDelete {
 
     /**
      * Specifies the action to take when a referenced entity is deleted.
-     * 
+     *
      * <p><strong>Note:</strong> This functionality should be implemented at the database level
      * using foreign key constraints rather than in the application layer.</p>
-     * 
+     *
      * <p>Available actions correspond to standard SQL ON DELETE behaviors:</p>
      * <ul>
      *   <li>{@link OnDeleteAction#NO_ACTION} - Default, no automatic action</li>
@@ -93,5 +93,6 @@ public @interface OnDelete {
      * @return the delete action, defaults to {@link OnDeleteAction#NO_ACTION}
      * @deprecated Define ON DELETE actions in database foreign key constraints
      */
+    @Deprecated
     OnDeleteAction action() default OnDeleteAction.NO_ACTION;
 }

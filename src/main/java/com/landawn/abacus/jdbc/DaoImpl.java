@@ -4343,7 +4343,9 @@ final class DaoImpl {
 
                             if (idPropNameList.size() == 1) {
                                 String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
-                                sql_selectPart = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
+                                final int eqIndex = sql_selectPart.lastIndexOf('=');
+                                N.checkArgument(eqIndex >= 0, "SQL query does not contain '=' character: %s", sql_selectPart);
+                                sql_selectPart = sql_selectPart.substring(0, eqIndex) + "IN ";
 
                                 if (idList.size() >= batchSize) {
                                     final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
@@ -4437,7 +4439,9 @@ final class DaoImpl {
                         final Collection<String> selectPropNames = N.asList(SQLBuilder.COUNT_ALL);
                         final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
                         final String sql_selectPart = selectSQLBuilderFunc.apply(selectPropNames, idCond).sql();
-                        final String sql_in_query = sql_selectPart.substring(0, sql_selectPart.lastIndexOf('=')) + "IN ";
+                        final int eqIndex = sql_selectPart.lastIndexOf('=');
+                        N.checkArgument(eqIndex >= 0, "SQL query does not contain '=' character: %s", sql_selectPart);
+                        final String sql_in_query = sql_selectPart.substring(0, eqIndex) + "IN ";
 
                         call = (proxy, args) -> {
                             final Collection<Object> ids = (Collection<Object>) args[0];

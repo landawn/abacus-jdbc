@@ -337,7 +337,9 @@ public final class JoinInfo {
                 final String middleSelectSql = entry.getValue()._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).sql();
                 final String leftSelectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).sql();
 
-                final String middleSelectSqlWhereIn = leftSelectSql.substring(leftSelectSql.lastIndexOf(" WHERE ")).replace(inCondToReplace, middleSelectSql);
+                final int whereIndex = leftSelectSql.lastIndexOf(" WHERE ");
+                N.checkState(whereIndex >= 0, "SQL query does not contain ' WHERE ' clause: %s", leftSelectSql);
+                final String middleSelectSqlWhereIn = leftSelectSql.substring(whereIndex).replace(inCondToReplace, middleSelectSql);
                 final String selectSql = entry.getValue()._2.apply(referencedEntityClass).sql() + middleSelectSqlWhereIn;
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
@@ -383,7 +385,9 @@ public final class JoinInfo {
                         ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableName).sql()
                         : entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass).sql();
 
-                final int fromLength = leftSelectSqlForBatch.length() - leftSelectSqlForBatch.lastIndexOf(" FROM ");
+                final int fromIndexInBatch = leftSelectSqlForBatch.lastIndexOf(" FROM ");
+                N.checkState(fromIndexInBatch >= 0, "SQL query does not contain ' FROM ' clause: %s", leftSelectSqlForBatch);
+                final int fromLength = leftSelectSqlForBatch.length() - fromIndexInBatch;
 
                 final String batchSelectAllLeftSql = leftSelectSqlForBatch.substring(0, leftSelectSqlForBatch.length() - fromLength) + ", " + middleCondPropName
                         + batchSelectFromToJoinOn;

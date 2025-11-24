@@ -84,9 +84,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private final Deque<Boolean> _isForUpdateOnlyStack = new ConcurrentLinkedDeque<>(); //NOSONAR
 
-    private IsolationLevel _isolationLevel; //NOSONAR
+    private volatile IsolationLevel _isolationLevel; //NOSONAR
 
-    private boolean _isForUpdateOnly; //NOSONAR
+    private volatile boolean _isForUpdateOnly; //NOSONAR
 
     private boolean _isMarkedByCommitPreviously = false; //NOSONAR
 
@@ -860,6 +860,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
          * Transaction created by SQLExecutor (deprecated, not used).
          * @deprecated not used
          */
+        @Deprecated
         SQL_EXECUTOR
     }
 }
