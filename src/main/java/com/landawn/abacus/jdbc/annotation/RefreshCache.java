@@ -126,6 +126,6 @@ public @interface RefreshCache {
      *
      * @return array of filter patterns for method names that should trigger cache refresh
      */
-    String[] filter() default { "update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete", "batchDeleteByIds", "batchInsert",
-            "batchSave", "batchUpsert", "upsert", "execute" };
+    String[] filter() default { "update", "delete", "deleteById", "insert", "save", "add", "remove", "upsert", "batchUpdate", "batchDelete", "batchDeleteByIds",
+            "batchInsert", "batchSave", "batchAdd", "batchRemove", "batchUpsert", "execute" };
 }

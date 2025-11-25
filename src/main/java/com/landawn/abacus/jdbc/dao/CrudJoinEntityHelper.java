@@ -285,6 +285,15 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * Retrieves an entity by its ID with only selected properties and loads the specified join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, Class)}.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get user with specific fields and orders
+     * User user = userDao.gett(userId, Arrays.asList("id", "name", "email"), Order.class);
+     * if (user != null) {
+     *     displayUserWithOrders(user);
+     * }
+     * }</pre>
+     *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
@@ -307,6 +316,17 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     /**
      * Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, Collection)}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get user with selected properties and multiple relations
+     * User user = userDao.gett(userId,
+     *                         Arrays.asList("id", "name", "status"),
+     *                         Arrays.asList(Order.class, UserProfile.class));
+     * if (user != null) {
+     *     processUserWithOrdersAndProfile(user);
+     * }
+     * }</pre>
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
@@ -333,6 +353,17 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     /**
      * Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, boolean)}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get user with minimal fields and all relations
+     * User user = userDao.gett(userId,
+     *                         Arrays.asList("id", "name", "email"),
+     *                         true);  // Load all @JoinedBy fields
+     * if (user != null) {
+     *     performFullUserAnalysis(user);
+     * }
+     * }</pre>
      *
      * @param id the entity ID to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
@@ -457,6 +488,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     /**
      * Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
      * Uses the default batch size for processing.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Get users with selected properties and all relations
+     * List<User> users = userDao.batchGet(userIds,
+     *                                     Arrays.asList("id", "name", "email"),
+     *                                     true);  // Load all relationships
+     * }</pre>
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.

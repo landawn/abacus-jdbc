@@ -1795,7 +1795,7 @@ public final class JdbcCodeGenerationUtil {
      */
     @Builder
     @Data
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @__(@SuppressWarnings("javadoc")))
     @AllArgsConstructor
     @Accessors(chain = true)
     public static final class EntityCodeConfig {

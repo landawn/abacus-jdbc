@@ -111,6 +111,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty OptionalByte if no record is found.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalByte flags = entityDao.queryForByte("flags", 123L);
+     * byte flagValue = flags.orElse((byte) 0);
+     * }</pre>
+     *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @return an OptionalByte containing the value if found, otherwise empty
@@ -124,6 +130,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a short value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty OptionalShort if no record is found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalShort port = serverDao.queryForShort("port", 123L);
+     * short portNumber = port.orElse((short) 8080);
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
@@ -176,6 +188,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a float value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns an empty OptionalFloat if no record is found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * OptionalFloat rating = productDao.queryForFloat("rating", 123L);
+     * float productRating = rating.orElse(0.0f);
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
@@ -247,6 +265,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a Time value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
      * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<java.sql.Time> startTime = scheduleDao.queryForTime("startTime", 123L);
+     * startTime.ifPresent(time -> System.out.println("Start time: " + time));
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
@@ -399,6 +423,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Throws DuplicatedResultException if more than one record is found.
      * Returns empty Optional if no record found or value is {@code null}.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<String> email = userDao.queryForUniqueNonNull("email", 123L, String.class);
+     * email.ifPresent(e -> System.out.println("Email: " + e));
+     * }</pre>
+     *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
@@ -416,6 +446,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Queries for a unique non-null result using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
      * Throws DuplicatedResultException if more than one record is found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<String> fullName = userDao.queryForUniqueNonNull("firstName", 123L,
+     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
@@ -496,6 +532,15 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive long ID.
      * This is useful for performance optimization when you only need specific fields.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Only load id, name, email fields
+     * User user = userDao.gett(123L, Arrays.asList("id", "name", "email"));
+     * if (user != null) {
+     *     System.out.println("User name: " + user.getName());
+     * }
+     * }</pre>
      *
      * @param id the primitive long ID of the entity to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.

@@ -259,6 +259,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch insert with only specified properties and custom batch size.
      * This provides fine-grained control over both what fields are inserted and how the batch is processed.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> largeUserList = loadUsers(); // 20000 users
+     * // Insert only name and email fields in batches of 1000
+     * List<Long> ids = userDao.batchInsert(largeUserList, Arrays.asList("name", "email"), 1000);
+     * }</pre>
+     *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement
      * @param batchSize the number of entities to process in each batch. The operation will split
@@ -292,6 +299,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Performs batch insert using a custom named SQL statement with specified batch size.
      * Combines custom SQL flexibility with batch processing efficiency.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * String sql = "INSERT INTO users (name, email, status, created_date) " +
+     *              "VALUES (:name, :email, 'ACTIVE', CURRENT_TIMESTAMP)";
+     * List<User> largeUserList = loadNewUsers(); // 15000 users
+     * List<Long> ids = userDao.batchInsert(sql, largeUserList, 1000);
+     * }</pre>
      *
      * @param namedInsertSQL the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
@@ -508,6 +523,12 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a Time value from a single property of the entity with the specified ID.
      * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<java.sql.Time> startTime = scheduleDao.queryForTime("startTime", scheduleId);
+     * startTime.ifPresent(time -> System.out.println("Start time: " + time));
+     * }</pre>
      *
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
@@ -786,6 +807,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves multiple entities by their IDs with a specified batch size.
      * Large ID collections will be processed in batches to avoid database query size limits.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<Long> largeIdList = getIdsFromReport(); // 50000 IDs
+     * // Process in batches of 1000 to avoid SQL query size limits
+     * List<User> users = userDao.batchGet(largeIdList, 1000);
+     * }</pre>
+     *
      * @param ids the collection of IDs to retrieve
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -822,8 +850,17 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves multiple entities by their IDs with only selected properties populated and custom batch size.
      * This provides the most control over batch retrieval operations.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<Long> largeIdList = getAllUserIds(); // 30000 IDs
+     * // Only fetch id, name, email in batches of 2000
+     * List<User> users = userDao.batchGet(largeIdList,
+     *                                     Arrays.asList("id", "name", "email"),
+     *                                     2000);
+     * }</pre>
+     *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select, excluding properties of joining entities. 
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -997,6 +1034,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch update of multiple entities with a specified batch size.
      * Large collections will be processed in batches of the specified size.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> largeUserList = loadUsers(); // 5000 users
+     * largeUserList.forEach(u -> u.setLastModified(new Date()));
+     * // Process in batches of 500
+     * int totalUpdated = userDao.batchUpdate(largeUserList, 500);
+     * }</pre>
+     *
      * @param entities the collection of entities to update
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -1031,6 +1076,17 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Performs batch update of multiple entities updating only specified properties with custom batch size.
      * This provides the most control over batch update operations.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> users = loadLargeUserList(); // 10000 users
+     * users.forEach(u -> {
+     *     u.setStatus("VERIFIED");
+     *     u.setVerifiedDate(new Date());
+     * });
+     * // Update only status and verifiedDate in batches of 500
+     * int rows = userDao.batchUpdate(users, Arrays.asList("status", "verifiedDate"), 500);
+     * }</pre>
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
@@ -1172,6 +1228,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Performs batch upsert based on specified unique properties with custom batch size.
      * This provides the most flexibility for batch upsert operations.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> largeUserList = importUsers(); // 25000 users from external system
+     * // Upsert based on email uniqueness in batches of 2000
+     * List<User> saved = userDao.batchUpsert(largeUserList, Arrays.asList("email"), 2000);
+     * }</pre>
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
@@ -1356,6 +1419,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Refreshes multiple entities from the database with a specified batch size.
      * Large collections will be processed in batches of the specified size.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> cachedUsers = getCachedUsers(); // 10000 cached entities
+     * int refreshedCount = userDao.batchRefresh(cachedUsers, 1000);
+     * System.out.println(refreshedCount + " users refreshed from database");
+     * }</pre>
+     *
      * @param entities the collection of entities to refresh
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -1397,6 +1467,15 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Refreshes specific properties of multiple entities with a custom batch size.
      * This provides the most control over batch refresh operations.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> cachedUsers = getCachedUsers(); // 8000 cached entities
+     * // Refresh only balance and status fields in batches of 800
+     * int count = userDao.batchRefresh(cachedUsers,
+     *                                  Arrays.asList("balance", "status"),
+     *                                  800);
+     * }</pre>
      *
      * @param entities the collection of entities to refresh
      * @param propNamesToRefresh the properties to refresh from the database
@@ -1503,6 +1582,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Performs batch delete of multiple entities with a specified batch size.
      * Large collections will be processed in batches of the specified size.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> largeDeleteList = getInactiveUsers(); // 20000 inactive users
+     * int totalDeleted = userDao.batchDelete(largeDeleteList, 1000);
+     * System.out.println(totalDeleted + " users deleted");
+     * }</pre>
+     *
      * @param entities the collection of entities to delete
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -1556,6 +1642,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Deletes multiple entities by their IDs with a specified batch size.
      * Large ID collections will be processed in batches to avoid database query size limits.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<Long> largeIdList = getExpiredUserIds(); // 40000 IDs
+     * // Delete in batches of 2000 to avoid SQL query size limits
+     * int deletedCount = userDao.batchDeleteByIds(largeIdList, 2000);
+     * }</pre>
      *
      * @param ids the collection of IDs to delete
      * @param batchSize the number of entities to process in each batch. The operation will split

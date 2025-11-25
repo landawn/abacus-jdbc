@@ -5468,10 +5468,21 @@ public final class Jdbc {
      * Represents an output parameter for a stored procedure call. This class encapsulates all
      * necessary information to register an output parameter with a {@code CallableStatement}.
      *
-     * <p>This class provides both a no-argument constructor and an all-arguments constructor
-     * for flexible instantiation.</p>
+     * <p>This class provides both a no-argument constructor (via Lombok's {@code @NoArgsConstructor})
+     * and an all-arguments constructor (via Lombok's {@code @AllArgsConstructor}) for flexible instantiation.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Using no-args constructor and setters
+     * OutParam outParam = new OutParam();
+     * outParam.setParameterIndex(1);
+     * outParam.setSqlType(Types.VARCHAR);
+     *
+     * // Using all-args constructor
+     * OutParam outParam = new OutParam(1, "result", Types.INTEGER, null);
+     * }</pre>
      */
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @__(@SuppressWarnings("javadoc")))
     @AllArgsConstructor
     @Data
     public static final class OutParam {
