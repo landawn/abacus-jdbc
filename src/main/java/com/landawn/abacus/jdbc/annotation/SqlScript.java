@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
  *     Set<User> listUserWithBiggerIdToSet(int id) throws SQLException;
  *
  *     @Query(id = "listActiveUsersWithOrders")
- *     List<User> listActiveUsersWithOrders(Bind("startDate") String startDate, Bind("minAmount") double minAmount) throws SQLException;
+ *     List<User> listActiveUsersWithOrders(@Bind("startDate") String startDate, @Bind("minAmount") double minAmount) throws SQLException;
  *
  *     static final class SqlTable {
  *

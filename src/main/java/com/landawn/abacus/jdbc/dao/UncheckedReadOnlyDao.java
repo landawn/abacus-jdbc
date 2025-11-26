@@ -24,10 +24,15 @@ import com.landawn.abacus.query.SQLBuilder;
  * A read-only DAO interface that provides only query operations without any write capabilities.
  * This interface disables all insert, update, and delete operations by throwing {@code UnsupportedOperationException}.
  * It's ideal for scenarios where data should only be read, never modified.
- * 
+ *
+ * <p><b>Unchecked Exception Handling:</b></p>
+ * <p>This is an "unchecked" DAO variant, meaning all methods throw {@link com.landawn.abacus.exception.UncheckedSQLException}
+ * instead of checked {@link java.sql.SQLException}. This eliminates the need for explicit try-catch blocks or
+ * throws declarations, making the API more convenient for use in functional programming contexts and lambda expressions.</p>
+ *
  * <p>This is a beta API that extends {@code UncheckedNoUpdateDao} and further restricts save/insert operations,
  * ensuring complete read-only access to the database.</p>
- * 
+ *
  * <p>Use cases include:</p>
  * <ul>
  *   <li>Reporting databases where data should never be modified</li>
@@ -35,23 +40,29 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Views or materialized views that shouldn't be updated</li>
  *   <li>Historical data that must remain immutable</li>
  * </ul>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface ReportDao extends UncheckedReadOnlyDao<Report, SQLBuilder.PSC, ReportDao> {
  *     // Only query methods are available
  * }
- * 
+ *
  * ReportDao dao = JdbcUtil.createDao(ReportDao.class, readOnlyDataSource);
- * 
- * // These operations work:
+ *
+ * // These operations work - note no checked exception handling needed:
  * List<Report> reports = dao.list(CF.between("date", startDate, endDate));
  * Optional<Report> report = dao.findFirst(CF.eq("id", reportId));
  * Dataset results = dao.query(CF.eq("status", "PUBLISHED"));
- * 
+ *
+ * // Can be used directly in streams without checked exceptions:
+ * Stream.of(reportId1, reportId2, reportId3)
+ *       .map(id -> dao.findFirst(CF.eq("id", id)))
+ *       .filter(Optional::isPresent)
+ *       .forEach(report -> System.out.println(report.get()));
+ *
  * // All write operations throw UnsupportedOperationException:
  * // dao.save(report);         // throws exception
- * // dao.update(...);          // throws exception  
+ * // dao.update(...);          // throws exception
  * // dao.delete(...);          // throws exception
  * // dao.batchSave(reports);   // throws exception
  * }</pre>

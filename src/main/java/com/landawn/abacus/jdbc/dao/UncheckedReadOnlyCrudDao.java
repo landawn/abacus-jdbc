@@ -27,8 +27,10 @@ import com.landawn.abacus.query.SQLBuilder;
  * This interface is useful for creating DAOs that should only have read access to the database,
  * ensuring data safety by preventing any modifications at compile time.
  *
- * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * making it easier to work with in functional programming contexts.</p>
+ * <p><b>Unchecked Exception Handling:</b></p>
+ * <p>This is an "unchecked" DAO variant. All methods throw {@link UncheckedSQLException} instead of checked
+ * {@link java.sql.SQLException}, making it easier to work with in functional programming contexts, lambda
+ * expressions, and stream operations without requiring explicit exception handling.</p>
  *
  * <p>All write operations (insert, update, delete, and their batch variants) will throw
  * {@link UnsupportedOperationException}.</p>
@@ -40,8 +42,22 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  *
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, readOnlyDataSource);
- * Optional<User> user = userDao.get(userId);  // OK
- * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));  // OK
+ *
+ * // Query operations work without checked exception handling:
+ * Optional<User> user = userDao.get(userId);
+ * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
+ * boolean exists = userDao.exists(CF.eq("email", "test@example.com"));
+ * long count = userDao.count(CF.gt("age", 18));
+ *
+ * // Can be used in functional contexts without try-catch:
+ * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
+ * List<User> usersFound = userIds.stream()
+ *     .map(id -> userDao.get(id))
+ *     .filter(Optional::isPresent)
+ *     .map(Optional::get)
+ *     .collect(Collectors.toList());
+ *
+ * // Write operations throw UnsupportedOperationException:
  * // userDao.insert(user);  // Throws UnsupportedOperationException
  * // userDao.update(user);  // Throws UnsupportedOperationException
  * // userDao.deleteById(id);  // Throws UnsupportedOperationException

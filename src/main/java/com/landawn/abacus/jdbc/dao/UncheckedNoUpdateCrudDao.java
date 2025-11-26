@@ -29,12 +29,15 @@ import com.landawn.abacus.query.condition.Condition;
  * This interface is designed for use cases where data modification is restricted to insertions and deletions only,
  * ensuring data integrity by preventing accidental updates.
  *
+ * <p><b>Unchecked Exception Handling:</b></p>
+ * <p>This is an "unchecked" DAO variant. All methods throw {@link UncheckedSQLException} instead of checked
+ * {@link java.sql.SQLException}, allowing for cleaner code without explicit exception handling. This makes it
+ * particularly convenient for use in lambda expressions, stream operations, and other functional programming
+ * patterns where checked exceptions would be cumbersome.</p>
+ *
  * <p>This interface extends multiple DAO interfaces to provide comprehensive read, insert, and delete functionality while
  * blocking update operations. It's particularly useful in audit systems, append-only data stores, or scenarios
  * where historical data must remain immutable.</p>
- *
- * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * allowing for cleaner code without explicit exception handling.</p>
  *
  * <p>All update-related methods (including {@code update}, {@code batchUpdate}, and {@code upsert}) will throw
  * {@link UnsupportedOperationException}.</p>
@@ -47,19 +50,33 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
  *
- * // Insert operations work normally
+ * // Insert operations work without checked exception handling:
  * AuditLog log = new AuditLog("User login", userId);
  * Long id = auditDao.insert(log);
  *
- * // Read operations work normally
+ * // Batch inserts are also supported:
+ * List<AuditLog> logs = Arrays.asList(
+ *     new AuditLog("Action 1", userId),
+ *     new AuditLog("Action 2", userId)
+ * );
+ * List<Long> ids = auditDao.batchInsert(logs);
+ *
+ * // Read operations work without checked exception handling:
  * Optional<AuditLog> retrieved = auditDao.get(id);
- * List<AuditLog> logs = auditDao.list(CF.eq("userId", userId));
+ * List<AuditLog> userLogs = auditDao.list(CF.eq("userId", userId));
+ * long count = auditDao.count(CF.between("timestamp", startDate, endDate));
  *
- * // Update operations throw UnsupportedOperationException
- * // auditDao.update(log);  // This will throw!
+ * // Can be used in functional contexts without try-catch:
+ * List<Long> logIds = Arrays.asList(1L, 2L, 3L);
+ * logIds.forEach(logId -> auditDao.get(logId).ifPresent(System.out::println));
  *
- * // Delete operations work normally
+ * // Update operations throw UnsupportedOperationException:
+ * // auditDao.update(log);  // Throws exception
+ * // auditDao.upsert(log);  // Throws exception
+ *
+ * // Delete operations work normally:
  * auditDao.deleteById(id);
+ * auditDao.delete(CF.lt("timestamp", cutoffDate));
  * }</pre>
  *
  * @param <T> the entity type
@@ -412,9 +429,9 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <pre>{@code
      * // Preferred way to delete by ID
      * int deletedCount = dao.deleteById(123L);
-     * 
+     *
      * // Or delete by condition
-     * int deletedCount = dao.deleteAll(CF.eq("status", "INACTIVE"));
+     * int deletedCount = dao.delete(CF.eq("status", "INACTIVE"));
      * }</pre>
      * 
      * @param id The ID of the entity to delete (operation will fail)
@@ -472,7 +489,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <p>Example of alternative approach:
      * <pre>{@code
      * // Instead of: dao.batchDeleteByIds(Arrays.asList(1L, 2L, 3L));
-     * // Use: dao.deleteAll(CF.in("id", Arrays.asList(1L, 2L, 3L)));
+     * // Use: dao.delete(CF.in("id", Arrays.asList(1L, 2L, 3L)));
      * }</pre>
      * 
      * @param ids Collection of IDs to delete (operation will fail)

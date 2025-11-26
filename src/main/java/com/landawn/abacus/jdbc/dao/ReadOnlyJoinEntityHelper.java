@@ -29,6 +29,18 @@ import com.landawn.abacus.query.SQLBuilder;
  * preventing any modifications to the relationships between entities while still allowing
  * read operations inherited from the parent interface.</p>
  *
+ * <p><b>Supported Join Entity Read Operations:</b></p>
+ * <ul>
+ *   <li>{@code loadJoinEntities(entity, Class)} - Load associated entities for a specific join type</li>
+ *   <li>{@code loadJoinEntities(entity, String)} - Load associated entities by property name</li>
+ *   <li>{@code loadJoinEntities(entity, Collection<String>)} - Load multiple join entities by property names</li>
+ *   <li>{@code loadAllJoinEntities(entity)} - Load all defined join entities for an entity</li>
+ *   <li>{@code loadJoinEntities(Collection, Class)} - Load join entities for multiple entities (batch)</li>
+ *   <li>{@code loadAllJoinEntities(Collection)} - Load all join entities for multiple entities (batch)</li>
+ * </ul>
+ *
+ * <p>All delete join entity operations will throw {@link UnsupportedOperationException}.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support
@@ -39,20 +51,27 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
- * // Read operations work fine
+ * // Supported operations - all work fine:
+ *
+ * // Load join entities for a single user
  * User user = userDao.gett(1L);
- * userDao.loadJoinEntities(user, Order.class);  // Successfully loads orders
+ * userDao.loadJoinEntities(user, Order.class);          // Loads associated orders
+ * userDao.loadJoinEntities(user, "addresses");          // Loads addresses by property name
+ * userDao.loadAllJoinEntities(user);                    // Loads all defined join entities
  *
+ * // Load join entities for multiple users (batch loading)
  * List<User> users = userDao.list(CF.alwaysTrue());
- * userDao.loadAllJoinEntities(users);  // Successfully loads all join entities
+ * userDao.loadJoinEntities(users, Order.class);         // Batch loads orders for all users
+ * userDao.loadAllJoinEntities(users);                   // Batch loads all join entities
  *
- * // Delete operations are blocked
- * try {
- *     userDao.deleteJoinEntities(user, Order.class);
- *     // Will throw UnsupportedOperationException
- * } catch (UnsupportedOperationException e) {
- *     // Expected - this is a read-only interface
- * }
+ * // Load specific join entities by property names
+ * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"));
+ *
+ * // Unsupported operations - all throw UnsupportedOperationException:
+ * userDao.deleteJoinEntities(user, Order.class);        // Throws exception
+ * userDao.deleteJoinEntities(user, "orders");           // Throws exception
+ * userDao.deleteAllJoinEntities(user);                  // Throws exception
+ * userDao.deleteJoinEntities(users, Order.class);       // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
@@ -60,6 +79,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see JoinEntityHelper
  * @see Dao
+ * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings("RedundantThrows")
 public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {

@@ -36,13 +36,13 @@ package com.landawn.abacus.jdbc;
  *   <li>{@link #NEVER} - Fails if a transaction exists</li>
  * </ul>
  * 
- * <p>Usage example:
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Transactional(propagation = Propagation.REQUIRES_NEW)
  * public void auditOperation() {
  *     // This method always runs in its own transaction
  * }
- * 
+ *
  * @Transactional(propagation = Propagation.MANDATORY)
  * public void criticalOperation() {
  *     // This method requires an existing transaction

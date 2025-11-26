@@ -37,30 +37,69 @@ import com.landawn.abacus.util.Throwables;
 /**
  * This interface extends the base Dao interface but disables update and delete operations while allowing read and insert operations
  * to ensure data integrity in scenarios where modifications to existing records should be prevented.
- * 
- * <p>This interface is particularly useful for:
+ *
+ * <p>This interface is particularly useful for:</p>
  * <ul>
- *   <li>Read-only database connections or users with limited permissions</li>
  *   <li>Audit trail systems where historical data must remain immutable</li>
+ *   <li>Append-only data stores and event sourcing patterns</li>
  *   <li>Data warehousing scenarios where only new data insertion is allowed</li>
  *   <li>Implementing the Command Query Responsibility Segregation (CQRS) pattern</li>
  * </ul>
- * 
+ *
  * <p>All methods that would typically perform UPDATE, DELETE, or CALL operations will throw
  * {@link UnsupportedOperationException} when invoked. Only SELECT queries for reading data
- * and INSERT queries for adding new records are permitted.
- * 
+ * and INSERT queries for adding new records are permitted.</p>
+ *
+ * <p><b>Supported Operations:</b></p>
+ * <ul>
+ *   <li><b>Read Operations:</b> {@code list}, {@code findFirst}, {@code findOnlyOne}, {@code count},
+ *       {@code exists}, {@code queryForSingleResult}, etc.</li>
+ *   <li><b>Insert Operations:</b> {@code save}, {@code batchSave} (inherited from Dao)</li>
+ *   <li><b>Query Preparation:</b> {@code prepareQuery} and {@code prepareNamedQuery} for SELECT and INSERT statements</li>
+ * </ul>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserReadOnlyDao extends NoUpdateDao<User, SQLBuilder, UserReadOnlyDao> {
- *     // Custom read-only methods
- *     @Query("SELECT * FROM users WHERE status = ?")
- *     List<User> findActiveUsers(String status);
- *     
- *     // Insert is still allowed
- *     @Query("INSERT INTO users (name, email) VALUES (?, ?)")
- *     void addUser(String name, String email);
+ * // Define a no-update DAO for append-only audit logs
+ * public interface AuditLogDao extends NoUpdateDao<AuditLog, SQLBuilder.PSC, AuditLogDao> {
+ *     // Custom read methods
  * }
+ *
+ * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
+ *
+ * // Supported operations - all work fine:
+ *
+ * // Read operations
+ * List<AuditLog> logs = auditDao.list(CF.eq("userId", 123L));
+ * Optional<AuditLog> firstLog = auditDao.findFirst(CF.gt("timestamp", yesterday));
+ * int count = auditDao.count(CF.eq("action", "LOGIN"));
+ * boolean exists = auditDao.exists(CF.eq("id", 456L));
+ *
+ * // Insert operations
+ * AuditLog newLog = new AuditLog("USER_LOGIN", userId, timestamp);
+ * auditDao.save(newLog);
+ *
+ * List<AuditLog> newLogs = createAuditLogs();
+ * auditDao.batchSave(newLogs);
+ *
+ * // Prepare SELECT queries
+ * List<AuditLog> results = auditDao.prepareQuery("SELECT * FROM audit_log WHERE user_id = ?")
+ *                                  .setLong(1, userId)
+ *                                  .list(AuditLog.class);
+ *
+ * // Prepare INSERT queries
+ * auditDao.prepareNamedQuery("INSERT INTO audit_log (action, user_id) VALUES (:action, :userId)")
+ *         .setString("action", "LOGOUT")
+ *         .setLong("userId", userId)
+ *         .execute();
+ *
+ * // Unsupported operations - all throw UnsupportedOperationException:
+ * auditDao.update("status", "MODIFIED", CF.eq("id", 123L));  // Throws exception
+ * auditDao.delete(CF.eq("id", 123L));                         // Throws exception
+ * auditDao.upsert(log, CF.eq("id", 123L));                   // Throws exception
+ * auditDao.prepareCallableQuery("{call update_proc()}");     // Throws exception
+ * auditDao.prepareQuery("UPDATE audit_log SET...");          // Throws exception
+ * auditDao.prepareQuery("DELETE FROM audit_log...");         // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

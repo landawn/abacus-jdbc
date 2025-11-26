@@ -25,7 +25,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * A completely read-only CRUD Data Access Object interface that prevents all data modification operations.
  * This interface extends both {@link ReadOnlyDao} and {@link NoUpdateCrudDao}, providing the most
  * restrictive DAO implementation where only read operations are permitted.
- * 
+ *
  * <p>All insert, update, delete, and upsert operations will throw {@link UnsupportedOperationException}.
  * This interface is ideal for:</p>
  * <ul>
@@ -34,25 +34,67 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Public APIs that should never modify data</li>
  *   <li>Enforcing read-only access at the application level</li>
  * </ul>
- * 
+ *
+ * <p><b>Supported Read Operations:</b></p>
+ * <ul>
+ *   <li>{@code get(ID)} / {@code gett(ID)} - Retrieve entity by ID (returns Optional or null)</li>
+ *   <li>{@code list(Condition)} - Query multiple records matching a condition</li>
+ *   <li>{@code findFirst(Condition)} - Find the first record matching a condition</li>
+ *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws exception if multiple found)</li>
+ *   <li>{@code count(Condition)} - Count records matching a condition</li>
+ *   <li>{@code exists(Condition)} - Check if any records match a condition</li>
+ *   <li>{@code queryForBoolean/Int/Long/String(propName, ID)} - Query single column value by ID</li>
+ *   <li>{@code queryForSingleResult(propName, ID, Class)} - Query single property value by ID</li>
+ *   <li>{@code prepareQuery(String)} - Prepare SELECT queries for execution</li>
+ * </ul>
+ *
  * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO for reporting
- * public interface ReportDao extends ReadOnlyCrudDao<Report, Long, SQLBuilder, ReportDao> {
- *     // Only read operations are available
- *     @Query("SELECT * FROM reports WHERE created_date >= ?")
- *     List<Report> findRecentReports(Date since);
+ * public interface ReportDao extends ReadOnlyCrudDao<Report, Long, SQLBuilder.PSC, ReportDao> {
+ *     // Custom query methods can be added
  * }
- * 
- * // Usage:
- * Report report = reportDao.gett(123L); // Works (returns {@code null} if not found)
- * List<Report> reports = reportDao.list(CF.alwaysTrue()); // Works
- * reportDao.insert(new Report()); // Throws UnsupportedOperationException
- * reportDao.update(report); // Throws UnsupportedOperationException
- * reportDao.deleteById(123L); // Throws UnsupportedOperationException
+ *
+ * ReportDao reportDao = JdbcUtil.createDao(ReportDao.class, dataSource);
+ *
+ * // Supported operations - all work fine:
+ *
+ * // Get by ID (returns Optional)
+ * Optional<Report> report = reportDao.get(123L);
+ *
+ * // Get by ID (returns null if not found)
+ * Report report2 = reportDao.gett(456L);
+ *
+ * // List reports by condition
+ * List<Report> activeReports = reportDao.list(CF.eq("status", "ACTIVE"));
+ *
+ * // Find first report
+ * Optional<Report> firstReport = reportDao.findFirst(CF.gt("createdDate", someDate));
+ *
+ * // Count reports
+ * int count = reportDao.count(CF.eq("type", "MONTHLY"));
+ *
+ * // Check if report exists
+ * boolean exists = reportDao.exists(CF.eq("id", 789L));
+ *
+ * // Query single property by ID
+ * Nullable<String> title = reportDao.queryForString("title", 123L);
+ * OptionalInt year = reportDao.queryForInt("year", 123L);
+ *
+ * // Prepare custom SELECT queries
+ * List<Report> results = reportDao.prepareQuery("SELECT * FROM reports WHERE year = ?")
+ *                                 .setInt(1, 2023)
+ *                                 .list(Report.class);
+ *
+ * // Unsupported operations - all throw UnsupportedOperationException:
+ * reportDao.insert(new Report());              // Throws exception
+ * reportDao.update(report2);                   // Throws exception
+ * reportDao.deleteById(123L);                  // Throws exception
+ * reportDao.batchInsert(reports);              // Throws exception
+ * reportDao.upsert(report2);                   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

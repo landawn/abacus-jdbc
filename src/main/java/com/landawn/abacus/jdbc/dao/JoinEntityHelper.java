@@ -621,12 +621,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a single entity by property name with specific property selection.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     * This is an abstract method that must be implemented by concrete DAO classes.
+     *
+     * <p>This method is the core implementation for loading join entities. It queries the database
+     * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
+     * and populates the specified property in the entity.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.findById(1L).orElseThrow();
      * // Load only specific fields from the 'addresses' join entity
      * userDao.loadJoinEntities(user, "addresses", Arrays.asList("street", "city", "zipCode"));
+     *
+     * // Load all fields from 'orders' join entity
+     * userDao.loadJoinEntities(user, "orders", null);
      * }</pre>
      *
      * @param entity the entity for which to load join entities
@@ -659,12 +667,20 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     /**
      * Loads join entities for a collection of entities by property name with specific property selection.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     * This is an abstract method that must be implemented by concrete DAO classes.
+     *
+     * <p>This method is the core batch implementation for loading join entities. It efficiently loads
+     * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
+     * The implementation typically uses an IN clause to fetch all related entities in one query.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.between("createdDate", startDate, endDate));
      * // Load only essential fields from addresses
      * userDao.loadJoinEntities(users, "addresses", Arrays.asList("city", "country"));
+     *
+     * // Load all fields from orders for multiple users
+     * userDao.loadJoinEntities(users, "orders", null);
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities
@@ -1558,12 +1574,17 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     /**
      * Deletes join entities for a single entity by property name.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     * This is an abstract method that must be implemented by concrete DAO classes.
+     *
+     * <p>This method deletes all related entities for the specified join property. The deletion
+     * is based on the foreign key relationship defined in the {@code @JoinedBy} annotation.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.findById(1L).orElseThrow();
      * // Delete all addresses associated with the user
      * int deletedCount = userDao.deleteJoinEntities(user, "addresses");
+     * System.out.println("Deleted " + deletedCount + " addresses");
      * }</pre>
      *
      * @param entity the entity for which to delete join entities
@@ -1576,12 +1597,17 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     /**
      * Deletes join entities for a collection of entities by property name.
      * The property name must correspond to a field annotated with {@code @JoinedBy}.
-     * 
+     * This is an abstract method that must be implemented by concrete DAO classes.
+     *
+     * <p>This method efficiently deletes all related entities for multiple parent entities in a batch operation.
+     * The implementation typically uses an IN clause to delete all related records in one or more SQL statements.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(CF.in("id", userIdsToClean));
      * // Delete all reviews for these users
      * int deletedCount = userDao.deleteJoinEntities(users, "reviews");
+     * System.out.println("Deleted " + deletedCount + " reviews for " + users.size() + " users");
      * }</pre>
      *
      * @param entities the collection of entities for which to delete join entities

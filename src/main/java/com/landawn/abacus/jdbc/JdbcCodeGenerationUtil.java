@@ -359,7 +359,7 @@ public final class JdbcCodeGenerationUtil {
      * EntityCodeConfig config = EntityCodeConfig.builder()
      *     .srcDir("./src/main/java")
      *     .packageName("com.example.entity")
-     *     .fieldNameConverter((table, column) -> StringUtil.toCamelCase(column.toLowerCase()))
+     *     .fieldNameConverter((table, column) -> Strings.toCamelCase(column.toLowerCase()))
      *     .build();
      * String entityCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "ComplexEntity", query, config);
      * }</pre>
@@ -843,7 +843,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns (MySQL): "SELECT user_id, first_name, last_name, <i>created-date</i> FROM user_profile"
+     *     // Returns (MySQL): "SELECT user_id, first_name, last_name, `created-date` FROM user_profile"
      *     // Returns (PostgreSQL): "SELECT user_id, first_name, last_name, "created-date" FROM user_profile"
      * }
      * }</pre>

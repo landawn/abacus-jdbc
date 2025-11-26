@@ -1191,6 +1191,13 @@ public final class Jdbc {
          * Returns a composed {@code BiResultExtractor} that first applies this extractor to
          * the {@code ResultSet} and then applies the {@code after} function to the result.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiResultExtractor<List<User>> userListExtractor = ...;
+         * // Creates an extractor that returns the count of users.
+         * BiResultExtractor<Integer> userCountExtractor = userListExtractor.andThen(List::size);
+         * }</pre>
+         *
          * @param <R> result type of the {@code after} function
          * @param after the function to apply after this extractor is applied
          * @return a composed {@code BiResultExtractor}
@@ -1778,6 +1785,12 @@ public final class Jdbc {
          * after the first execution. It should not be cached, shared, or used in parallel streams.
          * </p>
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * RowMapper<Object[]> arrayMapper = RowMapper.toArray(ColumnGetter.GET_OBJECT);
+         * // When applied to a row: Object[] rowData = arrayMapper.apply(rs);
+         * }</pre>
+         *
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @return a stateful {@code RowMapper} that maps a row to an {@code Object[]}
          */
@@ -1814,6 +1827,12 @@ public final class Jdbc {
          * after the first execution. It should not be cached, shared, or used in parallel streams.
          * </p>
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * RowMapper<List<Object>> listMapper = RowMapper.toList(ColumnGetter.GET_OBJECT);
+         * // When applied to a row: List<Object> rowData = listMapper.apply(rs);
+         * }</pre>
+         *
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
          * @return a stateful {@code RowMapper} that maps a row to a {@code List<Object>}
          */
@@ -1833,6 +1852,15 @@ public final class Jdbc {
          * <b>Warning:</b> The returned mapper is stateful because it caches the column count
          * after the first execution. It should not be cached, shared, or used in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Create a mapper that maps each row to an ArrayList
+         * RowMapper<ArrayList<Object>> mapper = RowMapper.toCollection(
+         *     ColumnGetter.GET_OBJECT,
+         *     size -> new ArrayList<>(size)
+         * );
+         * }</pre>
          *
          * @param <C> collection type
          * @param columnGetterForAll the {@code ColumnGetter} used to retrieve the value for every column
@@ -1875,6 +1903,13 @@ public final class Jdbc {
          * use this mapper in parallel streams.
          * </p>
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray();
+         * // Process immediately: DisposableObjArray data = mapper.apply(rs);
+         * // WARNING: Do not store 'data' reference, process it immediately
+         * }</pre>
+         *
          * @return a stateful {@code RowMapper} for high-performance, single-threaded row processing
          */
         @Beta
@@ -1913,6 +1948,13 @@ public final class Jdbc {
          * the next call to {@code apply}. You must process or copy its contents before the next row is mapped.
          * Do not cache, share, or use this mapper in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray(User.class);
+         * // Type conversions based on User class properties
+         * // WARNING: Process result immediately, do not store
+         * }</pre>
          *
          * @param entityClass the class used to infer the data type for each column based on matching property names
          * @return a stateful {@code RowMapper} for high-performance, type-aware, single-threaded row processing
@@ -2592,6 +2634,13 @@ public final class Jdbc {
          * Returns a composed {@code BiRowMapper} that first applies this mapper to the row and then
          * applies the {@code after} function to the result.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<User> userMapper = (rs, cols) -> new User(rs.getString("name"));
+         * // Creates a mapper that extracts just the user's name as a String.
+         * BiRowMapper<String> nameMapper = userMapper.andThen(User::getName);
+         * }</pre>
+         *
          * @param <R> result type of the {@code after} function
          * @param after the function to apply to the result of this mapper; must not be null
          * @return a composed {@code BiRowMapper}
@@ -2637,6 +2686,14 @@ public final class Jdbc {
          * Combines two {@code BiRowMapper} instances into a single mapper that returns a {@code Tuple2}
          * containing the results of both. Both mappers are applied to the same row.
          *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<Integer> idMapper = (rs, cols) -> rs.getInt("id");
+         * BiRowMapper<String> nameMapper = (rs, cols) -> rs.getString("name");
+         * BiRowMapper<Tuple2<Integer, String>> combinedMapper = BiRowMapper.combine(idMapper, nameMapper);
+         * // combinedMapper.apply(rs, cols) would return Tuple.of(1, "John") for a given row.
+         * }</pre>
+         *
          * @param <T> result type of first mapper
          * @param <U> result type of second mapper
          * @param rowMapper1 the first mapper; must not be null
@@ -2653,6 +2710,14 @@ public final class Jdbc {
         /**
          * Combines three {@code BiRowMapper} instances into a single mapper that returns a {@code Tuple3}
          * containing the results of all three. All mappers are applied to the same row.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<Integer> idMapper = (rs, cols) -> rs.getInt("id");
+         * BiRowMapper<String> nameMapper = (rs, cols) -> rs.getString("name");
+         * BiRowMapper<Date> dateMapper = (rs, cols) -> rs.getDate("join_date");
+         * BiRowMapper<Tuple3<Integer, String, Date>> combinedMapper = BiRowMapper.combine(idMapper, nameMapper, dateMapper);
+         * }</pre>
          *
          * @param <A> result type of first mapper
          * @param <B> result type of second mapper

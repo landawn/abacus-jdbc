@@ -24,39 +24,82 @@ import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
- * A CRUD Data Access Object interface that disables update and delete operations while allowing read and insert operations. 
- * This interface extends both {@link NoUpdateDao}
- * and {@link CrudDao}, effectively creating a DAO that can only read existing records
- * and insert new ones, but cannot modify or delete existing records.
- * 
+ * A CRUD Data Access Object interface that disables update and delete operations while allowing read and insert operations.
+ * This interface extends both {@link NoUpdateDao} and {@link CrudDao}, effectively creating a DAO that can only
+ * read existing records and insert new ones, but cannot modify or delete existing records.
+ *
  * <p>This pattern is particularly useful for:</p>
  * <ul>
  *   <li>Audit logs or event stores where records should be immutable</li>
- *   <li>Append-only data stores</li>
+ *   <li>Append-only data stores and event sourcing patterns</li>
  *   <li>Historical data that should not be modified</li>
  *   <li>Enforcing data integrity by preventing updates at the DAO level</li>
  * </ul>
- * 
+ *
  * <p>All update, upsert, and delete operations will throw {@link UnsupportedOperationException}.
  * Read operations (find, exists, query) and insert operations remain functional.</p>
- * 
+ *
+ * <p><b>Supported Operations:</b></p>
+ * <ul>
+ *   <li><b>Read by ID:</b> {@code get(ID)}, {@code gett(ID)}, {@code queryForBoolean/Int/Long/String(propName, ID)}</li>
+ *   <li><b>Query Operations:</b> {@code list(Condition)}, {@code findFirst(Condition)}, {@code findOnlyOne(Condition)}</li>
+ *   <li><b>Aggregate Operations:</b> {@code count(Condition)}, {@code exists(Condition)}</li>
+ *   <li><b>Insert Operations:</b> {@code insert(entity)}, {@code batchInsert(entities)}</li>
+ *   <li><b>Query Preparation:</b> {@code prepareQuery} and {@code prepareNamedQuery} for SELECT and INSERT</li>
+ * </ul>
+ *
  * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a DAO for immutable transaction records
- * public interface TransactionDao extends NoUpdateCrudDao<Transaction, String, SQLBuilder, TransactionDao> {
+ * public interface TransactionDao extends NoUpdateCrudDao<Transaction, String, SQLBuilder.PSC, TransactionDao> {
  *     // Custom read methods can be added
- *     List<Transaction> findByAccountId(String accountId);
  * }
- * 
- * // Usage:
- * Transaction txn = new Transaction();
- * String id = transactionDao.insert(txn); // Works
- * Transaction retrieved = transactionDao.gett(id); // Works (returns {@code null} if not found)
- * transactionDao.update(txn); // Throws UnsupportedOperationException
- * transactionDao.deleteById(id); // Throws UnsupportedOperationException
+ *
+ * TransactionDao transactionDao = JdbcUtil.createDao(TransactionDao.class, dataSource);
+ *
+ * // Supported operations - all work fine:
+ *
+ * // Insert operations
+ * Transaction txn = new Transaction("TXN001", customerId, amount);
+ * String txnId = transactionDao.insert(txn);                    // Returns generated ID
+ *
+ * List<Transaction> newTransactions = createTransactions();
+ * List<String> ids = transactionDao.batchInsert(newTransactions);  // Batch insert
+ *
+ * // Read by ID operations
+ * Optional<Transaction> transaction = transactionDao.get(txnId);    // Returns Optional
+ * Transaction txn2 = transactionDao.gett(txnId);                    // Returns null if not found
+ *
+ * // Query single property by ID
+ * Nullable<String> status = transactionDao.queryForString("status", txnId);
+ * OptionalDouble amount = transactionDao.queryForDouble("amount", txnId);
+ *
+ * // Query operations
+ * List<Transaction> txns = transactionDao.list(CF.eq("customerId", customerId));
+ * Optional<Transaction> firstTxn = transactionDao.findFirst(CF.gt("amount", 1000.0));
+ * Optional<Transaction> uniqueTxn = transactionDao.findOnlyOne(CF.eq("referenceNumber", "REF123"));
+ *
+ * // Count and existence checks
+ * int count = transactionDao.count(CF.eq("status", "PENDING"));
+ * boolean exists = transactionDao.exists(CF.eq("id", txnId));
+ *
+ * // Prepare custom SELECT queries
+ * List<Transaction> results = transactionDao.prepareQuery(
+ *         "SELECT * FROM transactions WHERE amount > ? AND status = ?")
+ *         .setDouble(1, 500.0)
+ *         .setString(2, "COMPLETED")
+ *         .list(Transaction.class);
+ *
+ * // Unsupported operations - all throw UnsupportedOperationException:
+ * transactionDao.update(txn);                              // Throws exception
+ * transactionDao.update("status", "CANCELLED", txnId);     // Throws exception
+ * transactionDao.deleteById(txnId);                        // Throws exception
+ * transactionDao.delete(txn);                              // Throws exception
+ * transactionDao.batchDelete(transactions);                // Throws exception
+ * transactionDao.upsert(txn);                              // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

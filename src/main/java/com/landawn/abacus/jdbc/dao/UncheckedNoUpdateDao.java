@@ -27,31 +27,45 @@ import com.landawn.abacus.query.condition.Condition;
  * Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while allowing read and insert operations.
  * This interface provides all basic DAO operations except updates and deletes. It supports create (insert/save)
  * and read (select/query) operations, but all update and delete methods will throw {@code UnsupportedOperationException}.
- * 
+ *
+ * <p><b>Unchecked Exception Handling:</b></p>
+ * <p>This is an "unchecked" DAO variant. All methods throw {@link com.landawn.abacus.exception.UncheckedSQLException}
+ * instead of checked {@link java.sql.SQLException}, providing a more convenient API for developers who prefer
+ * unchecked exceptions. This eliminates the need for try-catch blocks or throws declarations, making the code
+ * cleaner and more suitable for use in functional programming contexts.</p>
+ *
  * <p>This is useful for DAOs where update and delete operations should be prevented,
  * such as append-only data stores, immutable records, or when you want to ensure data is never modified
  * after creation.</p>
- * 
- * <p>Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}, providing a more
- * convenient API for developers who prefer unchecked exceptions.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, SQLBuilder.PSC, EventLogDao> {
  *     // Can insert new logs and query existing logs
  *     // But cannot update or delete any logs
  * }
- * 
+ *
  * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);
- * 
- * // These operations work:
+ *
+ * // Insert and query operations work without checked exception handling:
  * dao.save(new EventLog("System startup"));
  * List<EventLog> logs = dao.list(CF.between("timestamp", startTime, endTime));
  * boolean hasErrors = dao.exists(CF.eq("severity", "ERROR"));
- * 
- * // These operations throw UnsupportedOperationException:
- * // dao.update("status", "ARCHIVED", CF.lt("timestamp", cutoffTime));
- * // dao.delete(CF.eq("id", 123));
+ *
+ * // Batch inserts are also supported:
+ * List<EventLog> newLogs = Arrays.asList(
+ *     new EventLog("User login"),
+ *     new EventLog("Data export")
+ * );
+ * dao.batchSave(newLogs);
+ *
+ * // Can be used in functional contexts without try-catch:
+ * Stream.of("INFO", "WARN", "ERROR")
+ *       .forEach(level -> dao.save(new EventLog("Log level: " + level)));
+ *
+ * // Update and delete operations throw UnsupportedOperationException:
+ * // dao.update("status", "ARCHIVED", CF.lt("timestamp", cutoffTime));  // Throws exception
+ * // dao.delete(CF.eq("id", 123));  // Throws exception
  * }</pre>
  *
  * @param <T> the entity type

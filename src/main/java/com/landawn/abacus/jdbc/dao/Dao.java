@@ -1322,6 +1322,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a single value using a custom row mapper.
      * Provides flexibility in how the single column value is transformed.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<LocalDateTime> createdDate = dao.queryForSingleNonNull(
+     *     "created_at",
+     *     CF.eq("id", 123),
+     *     rs -> rs.getTimestamp(1).toLocalDateTime()
+     * );
+     * }</pre>
+     *
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
@@ -1336,6 +1345,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Queries for a unique single value, throwing if multiple rows found.
      * Returns a Nullable that can contain {@code null} values.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Nullable<String> uniqueEmail = dao.queryForUniqueResult(
+     *     "email",
+     *     CF.eq("username", "john_doe"),
+     *     String.class
+     * );
+     * // Throws DuplicatedResultException if multiple users have this username
+     * }</pre>
      *
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
@@ -1352,6 +1371,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Queries for a unique non-null single value, throwing if multiple rows found.
      * Combines uniqueness constraint with non-null requirement.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<BigDecimal> balance = dao.queryForUniqueNonNull(
+     *     "balance",
+     *     CF.eq("account_number", "ACC123"),
+     *     BigDecimal.class
+     * );
+     * balance.ifPresent(b -> System.out.println("Balance: $" + b));
+     * }</pre>
+     *
      * @param <V> the value type
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
@@ -1366,6 +1395,18 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Queries for a unique value using a custom row mapper.
      * Ensures uniqueness while allowing custom value transformation.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<ZonedDateTime> lastLogin = dao.queryForUniqueNonNull(
+     *     "last_login",
+     *     CF.eq("username", "john_doe"),
+     *     rs -> ZonedDateTime.ofInstant(
+     *         rs.getTimestamp(1).toInstant(),
+     *         ZoneId.systemDefault()
+     *     )
+     * );
+     * }</pre>
      *
      * @param <V> the value type
      * @param singleSelectPropName the property name to select

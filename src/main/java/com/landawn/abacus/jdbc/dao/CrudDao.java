@@ -97,10 +97,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Returns the functional interface of {@code Jdbc.BiRowMapper} that extracts the ID from a database row.
      * This mapper is used internally to extract ID values from query results.
-     * 
+     *
      * <p>Override this method to provide a custom ID extractor if the default behavior doesn't suit your needs.</p>
-     * 
-     * <p>Example implementation:</p>
+     *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Override
      * public Jdbc.BiRowMapper<Long> idExtractor() {
@@ -118,11 +118,11 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Generates a new ID for entity insertion.
-     * 
+     *
      * <p>This method should be overridden by implementations that support ID generation.
      * Common use cases include generating UUIDs, using sequences, or other ID generation strategies.</p>
-     * 
-     * <p>Example implementation:</p>
+     *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Override
      * public Long generateId() throws SQLException {
@@ -679,6 +679,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Throws DuplicatedResultException if more than one record is found.
      * Returns empty Optional if no record found or value is {@code null}.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<String> email = userDao.queryForUniqueNonNull("email", userId, String.class);
+     * email.ifPresent(e -> sendEmail(e));
+     * // Throws DuplicatedResultException if multiple records found
+     * }</pre>
+     *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
@@ -696,6 +703,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a unique non-null result using a custom row mapper.
      * Throws DuplicatedResultException if more than one record is found.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * Optional<String> upperName = userDao.queryForUniqueNonNull("name", userId,
+     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     * upperName.ifPresent(name -> System.out.println("Name: " + name));
+     * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
@@ -775,8 +789,17 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
      * This is useful for performance optimization when you only need specific fields.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Only load id, name, and email fields
+     * User user = userDao.gett(userId, Arrays.asList("id", "name", "email"));
+     * if (user != null) {
+     *     System.out.println("User name: " + user.getName());
+     * }
+     * }</pre>
+     *
      * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select, excluding properties of joining entities. 
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @return the entity if found, otherwise null
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
@@ -1183,6 +1206,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
     /**
      * Performs batch upsert of multiple entities with a specified batch size.
      * Large collections will be processed in batches of the specified size.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * List<User> importedUsers = loadUsersFromFile(); // 30000 users
+     * // Upsert in batches of 2000
+     * List<User> savedUsers = userDao.batchUpsert(importedUsers, 2000);
+     * System.out.println(savedUsers.size() + " users saved");
+     * }</pre>
      *
      * @param entities the collection of entities to upsert
      * @param batchSize the number of entities to process in each batch. The operation will split

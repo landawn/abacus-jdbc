@@ -175,7 +175,8 @@ public enum OP {
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre>
      *
-     * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.</p>
+     * <p>This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSets}
+     * returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.</p>
      */
     listAll,
 
@@ -192,7 +193,8 @@ public enum OP {
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
      *
-     * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>
+     * <p>This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSets}
+     * returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>
      */
     queryAll,
 
@@ -210,7 +212,8 @@ public enum OP {
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre>
      *
-     * <p>Mostly it's for {@code @Query} to retrieve all the {@code ResultSets} returned from the executed procedure by {@code streamAll}.</p>
+     * <p>This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSets}
+     * returned from the executed procedure by {@code streamAll}.</p>
      */
     streamAll,
 
@@ -229,7 +232,8 @@ public enum OP {
      * Tuple2<Integer, Double> calculateStats(@Bind("input") int input);
      * }</pre>
      *
-     * <p>Mostly it's for {@code @Query} to execute the target procedure and get out parameters by {@code executeAndGetOutParameters}.</p>
+     * <p>This operation is primarily used with {@code @Query} annotation to execute the target procedure
+     * and get out parameters by {@code executeAndGetOutParameters}.</p>
      */
     executeAndGetOutParameters,
 
@@ -242,7 +246,7 @@ public enum OP {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "UPDATE users SET active = {@code false} WHERE last_login < ?", op = OP.update)
+     * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = OP.update)
      * int deactivateInactiveUsers(Date threshold);
      * 
      * @Query(value = "INSERT INTO users (name, email) VALUES (?, ?)", op = OP.update)

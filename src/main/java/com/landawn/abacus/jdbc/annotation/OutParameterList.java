@@ -70,8 +70,8 @@ public @interface OutParameterList {
      * <pre>{@code
      * @OutParameterList({
      *     @OutParameter(position = 1, sqlType = Types.VARCHAR),
-     *     @OutParameter(name = "count", position = 2, sqlType = Types.INTEGER),
-     *     @OutParameter(name = "total", position = 3, sqlType = Types.DECIMAL)
+     *     @OutParameter(position = 2, sqlType = Types.INTEGER),
+     *     @OutParameter(position = 3, sqlType = Types.DECIMAL)
      * })
      * }</pre>
      *

@@ -88,7 +88,7 @@ import com.landawn.abacus.util.Strings;
  *         Thread.sleep(20000);
  *     } catch (InterruptedException e) {
  *         Thread.currentThread().interrupt();
-     *         System.err.println("Operation interrupted: " + e.getMessage());
+ *         System.err.println("Operation interrupted: " + e.getMessage());
  *     } finally {
  *         // Always release the lock in a finally block
  *         boolean released = dbLock.unlock(resourceId, lockCode);

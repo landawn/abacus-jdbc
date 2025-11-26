@@ -46,16 +46,16 @@ import com.landawn.abacus.annotation.Beta;
  *     List<User> findByStatuses(@BindList("statuses") String[] statuses);
  *     
  *     // With prefix and suffix for conditional SQL
- *     @Query("SELECT * FROM users WHERE active = {@code true} {statusFilter}")
+ *     @Query("SELECT * FROM users WHERE active = true {statusFilter}")
  *     List<User> findActiveUsers(
- *         @BindList(value = "statusFilter", 
- *                   prefixForNonEmpty = "AND status IN (", 
+ *         @BindList(value = "statusFilter",
+ *                   prefixForNonEmpty = "AND status IN (",
  *                   suffixForNonEmpty = ")")
  *         List<String> statuses
  *     );
- *     
+ *
  *     // If statuses is empty: SELECT * FROM users WHERE active = true
- *     // If statuses has values: SELECT * FROM users WHERE active = {@code true} AND status IN (?, ?)
+ *     // If statuses has values: SELECT * FROM users WHERE active = true AND status IN (?, ?)
  * }
  * }</pre>
  * 

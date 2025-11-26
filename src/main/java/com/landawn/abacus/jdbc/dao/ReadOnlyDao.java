@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * A strictly read-only Data Access Object interface that only allows SELECT queries.
  * This is the most restrictive DAO interface in the hierarchy, preventing all data
  * modification operations including inserts, updates, and deletes.
- * 
+ *
  * <p>This interface extends {@link NoUpdateDao} and further restricts it by also
  * disabling INSERT operations. Only SELECT queries are permitted. This makes it
  * ideal for:</p>
@@ -40,30 +40,65 @@ import com.landawn.abacus.query.SQLBuilder;
  *   <li>Reporting and analytics systems</li>
  *   <li>Enforcing strict read-only access at the application level</li>
  * </ul>
- * 
+ *
+ * <p><b>Supported Read Operations:</b></p>
+ * <ul>
+ *   <li>{@code list(Condition)} - Query multiple records matching a condition</li>
+ *   <li>{@code findFirst(Condition)} - Find the first record matching a condition</li>
+ *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws exception if multiple found)</li>
+ *   <li>{@code count(Condition)} - Count records matching a condition</li>
+ *   <li>{@code exists(Condition)} - Check if any records match a condition</li>
+ *   <li>{@code queryForSingleResult(...)} - Query for single column values</li>
+ *   <li>{@code prepareQuery(String)} - Prepare SELECT queries for execution</li>
+ *   <li>{@code prepareNamedQuery(String)} - Prepare named SELECT queries for execution</li>
+ * </ul>
+ *
  * <p>All save, batch save, and insert operations will throw {@link UnsupportedOperationException}.
  * Additionally, any prepared queries that are not SELECT statements will also throw
  * {@link UnsupportedOperationException}.</p>
- * 
+ *
  * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
- * 
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO for viewing data
- * public interface CustomerViewDao extends ReadOnlyDao<Customer, SQLBuilder, CustomerViewDao> {
- *     @Query("SELECT * FROM customers WHERE status = ?")
- *     List<Customer> findByStatus(String status);
- *     
- *     @Query("SELECT COUNT(*) FROM customers")
- *     long countAll();
+ * public interface CustomerViewDao extends ReadOnlyDao<Customer, SQLBuilder.PSC, CustomerViewDao> {
+ *     // Custom query methods can be added
  * }
- * 
- * // Usage:
- * List<Customer> activeCustomers = dao.findByStatus("ACTIVE"); // Works
- * dao.prepareQuery("SELECT * FROM customers").list(); // Works
- * dao.save(new Customer()); // Throws UnsupportedOperationException
- * dao.prepareQuery("INSERT INTO customers..."); // Throws UnsupportedOperationException
+ *
+ * CustomerViewDao dao = JdbcUtil.createDao(CustomerViewDao.class, dataSource);
+ *
+ * // Supported operations - all work fine:
+ *
+ * // List all active customers
+ * List<Customer> activeCustomers = dao.list(CF.eq("status", "ACTIVE"));
+ *
+ * // Find first customer by email
+ * Optional<Customer> customer = dao.findFirst(CF.eq("email", "john@example.com"));
+ *
+ * // Count customers by region
+ * int count = dao.count(CF.eq("region", "US"));
+ *
+ * // Check if a customer exists
+ * boolean exists = dao.exists(CF.eq("id", 123L));
+ *
+ * // Prepare custom SELECT queries
+ * List<Customer> results = dao.prepareQuery("SELECT * FROM customers WHERE status = ?")
+ *                             .setString(1, "ACTIVE")
+ *                             .list(Customer.class);
+ *
+ * // Named queries also work
+ * dao.prepareNamedQuery("SELECT * FROM customers WHERE region = :region")
+ *    .setString("region", "US")
+ *    .list(Customer.class);
+ *
+ * // Unsupported operations - all throw UnsupportedOperationException:
+ * dao.save(new Customer());                        // Throws exception
+ * dao.batchSave(customers);                        // Throws exception
+ * dao.prepareQuery("INSERT INTO customers...");    // Throws exception
+ * dao.prepareQuery("UPDATE customers...");         // Throws exception
+ * dao.prepareQuery("DELETE FROM customers...");    // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

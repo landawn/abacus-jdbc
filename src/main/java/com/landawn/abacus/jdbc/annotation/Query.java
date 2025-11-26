@@ -72,7 +72,7 @@ import com.landawn.abacus.util.RegExUtil;
  * public interface AdvancedDao {
  *     // Batch operation with custom batch size
  *     @Query(value = "INSERT INTO logs (timestamp, message) VALUES (:timestamp, :message)",
- *            isBatch = {@code true}, batchSize = 500)
+ *            isBatch = true, batchSize = 500)
  *     int[] batchInsertLogs(@Bind("timestamp") List<Date> timestamps,
  *                          @Bind("message") List<String> messages);
  *
@@ -384,7 +384,7 @@ public @interface Query {
      * // Batch insert with parallel parameter lists
      * @Query(value = "INSERT INTO products (code, name, price) " +
      *               "VALUES (:code, :name, :price)",
-     *        isBatch = {@code true}, batchSize = 500)
+     *        isBatch = true, batchSize = 500)
      * int[] batchInsertProducts(@Bind("code") List<String> codes,
      *                          @Bind("name") List<String> names,
      *                          @Bind("price") List<BigDecimal> prices);
@@ -416,14 +416,14 @@ public @interface Query {
      * // Large batch with custom batch size
      * @Query(value = "INSERT INTO event_log (timestamp, event_type, data) " +
      *               "VALUES (:timestamp, :eventType, :data)",
-     *        isBatch = {@code true}, batchSize = 1000)
+     *        isBatch = true, batchSize = 1000)
      * int[] batchLogEvents(List<EventLog> events);
      * // Processes 1000 records per database round trip
      *
      * // Batch with timeout for large operations
      * @Query(value = "INSERT INTO historical_data (date, metric, value) " +
      *               "VALUES (:date, :metric, :value)",
-     *        isBatch = {@code true}, batchSize = 5000, queryTimeout = 300)
+     *        isBatch = true, batchSize = 5000, queryTimeout = 300)
      * int[] importHistoricalData(@Bind("date") List<Date> dates,
      *                           @Bind("metric") List<String> metrics,
      *                           @Bind("value") List<Double> values);
@@ -604,7 +604,7 @@ public @interface Query {
      *               "WHERE start_date <= :sysTime AND end_date >= :sysDate",
      *        autoSetSysTimeParam = true)
      * List<Promotion> findActivePromotions();
-     * // :sysTime is automatically set to current date
+     * // :sysTime and :sysDate are automatically set to current timestamp and date
      *
      * // Audit logging
      * @Query(value = "INSERT INTO audit_log (action, user_id, timestamp) " +
@@ -890,13 +890,13 @@ public @interface Query {
      *
      * // Small batch size for memory-constrained environment
      * @Query(value = "INSERT INTO large_documents (title, content) VALUES (:title, :content)",
-     *        isBatch = {@code true}, batchSize = 50)
+     *        isBatch = true, batchSize = 50)
      * int[] insertDocuments(List<Document> documents);
      * // Processes 50 documents per round trip
      *
      * // Large batch size for bulk import
      * @Query(value = "INSERT INTO event_log (timestamp, type, data) VALUES (:timestamp, :type, :data)",
-     *        isBatch = {@code true}, batchSize = 5000)
+     *        isBatch = true, batchSize = 5000)
      * int[] importEvents(List<Event> events);
      * // Processes 5000 events per round trip
      * }</pre>
@@ -905,17 +905,17 @@ public @interface Query {
      * <pre>{@code
      * // Optimize for network latency (high latency, use larger batches)
      * @Query(value = "INSERT INTO metrics (name, value, timestamp) VALUES (:name, :value, :timestamp)",
-     *        isBatch = {@code true}, batchSize = 2000)
+     *        isBatch = true, batchSize = 2000)
      * int[] insertMetrics(List<Metric> metrics);
      *
      * // Optimize for low memory (small row size but many rows)
      * @Query(value = "INSERT INTO simple_logs (timestamp, message) VALUES (:timestamp, :message)",
-     *        isBatch = {@code true}, batchSize = 10000)
+     *        isBatch = true, batchSize = 10000)
      * int[] insertLogs(List<LogEntry> logs);
      *
      * // Optimize for large rows (documents, blobs)
      * @Query(value = "INSERT INTO files (filename, content) VALUES (:filename, :content)",
-     *        isBatch = {@code true}, batchSize = 10)
+     *        isBatch = true, batchSize = 10)
      * int[] insertFiles(List<FileData> files);
      * }</pre>
      *
@@ -923,13 +923,13 @@ public @interface Query {
      * <pre>{@code
      * // Batch with timeout for very large operations
      * @Query(value = "INSERT INTO archive_data SELECT * FROM staging WHERE batch_id = :batchId",
-     *        isBatch = {@code true}, batchSize = 1000, queryTimeout = 600)
+     *        isBatch = true, batchSize = 1000, queryTimeout = 600)
      * int[] archiveData(@Bind("batchId") List<String> batchIds);
      *
      * // Balance batch size with transaction scope
      * @Transactional
      * @Query(value = "UPDATE inventory SET quantity = quantity - :amount WHERE product_id = :productId",
-     *        isBatch = {@code true}, batchSize = 500)
+     *        isBatch = true, batchSize = 500)
      * int[] decrementInventory(@Bind("productId") List<Long> productIds,
      *                         @Bind("amount") List<Integer> amounts);
      * }</pre>
