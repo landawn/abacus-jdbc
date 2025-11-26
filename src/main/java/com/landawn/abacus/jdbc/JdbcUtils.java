@@ -3932,7 +3932,7 @@ public final class JdbcUtils {
      * // Create a setter that converts all nulls to empty strings
      * ColumnGetter<Object> getter = (rs, columnIndex) -> {
      *     Object value = rs.getObject(columnIndex);
-     *     return (value == {@code null} && rs.getMetaData().getColumnType(columnIndex) == Types.VARCHAR) 
+     *     return (value == null && rs.getMetaData().getColumnType(columnIndex) == Types.VARCHAR) 
      *            ? "" : value;
      * };
      *

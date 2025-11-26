@@ -1775,7 +1775,7 @@ public final class JdbcCodeGenerationUtil {
      *        .className("User")
      *        .packageName("codes.entity")
      *        .srcDir("./samples")
-     *        .fieldNameConverter((entityOrTableName, columnName) -> StringUtil.toCamelCase(columnName))
+     *        .fieldNameConverter((entityOrTableName, columnName) -> Strings.toCamelCase(columnName))
      *        .fieldTypeConverter((entityOrTableName, fieldName, columnName, columnClassName) -> columnClassName
      *                .replace("java.lang.", ""))
      *        .useBoxedType(false)

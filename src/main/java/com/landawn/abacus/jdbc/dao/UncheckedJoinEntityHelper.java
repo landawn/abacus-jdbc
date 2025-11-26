@@ -1733,7 +1733,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code isParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Beta
     @Deprecated
@@ -1810,7 +1810,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code isParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Beta
     @Deprecated
@@ -1977,7 +1977,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code isParallel} is {@code true}
+     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
      */
     @Beta
     @Deprecated
