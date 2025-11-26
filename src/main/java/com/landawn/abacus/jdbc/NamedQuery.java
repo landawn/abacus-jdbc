@@ -71,9 +71,9 @@ import com.landawn.abacus.util.N;
  * <pre>{@code
  * String sql = "SELECT * FROM users WHERE name = :name AND age > :age";
  * try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, sql)) {
- *     query.setString("name", "John")
- *          .setInt("age", 25)
- *          .query(ResultExtractor.toList(User.class));
+ *     List<User> users = query.setString("name", "John")
+ *                             .setInt("age", 25)
+ *                             .query(ResultExtractor.toList(User.class));
  * }
  * }</pre>
  *

@@ -113,12 +113,32 @@ import com.landawn.abacus.query.SQLBuilder;
 public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T, SB, TD>> extends NoUpdateDao<T, SB, TD> {
 
     /**
-     * Prepares a query for execution. Only SELECT queries are supported.
+     * Prepares a SQL query for execution. Only SELECT queries are supported in read-only DAO.
+     * This method creates a {@link PreparedQuery} object that can be used to execute
+     * the query multiple times with different parameters efficiently.
      *
-     * @param query the SQL query string to prepare
-     * @return a {@link PreparedQuery} instance for the given query
+     * <p>The query string must be a valid SQL SELECT statement. Any attempt to prepare
+     * INSERT, UPDATE, DELETE, or other modification queries will result in an
+     * {@link UnsupportedOperationException}.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Prepare and execute a simple SELECT query
+     * List<User> adults = dao.prepareQuery("SELECT * FROM users WHERE age > ?")
+     *         .setInt(1, 18)
+     *         .list(User.class);
+     *
+     * // Query with multiple parameters
+     * Optional<User> user = dao.prepareQuery("SELECT * FROM users WHERE email = ? AND status = ?")
+     *         .setString(1, "john@example.com")
+     *         .setString(2, "ACTIVE")
+     *         .findFirst(User.class);
+     * }</pre>
+     *
+     * @param query the SQL query string to prepare (must be a SELECT statement)
+     * @return a PreparedQuery object for executing the query
      * @throws SQLException if a database access error occurs
-     * @throws UnsupportedOperationException if the query is not a SELECT statement
+     * @throws UnsupportedOperationException if the specified query is not a SELECT statement
      */
     @NonDBOperation
     @Override
@@ -182,13 +202,34 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * Prepares a named query for execution. Only SELECT queries are supported.
-     * Named queries use named parameters (e.g., :paramName) instead of positional parameters (?).
+     * Prepares a named parameter SQL query for execution. Only SELECT queries are supported in read-only DAO.
+     * Named queries use parameter placeholders like :paramName instead of ? placeholders,
+     * making complex queries more readable and maintainable.
      *
-     * @param namedQuery the SQL query string with named parameters
-     * @return a {@link NamedQuery} instance for the given query
+     * <p>Named parameters can appear multiple times in the query and will all be set
+     * to the same value when the parameter is bound.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Prepare and execute a named query
+     * String namedQuery = "SELECT * FROM users WHERE age > :minAge AND status = :status";
+     * try (NamedQuery query = dao.prepareNamedQuery(namedQuery)) {
+     *     query.setInt("minAge", 21);
+     *     query.setString("status", "ACTIVE");
+     *     List<User> users = query.list(User.class);
+     * }
+     *
+     * // Named parameter used multiple times
+     * String query2 = "SELECT * FROM orders WHERE customer_id = :id OR seller_id = :id";
+     * List<Order> orders = dao.prepareNamedQuery(query2)
+     *         .setLong("id", userId)
+     *         .list(Order.class);
+     * }</pre>
+     *
+     * @param namedQuery the SQL query string with named parameters (must be a SELECT statement)
+     * @return a NamedQuery object for executing the query with named parameters
      * @throws SQLException if a database access error occurs
-     * @throws UnsupportedOperationException if the query is not a SELECT statement
+     * @throws UnsupportedOperationException if the specified query is not a SELECT statement
      */
     @NonDBOperation
     @Override
@@ -252,10 +293,33 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * Prepares a parsed named query for execution. Only SELECT queries are supported.
+     * Prepares a named query using a pre-parsed SQL object. Only SELECT queries are supported in read-only DAO.
+     * This method is useful when you have already parsed a named query and want to avoid
+     * the overhead of parsing it again.
      *
-     * @param namedQuery the parsed SQL query with named parameters
-     * @return a {@link NamedQuery} instance for the given query
+     * <p>The ParsedSql object contains the original SQL with named parameters and
+     * metadata about parameter positions and names.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Parse query once and reuse
+     * ParsedSql parsedSql = NamedQuery.parse("SELECT * FROM users WHERE id = :id");
+     *
+     * // Use the parsed query multiple times
+     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql)) {
+     *     query.setLong("id", userId);
+     *     User user = query.findFirst(User.class).orElse(null);
+     * }
+     *
+     * // Reuse the same parsed SQL with different parameter values
+     * try (NamedQuery query = dao.prepareNamedQuery(parsedSql)) {
+     *     query.setLong("id", anotherUserId);
+     *     User anotherUser = query.findFirst(User.class).orElse(null);
+     * }
+     * }</pre>
+     *
+     * @param namedQuery the pre-parsed SQL query object (must represent a SELECT statement)
+     * @return a NamedQuery object for executing the parsed query
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if the query is not a SELECT statement
      */

@@ -202,8 +202,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * AbstractQuery query = JdbcUtil.prepareQuery(connection, sql)
      *     .closeAfterExecution(false);
      * try {
-     *     query.setInt(1, 10).list();
-     *     query.setInt(1, 20).list();
+     *     List<Map<String, Object>> result1 = query.setInt(1, 10).list();
+     *     List<Map<String, Object>> result2 = query.setInt(1, 20).list();
      * } finally {
      *     query.close();
      * }

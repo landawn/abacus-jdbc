@@ -2395,7 +2395,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract to a custom summary object
-     * Tuple2<Summary, OutParamResult> result = query.queryAndGetOutParameters(
+     * Tuple2<Summary, Jdbc.OutParamResult> result = query.queryAndGetOutParameters(
      *     rs -> {
      *         Summary summary = new Summary();
      *         while (rs.next()) {
@@ -2404,9 +2404,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         return summary;
      *     }
      * );
-     * 
+     *
      * Summary summary = result._1;
-     * OutParamResult outParams = result._2;
+     * Jdbc.OutParamResult outParams = result._2;
      * }</pre>
      *
      * @param <R> the type of object the result set will be converted to
@@ -2446,7 +2446,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<Map<String, List<Object>>, OutParamResult> result = 
+     * Tuple2<Map<String, List<Object>>, Jdbc.OutParamResult> result = 
      *     query.queryAndGetOutParameters((rs, columnLabels) -> {
      *         Map<String, List<Object>> columnData = new HashMap<>();
      *         for (String label : columnLabels) {
@@ -2533,7 +2533,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract row counts from multiple result sets
-     * Tuple2<List<Integer>, OutParamResult> results = 
+     * Tuple2<List<Integer>, Jdbc.OutParamResult> results = 
      *     query.queryAllResultsetsAndGetOutParameters(rs -> {
      *         int count = 0;
      *         while (rs.next()) {
@@ -2604,7 +2604,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setInt(1, customerId)
      *          .registerOutParameter(2, Types.DECIMAL);  // total amount
      *
-     *     Tuple2<List<Dataset>, OutParamResult> result =
+     *     Tuple2<List<Dataset>, Jdbc.OutParamResult> result =
      *         query.queryAllResultsetsAndGetOutParameters(
      *             (rs, columnLabels) -> JdbcUtil.extractResultSetToDataset(rs)
      *         );
@@ -2622,7 +2622,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of extracted results (one per result set)</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -2678,7 +2678,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *          .setDate(2, endDate)
      *          .registerOutParameter(3, Types.DECIMAL);  // grand total
      *
-     *     Tuple3<SalesSummary, List<SalesDetail>, OutParamResult> result =
+     *     Tuple3<SalesSummary, List<SalesDetail>, Jdbc.OutParamResult> result =
      *         query.query2ResultsetsAndGetOutParameters(
      *             (rs, labels) -> extractSalesSummary(rs),     // First result set
      *             (rs, labels) -> extractSalesDetailList(rs)   // Second result set
@@ -2698,7 +2698,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         <ul>
      *           <li>First element: Extracted result from the first result set (or null)</li>
      *           <li>Second element: Extracted result from the second result set (or null)</li>
-     *           <li>Third element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Third element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if either {@code resultExtractor1} or {@code resultExtractor2} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -2759,7 +2759,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setInt(1, year)
      *          .setInt(2, quarter);
      *     
-     *     Tuple4<Summary, List<Revenue>, List<Expense>, OutParamResult> result = 
+     *     Tuple4<Summary, List<Revenue>, List<Expense>, Jdbc.OutParamResult> result = 
      *         query.query3ResultsetsAndGetOutParameters(
      *             (rs, labels) -> extractSummary(rs),        // Summary data
      *             (rs, labels) -> extractRevenueList(rs),    // Revenue details
@@ -2784,7 +2784,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: Extracted result from the first result set (or null)</li>
      *           <li>Second element: Extracted result from the second result set (or null)</li>
      *           <li>Third element: Extracted result from the third result set (or null)</li>
-     *           <li>Fourth element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Fourth element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if any of the result extractors is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -2856,7 +2856,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setString(1, "Engineering")
      *          .registerOutParameter(2, Types.INTEGER);  // employee count
      *     
-     *     Tuple2<List<Employee>, OutParamResult> result = 
+     *     Tuple2<List<Employee>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(Employee.class);
      *     
      *     List<Employee> employees = result._1;
@@ -2873,7 +2873,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code targetType} is {@code null}
      * @throws SQLException if a database access error occurs, the stored procedure fails,
@@ -2903,7 +2903,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setString(1, warehouseCode)
      *          .registerOutParameter(2, Types.DECIMAL);  // total value
      *     
-     *     Tuple2<List<ProductInfo>, OutParamResult> result = 
+     *     Tuple2<List<ProductInfo>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(rs -> {
      *             ProductInfo info = new ProductInfo();
      *             info.setId(rs.getLong("product_id"));
@@ -2924,7 +2924,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -2968,7 +2968,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_all_accounts(?)}")) {
      *     query.registerOutParameter(1, Types.INTEGER);  // total count
      *     
-     *     Tuple2<List<Account>, OutParamResult> result = 
+     *     Tuple2<List<Account>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(
      *             rs -> rs.getBoolean("is_active") && rs.getBigDecimal("balance").compareTo(new BigDecimal("1000")) > 0,
      *             rs -> new Account(rs.getLong("id"), rs.getString("name"), rs.getBigDecimal("balance"))
@@ -2988,7 +2988,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from filtered rows</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3034,7 +3034,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setInt(1, customerId)
      *          .registerOutParameter(2, Types.VARCHAR);  // status
      *     
-     *     Tuple2<List<Map<String, Object>>, OutParamResult> result = 
+     *     Tuple2<List<Map<String, Object>>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters((rs, columnLabels) -> {
      *             Map<String, Object> row = new HashMap<>();
      *             for (String label : columnLabels) {
@@ -3053,7 +3053,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3100,7 +3100,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *          .setInt(2, maxResults)
      *          .registerOutParameter(3, Types.INTEGER);  // total matches
      *     
-     *     Tuple2<List<Product>, OutParamResult> result = 
+     *     Tuple2<List<Product>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(
      *             (rs, labels) -> {
      *                 // Only include products with a discount if the column exists
@@ -3131,7 +3131,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from filtered rows</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3179,7 +3179,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_employees_by_categories(?)}")) {
      *     query.registerOutParameter(1, Types.INTEGER);  // total count
      *     
-     *     Tuple2<List<List<Employee>>, OutParamResult> result = 
+     *     Tuple2<List<List<Employee>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(Employee.class);
      *     
      *     List<Employee> managers = result._1.get(0);     // First result set
@@ -3197,7 +3197,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code targetType} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3236,7 +3236,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setDate(1, reportDate)
      *          .registerOutParameter(2, Types.VARCHAR);  // report status
      *     
-     *     Tuple2<List<List<ReportRow>>, OutParamResult> result = 
+     *     Tuple2<List<List<ReportRow>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(rs -> {
      *             ReportRow row = new ReportRow();
      *             row.setCategory(rs.getString("category"));
@@ -3258,7 +3258,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3297,7 +3297,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     query.setDate(1, startDate)
      *          .registerOutParameter(2, Types.INTEGER);  // total transactions
      *     
-     *     Tuple2<List<List<Transaction>>, OutParamResult> result = 
+     *     Tuple2<List<List<Transaction>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(
      *             rs -> rs.getBigDecimal("amount").compareTo(new BigDecimal("1000")) >= 0,
      *             rs -> new Transaction(
@@ -3322,7 +3322,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists of filtered and mapped objects</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3360,7 +3360,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_hierarchical_data(?)}")) {
      *     query.setString(1, rootId);
      *     
-     *     Tuple2<List<List<Node>>, OutParamResult> result = 
+     *     Tuple2<List<List<Node>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters((rs, labels) -> {
      *             Node node = new Node();
      *             node.setId(rs.getString("id"));
@@ -3391,7 +3391,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed
@@ -3430,7 +3430,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call analyze_customer_360(?)}")) {
      *     query.setLong(1, customerId);
      *     
-     *     Tuple2<List<List<CustomerData>>, OutParamResult> result = 
+     *     Tuple2<List<List<CustomerData>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(
      *             (rs, labels) -> {
      *                 // Filter based on available columns
@@ -3474,7 +3474,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return A {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists of filtered and mapped objects</li>
-     *           <li>Second element: {@code OutParamResult} containing all OUT parameters</li>
+     *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query has already been closed

@@ -166,21 +166,19 @@ import com.landawn.abacus.util.WD;
  *     new File("export.csv"));
  *
  * // Copy data between databases
- * long copiedRows = JdbcUtils.copy(sourceDataSource, targetDataSource,
+ * long copiedRows = JdbcUtils.copy(sourceDataSource,
  *     "SELECT id, UPPER(name) as name, age FROM source_users WHERE active = true",
+ *     targetDataSource,
  *     "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
- *
- * // Import large CSV file with batch configuration
- * int importedCSVRows = JdbcUtils.importCSV(new File("large_data.csv"), dataSource,
- *     "INSERT INTO products (sku, name, price, category) VALUES (?, ?, ?, ?)",
- *     5000);  // batch size
  * }</pre>
  *
  * <p><b>Advanced Configuration and Optimization:</b>
  * <pre>{@code
  * // High-performance data migration with batch processing
- * long copiedRows = JdbcUtils.copy(sourceDataSource, targetDataSource,
+ * long copiedRows = JdbcUtils.copy(sourceDataSource,
  *     "SELECT customer_id, first_name, last_name, email FROM legacy_customers",
+ *     50000,  // fetch size
+ *     targetDataSource,
  *     "INSERT INTO customers (id, name, email) VALUES (?, ?, ?)",
  *     10000);  // batch size
  * System.out.println("Migrated " + copiedRows + " customer records");
@@ -297,14 +295,13 @@ import com.landawn.abacus.util.WD;
  *     public void dailyCustomerETL() throws SQLException {
  *         String extractQuery = "SELECT customer_id, first_name, last_name, email, " +
  *                             "registration_date, last_login, status " +
- *                             "FROM customers WHERE updated_date >= ?";
+ *                             "FROM customers WHERE updated_date >= CURRENT_DATE - 1";
  *
  *         String loadQuery = "INSERT INTO dim_customer (customer_id, first_name, last_name, email, " +
- *                          "registration_date, last_login, status, etl_timestamp) " +
- *                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+ *                          "registration_date, last_login, status) " +
+ *                          "VALUES (?, ?, ?, ?, ?, ?, ?)";
  *
- *         long processedRows = JdbcUtils.copy(sourceDB, warehouseDB,
- *             extractQuery, loadQuery, 5000, LocalDate.now().minusDays(1));
+ *         long processedRows = JdbcUtils.copy(sourceDB, extractQuery, warehouseDB, loadQuery);
  *
  *         System.out.println("Processed " + processedRows + " customer records");
  *     }
