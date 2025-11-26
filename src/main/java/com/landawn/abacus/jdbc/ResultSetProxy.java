@@ -163,16 +163,25 @@ final class ResultSetProxy implements ResultSet {
         delegate.close();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean wasNull() throws SQLException {
         return delegate.wasNull();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getString(int columnIndex) throws SQLException {
         return delegate.getString(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
         return delegate.getBoolean(columnIndex);
@@ -188,11 +197,17 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getShort(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getInt(int columnIndex) throws SQLException {
         return delegate.getInt(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long getLong(int columnIndex) throws SQLException {
         return delegate.getLong(columnIndex);
@@ -219,6 +234,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getBytes(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Date getDate(int columnIndex) throws SQLException {
         return delegate.getDate(columnIndex);
@@ -229,6 +247,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getTime(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
         return delegate.getTimestamp(columnIndex);
@@ -250,6 +271,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getBinaryStream(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getString(String columnLabel) throws SQLException {
         return delegate.getString(columnLabel);
@@ -270,11 +294,17 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getShort(columnLabel);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getInt(String columnLabel) throws SQLException {
         return delegate.getInt(columnLabel);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long getLong(String columnLabel) throws SQLException {
         return delegate.getLong(columnLabel);
@@ -301,6 +331,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getBytes(columnLabel);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Date getDate(String columnLabel) throws SQLException {
         return delegate.getDate(columnLabel);
@@ -311,6 +344,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getTime(columnLabel);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
         return delegate.getTimestamp(columnLabel);
@@ -347,6 +383,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getCursorName();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         return delegate.getMetaData();
@@ -509,16 +548,25 @@ final class ResultSetProxy implements ResultSet {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
         return delegate.getObject(columnIndex, type);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
         return delegate.getObject(columnLabel, type);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int findColumn(String columnLabel) throws SQLException {
         return delegate.findColumn(columnLabel);
@@ -534,11 +582,17 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getCharacterStream(columnLabel);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
         return delegate.getBigDecimal(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
         return delegate.getBigDecimal(columnLabel);
@@ -574,6 +628,9 @@ final class ResultSetProxy implements ResultSet {
         delegate.afterLast();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean first() throws SQLException {
         return delegate.first();
@@ -584,11 +641,17 @@ final class ResultSetProxy implements ResultSet {
         return delegate.last();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getRow() throws SQLException {
         return delegate.getRow();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean absolute(int row) throws SQLException {
         return delegate.absolute(row);
@@ -614,16 +677,25 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getFetchDirection();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setFetchSize(int rows) throws SQLException {
         delegate.setFetchSize(rows);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getFetchSize() throws SQLException {
         return delegate.getFetchSize();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getType() throws SQLException {
         return delegate.getType();
@@ -839,16 +911,25 @@ final class ResultSetProxy implements ResultSet {
         delegate.updateObject(columnLabel, x);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void insertRow() throws SQLException {
         delegate.insertRow();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void updateRow() throws SQLException {
         delegate.updateRow();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void deleteRow() throws SQLException {
         delegate.deleteRow();
@@ -874,6 +955,9 @@ final class ResultSetProxy implements ResultSet {
         delegate.moveToCurrentRow();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Statement getStatement() throws SQLException {
         return delegate.getStatement();
@@ -889,11 +973,17 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getRef(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
         return delegate.getBlob(columnIndex);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
         return delegate.getClob(columnIndex);
@@ -1034,6 +1124,9 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getHoldability();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isClosed() throws SQLException {
         return delegate.isClosed();

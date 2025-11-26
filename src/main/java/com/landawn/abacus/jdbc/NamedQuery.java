@@ -1419,7 +1419,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Date utilDate = new Date();
+     * java.util.Date utilDate = new java.util.Date();
      * query.setDate("createdDate", utilDate);
      * }</pre>
      *
@@ -1529,9 +1529,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * java.util.Date date = new Date(); // Current date and time
+     * java.util.Date date = new java.util.Date(); // Current date and time
      * query.setTime("startTime", date); // Only time portion is used
-     * 
+     *
      * // Using Calendar
      * Calendar cal = Calendar.getInstance();
      * cal.set(Calendar.HOUR_OF_DAY, 14);
@@ -1662,9 +1662,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Date now = new Date();
+     * java.util.Date now = new java.util.Date();
      * query.setTimestamp("lastLogin", now);
-     * 
+     *
      * // Using Calendar
      * Calendar cal = Calendar.getInstance();
      * cal.add(Calendar.DAY_OF_MONTH, -7); // 7 days ago
@@ -1879,17 +1879,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to an ASCII stream value.
-     * 
+     *
      * <p>This method is used to set very large ASCII values. The JDBC driver will read
      * the data from the stream as needed. The stream should contain only ASCII characters.
      * Note that the stream will be read when the query is executed, not when this method is called.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // From file
      * FileInputStream fis = new FileInputStream("large_text.txt");
      * query.setAsciiStream("textData", fis);
-     * 
+     *
      * // From string
      * String text = "Large ASCII text content...";
      * InputStream stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.US_ASCII));
@@ -1901,6 +1901,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setAsciiStream(String, InputStream, long)
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1950,17 +1951,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to an ASCII stream value with a specified length.
-     * 
+     *
      * <p>This method is used to set very large ASCII values when the length is known.
      * The JDBC driver will read exactly 'length' bytes from the stream. This can be
      * more efficient than the length-unspecified version.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * File file = new File("data.txt");
      * FileInputStream fis = new FileInputStream(file);
      * query.setAsciiStream("fileContent", fis, file.length());
-     * 
+     *
      * // With ByteArrayInputStream
      * byte[] data = "ASCII content".getBytes(StandardCharsets.US_ASCII);
      * ByteArrayInputStream bais = new ByteArrayInputStream(data);
@@ -1973,6 +1974,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setAsciiStream(String, InputStream)
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2022,17 +2024,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a binary stream value.
-     * 
+     *
      * <p>This method is used to set very large binary values such as images, documents,
      * or other binary data. The JDBC driver will read the data from the stream as needed.
      * The stream will be read when the query is executed, not when this method is called.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Uploading image
      * FileInputStream imageStream = new FileInputStream("photo.jpg");
      * query.setBinaryStream("photo", imageStream);
-     * 
+     *
      * // From byte array
      * byte[] documentData = getDocumentBytes();
      * ByteArrayInputStream bais = new ByteArrayInputStream(documentData);
@@ -2044,6 +2046,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setBinaryStream(String, InputStream, long)
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2093,18 +2096,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a binary stream value with a specified length.
-     * 
+     *
      * <p>This method is used to set very large binary values when the length is known.
      * The JDBC driver will read exactly 'length' bytes from the stream. This can be
      * more efficient than the length-unspecified version and is required by some drivers.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Uploading file with known size
      * File file = new File("document.pdf");
      * FileInputStream fis = new FileInputStream(file);
      * query.setBinaryStream("pdfData", fis, file.length());
-     * 
+     *
      * // From byte array with specific length
      * byte[] data = getLargeData();
      * ByteArrayInputStream bais = new ByteArrayInputStream(data);
@@ -2117,6 +2120,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setBinaryStream(String, InputStream)
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2166,17 +2170,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a character stream value.
-     * 
+     *
      * <p>This method is used to set very large character values such as CLOB data.
      * The JDBC driver will read the data from the Reader as needed. The Reader should
      * contain Unicode character data.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // From file
      * FileReader reader = new FileReader("large_text.txt", StandardCharsets.UTF_8);
      * query.setCharacterStream("content", reader);
-     * 
+     *
      * // From string
      * String largeText = getLargeTextContent();
      * StringReader stringReader = new StringReader(largeText);
@@ -2188,6 +2192,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setCharacterStream(String, Reader, long)
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2237,18 +2242,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a character stream value with a specified length.
-     * 
+     *
      * <p>This method is used to set very large character values when the length is known.
      * The JDBC driver will read exactly 'length' characters from the Reader. This can be
      * more efficient than the length-unspecified version.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // From file with known character count
      * String content = readFileContent();
      * StringReader reader = new StringReader(content);
      * query.setCharacterStream("largeText", reader, content.length());
-     * 
+     *
      * // Limited portion of text
      * String fullText = getFullText();
      * StringReader reader = new StringReader(fullText);
@@ -2261,6 +2266,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setCharacterStream(String, Reader)
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2310,18 +2316,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a national character stream value.
-     * 
+     *
      * <p>This method is used to set very large NCHAR, NVARCHAR, or NCLOB values.
      * The data will be read from the stream as needed. This is used for databases
      * that distinguish between character and national character data types.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Unicode text with special characters
      * String unicodeText = "Hello 世界 🌍";
      * StringReader reader = new StringReader(unicodeText);
      * query.setNCharacterStream("unicodeContent", reader);
-     * 
+     *
      * // From file containing unicode data
      * FileReader fileReader = new FileReader("unicode_text.txt", StandardCharsets.UTF_8);
      * query.setNCharacterStream("content", fileReader);
@@ -2332,6 +2338,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setNCharacterStream(String, Reader, long)
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2381,18 +2388,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets the specified named parameter to a national character stream value with a specified length.
-     * 
+     *
      * <p>This method is used to set very large NCHAR, NVARCHAR, or NCLOB values when
      * the length is known. The JDBC driver will read exactly 'length' characters from
      * the Reader.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Unicode content with known length
      * String unicodeContent = getUnicodeContent();
      * StringReader reader = new StringReader(unicodeContent);
      * query.setNCharacterStream("description", reader, unicodeContent.length());
-     * 
+     *
      * // Partial content
      * String fullText = "Large unicode text with emojis 😀😃😄...";
      * query.setNCharacterStream("preview", new StringReader(fullText), 100);
@@ -2404,6 +2411,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
+     * @see #setNCharacterStream(String, Reader)
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {

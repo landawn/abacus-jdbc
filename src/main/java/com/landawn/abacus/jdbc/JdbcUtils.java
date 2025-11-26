@@ -2799,7 +2799,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy with data transformation
-     * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
+     * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
      *     pq.setLong(1, rs.getLong("id"));
      *     pq.setString(2, rs.getString("name").toUpperCase());
      *     pq.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
@@ -2838,7 +2838,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex copy with throttling and transformation
-     * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
+     * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
      *     // Custom transformation logic
      *     pq.setLong(1, rs.getLong("id"));
      *     pq.setString(2, processName(rs.getString("name")));
@@ -3177,7 +3177,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy with data transformation and type conversion
-     * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
+     * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
      *     pq.setLong(1, rs.getLong("id"));
      *     pq.setString(2, rs.getString("first_name") + " " + rs.getString("last_name"));
      *     pq.setDate(3, new java.sql.Date(rs.getTimestamp("created_at").getTime()));
@@ -3216,7 +3216,7 @@ public final class JdbcUtils {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Complex copy with rate limiting and transformation
-     * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
+     * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
      *     pq.setLong(1, rs.getLong("id"));
      *     pq.setString(2, sanitize(rs.getString("data")));
      *     pq.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
@@ -3284,7 +3284,7 @@ public final class JdbcUtils {
      * PreparedStatement insertStmt = targetConn.prepareStatement(
      *     "INSERT INTO target_table VALUES (?, ?, ?)");
      *
-     * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
+     * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = (pq, rs) -> {
      *     pq.setLong(1, rs.getLong(1));
      *     pq.setString(2, rs.getString(2));
      *     pq.setTimestamp(3, rs.getTimestamp(3));
@@ -3936,7 +3936,7 @@ public final class JdbcUtils {
      *            ? "" : value;
      * };
      *
-     * BiConsumer<PreparedQuery, ResultSet, SQLException> setter = 
+     * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter =
      *     JdbcUtils.createParamSetter(getter);
      *
      * // Use in copy operation

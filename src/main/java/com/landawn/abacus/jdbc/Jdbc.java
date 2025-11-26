@@ -1141,6 +1141,20 @@ public final class Jdbc {
      * the {@code apply} method will typically be closed automatically after the method returns.
      * Do not attempt to return or store the {@code ResultSet} itself.</p>
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Example: Extracting a map where keys are column names
+     * BiResultExtractor<Map<String, Object>> dynamicExtractor = (rs, columnLabels) -> {
+     *     Map<String, Object> firstRow = new HashMap<>();
+     *     if (rs.next()) {
+     *         for (int i = 0; i < columnLabels.size(); i++) {
+     *             firstRow.put(columnLabels.get(i), rs.getObject(i + 1));
+     *         }
+     *     }
+     *     return firstRow;
+     * };
+     * }</pre>
+     *
      * @param <T> result type
      */
     @FunctionalInterface
@@ -1213,6 +1227,17 @@ public final class Jdbc {
         /**
          * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a custom {@code Map}.
          * Each row is mapped to a key-value pair. Throws an {@code IllegalStateException} on duplicate keys.
+         * This method allows specifying a custom map implementation (e.g., LinkedHashMap, TreeMap).
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Create a LinkedHashMap to preserve insertion order
+         * BiResultExtractor<LinkedHashMap<Integer, String>> extractor = BiResultExtractor.toMap(
+         *     (rs, cols) -> rs.getInt("id"),
+         *     (rs, cols) -> rs.getString("name"),
+         *     LinkedHashMap::new
+         * );
+         * }</pre>
          *
          * @param <K> map key type
          * @param <V> map value type
@@ -1257,7 +1282,19 @@ public final class Jdbc {
 
         /**
          * Creates a {@code BiResultExtractor} that processes a {@code ResultSet} into a custom {@code Map},
-         * with a specified function to merge values of duplicate keys.
+         * with a specified function to merge values of duplicate keys. This is the most flexible toMap variant
+         * for BiResultExtractor, allowing both custom map type and duplicate key handling.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Sum values for duplicate keys, storing in a TreeMap
+         * BiResultExtractor<TreeMap<String, Integer>> extractor = BiResultExtractor.toMap(
+         *     (rs, cols) -> rs.getString("category"),
+         *     (rs, cols) -> rs.getInt("amount"),
+         *     Integer::sum,
+         *     TreeMap::new
+         * );
+         * }</pre>
          *
          * @param <K> map key type
          * @param <V> map value type
@@ -3201,14 +3238,15 @@ public final class Jdbc {
 
         /**
          * Creates a {@code BiRowMapper} that converts a row to a {@code Map}, including only the
-         * entries that satisfy the given key-value filter.
+         * entries that satisfy the given key-value filter. This method allows both filtering
+         * based on column names and values, and customizing the map implementation.
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * // Creates a TreeMap excluding internal columns and {@code null} values.
+         * // Creates a TreeMap excluding internal columns and null values.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         * (key, value) -> !key.startsWith("_") && value != {@code null},
-         * (size) -> new TreeMap<>()
+         *     (key, value) -> !key.startsWith("_") && value != null,
+         *     (size) -> new TreeMap<>()
          * );
          * }</pre>
          *
@@ -3240,12 +3278,24 @@ public final class Jdbc {
 
         /**
          * Creates a stateful {@code BiRowMapper} that converts a row to a {@code Map} using a custom
-         * {@code RowExtractor} and then filters the results.
+         * {@code RowExtractor} and then filters the results. This method is useful when you need
+         * custom value extraction logic (via {@code RowExtractor}) combined with filtering.
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful because it reuses an internal array for the extractor.
          * It should not be cached, shared, or used in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Extract using custom RowExtractor and filter out null values
+         * RowExtractor extractor = RowExtractor.createBy(User.class);
+         * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
+         *     extractor,
+         *     (key, value) -> value != null,
+         *     IntFunctions.ofLinkedHashMap()
+         * );
+         * }</pre>
          *
          * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
          * @param valueFilter a bi-predicate to test column names and their corresponding values
@@ -3314,12 +3364,22 @@ public final class Jdbc {
 
         /**
          * Creates a stateful {@code BiRowMapper} that converts a row to a custom {@code Map}, applying a
-         * conversion function to each column name to generate the map keys.
+         * conversion function to each column name to generate the map keys. This method is useful for
+         * transforming column names (e.g., from SNAKE_CASE to camelCase) while using a custom map type.
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
          * It should not be cached, shared across different query structures, or used in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Converts "FIRST_NAME" to "firstName", using a LinkedHashMap
+         * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
+         *     N::toCamelCase,
+         *     IntFunctions.ofLinkedHashMap()
+         * );
+         * }</pre>
          *
          * @param columnNameConverter a function to transform column names into map keys
          * @param mapSupplier a function that provides a new map instance, given the column count
@@ -3356,11 +3416,20 @@ public final class Jdbc {
 
         /**
          * Creates a stateful {@code BiRowMapper} that converts a row to a {@code Map} using a custom {@code RowExtractor}.
+         * This method is useful when you need custom value extraction logic for all columns, producing a HashMap
+         * with original column names as keys.
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it reuses an internal array.
          * It should not be cached, shared, or used in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Use a custom RowExtractor for specialized value extraction
+         * RowExtractor extractor = RowExtractor.createBy(User.class);
+         * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(extractor);
+         * }</pre>
          *
          * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
          * @return a new stateful {@code BiRowMapper}.
@@ -3394,12 +3463,24 @@ public final class Jdbc {
 
         /**
          * Creates a stateful {@code BiRowMapper} that converts a row to a custom {@code Map} using a
-         * {@code RowExtractor} and applying a conversion to the column names for keys.
+         * {@code RowExtractor} and applying a conversion to the column names for keys. This is the most
+         * flexible toMap variant, combining custom value extraction, key name transformation, and custom map type.
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches converted key names and reuses an internal array.
          * It should not be cached, shared across different query structures, or used in parallel streams.
          * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Combine custom extractor, name conversion, and TreeMap
+         * RowExtractor extractor = RowExtractor.createBy(User.class);
+         * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
+         *     extractor,
+         *     N::toCamelCase,
+         *     (size) -> new TreeMap<>()
+         * );
+         * }</pre>
          *
          * @param rowExtractor the custom extractor to get values from the row
          * @param columnNameConverter a function to transform column names into map keys
@@ -4050,6 +4131,15 @@ public final class Jdbc {
      * <p><b>Note:</b> If you need to access column labels or count within the consumer, consider using
      * {@link BiRowConsumer} for better performance when processing multiple rows, as it avoids
      * repeatedly fetching metadata.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Example: Printing each row's data
+     * RowConsumer printer = rs -> {
+     *     System.out.println("ID: " + rs.getInt("id") + ", Name: " + rs.getString("name"));
+     * };
+     * // preparedQuery.forEach(printer);
+     * }</pre>
      */
     @FunctionalInterface
     public interface RowConsumer extends Throwables.Consumer<ResultSet, SQLException> {
@@ -4260,6 +4350,19 @@ public final class Jdbc {
      * A functional interface for consuming a single row of a {@code ResultSet} along with its column labels.
      * This is more efficient than {@link RowConsumer} when column metadata (like names or count) is needed
      * for processing multiple rows, as the metadata is fetched only once.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Example: Processing each row with column names
+     * BiRowConsumer consumer = (rs, columnLabels) -> {
+     *     System.out.print("Row: ");
+     *     for (int i = 0; i < columnLabels.size(); i++) {
+     *         System.out.print(columnLabels.get(i) + "=" + rs.getObject(i + 1) + " ");
+     *     }
+     *     System.out.println();
+     * };
+     * // preparedQuery.forEach(consumer);
+     * }</pre>
      */
     @FunctionalInterface
     public interface BiRowConsumer extends Throwables.BiConsumer<ResultSet, List<String>, SQLException> {
@@ -5482,7 +5585,7 @@ public final class Jdbc {
      * OutParam outParam = new OutParam(1, "result", Types.INTEGER, null);
      * }</pre>
      */
-    @NoArgsConstructor(onConstructor_ = @__(@SuppressWarnings("javadoc")))
+    @NoArgsConstructor
     @AllArgsConstructor
     @Data
     public static final class OutParam {

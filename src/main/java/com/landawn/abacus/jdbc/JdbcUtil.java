@@ -1296,7 +1296,7 @@ public final class JdbcUtil {
      *     // ... process results
      * } finally {
      *     // Closes rs, stmt, and conn
-     *     JdbcUtil.close(rs, {@code true}, true);
+     *     JdbcUtil.close(rs, true, true);
      * }
      * }</pre>
      *
@@ -2664,8 +2664,8 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Basic query execution with single result
-     * // If {@code closeAfterExecution(false)} is not called,
-     * // there is no need to place the query instance in a try-catch block for closure.</p> 
+     * // If closeAfterExecution(false) is not called,
+     * // there is no need to place the query instance in a try-catch block for closure.
      * Optional<User> user = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")
      *                                  .setLong(1, userId).findFirst(User.class);
      * if (user.isPresent()) {
@@ -2710,7 +2710,7 @@ public final class JdbcUtil {
      *
      * System.out.println("Total: " + totalAmount);
      *
-     * // Working with DataSet (column-oriented data structure)
+     * // Working with Dataset (column-oriented data structure)
      * Dataset dataset = JdbcUtil.prepareQuery(dataSource,
      *         "SELECT name, email, age FROM users WHERE department = ?")
      *     .setString(1, "Engineering")
@@ -2998,8 +2998,8 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     // If {@code closeAfterExecution(false)} is not called,
-     *     // there is no need to place the query instance in a try-catch block for closure.</p>
+     *     // If closeAfterExecution(false) is not called,
+     *     // there is no need to place the query instance in a try-catch block for closure.
      *     User user = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findOnlyOne(User.class);
      *     // ...
      * } catch (SQLException e) {
@@ -3029,8 +3029,8 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     // If {@code closeAfterExecution(false)} is not called,
-     *     // there is no need to place query instance in a try-catch block for closure.</p>
+     *     // If closeAfterExecution(false) is not called,
+     *     // there is no need to place query instance in a try-catch block for closure.
      *     Optional<Long> newId = JdbcUtil.prepareQuery(conn, "INSERT INTO users (name) VALUES (?)", true)
      *         .setString(1, "New User")
      *         .insert();
@@ -4057,6 +4057,8 @@ public final class JdbcUtil {
 
     /**
      * Prepares a callable SQL query using a custom statement creator with the provided DataSource.
+     * This method allows for fine-grained control over the CallableStatement creation process,
+     * enabling custom configurations such as result set type, concurrency, and holdability.
      *
      * <p>
      * This method intelligently manages connections: if a transaction is active on the current thread
@@ -4065,12 +4067,44 @@ public final class JdbcUtil {
      * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
      * </p>
      *
-     * @param ds The DataSource to use for the query
-     * @param sql The SQL string for the stored procedure call
-     * @param stmtCreator A function to create a CallableStatement with custom configuration
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Create a CallableStatement with specific result set type and concurrency
+     * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource,
+     *         "{call get_users(?, ?)}",
+     *         (conn, sql) -> conn.prepareCall(sql,
+     *             ResultSet.TYPE_SCROLL_INSENSITIVE,
+     *             ResultSet.CONCUR_READ_ONLY))) {
+     *
+     *     query.setInt(1, departmentId);
+     *     query.registerOutParameter(2, Types.INTEGER);
+     *     ResultSet rs = query.executeQuery();
+     *     // Process result set that can be scrolled backward
+     * }
+     *
+     * // Configure statement with specific timeout
+     * Throwables.BiFunction<Connection, String, CallableStatement, SQLException> creator =
+     *     (conn, sql) -> {
+     *         CallableStatement stmt = conn.prepareCall(sql);
+     *         stmt.setQueryTimeout(30); // 30 seconds timeout
+     *         return stmt;
+     *     };
+     * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource,
+     *         "{call long_running_procedure(?)}", creator)) {
+     *     query.setString(1, "param");
+     *     query.execute();
+     * }
+     * }</pre>
+     *
+     * @param ds The DataSource to use for the query, must not be {@code null}
+     * @param sql The SQL string for the stored procedure call, must not be {@code null} or empty
+     * @param stmtCreator A functional interface that creates a CallableStatement with custom configuration.
+     *                    Receives the Connection and SQL string, and returns a configured CallableStatement.
+     *                    Must not be {@code null}.
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If the DataSource, SQL string, or stmtCreator is {@code null} or empty
+     * @throws IllegalArgumentException If {@code ds}, {@code sql}, or {@code stmtCreator} is {@code null} or empty
      * @throws SQLException If a SQL exception occurs while preparing the query
+     * @see #prepareCallableQuery(javax.sql.DataSource, String)
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -4680,15 +4714,44 @@ public final class JdbcUtil {
     /**
      * Executes a batch SQL update using the provided DataSource with specified batch size.
      * Large lists will be automatically split into smaller batches for optimal performance.
+     * When the number of parameter sets exceeds the batch size, a transaction is automatically
+     * started to ensure atomicity.
      *
-     * @param ds The DataSource to use for the batch update
-     * @param sql The SQL string to execute
-     * @param listOfParameters A list of parameter sets for the batch update
-     * @param batchSize The size of each batch
-     * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException If the DataSource or SQL string is {@code null} or empty
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Insert 10,000 records in batches of 500
+     * List<Object[]> largeDataset = new ArrayList<>();
+     * for (int i = 0; i < 10000; i++) {
+     *     largeDataset.add(new Object[] {"User" + i, i % 100});
+     * }
+     * int totalRows = JdbcUtil.executeBatchUpdate(dataSource,
+     *     "INSERT INTO users (name, age) VALUES (?, ?)",
+     *     largeDataset,
+     *     500); // Process in batches of 500
+     *
+     * // Update records with custom batch size for better memory management
+     * List<Object[]> updates = Arrays.asList(
+     *     new Object[] {"active", 1},
+     *     new Object[] {"active", 2},
+     *     new Object[] {"inactive", 3}
+     * );
+     * int updated = JdbcUtil.executeBatchUpdate(dataSource,
+     *     "UPDATE users SET status = ? WHERE id = ?",
+     *     updates,
+     *     100);
+     * }</pre>
+     *
+     * @param ds The DataSource to use for the batch update, must not be {@code null}
+     * @param sql The SQL string to execute, must not be {@code null} or empty
+     * @param listOfParameters A list of parameter sets for the batch update. Each element should be
+     *                        an Object array or a compatible collection representing one set of parameters.
+     * @param batchSize The size of each batch, must be positive. Smaller batches use less memory
+     *                  but may be slower; larger batches are faster but use more memory.
+     * @return The total number of rows affected by the batch update across all batches
+     * @throws IllegalArgumentException If {@code ds} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
+     * @see #executeBatchUpdate(javax.sql.DataSource, String, List)
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
@@ -5370,10 +5433,29 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet using the specified RowFilter.
      * Only rows that pass the filter will be included in the result.
      *
-     * @param rs The ResultSet to extract data from
-     * @param filter The RowFilter to apply while extracting data
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Filter rows where age is greater than 18
+     * ResultSet rs = stmt.executeQuery("SELECT name, age, email FROM users");
+     * RowFilter adultFilter = resultSet -> resultSet.getInt("age") > 18;
+     * Dataset adults = JdbcUtil.extractData(rs, adultFilter);
+     *
+     * // Filter rows based on multiple conditions
+     * RowFilter activeUsersFilter = resultSet ->
+     *     resultSet.getBoolean("is_active") &&
+     *     resultSet.getString("status").equals("VERIFIED");
+     * Dataset activeUsers = JdbcUtil.extractData(rs, activeUsersFilter);
+     * }</pre>
+     *
+     * @param rs The ResultSet to extract data from, must not be {@code null}
+     * @param filter The RowFilter to apply while extracting data. This is a functional interface that tests each row;
+     *               only rows for which {@code filter.test(rs)} returns {@code true} will be included in the result.
+     *               Must not be {@code null}.
      * @return A Dataset containing the filtered data
      * @throws SQLException If a SQL exception occurs while extracting data
+     * @throws IllegalArgumentException If {@code rs} or {@code filter} is {@code null}
+     * @see RowFilter
+     * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
@@ -5381,12 +5463,37 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet using the specified RowExtractor.
-     * The RowExtractor can transform or manipulate each row during extraction.
+     * The RowExtractor can transform or manipulate each row during extraction, allowing you to
+     * modify column values before they are added to the resulting Dataset.
      *
-     * @param rs The ResultSet to extract data from
-     * @param rowExtractor The RowExtractor to apply while extracting data
-     * @return A Dataset containing the extracted data
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Transform email addresses to lowercase during extraction
+     * ResultSet rs = stmt.executeQuery("SELECT id, name, email FROM users");
+     * RowExtractor emailNormalizer = (resultSet, outputRow) -> {
+     *     outputRow[2] = ((String) outputRow[2]).toLowerCase(); // email is at index 2
+     * };
+     * Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
+     *
+     * // Mask sensitive data during extraction
+     * RowExtractor maskSensitiveData = (resultSet, outputRow) -> {
+     *     String ssn = (String) outputRow[3]; // assuming SSN is at index 3
+     *     if (ssn != null && ssn.length() > 4) {
+     *         outputRow[3] = "***-**-" + ssn.substring(ssn.length() - 4);
+     *     }
+     * };
+     * Dataset maskedData = JdbcUtil.extractData(rs, maskSensitiveData);
+     * }</pre>
+     *
+     * @param rs The ResultSet to extract data from, must not be {@code null}
+     * @param rowExtractor The RowExtractor to apply while extracting data. This is a functional interface
+     *                     that receives the current ResultSet and an output row array, allowing modification
+     *                     of the row data before it's added to the Dataset. Must not be {@code null}.
+     * @return A Dataset containing the extracted and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
+     * @throws IllegalArgumentException If {@code rs} or {@code rowExtractor} is {@code null}
+     * @see RowExtractor
+     * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
@@ -5394,12 +5501,44 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet using both RowFilter and RowExtractor.
+     * This method combines filtering and transformation: first, rows are filtered based on the
+     * {@code RowFilter}, then the remaining rows are transformed using the {@code RowExtractor}.
      *
-     * @param rs The ResultSet to extract data from
-     * @param filter The RowFilter to apply while extracting data
-     * @param rowExtractor The RowExtractor to apply while extracting data
-     * @return A Dataset containing the filtered and extracted data
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Filter adult users and normalize their email addresses
+     * ResultSet rs = stmt.executeQuery("SELECT id, name, email, age FROM users");
+     *
+     * RowFilter adultFilter = resultSet -> resultSet.getInt("age") >= 18;
+     * RowExtractor emailNormalizer = (resultSet, outputRow) -> {
+     *     outputRow[2] = ((String) outputRow[2]).toLowerCase(); // normalize email
+     * };
+     * Dataset adultUsersWithNormalizedEmails = JdbcUtil.extractData(rs, adultFilter, emailNormalizer);
+     *
+     * // Filter active transactions and calculate a derived field
+     * RowFilter activeFilter = resultSet -> resultSet.getString("status").equals("ACTIVE");
+     * RowExtractor addTaxColumn = (resultSet, outputRow) -> {
+     *     // Assuming amount is at index 3, calculate tax and store it
+     *     Double amount = (Double) outputRow[3];
+     *     if (amount != null) {
+     *         outputRow[3] = amount * 1.08; // Add 8% tax
+     *     }
+     * };
+     * Dataset activeTransactionsWithTax = JdbcUtil.extractData(rs, activeFilter, addTaxColumn);
+     * }</pre>
+     *
+     * @param rs The ResultSet to extract data from, must not be {@code null}
+     * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
+     *               returns {@code true} will be processed by the extractor. Must not be {@code null}.
+     * @param rowExtractor The RowExtractor to apply for transforming filtered rows. This receives the
+     *                     ResultSet and output row array for modification. Must not be {@code null}.
+     * @return A Dataset containing the filtered and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
+     * @throws IllegalArgumentException If any argument is {@code null}
+     * @see RowFilter
+     * @see RowExtractor
+     * @see #extractData(ResultSet, RowFilter)
+     * @see #extractData(ResultSet, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor) throws SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, filter, rowExtractor, false);
@@ -5437,13 +5576,30 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet with offset, count, and filter.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
-     * @param rs The ResultSet to extract data from
-     * @param offset The starting position in the ResultSet
-     * @param count The number of rows to extract
-     * @param filter The RowFilter to apply while extracting data
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Extract 10 active users starting from the 5th record
+     * ResultSet rs = stmt.executeQuery("SELECT * FROM users ORDER BY created_at");
+     * RowFilter activeFilter = resultSet -> resultSet.getBoolean("is_active");
+     * Dataset activeUsers = JdbcUtil.extractData(rs, 5, 10, activeFilter, true);
+     *
+     * // Paginated extraction with filtering
+     * int pageSize = 20;
+     * int pageNumber = 3; // zero-based
+     * RowFilter verifiedFilter = resultSet -> resultSet.getString("status").equals("VERIFIED");
+     * Dataset page = JdbcUtil.extractData(rs, pageNumber * pageSize, pageSize, verifiedFilter, false);
+     * }</pre>
+     *
+     * @param rs The ResultSet to extract data from, must not be {@code null}
+     * @param offset The starting position (0-based) in the ResultSet, must be non-negative
+     * @param count The maximum number of rows to extract, must be non-negative
+     * @param filter The RowFilter to apply while extracting data. Only rows for which {@code filter.test(rs)}
+     *               returns {@code true} will be included. Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted data
      * @throws SQLException If a SQL exception occurs while extracting data
+     * @throws IllegalArgumentException If any argument is invalid (null or negative values)
+     * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
             throws SQLException {
@@ -5454,13 +5610,35 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet with offset, count, and extractor.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
-     * @param rs The ResultSet to extract data from
-     * @param offset The starting position in the ResultSet
-     * @param count The number of rows to extract
-     * @param rowExtractor The RowExtractor to apply while extracting data
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Extract 50 users starting from position 100, masking sensitive data
+     * ResultSet rs = stmt.executeQuery("SELECT id, name, email, ssn FROM users");
+     * RowExtractor maskExtractor = (resultSet, outputRow) -> {
+     *     String ssn = (String) outputRow[3];
+     *     if (ssn != null && ssn.length() > 4) {
+     *         outputRow[3] = "***-**-" + ssn.substring(ssn.length() - 4);
+     *     }
+     * };
+     * Dataset maskedUsers = JdbcUtil.extractData(rs, 100, 50, maskExtractor, true);
+     *
+     * // Paginated extraction with data transformation
+     * RowExtractor normalizer = (resultSet, outputRow) -> {
+     *     outputRow[2] = ((String) outputRow[2]).toLowerCase(); // normalize email
+     * };
+     * Dataset page = JdbcUtil.extractData(rs, 0, 25, normalizer, false);
+     * }</pre>
+     *
+     * @param rs The ResultSet to extract data from, must not be {@code null}
+     * @param offset The starting position (0-based) in the ResultSet, must be non-negative
+     * @param count The maximum number of rows to extract, must be non-negative
+     * @param rowExtractor The RowExtractor to apply for transforming rows. This receives the ResultSet
+     *                     and output row array for modification. Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A Dataset containing the extracted data
+     * @return A Dataset containing the extracted and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
+     * @throws IllegalArgumentException If any argument is invalid (null or negative values)
+     * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws SQLException {
@@ -5469,17 +5647,50 @@ public final class JdbcUtil {
 
     /**
      * Extracts data from the provided ResultSet with all extraction options.
-     * This is the most comprehensive extraction method providing full control over the process.
+     * This is the most comprehensive extraction method providing full control over the extraction process,
+     * including pagination (offset/count), filtering (RowFilter), and transformation (RowExtractor).
      *
-     * @param rs The ResultSet to extract data from
-     * @param offset The starting position in the ResultSet
-     * @param count The number of rows to extract
-     * @param filter The RowFilter to apply while extracting data
-     * @param rowExtractor The RowExtractor to apply while extracting data
-     * @param closeResultSet Whether to close the ResultSet after extraction
-     * @return A Dataset containing the extracted data
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Complete example: paginated extraction with filtering and transformation
+     * ResultSet rs = stmt.executeQuery("SELECT id, name, email, age, salary FROM employees");
+     *
+     * // Filter: only employees over 25 years old
+     * RowFilter ageFilter = resultSet -> resultSet.getInt("age") > 25;
+     *
+     * // Transform: mask salary to show only salary range
+     * RowExtractor salaryMasker = (resultSet, outputRow) -> {
+     *     Double salary = (Double) outputRow[4]; // salary at index 4
+     *     if (salary != null) {
+     *         outputRow[4] = (salary / 10000) * 10000; // Round to nearest 10k
+     *     }
+     * };
+     *
+     * // Extract page 2 (records 20-40) with filtering and transformation, auto-close ResultSet
+     * Dataset employees = JdbcUtil.extractData(rs, 20, 20, ageFilter, salaryMasker, true);
+     *
+     * // Another example: Extract top 100 active users with normalized emails
+     * RowFilter activeFilter = resultSet -> resultSet.getBoolean("is_active");
+     * RowExtractor emailNormalizer = (resultSet, outputRow) -> {
+     *     outputRow[2] = ((String) outputRow[2]).toLowerCase();
+     * };
+     * Dataset activeUsers = JdbcUtil.extractData(rs, 0, 100, activeFilter, emailNormalizer, false);
+     * }</pre>
+     *
+     * @param rs The ResultSet to extract data from, must not be {@code null}
+     * @param offset The starting position (0-based) in the ResultSet, must be non-negative
+     * @param count The maximum number of rows to extract, must be non-negative
+     * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
+     *               returns {@code true} will be processed. Must not be {@code null}.
+     * @param rowExtractor The RowExtractor to apply for transforming filtered rows. This receives the
+     *                     ResultSet and output row array for modification. Must not be {@code null}.
+     * @param closeResultSet Whether to close the ResultSet after extraction completes (or if an error occurs)
+     * @return A Dataset containing the filtered and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
-     * @throws IllegalArgumentException If the provided arguments are invalid
+     * @throws IllegalArgumentException If any argument is invalid (null or negative values)
+     * @see RowFilter
+     * @see RowExtractor
+     * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean closeResultSet) throws IllegalArgumentException, SQLException {
@@ -7494,11 +7705,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures = 
+     * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures =
      *     JdbcUtil.asyncCall(
      *         () -> JdbcUtil.queryForSingleResult(Long.class, dataSource, "SELECT COUNT(*) FROM orders"),
      *         () -> JdbcUtil.queryForSingleResult(BigDecimal.class, dataSource, "SELECT SUM(total) FROM orders"),
-     *         () -> JdbcUtil.query(dataSource, "SELECT * FROM products WHERE stock < ?", 10).list(Product.class)
+     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
      *     );
      * 
      * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() -> {
@@ -8653,8 +8864,9 @@ public final class JdbcUtil {
      * <pre>{@code
      * JdbcUtil.runWithSqlLogDisabled(() -> {
      *     // Execute sensitive SQL operations without logging
-     *     preparedQuery.setString(1, password);
-     *     preparedQuery.executeUpdate();
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "UPDATE users SET password = ? WHERE id = ?",
+     *         password, userId);
      * });
      * }</pre>
      *
@@ -8685,9 +8897,10 @@ public final class JdbcUtil {
      * <pre>{@code
      * String result = JdbcUtil.callWithSqlLogDisabled(() -> {
      *     // Execute sensitive query without logging
-     *     return preparedQuery.setString(1, userId)
-     *                        .queryForString()
-     *                        .orElse(null);
+     *     return JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE id = ?")
+     *                    .setString(1, userId)
+     *                    .queryForString()
+     *                    .orElse(null);
      * });
      * }</pre>
      *
@@ -8856,7 +9069,9 @@ public final class JdbcUtil {
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
      * try {
      *     // Perform database operations with READ_COMMITTED isolation
-     *     preparedQuery.executeUpdate();
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+     *         amount, accountId);
      *     tran.commit();
      * } finally {
      *     tran.rollbackIfNotCommitted();
@@ -8958,7 +9173,9 @@ public final class JdbcUtil {
      * <pre>{@code
      * String result = JdbcUtil.callInTransaction(dataSource, () -> {
      *     // Perform database operations
-     *     preparedQuery.executeUpdate();
+     *     JdbcUtil.executeUpdate(dataSource,
+     *         "INSERT INTO audit_log (event, timestamp) VALUES (?, ?)",
+     *         "USER_LOGIN", System.currentTimeMillis());
      *     return "Success";
      * });
      * }</pre>

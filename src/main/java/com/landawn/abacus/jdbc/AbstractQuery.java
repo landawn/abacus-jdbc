@@ -5494,6 +5494,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType The class to map the result row to
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
+     * @throws IllegalArgumentException If {@code targetType} is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueResult(Class)
@@ -5522,7 +5523,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5552,7 +5553,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5603,7 +5604,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType The class to map the result row to
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If the target type is invalid
+     * @throws IllegalArgumentException If {@code targetType} is {@code null} or if the target type is invalid
      * @throws IllegalStateException if this query is closed
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
@@ -5647,7 +5648,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code RowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
      * @throws IllegalStateException if this query is closed
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
@@ -5692,7 +5693,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper The {@code BiRowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
      * @throws IllegalStateException if this query is closed
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
@@ -8604,9 +8605,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * List<Long> generatedIds = JdbcUtil.prepareQuery(conn,
      *         "INSERT INTO users (name, email) VALUES (?, ?)")
-     *     .addBatch("John", "john@example.com")
-     *     .addBatch("Jane", "jane@example.com")
-     *     .addBatch("Bob", "bob@example.com")
+     *     .setString(1, "John").setString(2, "john@example.com").addBatch()
+     *     .setString(1, "Jane").setString(2, "jane@example.com").addBatch()
+     *     .setString(1, "Bob").setString(2, "bob@example.com").addBatch()
      *     .batchInsert();
      * }</pre>
      *
@@ -8912,11 +8913,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * int[] results = JdbcUtil.prepareQuery(conn,
      *         "UPDATE users SET last_login = ? WHERE id = ?")
-     *     .addBatch(timestamp1, userId1)
-     *     .addBatch(timestamp2, userId2)
-     *     .addBatch(timestamp3, userId3)
+     *     .setTimestamp(1, timestamp1).setLong(2, userId1).addBatch()
+     *     .setTimestamp(1, timestamp2).setLong(2, userId2).addBatch()
+     *     .setTimestamp(1, timestamp3).setLong(2, userId3).addBatch()
      *     .batchUpdate();
-     *     
+     *
      * for (int i = 0; i < results.length; i++) {
      *     System.out.println("Update " + i + " affected " + results[i] + " rows");
      * }
@@ -8949,10 +8950,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Tuple2<int[], List<Long>> result = JdbcUtil.prepareQuery(conn,
      *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)")
-     *     .addBatch(customerId1, total1)
-     *     .addBatch(customerId2, total2)
-     *     .batchUpdateAndReturnGeneratedKeys(rs -> rs.getLong("order_id"));
-     *     
+     *     .setLong(1, customerId1).setBigDecimal(2, total1).addBatch()
+     *     .setLong(1, customerId2).setBigDecimal(2, total2).addBatch()
+     *     .batchUpdateAndReturnGeneratedKeys(rs -> rs.getLong(1));
+     *
      * int[] insertCounts = result._1;
      * List<Long> orderIds = result._2;
      * }</pre>
@@ -9077,12 +9078,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * long[] results = JdbcUtil.prepareQuery(conn,
-     *         "UPDATE large_table SET processed = {@code true} WHERE batch_id = ?")
-     *     .addBatch(batchId1)
-     *     .addBatch(batchId2)
-     *     .addBatch(batchId3)
+     *         "UPDATE large_table SET processed = true WHERE batch_id = ?")
+     *     .setLong(1, batchId1).addBatch()
+     *     .setLong(1, batchId2).addBatch()
+     *     .setLong(1, batchId3).addBatch()
      *     .largeBatchUpdate();
-     *     
+     *
      * for (int i = 0; i < results.length; i++) {
      *     System.out.println("Batch " + i + " updated " + results[i] + " rows");
      * }

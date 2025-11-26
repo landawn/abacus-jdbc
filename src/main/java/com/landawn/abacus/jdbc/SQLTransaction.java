@@ -42,9 +42,9 @@ import com.landawn.abacus.util.Throwables;
  * <pre>{@code
  * try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED)) {
  *     // Execute database operations
- *     dao.insert(entity);
+ *     dao.save(entity);
  *     dao.update(anotherEntity);
- *     
+ *
  *     tran.commit(); // Commit the transaction
  * } // Auto-rollback if not committed
  * }</pre>
@@ -272,7 +272,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform database operations
-     *     dao.insert(entity);
+     *     dao.save(entity);
      *     dao.update(anotherEntity);
      *     tran.commit();
      * } catch (Exception e) {
@@ -362,7 +362,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform database operations
-     *     dao.insert(entity);
+     *     dao.save(entity);
      *     tran.commit();
      * } finally {
      *     tran.rollbackIfNotCommitted(); // Safer than rollback()
@@ -423,7 +423,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform database operations
-     *     dao.insert(entity);
+     *     dao.save(entity);
      *     dao.update(anotherEntity);
      *
      *     tran.commit();
@@ -730,12 +730,14 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform transactional operations
-     *     dao.insert(entity);
+     *     dao.save(entity);
      *
      *     // Query outside transaction to see committed state
      *     String timestamp = tran.callNotInMe(() -> {
      *         // This query runs outside the transaction
-     *         return dao.queryForString("SELECT current_timestamp");
+     *         return JdbcUtil.prepareQuery(dataSource, "SELECT current_timestamp")
+     *                        .queryForString()
+     *                        .orElse(null);
      *     });
      *
      *     tran.commit();
@@ -768,7 +770,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
     /**
      * Closes this transaction by calling {@link #rollbackIfNotCommitted()}.
      * This method is provided to support try-with-resources statements.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
@@ -777,6 +779,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * } // Automatically calls close(), which calls rollbackIfNotCommitted()
      * }</pre>
      *
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback operation
      * @see #rollbackIfNotCommitted()
      */
     @Override

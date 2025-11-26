@@ -279,8 +279,8 @@
 					<detectJavaApiLink>false</detectJavaApiLink>
 
 					<sourceFileExcludes>
-						<exclude>/com/landawn/abacus/jdbc/DaoImpl.java</exclude>
-						<exclude>/com/landawn/abacus/jdbc/cs.java</exclude>
+						<exclude>**/DaoImpl.java</exclude>
+						<exclude>**/cs.java</exclude>
 					</sourceFileExcludes>
 				</configuration>
 				<executions>

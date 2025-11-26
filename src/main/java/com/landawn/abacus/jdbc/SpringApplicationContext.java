@@ -72,15 +72,16 @@ final class SpringApplicationContext {
 
     /**
      * Retrieves a bean from the Spring ApplicationContext by its name.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Object dataSource = springAppContext.getBean("myDataSource");
      * }</pre>
      *
      * @param name the name of the bean to retrieve
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized or the bean is not found
-     * 
+     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found
+     *
      * @see ApplicationContext#getBean(String)
      */
     public Object getBean(final String name) {

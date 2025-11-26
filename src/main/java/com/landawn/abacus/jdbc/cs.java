@@ -349,7 +349,7 @@ public final class cs { // NOSONAR
     /**
      * Parameter name for property names used in select queries.
      */
-    public static String selectPropName = "selectPropName";
+    public static final String selectPropName = "selectPropName";
     /**
      * Parameter name for specifying the target value type in mapping or conversion operations.
      */

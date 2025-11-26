@@ -26,7 +26,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * Transaction txn = dataSource.beginTransaction();
+ * Transaction txn = JdbcUtil.beginTransaction(dataSource);
  * try {
  *     // Perform database operations
  *     txn.commit();
@@ -189,7 +189,7 @@ public interface Transaction {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Transaction txn = dataSource.beginTransaction();
+     * Transaction txn = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     performDatabaseOperations();
      *     txn.commit();

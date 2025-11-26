@@ -45,7 +45,7 @@ import java.sql.PreparedStatement;
  *                  .orElse(null);
  * 
  * // Multiple executions with closeAfterExecution(false)
- * PreparedQuery reusableQuery = JdbcUtil.prepareQuery(connection, "SELECT * FROM users WHERE age > ?")
+ * PreparedQuery reusableQuery = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE age > ?")
  *                                   .closeAfterExecution(false);
  * List<User> adults = reusableQuery.setInt(1, 18).list(User.class);
  * List<User> seniors = reusableQuery.setInt(1, 65).list(User.class);
@@ -54,6 +54,12 @@ import java.sql.PreparedStatement;
  * 
  * <p>This class is thread-safe only if the underlying {@code PreparedStatement} is not accessed concurrently
  * from multiple threads. It's recommended to create a new instance for each thread or use proper synchronization.
+ *
+ * <p>This class extends {@link AbstractQuery} with the following type parameters:
+ * <ul>
+ *   <li>{@code PreparedStatement} as the statement type - the specific type of JDBC statement used</li>
+ *   <li>{@code PreparedQuery} as the self-reference type - enables fluent method chaining</li>
+ * </ul>
  *
  * @see com.landawn.abacus.annotation.ReadOnly
  * @see com.landawn.abacus.annotation.ReadOnlyId
@@ -69,7 +75,7 @@ import java.sql.PreparedStatement;
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
- * 
+ *
  */
 public final class PreparedQuery extends AbstractQuery<PreparedStatement, PreparedQuery> {
 

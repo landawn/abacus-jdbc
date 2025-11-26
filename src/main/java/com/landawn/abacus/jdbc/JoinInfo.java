@@ -175,7 +175,7 @@ public final class JoinInfo {
      *     Employee.class,
      *     "employees",
      *     "projects",
-     *     {@code false}  // Don't allow {@code null} join values
+     *     false  // Don't allow null join values
      * );
      *
      * // Many-to-many join example
@@ -185,7 +185,7 @@ public final class JoinInfo {
      *     Employee.class,
      *     "employees",
      *     "projects",
-     *     {@code true}  // Allow {@code null} join values
+     *     true  // Allow null join values
      * );
      * }</pre>
      *
@@ -675,7 +675,7 @@ public final class JoinInfo {
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
-     * Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>
+     * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
      *
      * // Build SQL with specific columns
@@ -709,7 +709,7 @@ public final class JoinInfo {
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
-     * Tuple2<BiFunction<Collection<String>, Integer, String>, BiParametersSetter<PreparedStatement, Collection<?>>>
+     * Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
      *     batchBuilder = joinInfo.getBatchSelectSQLBuilderAndParamSetter(PSC.class);
      *
      * // Build SQL for batch of entities
@@ -755,12 +755,12 @@ public final class JoinInfo {
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
-     * Tuple3<String, String, BiParametersSetter<PreparedStatement, Object>>
+     * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     deleteSql = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
      *
      * String deleteSql = deleteSql._1;  // Main delete SQL
      * String middleTableDeleteSql = deleteSql._2;  // Join table delete SQL (if many-to-many)
-     * BiParametersSetter<PreparedStatement, Object> paramSetter = deleteSql._3;
+     * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteSql._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
@@ -789,13 +789,13 @@ public final class JoinInfo {
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
-     * Tuple3<IntFunction<String>, IntFunction<String>, BiParametersSetter<PreparedStatement, Collection<?>>>
+     * Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
      *     batchDelete = joinInfo.getBatchDeleteSQLBuilderAndParamSetter(PSC.class);
      *
      * List<Employee> employees = getEmployeesToDelete();
      * String deleteSql = batchDelete._1.apply(employees.size());  // Main delete SQL
-     * String middleTableDeleteSql = batchDelete._2 != {@code null} ? batchDelete._2.apply(employees.size()) : null;
-     * BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDelete._3;
+     * String middleTableDeleteSql = batchDelete._2 != null ? batchDelete._2.apply(employees.size()) : null;
+     * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDelete._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
@@ -865,9 +865,8 @@ public final class JoinInfo {
      *
      * // Load and group projects by employee ID
      * List<Project> projects = projectDao.list();
-     * Map<Object, List<Object>> projectsByEmployeeId = projects.stream()
-     *     .collect(Collectors.groupingBy(p -> p.getEmployeeId(),
-     *                                     Collectors.toList()));
+     * Map<Object, List<Object>> projectsByEmployeeId = Stream.of((Collection<Object>) projects)
+     *     .groupTo(p -> ((Project) p).getEmployeeId());
      *
      * // Get join info and populate relationships with pre-grouped data
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
@@ -1028,7 +1027,7 @@ public final class JoinInfo {
      *
      * // Use the join info to load related entities for a single employee
      * Employee employee = employeeDao.findById(123);
-     * Tuple2<Function<Collection<String>, String>, BiParametersSetter<PreparedStatement, Object>>
+     * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
      * String sql = builder._1.apply(null); // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
