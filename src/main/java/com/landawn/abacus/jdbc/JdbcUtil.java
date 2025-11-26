@@ -217,7 +217,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p><b>Common Usage Patterns:</b>
  * <pre>{@code
  * // Basic query execution with automatic resource management
- * DataSource dataSource = createHikariDataSource(config);
+ * DataSource dataSource = JdbcUtil.createHikariDataSource(url, user, password);
  * List<User> users = JdbcUtil.executeQuery(dataSource,
  *     "SELECT * FROM users WHERE department = ? AND active = ?",
  *     User.class, "Engineering", true);

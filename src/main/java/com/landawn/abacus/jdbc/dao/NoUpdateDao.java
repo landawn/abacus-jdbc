@@ -327,8 +327,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *     query.setString("name", "Bob Smith");
      *     query.setString("email", "bob@example.com");
      *     query.setInt("age", 30);
-     *     query.execute();
-     *     Long generatedId = query.getGeneratedKey(Long.class);
+     *     Optional<Long> generatedId = query.insert();
      * }
      * }</pre>
      *
@@ -394,9 +393,8 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *         namedQuery, new String[] {"id", "created_at"})) {
      *     query.setString("name", "Alice Johnson");
      *     query.setString("email", "alice@example.com");
-     *     query.execute();
-     *     Long id = query.getGeneratedKey("id", Long.class);
-     *     Timestamp created = query.getGeneratedKey("created_at", Timestamp.class);
+     *     // Insert and retrieve generated keys using custom extractor
+     *     Optional<Long> id = query.insert(rs -> rs.getLong("id"));
      * }
      * }</pre>
      *
@@ -480,8 +478,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, true)) {
      *     query.setString("name", "Carol White");
      *     query.setString("email", "carol@example.com");
-     *     query.execute();
-     *     Long generatedId = query.getGeneratedKey(Long.class);
+     *     Optional<Long> generatedId = query.insert();
      * }
      * }</pre>
      *
@@ -549,9 +546,8 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      *         parsedSql, new String[] {"customer_id", "registration_date"})) {
      *     query.setString("name", "David Brown");
      *     query.setString("email", "david@example.com");
-     *     query.execute();
-     *     Long id = query.getGeneratedKey("customer_id", Long.class);
-     *     Date regDate = query.getGeneratedKey("registration_date", Date.class);
+     *     // Insert and retrieve generated keys using custom extractor
+     *     Optional<Long> id = query.insert(rs -> rs.getLong("customer_id"));
      * }
      * }</pre>
      *

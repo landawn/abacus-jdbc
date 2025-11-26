@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
  * multiple {@code @Handler} annotations to the same element, and the compiler
  * will automatically wrap them in a {@code @HandlerList}.</p>
  * 
- * <p>Example of multiple handlers (automatically wrapped in HandlerList):</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Handler(type = LoggingHandler.class)
  * @Handler(type = SecurityHandler.class)

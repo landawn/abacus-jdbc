@@ -243,7 +243,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery("INSERT INTO users (name) VALUES (?)", true);
-     * long generatedId = query.setString(1, "John").insert().getGeneratedKeys().getLong(1);
+     * Optional<Long> generatedId = query.setString(1, "John").insert();
      * }</pre>
      *
      * @param query the SQL query string

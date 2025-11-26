@@ -737,7 +737,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *         // This query runs outside the transaction
      *         return JdbcUtil.prepareQuery(dataSource, "SELECT current_timestamp")
      *                        .queryForString()
-     *                        .orElse(null);
+     *                        .orElseNull();
      *     });
      *
      *     tran.commit();
