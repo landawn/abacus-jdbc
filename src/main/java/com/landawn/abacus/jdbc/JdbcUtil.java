@@ -5563,6 +5563,20 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet using the specified RowFilter.
      * Only rows that pass the filter will be included in the result.
      *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Filter rows where age is greater than 18
+     * ResultSet rs = stmt.executeQuery("SELECT name, age, email FROM users");
+     * RowFilter adultFilter = resultSet -> resultSet.getInt("age") > 18;
+     * Dataset adults = JdbcUtil.extractData(rs, adultFilter);
+     *
+     * // Filter rows based on multiple conditions
+     * RowFilter activeUsersFilter = resultSet ->
+     *     resultSet.getBoolean("is_active") &&
+     *     resultSet.getString("status").equals("VERIFIED");
+     * Dataset activeUsers = JdbcUtil.extractData(rs, activeUsersFilter);
+     * }</pre>
+     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param filter The RowFilter to apply while extracting data. This is a functional interface that tests each row;
      *               only rows for which {@code filter.test(rs)} returns {@code true} will be included in the result.
@@ -5581,6 +5595,17 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet using the specified RowExtractor.
      * The RowExtractor can transform or manipulate each row during extraction, allowing you to
      * modify column values before they are added to the resulting Dataset.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Transform email addresses to lowercase during extraction
+     * ResultSet rs = stmt.executeQuery("SELECT id, name, email FROM users");
+     * RowExtractor emailNormalizer = RowExtractor.builder()
+     *              // normalize email is at index 2
+     *              .get(2, (rs, col) -> rs.getString(col).toLowerCase()).build();
+     * 
+     * Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
+     * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param rowExtractor The RowExtractor to apply while extracting data. This is a functional interface

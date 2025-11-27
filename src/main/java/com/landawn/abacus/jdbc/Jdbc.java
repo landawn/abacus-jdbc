@@ -4613,8 +4613,9 @@ public final class Jdbc {
      * Use this to filter rows after they have been fetched from the database.
      *
      * <p><b>Note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
-     * Use {@code RowFilter} only when the filtering logic cannot be expressed in SQL. For performance-sensitive
-     * filtering that requires column metadata, consider using {@link BiRowFilter}.</p>
+     * Use {@code RowFilter} only when the filtering logic cannot be expressed in SQL. 
+     * The row filtering should be fast enough to avoid holding DB connections for a long time or slowing down the overall performance.
+     * For performance-sensitive filtering that requires column metadata, consider using {@link BiRowFilter}.</p>
      */
     @FunctionalInterface
     public interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
@@ -4631,6 +4632,7 @@ public final class Jdbc {
 
         /**
          * Evaluates this filter on the given {@code ResultSet}.
+         * This method should be fast enough to avoid holding DB connections for a long time or slowing down overall performance.
          *
          * @param rs the {@code ResultSet} positioned at the current row.
          * @return {@code true} if the row should be included, {@code false} otherwise.
@@ -4680,7 +4682,8 @@ public final class Jdbc {
      * to access column metadata, as the metadata is fetched only once per query.
      *
      * <p><b>Note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
-     * Use {@code BiRowFilter} only when the filtering logic cannot be expressed in SQL.</p>
+     * Use {@code BiRowFilter} only when the filtering logic cannot be expressed in SQL. 
+     * The row filtering should be fast enough to avoid holding DB connections for a long time or slowing down the overall performance.</p>
      */
     @FunctionalInterface
     public interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
@@ -4697,6 +4700,7 @@ public final class Jdbc {
 
         /**
          * Evaluates this filter on the given {@code ResultSet} and column labels.
+         * This method should be fast enough to avoid holding DB connections for a long time or slowing down overall performance.
          *
          * @param rs the {@code ResultSet} positioned at the current row.
          * @param columnLabels the list of column labels from the result set metadata.
