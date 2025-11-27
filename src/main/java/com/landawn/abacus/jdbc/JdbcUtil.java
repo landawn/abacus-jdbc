@@ -174,13 +174,13 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   </tr>
  *   <tr>
  *     <td>Data Modification</td>
- *     <td>executeUpdate(), prepareUpdate()</td>
+ *     <td>executeUpdate(), prepareQuery()</td>
  *     <td>INSERT, UPDATE, DELETE operations</td>
  *     <td>Optimized for bulk operations</td>
  *   </tr>
  *   <tr>
  *     <td>Batch Processing</td>
- *     <td>executeBatch(), prepareBatch()</td>
+ *     <td>executeBatch(), prepareQuery()</td>
  *     <td>High-volume data processing</td>
  *     <td>Significant performance gains</td>
  *   </tr>
@@ -208,8 +208,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <ul>
  *   <li><b>Connection Management:</b> {@code getConnection()}, {@code releaseConnection()}, {@code createDataSource()}</li>
  *   <li><b>Query Operations:</b> {@code executeQuery()}, {@code prepareQuery()}, {@code findFirst()}, {@code exists()}</li>
- *   <li><b>Update Operations:</b> {@code executeUpdate()}, {@code prepareUpdate()}, {@code insert()}, {@code update()}, {@code delete()}</li>
- *   <li><b>Batch Operations:</b> {@code executeBatch()}, {@code prepareBatch()}, {@code batchInsert()}, {@code batchUpdate()}</li>
+ *   <li><b>Update Operations:</b> {@code executeUpdate()}, {@code prepareQuery()}, {@code insert()}, {@code update()}, {@code delete()}</li>
+ *   <li><b>Batch Operations:</b> {@code executeBatch()}, {@code prepareQuery()}, {@code batchInsert()}, {@code batchUpdate()}</li>
  *   <li><b>Transaction Support:</b> {@code beginTransaction()}, {@code runInTransaction()}, {@code asyncRunInTransaction()}</li>
  *   <li><b>DAO Creation:</b> {@code createDao()}, {@code createCrudDao()}, {@code createReadOnlyDao()}</li>
  * </ul>
@@ -5563,20 +5563,6 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet using the specified RowFilter.
      * Only rows that pass the filter will be included in the result.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Filter rows where age is greater than 18
-     * ResultSet rs = stmt.executeQuery("SELECT name, age, email FROM users");
-     * RowFilter adultFilter = resultSet -> resultSet.getInt("age") > 18;
-     * Dataset adults = JdbcUtil.extractData(rs, adultFilter);
-     *
-     * // Filter rows based on multiple conditions
-     * RowFilter activeUsersFilter = resultSet ->
-     *     resultSet.getBoolean("is_active") &&
-     *     resultSet.getString("status").equals("VERIFIED");
-     * Dataset activeUsers = JdbcUtil.extractData(rs, activeUsersFilter);
-     * }</pre>
-     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param filter The RowFilter to apply while extracting data. This is a functional interface that tests each row;
      *               only rows for which {@code filter.test(rs)} returns {@code true} will be included in the result.
@@ -5595,25 +5581,6 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet using the specified RowExtractor.
      * The RowExtractor can transform or manipulate each row during extraction, allowing you to
      * modify column values before they are added to the resulting Dataset.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Transform email addresses to lowercase during extraction
-     * ResultSet rs = stmt.executeQuery("SELECT id, name, email FROM users");
-     * RowExtractor emailNormalizer = (resultSet, outputRow) -> {
-     *     outputRow[2] = ((String) outputRow[2]).toLowerCase(); // email is at index 2
-     * };
-     * Dataset normalizedData = JdbcUtil.extractData(rs, emailNormalizer);
-     *
-     * // Mask sensitive data during extraction
-     * RowExtractor maskSensitiveData = (resultSet, outputRow) -> {
-     *     String ssn = (String) outputRow[3]; // assuming SSN is at index 3
-     *     if (ssn != null && ssn.length() > 4) {
-     *         outputRow[3] = "***-**-" + ssn.substring(ssn.length() - 4);
-     *     }
-     * };
-     * Dataset maskedData = JdbcUtil.extractData(rs, maskSensitiveData);
-     * }</pre>
      *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param rowExtractor The RowExtractor to apply while extracting data. This is a functional interface
@@ -5634,34 +5601,10 @@ public final class JdbcUtil {
      * This method combines filtering and transformation: first, rows are filtered based on the
      * {@code RowFilter}, then the remaining rows are transformed using the {@code RowExtractor}.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Filter adult users and normalize their email addresses
-     * ResultSet rs = stmt.executeQuery("SELECT id, name, email, age FROM users");
-     *
-     * RowFilter adultFilter = resultSet -> resultSet.getInt("age") >= 18;
-     * RowExtractor emailNormalizer = (resultSet, outputRow) -> {
-     *     outputRow[2] = ((String) outputRow[2]).toLowerCase(); // normalize email
-     * };
-     * Dataset adultUsersWithNormalizedEmails = JdbcUtil.extractData(rs, adultFilter, emailNormalizer);
-     *
-     * // Filter active transactions and calculate a derived field
-     * RowFilter activeFilter = resultSet -> resultSet.getString("status").equals("ACTIVE");
-     * RowExtractor addTaxColumn = (resultSet, outputRow) -> {
-     *     // Assuming amount is at index 3, calculate tax and store it
-     *     Double amount = (Double) outputRow[3];
-     *     if (amount != null) {
-     *         outputRow[3] = amount * 1.08; // Add 8% tax
-     *     }
-     * };
-     * Dataset activeTransactionsWithTax = JdbcUtil.extractData(rs, activeFilter, addTaxColumn);
-     * }</pre>
-     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed by the extractor. Must not be {@code null}.
-     * @param rowExtractor The RowExtractor to apply for transforming filtered rows. This receives the
-     *                     ResultSet and output row array for modification. Must not be {@code null}.
+     * @param rowExtractor applied to extract data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
      * @return A Dataset containing the filtered and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
      * @throws IllegalArgumentException If any argument is {@code null}
@@ -5706,20 +5649,6 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet with offset, count, and filter.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Extract 10 active users starting from the 5th record
-     * ResultSet rs = stmt.executeQuery("SELECT * FROM users ORDER BY created_at");
-     * RowFilter activeFilter = resultSet -> resultSet.getBoolean("is_active");
-     * Dataset activeUsers = JdbcUtil.extractData(rs, 5, 10, activeFilter, true);
-     *
-     * // Paginated extraction with filtering
-     * int pageSize = 20;
-     * int pageNumber = 3; // zero-based
-     * RowFilter verifiedFilter = resultSet -> resultSet.getString("status").equals("VERIFIED");
-     * Dataset page = JdbcUtil.extractData(rs, pageNumber * pageSize, pageSize, verifiedFilter, false);
-     * }</pre>
-     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
      * @param count The maximum number of rows to extract, must be non-negative
@@ -5740,30 +5669,10 @@ public final class JdbcUtil {
      * Extracts data from the provided ResultSet with offset, count, and extractor.
      * This method allows specifying whether to close the ResultSet after extraction.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Extract 50 users starting from position 100, masking sensitive data
-     * ResultSet rs = stmt.executeQuery("SELECT id, name, email, ssn FROM users");
-     * RowExtractor maskExtractor = (resultSet, outputRow) -> {
-     *     String ssn = (String) outputRow[3];
-     *     if (ssn != null && ssn.length() > 4) {
-     *         outputRow[3] = "***-**-" + ssn.substring(ssn.length() - 4);
-     *     }
-     * };
-     * Dataset maskedUsers = JdbcUtil.extractData(rs, 100, 50, maskExtractor, true);
-     *
-     * // Paginated extraction with data transformation
-     * RowExtractor normalizer = (resultSet, outputRow) -> {
-     *     outputRow[2] = ((String) outputRow[2]).toLowerCase(); // normalize email
-     * };
-     * Dataset page = JdbcUtil.extractData(rs, 0, 25, normalizer, false);
-     * }</pre>
-     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
      * @param count The maximum number of rows to extract, must be non-negative
-     * @param rowExtractor The RowExtractor to apply for transforming rows. This receives the ResultSet
-     *                     and output row array for modification. Must not be {@code null}.
+     * @param rowExtractor applied to extract data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
@@ -5780,40 +5689,12 @@ public final class JdbcUtil {
      * This is the most comprehensive extraction method providing full control over the extraction process,
      * including pagination (offset/count), filtering (RowFilter), and transformation (RowExtractor).
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // Complete example: paginated extraction with filtering and transformation
-     * ResultSet rs = stmt.executeQuery("SELECT id, name, email, age, salary FROM employees");
-     *
-     * // Filter: only employees over 25 years old
-     * RowFilter ageFilter = resultSet -> resultSet.getInt("age") > 25;
-     *
-     * // Transform: mask salary to show only salary range
-     * RowExtractor salaryMasker = (resultSet, outputRow) -> {
-     *     Double salary = (Double) outputRow[4]; // salary at index 4
-     *     if (salary != null) {
-     *         outputRow[4] = (salary / 10000) * 10000; // Round to nearest 10k
-     *     }
-     * };
-     *
-     * // Extract page 2 (records 20-40) with filtering and transformation, auto-close ResultSet
-     * Dataset employees = JdbcUtil.extractData(rs, 20, 20, ageFilter, salaryMasker, true);
-     *
-     * // Another example: Extract top 100 active users with normalized emails
-     * RowFilter activeFilter = resultSet -> resultSet.getBoolean("is_active");
-     * RowExtractor emailNormalizer = (resultSet, outputRow) -> {
-     *     outputRow[2] = ((String) outputRow[2]).toLowerCase();
-     * };
-     * Dataset activeUsers = JdbcUtil.extractData(rs, 0, 100, activeFilter, emailNormalizer, false);
-     * }</pre>
-     *
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
      * @param count The maximum number of rows to extract, must be non-negative
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed. Must not be {@code null}.
-     * @param rowExtractor The RowExtractor to apply for transforming filtered rows. This receives the
-     *                     ResultSet and output row array for modification. Must not be {@code null}.
+     * @param rowExtractor applied to extract data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
      * @param closeResultSet Whether to close the ResultSet after extraction completes (or if an error occurs)
      * @return A Dataset containing the filtered and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
