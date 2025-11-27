@@ -600,7 +600,7 @@ final class DaoUtil {
      * // Use the PreparedQuery function
      * BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> preparedQueryFunc = funcs._1;
      * Collection<String> selectProps = Arrays.asList("id", "name", "email");
-     * Condition condition = CF.eq("status", "active");
+     * Condition condition = Filters.eq("status", "active");
      * PreparedQuery query = preparedQueryFunc.apply(selectProps, condition);
      *
      * // Use the NamedQuery function

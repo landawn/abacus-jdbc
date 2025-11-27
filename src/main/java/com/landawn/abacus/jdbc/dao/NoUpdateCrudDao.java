@@ -78,13 +78,13 @@ import com.landawn.abacus.query.condition.Condition;
  * OptionalDouble amount = transactionDao.queryForDouble("amount", txnId);
  *
  * // Query operations
- * List<Transaction> txns = transactionDao.list(CF.eq("customerId", customerId));
- * Optional<Transaction> firstTxn = transactionDao.findFirst(CF.gt("amount", 1000.0));
- * Optional<Transaction> uniqueTxn = transactionDao.findOnlyOne(CF.eq("referenceNumber", "REF123"));
+ * List<Transaction> txns = transactionDao.list(Filters.eq("customerId", customerId));
+ * Optional<Transaction> firstTxn = transactionDao.findFirst(Filters.gt("amount", 1000.0));
+ * Optional<Transaction> uniqueTxn = transactionDao.findOnlyOne(Filters.eq("referenceNumber", "REF123"));
  *
  * // Count and existence checks
- * int count = transactionDao.count(CF.eq("status", "PENDING"));
- * boolean exists = transactionDao.exists(CF.eq("id", txnId));
+ * int count = transactionDao.count(Filters.eq("status", "PENDING"));
+ * boolean exists = transactionDao.exists(Filters.eq("id", txnId));
  *
  * // Prepare custom SELECT queries
  * List<Transaction> results = transactionDao.prepareQuery(
@@ -108,8 +108,7 @@ import com.landawn.abacus.query.condition.Condition;
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see NoUpdateDao
  * @see CrudDao
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta

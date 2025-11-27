@@ -45,7 +45,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * // Read operations work normally with primitive long
  * Optional<User> user = userDao.get(123L);
  * boolean exists = userDao.exists(123L);
- * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
+ * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
  *
  * // Write operations will throw UnsupportedOperationException
  * // userDao.insert(newUser); // This will fail

@@ -44,7 +44,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLBuilder.PSC;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ImmutableList;
@@ -241,7 +241,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     static final class SqlTable {
 
         @SqlScript
-        static final String sql_listToSet = PSC.selectFrom(User.class).where(CF.gt("id")).sql() + ";";
+        static final String sql_listToSet = PSC.selectFrom(User.class).where(Filters.gt("id")).sql() + ";";
     }
 
     static final class Handlers {

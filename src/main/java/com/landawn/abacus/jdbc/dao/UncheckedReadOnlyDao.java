@@ -50,13 +50,13 @@ import com.landawn.abacus.query.SQLBuilder;
  * ReportDao dao = JdbcUtil.createDao(ReportDao.class, readOnlyDataSource);
  *
  * // These operations work - note no checked exception handling needed:
- * List<Report> reports = dao.list(CF.between("date", startDate, endDate));
- * Optional<Report> report = dao.findFirst(CF.eq("id", reportId));
- * Dataset results = dao.query(CF.eq("status", "PUBLISHED"));
+ * List<Report> reports = dao.list(Filters.between("date", startDate, endDate));
+ * Optional<Report> report = dao.findFirst(Filters.eq("id", reportId));
+ * Dataset results = dao.query(Filters.eq("status", "PUBLISHED"));
  *
  * // Can be used directly in streams without checked exceptions:
  * Stream.of(reportId1, reportId2, reportId3)
- *       .map(id -> dao.findFirst(CF.eq("id", id)))
+ *       .map(id -> dao.findFirst(Filters.eq("id", id)))
  *       .filter(Optional::isPresent)
  *       .forEach(report -> System.out.println(report.get()));
  *

@@ -433,8 +433,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * </ul>
  *
  * @see Connection
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  * @see com.landawn.abacus.annotation.ReadOnly
  * @see com.landawn.abacus.annotation.ReadOnlyId
  * @see com.landawn.abacus.annotation.NonUpdatable
@@ -565,8 +564,8 @@ public final class JdbcUtil {
     private static final Set<String> sqlStateForTableNotExists = N.newHashSet();
 
     static {
-        sqlStateForTableNotExists.add("42S02"); // for MySQCF.
-        sqlStateForTableNotExists.add("42P01"); // for PostgreSQCF.
+        sqlStateForTableNotExists.add("42S02"); // for MySQFilters.
+        sqlStateForTableNotExists.add("42P01"); // for PostgreSQFilters.
         sqlStateForTableNotExists.add("42501"); // for HSQLDB.
     }
 

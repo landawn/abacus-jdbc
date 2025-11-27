@@ -62,10 +62,10 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  * 
  * // Load user with orders
- * Optional<User> user = userDao.findFirst(null, Order.class, CF.eq("id", 1L));
+ * Optional<User> user = userDao.findFirst(null, Order.class, Filters.eq("id", 1L));
  * 
  * // Load orders for multiple users
- * List<User> users = userDao.list(null, CF.gt("id", 0));
+ * List<User> users = userDao.list(null, Filters.gt("id", 0));
  * userDao.loadJoinEntities(users, "orders");
  * }</pre>
  *
@@ -74,8 +74,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
@@ -129,7 +128,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first user with their orders loaded
-     * Optional<User> user = userDao.findFirst(Arrays.asList("id", "name"), Order.class, CF.eq("email", "john@example.com"));
+     * Optional<User> user = userDao.findFirst(Arrays.asList("id", "name"), Order.class, Filters.eq("email", "john@example.com"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -155,7 +154,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first user with both orders and addresses loaded
-     * Optional<User> user = userDao.findFirst(null, Arrays.asList(Order.class, Address.class), CF.eq("id", 1L));
+     * Optional<User> user = userDao.findFirst(null, Arrays.asList(Order.class, Address.class), Filters.eq("id", 1L));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -184,7 +183,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first user with all join entities loaded
-     * Optional<User> user = userDao.findFirst(null, {@code true}, CF.eq("status", "active"));
+     * Optional<User> user = userDao.findFirst(null, {@code true}, Filters.eq("status", "active"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -212,7 +211,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find the only user with specific email and load their orders
-     * Optional<User> user = userDao.findOnlyOne(null, Order.class, CF.eq("email", "unique@example.com"));
+     * Optional<User> user = userDao.findOnlyOne(null, Order.class, Filters.eq("email", "unique@example.com"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -241,7 +240,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find the only user with specific ID and load multiple join entities
-     * Optional<User> user = userDao.findOnlyOne(null, Arrays.asList(Order.class, Address.class), CF.eq("id", 1L));
+     * Optional<User> user = userDao.findOnlyOne(null, Arrays.asList(Order.class, Address.class), Filters.eq("id", 1L));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -272,7 +271,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find the only active user and load all their join entities
-     * Optional<User> user = userDao.findOnlyOne(Arrays.asList("id", "name", "email"), {@code true}, CF.eq("status", "active"));
+     * Optional<User> user = userDao.findOnlyOne(Arrays.asList("id", "name", "email"), {@code true}, Filters.eq("status", "active"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -302,7 +301,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all active users with their orders loaded
-     * List<User> users = userDao.list(null, Order.class, CF.eq("status", "active"));
+     * List<User> users = userDao.list(null, Order.class, Filters.eq("status", "active"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -334,7 +333,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all users with both orders and addresses loaded
-     * List<User> users = userDao.list(null, Arrays.asList(Order.class, Address.class), CF.gt("createdDate", lastWeek));
+     * List<User> users = userDao.list(null, Arrays.asList(Order.class, Address.class), Filters.gt("createdDate", lastWeek));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -372,7 +371,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all premium users with all their related data loaded
-     * List<User> users = userDao.list(Arrays.asList("id", "name", "email"), {@code true}, CF.eq("membershipType", "premium"));
+     * List<User> users = userDao.list(Arrays.asList("id", "name", "email"), {@code true}, Filters.eq("membershipType", "premium"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -405,7 +404,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all users and load their orders, processing in batches
-     * userDao.stream(null, Order.class, CF.alwaysTrue())
+     * userDao.stream(null, Order.class, Filters.alwaysTrue())
      *     .filter(user -> user.getOrders().size() > 5)
      *     .forEach(user -> processUserWithManyOrders(user));
      * }</pre>
@@ -434,7 +433,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream users with multiple join entities loaded
-     * userDao.stream(null, Arrays.asList(Order.class, Address.class, PaymentMethod.class), CF.eq("country", "US"))
+     * userDao.stream(null, Arrays.asList(Order.class, Address.class, PaymentMethod.class), Filters.eq("country", "US"))
      *     .map(user -> analyzeUserProfile(user))
      *     .collect(Collectors.toList());
      * }</pre>
@@ -469,7 +468,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all entities with complete data
-     * userDao.stream(null, {@code true}, CF.alwaysTrue())
+     * userDao.stream(null, {@code true}, Filters.alwaysTrue())
      *     .limit(100)
      *     .forEach(user -> exportUserData(user));
      * }</pre>
@@ -554,7 +553,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.in("id", Arrays.asList(1L, 2L, 3L)));
+     * List<User> users = userDao.list(Filters.in("id", Arrays.asList(1L, 2L, 3L)));
      * userDao.loadJoinEntities(users, Order.class);
      * // All users now have their orders loaded
      * }</pre>
@@ -573,7 +572,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("status", "active"));
+     * List<User> users = userDao.list(Filters.eq("status", "active"));
      * // Load only essential order information
      * userDao.loadJoinEntities(users, Order.class, Arrays.asList("id", "totalAmount"));
      * }</pre>
@@ -651,7 +650,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("country", "US"));
+     * List<User> users = userDao.list(Filters.eq("country", "US"));
      * userDao.loadJoinEntities(users, "paymentMethods");
      * // All users now have their payment methods loaded
      * }</pre>
@@ -675,7 +674,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.between("createdDate", startDate, endDate));
+     * List<User> users = userDao.list(Filters.between("createdDate", startDate, endDate));
      * // Load only essential fields from addresses
      * userDao.loadJoinEntities(users, "addresses", Arrays.asList("city", "country"));
      *
@@ -776,7 +775,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("accountType", "premium"));
+     * List<User> users = userDao.list(Filters.eq("accountType", "premium"));
      * userDao.loadJoinEntities(users, Arrays.asList("orders", "subscriptions"));
      * }</pre>
      *
@@ -800,7 +799,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.in("id", userIds));
+     * List<User> users = userDao.list(Filters.in("id", userIds));
      * // Load multiple join entity types in parallel for better performance
      * userDao.loadJoinEntities(users, Arrays.asList("orders", "addresses", "reviews"), true);
      * }</pre>
@@ -826,7 +825,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newCachedThreadPool();
-     * List<User> users = userDao.list(CF.alwaysTrue());
+     * List<User> users = userDao.list(Filters.alwaysTrue());
      * userDao.loadJoinEntities(users, Arrays.asList("orders", "addresses", "reviews"), customExecutor);
      * }</pre>
      *
@@ -916,7 +915,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("status", "active"));
+     * List<User> users = userDao.list(Filters.eq("status", "active"));
      * userDao.loadAllJoinEntities(users);
      * // All join entities are loaded for all users
      * }</pre>
@@ -938,7 +937,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.in("id", largeUserIdList));
+     * List<User> users = userDao.list(Filters.in("id", largeUserIdList));
      * // Load all join entities in parallel for better performance
      * userDao.loadAllJoinEntities(users, true);
      * }</pre>
@@ -963,7 +962,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchExecutor = Executors.newWorkStealingPool();
-     * List<User> users = userDao.list(CF.alwaysTrue());
+     * List<User> users = userDao.list(Filters.alwaysTrue());
      * userDao.loadAllJoinEntities(users, batchExecutor);
      * }</pre>
      *
@@ -1530,7 +1529,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("status", "inactive"));
+     * List<User> users = userDao.list(Filters.eq("status", "inactive"));
      * // Delete all orders for inactive users
      * int deletedCount = userDao.deleteJoinEntities(users, Order.class);
      * }</pre>
@@ -1604,7 +1603,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.in("id", userIdsToClean));
+     * List<User> users = userDao.list(Filters.in("id", userIdsToClean));
      * // Delete all reviews for these users
      * int deletedCount = userDao.deleteJoinEntities(users, "reviews");
      * System.out.println("Deleted " + deletedCount + " reviews for " + users.size() + " users");
@@ -1725,7 +1724,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("accountStatus", "terminated"));
+     * List<User> users = userDao.list(Filters.eq("accountStatus", "terminated"));
      * // Delete all related data for terminated accounts
      * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses", "paymentMethods"));
      * }</pre>
@@ -1896,7 +1895,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("markedForDeletion", true));
+     * List<User> users = userDao.list(Filters.eq("markedForDeletion", true));
      * // Delete all related data for users marked for deletion
      * int deletedCount = userDao.deleteAllJoinEntities(users);
      * }</pre>

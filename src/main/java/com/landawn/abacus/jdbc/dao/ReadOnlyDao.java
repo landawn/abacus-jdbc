@@ -72,16 +72,16 @@ import com.landawn.abacus.query.SQLBuilder;
  * // Supported operations - all work fine:
  *
  * // List all active customers
- * List<Customer> activeCustomers = dao.list(CF.eq("status", "ACTIVE"));
+ * List<Customer> activeCustomers = dao.list(Filters.eq("status", "ACTIVE"));
  *
  * // Find first customer by email
- * Optional<Customer> customer = dao.findFirst(CF.eq("email", "john@example.com"));
+ * Optional<Customer> customer = dao.findFirst(Filters.eq("email", "john@example.com"));
  *
  * // Count customers by region
- * int count = dao.count(CF.eq("region", "US"));
+ * int count = dao.count(Filters.eq("region", "US"));
  *
  * // Check if a customer exists
- * boolean exists = dao.exists(CF.eq("id", 123L));
+ * boolean exists = dao.exists(Filters.eq("id", 123L));
  *
  * // Prepare custom SELECT queries
  * List<Customer> results = dao.prepareQuery("SELECT * FROM customers WHERE status = ?")
@@ -105,8 +105,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * @param <SB> the SQLBuilder type used for query construction
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see NoUpdateDao
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta

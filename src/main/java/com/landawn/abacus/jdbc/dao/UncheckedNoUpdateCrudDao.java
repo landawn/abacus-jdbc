@@ -63,8 +63,8 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * // Read operations work without checked exception handling:
  * Optional<AuditLog> retrieved = auditDao.get(id);
- * List<AuditLog> userLogs = auditDao.list(CF.eq("userId", userId));
- * long count = auditDao.count(CF.between("timestamp", startDate, endDate));
+ * List<AuditLog> userLogs = auditDao.list(Filters.eq("userId", userId));
+ * long count = auditDao.count(Filters.between("timestamp", startDate, endDate));
  *
  * // Can be used in functional contexts without try-catch:
  * List<Long> logIds = Arrays.asList(1L, 2L, 3L);
@@ -76,15 +76,14 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * // Delete operations work normally:
  * auditDao.deleteById(id);
- * auditDao.delete(CF.lt("timestamp", cutoffDate));
+ * auditDao.delete(Filters.lt("timestamp", cutoffDate));
  * }</pre>
  *
  * @param <T> the entity type
  * @param <ID> the ID type
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD> the self-type of the DAO for method chaining
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  * @see NoUpdateCrudDao
  * @see UncheckedCrudDao
  */
@@ -431,7 +430,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * int deletedCount = dao.deleteById(123L);
      *
      * // Or delete by condition
-     * int deletedCount = dao.delete(CF.eq("status", "INACTIVE"));
+     * int deletedCount = dao.delete(Filters.eq("status", "INACTIVE"));
      * }</pre>
      * 
      * @param id The ID of the entity to delete (operation will fail)
@@ -489,7 +488,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <p>Example of alternative approach:
      * <pre>{@code
      * // Instead of: dao.batchDeleteByIds(Arrays.asList(1L, 2L, 3L));
-     * // Use: dao.delete(CF.in("id", Arrays.asList(1L, 2L, 3L)));
+     * // Use: dao.delete(Filters.in("id", Arrays.asList(1L, 2L, 3L)));
      * }</pre>
      * 
      * @param ids Collection of IDs to delete (operation will fail)

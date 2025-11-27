@@ -27,7 +27,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
@@ -198,7 +198,7 @@ public class JdbcTest {
 
     //    @Test
     //    public void crud_by_Jdbc_00() throws SQLException {
-    //        NSC.selectFrom(User.class).where(CF.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
+    //        NSC.selectFrom(User.class).where(Filters.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
     //    }
 
     @Test
@@ -224,8 +224,8 @@ public class JdbcTest {
 
         assertEquals(users.size(), userDao.batchUpdate(users));
 
-        final String query1 = NSC.selectFrom(User.class).where(CF.lt("id", 0)).sql();
-        final String query2 = NSC.selectFrom(User.class).where(CF.gt("id", 200)).sql();
+        final String query1 = NSC.selectFrom(User.class).where(Filters.lt("id", 0)).sql();
+        final String query2 = NSC.selectFrom(User.class).where(Filters.gt("id", 200)).sql();
 
         final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
                 .setInt(1, 10)
@@ -393,7 +393,7 @@ public class JdbcTest {
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
-        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
+        // userDao.stream(Filters.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
 
         userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
@@ -407,7 +407,7 @@ public class JdbcTest {
 
     @Test
     public void crud_by_UsreDao12() throws SQLException {
-        userDao12.delete(CF.alwaysTrue());
+        userDao12.delete(Filters.alwaysTrue());
 
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao12.insert(user);
@@ -419,7 +419,7 @@ public class JdbcTest {
         System.out.println(userFromDB);
 
         // There are so much more can be done by findFirst/list/stream/
-        // userDao.stream(CF.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
+        // userDao.stream(Filters.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
 
         userDao12.updateFirstAndLastName("Tom", "Hanks", 100);
 
@@ -442,7 +442,7 @@ public class JdbcTest {
         try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
-            userDao.queryForBoolean("firstName", CF.eq("id", 100)); // throw exception.
+            userDao.queryForBoolean("firstName", Filters.eq("id", 100)); // throw exception.
             tran.commit();
         } catch (final SQLException e) {
             // ignore

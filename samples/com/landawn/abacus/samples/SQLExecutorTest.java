@@ -20,7 +20,7 @@ public class SQLExecutorTest {
     //        List<User> users = N.fill(User.class, 99);
     //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).sql();
     //        List<Long> ids = sqlExecutor.batchInsert(sql_insert, users);
-    //        String sql = NSC.selectFrom(User.class).where(CF.in("id", ids)).sql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.in("id", ids)).sql();
     //
     //        for (int i = 0; i < 1000; i++) {
     //            assertEquals(99, sqlExecutor.stream(User.class, sql, ids).count());
@@ -35,7 +35,7 @@ public class SQLExecutorTest {
     //            }
     //        }
     //
-    //        userDao.delete(CF.alwaysTrue());
+    //        userDao.delete(Filters.alwaysTrue());
     //    }
     //
     //    @Test
@@ -50,7 +50,7 @@ public class SQLExecutorTest {
     //
     //        assertEquals(users.size(), ids.size());
     //
-    //        SP sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).build();
+    //        SP sp = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build();
     //        sqlExecutor.query(sp.query, sp.parameters).println();
     //
     //        // insert 3001 users, bigger the specified batch size.
@@ -60,10 +60,10 @@ public class SQLExecutorTest {
     //
     //        assertEquals(users.size(), ids.size());
     //
-    //        sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).build();
+    //        sp = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build();
     //        sqlExecutor.query(sp.query, sp.parameters).println();
     //
-    //        userDao.delete(CF.alwaysTrue());
+    //        userDao.delete(Filters.alwaysTrue());
     //    }
     //
     //    @Test
@@ -76,9 +76,9 @@ public class SQLExecutorTest {
     //
     //        assertEquals(users.size(), ids.size());
     //
-    //        SP sp = NSC.selectFrom(User.class).where(CF.in("id", ids)).build();
+    //        SP sp = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build();
     //        assertEquals(users.size(), sqlExecutor.query(sp.query, sp.parameters).size());
     //
-    //        userDao.delete(CF.alwaysTrue());
+    //        userDao.delete(Filters.alwaysTrue());
     //    }
 }

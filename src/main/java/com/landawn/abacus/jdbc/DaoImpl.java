@@ -53,8 +53,6 @@ import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
-import com.landawn.abacus.jdbc.annotation.SqlFragment;
-import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
 import com.landawn.abacus.jdbc.annotation.Handler;
 import com.landawn.abacus.jdbc.annotation.HandlerList;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
@@ -66,9 +64,11 @@ import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
-import com.landawn.abacus.jdbc.annotation.SqlScript;
+import com.landawn.abacus.jdbc.annotation.SqlFragment;
+import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.SqlMapper;
+import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.CrudDaoL;
@@ -92,6 +92,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.AbstractQueryBuilder.SP;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
@@ -103,8 +104,6 @@ import com.landawn.abacus.query.SQLBuilder.PLC;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.SQLMapper;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.query.condition.Expression;
 import com.landawn.abacus.query.condition.Limit;
@@ -1515,11 +1514,11 @@ final class DaoImpl {
             switch (dbVersion) { //NOSONAR
                 case Oracle, SQL_Server, DB2:
                     if (limit.getCount() > 0 && limit.getOffset() > 0) {
-                        return CF.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
+                        return Filters.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
                     } else if (limit.getCount() > 0) {
-                        return CF.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
+                        return Filters.limit("FETCH FIRST " + limit.getCount() + " ROWS ONLY");
                     } else if (limit.getOffset() > 0) {
-                        return CF.limit("OFFSET " + limit.getOffset() + " ROWS");
+                        return Filters.limit("OFFSET " + limit.getOffset() + " ROWS");
                     } else {
                         return limit;
                     }
@@ -1562,7 +1561,7 @@ final class DaoImpl {
                 && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ")) {
             // ignore.
         } else if (count > 0) {
-            final Criteria criteria = CF.criteria();
+            final Criteria criteria = Filters.criteria();
 
             if (cond != null) {
                 switch (cond.getOperator()) {
@@ -1966,11 +1965,11 @@ final class DaoImpl {
         final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
         final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = !isNoId && idPropNameList.size() == 1;
-        final Condition idCond = isNoId ? null : isOneId ? CF.eq(oneIdPropName) : CF.and(StreamEx.of(idPropNameList).map(CF::eq).toList());
+        final Condition idCond = isNoId ? null : isOneId ? Filters.eq(oneIdPropName) : Filters.and(StreamEx.of(idPropNameList).map(Filters::eq).toList());
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
-                : (isEntityId ? id -> CF.id2Cond((EntityId) id)
-                        : Map.class.isAssignableFrom(idClass) ? id -> CF.eqAnd((Map<String, ?>) id)
-                                : Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? ConditionFactory::eqAnd : id -> CF.eq(oneIdPropName, id));
+                : (isEntityId ? id -> Filters.id2Cond((EntityId) id)
+                        : Map.class.isAssignableFrom(idClass) ? id -> Filters.eqAnd((Map<String, ?>) id)
+                                : Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? Filters::eqAnd : id -> Filters.eq(oneIdPropName, id));
 
         N.checkArgument(idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (Beans.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
                 "Id type/class can not be EntityId/Map or Entity for single id ");
@@ -4385,11 +4384,11 @@ final class DaoImpl {
                                 if (idList.size() >= batchSize) {
                                     for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                         if (isEntityId) {
-                                            entities = proxy.list(CF.id2Cond(idList.subList(i, i + batchSize)));
+                                            entities = proxy.list(Filters.id2Cond(idList.subList(i, i + batchSize)));
                                         } else if (isMap) {
-                                            entities = proxy.list(CF.eqAndOr(idList.subList(i, i + batchSize)));
+                                            entities = proxy.list(Filters.eqAndOr(idList.subList(i, i + batchSize)));
                                         } else {
-                                            entities = proxy.list(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
+                                            entities = proxy.list(Filters.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
                                         }
 
                                         if (entities.size() > batchSize) {
@@ -4405,11 +4404,11 @@ final class DaoImpl {
                                     final int remaining = idList.size() % batchSize;
 
                                     if (isEntityId) {
-                                        entities = proxy.list(CF.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
+                                        entities = proxy.list(Filters.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
                                     } else if (isMap) {
-                                        entities = proxy.list(CF.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
+                                        entities = proxy.list(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
                                     } else {
-                                        entities = proxy.list(CF.eqAndOr(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
+                                        entities = proxy.list(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
                                     }
 
                                     if (entities.size() > remaining) {
@@ -4498,11 +4497,11 @@ final class DaoImpl {
                                 if (idList.size() >= batchSize) {
                                     for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                         if (isEntityId) {
-                                            result += proxy.count(CF.id2Cond(idList.subList(i, i + batchSize)));
+                                            result += proxy.count(Filters.id2Cond(idList.subList(i, i + batchSize)));
                                         } else if (isMap) {
-                                            result += proxy.count(CF.eqAndOr(idList.subList(i, i + batchSize)));
+                                            result += proxy.count(Filters.eqAndOr(idList.subList(i, i + batchSize)));
                                         } else {
-                                            result += proxy.count(CF.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
+                                            result += proxy.count(Filters.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
                                         }
                                     }
                                 }
@@ -4511,11 +4510,11 @@ final class DaoImpl {
                                     final int remaining = idList.size() % batchSize;
 
                                     if (isEntityId) {
-                                        result += proxy.count(CF.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
+                                        result += proxy.count(Filters.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
                                     } else if (isMap) {
-                                        result += proxy.count(CF.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
+                                        result += proxy.count(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
                                     } else {
-                                        result += proxy.count(CF.eqAndOr(idList.subList(ids.size() - remaining, idList.size()), idPropNameList));
+                                        result += proxy.count(Filters.eqAndOr(idList.subList(ids.size() - remaining, idList.size()), idPropNameList));
                                     }
                                 }
                             }

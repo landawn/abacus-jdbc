@@ -31,11 +31,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.Dataset;
@@ -66,15 +65,14 @@ import com.landawn.abacus.util.u.OptionalShort;
  * User user = new User("John", "Doe");
  * userDao.save(user);
  * 
- * Optional<User> foundUser = userDao.findFirst(CF.eq("firstName", "John"));
+ * Optional<User> foundUser = userDao.findFirst(Filters.eq("firstName", "John"));
  * }</pre>
  *
  * @param <T> the entity type
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.jdbc.dao.Dao
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @Beta
 public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
@@ -253,7 +251,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * boolean hasActiveUsers = userDao.exists(CF.eq("status", "ACTIVE"));
+     * boolean hasActiveUsers = userDao.exists(Filters.eq("status", "ACTIVE"));
      * }</pre>
      *
      * @param cond the condition to match
@@ -270,14 +268,14 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * boolean noInactiveUsers = userDao.notExists(CF.eq("status", "INACTIVE"));
+     * boolean noInactiveUsers = userDao.notExists(Filters.eq("status", "INACTIVE"));
      * }</pre>
      *
      * @param cond the condition to match
      * @return {@code true} if no records are found, {@code false} if at least one record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#notExists()
      */
     @Beta
@@ -291,7 +289,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int activeUserCount = userDao.count(CF.eq("status", "ACTIVE"));
+     * int activeUserCount = userDao.count(Filters.eq("status", "ACTIVE"));
      * }</pre>
      *
      * @param cond the condition to match
@@ -306,7 +304,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<User> user = userDao.findFirst(CF.eq("email", "john@example.com"));
+     * Optional<User> user = userDao.findFirst(Filters.eq("email", "john@example.com"));
      * }</pre>
      *
      * @param cond the condition to match
@@ -322,7 +320,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> name = userDao.findFirst(
-     *     CF.eq("id", 1), 
+     *     Filters.eq("id", 1), 
      *     rs -> rs.getString("firstName") + " " + rs.getString("lastName")
      * );
      * }</pre>
@@ -343,7 +341,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Map<String, Object>> result = userDao.findFirst(
-     *     CF.eq("id", 1),
+     *     Filters.eq("id", 1),
      *     (rs, columnLabels) -> {
      *         Map<String, Object> map = new HashMap<>();
      *         for (String col : columnLabels) {
@@ -370,7 +368,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<User> user = userDao.findFirst(
      *     Arrays.asList("id", "firstName", "email"),
-     *     CF.eq("status", "ACTIVE")
+     *     Filters.eq("status", "ACTIVE")
      * );
      * }</pre>
      *
@@ -389,7 +387,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<String> email = userDao.findFirst(
      *     Arrays.asList("email", "firstName"),
-     *     CF.eq("id", 1),
+     *     Filters.eq("id", 1),
      *     rs -> rs.getString("email")
      * );
      * }</pre>
@@ -412,7 +410,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<UserInfo> info = userDao.findFirst(
      *     Arrays.asList("id", "firstName", "lastName"),
-     *     CF.eq("email", "john@example.com"),
+     *     Filters.eq("email", "john@example.com"),
      *     (rs, cols) -> new UserInfo(rs.getLong("id"), rs.getString("firstName"))
      * );
      * }</pre>
@@ -433,7 +431,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<User> user = userDao.findOnlyOne(CF.eq("email", "unique@example.com"));
+     * Optional<User> user = userDao.findOnlyOne(Filters.eq("email", "unique@example.com"));
      * }</pre>
      *
      * @param cond the condition to match
@@ -450,7 +448,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> name = userDao.findOnlyOne(
-     *     CF.eq("email", "unique@example.com"),
+     *     Filters.eq("email", "unique@example.com"),
      *     rs -> rs.getString("firstName")
      * );
      * }</pre>
@@ -471,7 +469,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserDTO> user = userDao.findOnlyOne(
-     *     CF.eq("id", 1),
+     *     Filters.eq("id", 1),
      *     (rs, cols) -> UserDTO.from(rs)
      * );
      * }</pre>
@@ -493,7 +491,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "email"),
-     *     CF.eq("username", "john_doe")
+     *     Filters.eq("username", "john_doe")
      * );
      * }</pre>
      *
@@ -513,7 +511,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<Long> userId = userDao.findOnlyOne(
      *     Arrays.asList("id"),
-     *     CF.eq("email", "unique@example.com"),
+     *     Filters.eq("email", "unique@example.com"),
      *     rs -> rs.getLong("id")
      * );
      * }</pre>
@@ -537,7 +535,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<UserSummary> summary = userDao.findOnlyOne(
      *     Arrays.asList("id", "firstName", "lastName", "email"),
-     *     CF.eq("username", "john_doe"),
+     *     Filters.eq("username", "john_doe"),
      *     (rs, cols) -> new UserSummary(rs)
      * );
      * }</pre>
@@ -559,7 +557,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalBoolean isActive = userDao.queryForBoolean("isActive", CF.eq("id", 1));
+     * OptionalBoolean isActive = userDao.queryForBoolean("isActive", Filters.eq("id", 1));
      * if (isActive.isPresent() && isActive.getAsBoolean()) {
      *     // User is active
      * }
@@ -569,8 +567,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @return an OptionalBoolean containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForBoolean()
      */
     @Override
@@ -581,15 +579,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalChar grade = userDao.queryForChar("grade", CF.eq("studentId", 12345));
+     * OptionalChar grade = userDao.queryForChar("grade", Filters.eq("studentId", 12345));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalChar containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForChar()
      */
     @Override
@@ -600,15 +598,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalByte level = userDao.queryForByte("userLevel", CF.eq("id", 1));
+     * OptionalByte level = userDao.queryForByte("userLevel", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalByte containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForByte()
      */
     @Override
@@ -619,15 +617,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalShort age = userDao.queryForShort("age", CF.eq("username", "john_doe"));
+     * OptionalShort age = userDao.queryForShort("age", Filters.eq("username", "john_doe"));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalShort containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForShort()
      */
     @Override
@@ -638,15 +636,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalInt count = userDao.queryForInt("loginCount", CF.eq("email", "user@example.com"));
+     * OptionalInt count = userDao.queryForInt("loginCount", Filters.eq("email", "user@example.com"));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalInt containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForInt()
      */
     @Override
@@ -657,15 +655,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalLong totalBytes = userDao.queryForLong("totalStorageUsed", CF.eq("id", 1));
+     * OptionalLong totalBytes = userDao.queryForLong("totalStorageUsed", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalLong containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForLong()
      */
     @Override
@@ -676,15 +674,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalFloat rating = userDao.queryForFloat("averageRating", CF.eq("productId", 100));
+     * OptionalFloat rating = userDao.queryForFloat("averageRating", Filters.eq("productId", 100));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalFloat containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForFloat()
      */
     @Override
@@ -695,15 +693,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalDouble balance = userDao.queryForDouble("accountBalance", CF.eq("accountId", 12345));
+     * OptionalDouble balance = userDao.queryForDouble("accountBalance", Filters.eq("accountId", 12345));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return an OptionalDouble containing the value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForDouble()
      */
     @Override
@@ -714,7 +712,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> email = userDao.queryForString("email", CF.eq("username", "john_doe"));
+     * Nullable<String> email = userDao.queryForString("email", Filters.eq("username", "john_doe"));
      * if (email.isPresent()) {
      *     sendEmail(email.get());
      * }
@@ -724,8 +722,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @return a Nullable containing the String value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForString()
      */
     @Override
@@ -736,15 +734,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", CF.eq("id", 1));
+     * Nullable<java.sql.Date> birthDate = userDao.queryForDate("birthDate", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return a Nullable containing the Date value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForDate()
      */
     @Override
@@ -755,15 +753,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<java.sql.Time> startTime = userDao.queryForTime("workStartTime", CF.eq("employeeId", 100));
+     * Nullable<java.sql.Time> startTime = userDao.queryForTime("workStartTime", Filters.eq("employeeId", 100));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return a Nullable containing the Time value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForTime()
      */
     @Override
@@ -774,15 +772,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<java.sql.Timestamp> lastLogin = userDao.queryForTimestamp("lastLoginTime", CF.eq("username", "john_doe"));
+     * Nullable<java.sql.Timestamp> lastLogin = userDao.queryForTimestamp("lastLoginTime", Filters.eq("username", "john_doe"));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return a Nullable containing the Timestamp value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForTimestamp()
      */
     @Override
@@ -793,15 +791,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", CF.eq("userId", 1));
+     * Nullable<byte[]> avatar = userDao.queryForBytes("avatarImage", Filters.eq("userId", 1));
      * }</pre>
      *
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @return a Nullable containing the byte array value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForBytes()
      */
     @Override
@@ -813,7 +811,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", CF.eq("productId", 100), BigDecimal.class);
+     * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", Filters.eq("productId", 100), BigDecimal.class);
      * }</pre>
      *
      * @param <V> the target value type
@@ -822,8 +820,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param targetValueType the class of the target value type
      * @return a Nullable containing the converted value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     @Override
@@ -836,7 +834,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", CF.eq("id", 1), String.class);
+     * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", Filters.eq("id", 1), String.class);
      * }</pre>
      *
      * @param <V> the value type
@@ -845,8 +843,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param targetValueType the class of the target value type
      * @return an Optional containing the non-null value, or empty if no match found or value is null
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -860,7 +858,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<UserStatus> status = userDao.queryForSingleNonNull(
      *     "status", 
-     *     CF.eq("id", 1),
+     *     Filters.eq("id", 1),
      *     rs -> UserStatus.valueOf(rs.getString(1))
      * );
      * }</pre>
@@ -871,8 +869,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the non-null mapped value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -885,7 +883,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> uniqueCode = userDao.queryForUniqueResult("code", CF.eq("type", "ADMIN"), String.class);
+     * Nullable<String> uniqueCode = userDao.queryForUniqueResult("code", Filters.eq("type", "ADMIN"), String.class);
      * }</pre>
      *
      * @param <V> the value type
@@ -895,8 +893,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @return a Nullable containing the unique result value, or empty if no match found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
@@ -911,7 +909,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<Integer> uniqueLevel = userDao.queryForUniqueNonNull(
      *     "level", 
-     *     CF.eq("badge", "GOLD"), 
+     *     Filters.eq("badge", "GOLD"), 
      *     Integer.class
      * );
      * }</pre>
@@ -923,8 +921,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @return an Optional containing the unique non-null value, or empty if no match found or value is null
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -939,7 +937,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Optional<Permission> permission = userDao.queryForUniqueNonNull(
      *     "permissionData",
-     *     CF.eq("roleId", 1),
+     *     Filters.eq("roleId", 1),
      *     rs -> Permission.parse(rs.getString(1))
      * );
      * }</pre>
@@ -951,8 +949,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @return an Optional containing the unique non-null mapped value, or empty if no match found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -964,7 +962,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset activeUsers = userDao.query(CF.eq("status", "ACTIVE"));
+     * Dataset activeUsers = userDao.query(Filters.eq("status", "ACTIVE"));
      * activeUsers.forEach(row -> System.out.println(row.getString("email")));
      * }</pre>
      *
@@ -982,7 +980,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * Dataset userEmails = userDao.query(
      *     Arrays.asList("id", "email", "firstName"),
-     *     CF.like("email", "%@company.com")
+     *     Filters.like("email", "%@company.com")
      * );
      * }</pre>
      *
@@ -1001,7 +999,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<Long, String> idToEmail = userDao.query(
-     *     CF.eq("status", "ACTIVE"),
+     *     Filters.eq("status", "ACTIVE"),
      *     rs -> {
      *         Map<Long, String> map = new HashMap<>();
      *         while (rs.next()) {
@@ -1028,7 +1026,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<String> names = userDao.query(
      *     Arrays.asList("firstName", "lastName"),
-     *     CF.eq("department", "IT"),
+     *     Filters.eq("department", "IT"),
      *     rs -> {
      *         List<String> list = new ArrayList<>();
      *         while (rs.next()) {
@@ -1056,7 +1054,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Map<String, Object>> results = userDao.query(
-     *     CF.gt("createdDate", lastWeek),
+     *     Filters.gt("createdDate", lastWeek),
      *     (rs, columnLabels) -> {
      *         List<Map<String, Object>> list = new ArrayList<>();
      *         while (rs.next()) {
@@ -1087,7 +1085,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * double avgAge = userDao.query(
      *     Arrays.asList("age"),
-     *     CF.eq("status", "ACTIVE"),
+     *     Filters.eq("status", "ACTIVE"),
      *     (rs, cols) -> {
      *         double sum = 0;
      *         int count = 0;
@@ -1116,7 +1114,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> activeUsers = userDao.list(CF.eq("status", "ACTIVE"));
+     * List<User> activeUsers = userDao.list(Filters.eq("status", "ACTIVE"));
      * }</pre>
      *
      * @param cond the condition to match
@@ -1132,7 +1130,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> emails = userDao.list(
-     *     CF.eq("newsletter", true),
+     *     Filters.eq("newsletter", true),
      *     rs -> rs.getString("email")
      * );
      * }</pre>
@@ -1152,7 +1150,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<UserDTO> users = userDao.list(
-     *     CF.gt("score", 100),
+     *     Filters.gt("score", 100),
      *     (rs, cols) -> new UserDTO(rs.getLong("id"), rs.getString("name"))
      * );
      * }</pre>
@@ -1173,7 +1171,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> premiumUsers = userDao.list(
-     *     CF.eq("status", "ACTIVE"),
+     *     Filters.eq("status", "ACTIVE"),
      *     rs -> rs.getDouble("accountBalance") > 1000.0,  // row filter
      *     rs -> userMapper.map(rs)                        // row mapper
      * );
@@ -1195,7 +1193,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Account> accounts = userDao.list(
-     *     CF.in("type", Arrays.asList("PREMIUM", "GOLD")),
+     *     Filters.in("type", Arrays.asList("PREMIUM", "GOLD")),
      *     (rs, cols) -> rs.getBoolean("verified"),                    // bi-row filter
      *     (rs, cols) -> Account.fromResultSet(rs, cols)              // bi-row mapper
      * );
@@ -1218,7 +1216,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<User> users = userDao.list(
      *     Arrays.asList("id", "email", "firstName"),
-     *     CF.like("email", "%@company.com")
+     *     Filters.like("email", "%@company.com")
      * );
      * }</pre>
      *
@@ -1237,7 +1235,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<String> fullNames = userDao.list(
      *     Arrays.asList("firstName", "lastName"),
-     *     CF.eq("active", true),
+     *     Filters.eq("active", true),
      *     rs -> rs.getString("firstName") + " " + rs.getString("lastName")
      * );
      * }</pre>
@@ -1259,7 +1257,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<UserInfo> infos = userDao.list(
      *     Arrays.asList("id", "email", "createdDate"),
-     *     CF.between("createdDate", startDate, endDate),
+     *     Filters.between("createdDate", startDate, endDate),
      *     (rs, cols) -> new UserInfo(rs)
      * );
      * }</pre>
@@ -1282,7 +1280,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<PremiumUser> premiumUsers = userDao.list(
      *     Arrays.asList("id", "email", "membershipLevel"),
-     *     CF.eq("status", "ACTIVE"),
+     *     Filters.eq("status", "ACTIVE"),
      *     rs -> rs.getInt("membershipLevel") >= 3,          // filter
      *     rs -> new PremiumUser(rs)                         // mapper
      * );
@@ -1307,7 +1305,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<ValidatedUser> users = userDao.list(
      *     Arrays.asList("id", "email", "validated", "score"),
-     *     CF.isNotNull("email"),
+     *     Filters.isNotNull("email"),
      *     (rs, cols) -> rs.getBoolean("validated") && rs.getInt("score") > 50,
      *     (rs, cols) -> ValidatedUser.create(rs, cols)
      * );
@@ -1331,7 +1329,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<String> emails = userDao.list("email", CF.eq("newsletter", true));
+     * List<String> emails = userDao.list("email", Filters.eq("newsletter", true));
      * }</pre>
      *
      * @param <R> the result type
@@ -1356,7 +1354,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<UserStatus> statuses = userDao.list(
      *     "statusCode",
-     *     CF.eq("active", true),
+     *     Filters.eq("active", true),
      *     rs -> UserStatus.fromCode(rs.getString(1))
      * );
      * }</pre>
@@ -1381,7 +1379,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * List<BigDecimal> highPrices = userDao.list(
      *     "price",
-     *     CF.eq("category", "PREMIUM"),
+     *     Filters.eq("category", "PREMIUM"),
      *     rs -> rs.getBigDecimal(1).compareTo(threshold) > 0,  // filter
      *     rs -> rs.getBigDecimal(1)                            // mapper
      * );
@@ -1408,7 +1406,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
-     *     CF.eq("status", "PENDING"),
+     *     Filters.eq("status", "PENDING"),
      *     rs -> sendNotification(rs.getString("email"))
      * );
      * }</pre>
@@ -1426,7 +1424,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
-     *     CF.like("email", "%@oldDomain.com"),
+     *     Filters.like("email", "%@oldDomain.com"),
      *     (rs, cols) -> {
      *         System.out.println("Processing user: " + rs.getString("id"));
      *         updateEmail(rs.getString("email"));
@@ -1448,7 +1446,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
-     *     CF.isNotNull("lastLogin"),
+     *     Filters.isNotNull("lastLogin"),
      *     rs -> rs.getTimestamp("lastLogin").after(cutoffDate),  // filter
      *     rs -> archiveUser(rs.getLong("id"))                    // consumer
      * );
@@ -1468,7 +1466,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.forEach(
-     *     CF.in("status", Arrays.asList("ACTIVE", "PENDING")),
+     *     Filters.in("status", Arrays.asList("ACTIVE", "PENDING")),
      *     (rs, cols) -> isEligibleForPromotion(rs),              // bi-filter
      *     (rs, cols) -> sendPromotionEmail(rs, cols)            // bi-consumer
      * );
@@ -1489,7 +1487,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * userDao.forEach(
      *     Arrays.asList("id", "email", "firstName"),
-     *     CF.eq("newsletter", true),
+     *     Filters.eq("newsletter", true),
      *     rs -> sendNewsletter(rs.getString("email"), rs.getString("firstName"))
      * );
      * }</pre>
@@ -1509,7 +1507,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * userDao.forEach(
      *     Arrays.asList("id", "data"),
-     *     CF.eq("needsProcessing", true),
+     *     Filters.eq("needsProcessing", true),
      *     (rs, cols) -> processUserData(rs, cols)
      * );
      * }</pre>
@@ -1529,7 +1527,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * userDao.forEach(
      *     Arrays.asList("id", "score", "level"),
-     *     CF.gt("score", 0),
+     *     Filters.gt("score", 0),
      *     rs -> rs.getInt("level") >= 5,                        // filter
      *     rs -> grantAchievement(rs.getLong("id"))             // consumer
      * );
@@ -1552,7 +1550,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * userDao.forEach(
      *     Arrays.asList("id", "email", "preferences"),
-     *     CF.eq("active", true),
+     *     Filters.eq("active", true),
      *     (rs, cols) -> shouldReceiveNotification(rs.getString("preferences")),
      *     (rs, cols) -> queueNotification(rs.getLong("id"), rs.getString("email"))
      * );
@@ -1576,7 +1574,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <pre>{@code
      * userDao.foreach(
      *     Arrays.asList("id", "email", "status"),
-     *     CF.eq("needsVerification", true),
+     *     Filters.eq("needsVerification", true),
      *     arr -> verifyUser((Long)arr.get(0), (String)arr.get(1))
      * );
      * }</pre>
@@ -1585,8 +1583,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowConsumer the consumer that receives row data as DisposableObjArray
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1603,7 +1601,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.foreach(
-     *     CF.between("age", 18, 65),
+     *     Filters.between("age", 18, 65),
      *     arr -> processEligibleUser(arr)
      * );
      * }</pre>
@@ -1611,8 +1609,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowConsumer the consumer that receives row data as DisposableObjArray
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1626,7 +1624,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int updated = userDao.update("status", "INACTIVE", CF.lt("lastLogin", thirtyDaysAgo));
+     * int updated = userDao.update("status", "INACTIVE", Filters.lt("lastLogin", thirtyDaysAgo));
      * }</pre>
      *
      * @param propName the property name to update
@@ -1651,7 +1649,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("status", "VERIFIED");
      * updates.put("verifiedDate", new Date());
-     * int updated = userDao.update(updates, CF.eq("pendingVerification", true));
+     * int updated = userDao.update(updates, Filters.eq("pendingVerification", true));
      * }</pre>
      *
      * @param updateProps a map of property names to their new values
@@ -1671,7 +1669,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * User template = new User();
      * template.setStatus("MIGRATED");
      * template.setMigratedDate(new Date());
-     * int updated = userDao.update(template, CF.eq("legacySystem", true));
+     * int updated = userDao.update(template, Filters.eq("legacySystem", true));
      * }</pre>
      *
      * @param entity the entity containing values to update
@@ -1701,7 +1699,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * int updated = userDao.update(
      *     updates,
      *     Arrays.asList("email", "phone"),  // Only update these fields
-     *     CF.eq("id", 123)
+     *     Filters.eq("id", 123)
      * );
      * }</pre>
      *
@@ -1710,8 +1708,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      */
     @Override
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UncheckedSQLException;
@@ -1739,7 +1737,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
-        final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.eqAnd(entity, uniquePropNamesForQuery);
 
         return upsert(entity, cond);
     }
@@ -1755,9 +1753,9 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * user.setScore(100);
      * 
      * // Custom condition for upsert
-     * User result = userDao.upsert(user, CF.and(
-     *     CF.eq("email", user.getEmail()),
-     *     CF.eq("accountType", "PREMIUM")
+     * User result = userDao.upsert(user, Filters.and(
+     *     Filters.eq("email", user.getEmail()),
+     *     Filters.eq("accountType", "PREMIUM")
      * ));
      * }</pre>
      *
@@ -1788,9 +1786,9 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Delete all inactive users
-     * int deletedCount = userDao.delete(CF.and(
-     *     CF.eq("status", "INACTIVE"),
-     *     CF.lt("lastLogin", oneYearAgo)
+     * int deletedCount = userDao.delete(Filters.and(
+     *     Filters.eq("status", "INACTIVE"),
+     *     Filters.lt("lastLogin", oneYearAgo)
      * ));
      * }</pre>
      *

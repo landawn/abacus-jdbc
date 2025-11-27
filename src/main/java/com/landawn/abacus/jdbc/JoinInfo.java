@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
@@ -309,11 +309,11 @@ public final class JoinInfo {
             }
 
             final List<Integer> dummyList = N.asList(1, 2, 3);
-            final Condition cond = CF.in(right[1], dummyList); //
+            final Condition cond = Filters.in(right[1], dummyList); //
             final String inCondToReplace = Strings.repeat("?", dummyList.size(), ", ");
 
             final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
-            final Condition middleEntityCond = CF.eq(left[1].substring(left[1].indexOf('.') + 1));
+            final Condition middleEntityCond = Filters.eq(left[1].substring(left[1].indexOf('.') + 1));
 
             final Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1,
                     getJoinPropValue(srcPropInfos[0], entity));
@@ -491,10 +491,10 @@ public final class JoinInfo {
                             + Stream.of(srcPropInfos[i].clazz, referencedPropInfos[i].clazz).map(ClassUtil::getSimpleClassName).toList());
                 }
 
-                conds.add(CF.eq(referencedPropInfos[i].name));
+                conds.add(Filters.eq(referencedPropInfos[i].name));
             }
 
-            final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : CF.and(conds);
+            final Condition cond = joinColumnPairs.length == 1 ? conds.get(0) : Filters.and(conds);
 
             final Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = srcPropInfos.length == 1
                     ? (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1, getJoinPropValue(srcPropInfos[0], entity))
@@ -564,9 +564,9 @@ public final class JoinInfo {
                 selectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
 
                 final BiFunction<SQLBuilder, Integer, SQLBuilder> appendWhereFunc = referencedPropInfos.length == 1
-                        ? (sb, batchSize) -> sb.append(CF.expr(referencedPropInfos[0].name)) //
+                        ? (sb, batchSize) -> sb.append(Filters.expr(referencedPropInfos[0].name)) //
                                 .append(Strings.repeat("?", batchSize, ", ", " IN (", ")")) //
-                        : (sb, batchSize) -> sb.where(CF.or(N.repeat(cond, batchSize)));
+                        : (sb, batchSize) -> sb.where(Filters.or(N.repeat(cond, batchSize)));
 
                 final BiFunction<Collection<String>, Integer, String> batchSelectSQLBuilder = (selectPropNames, size) -> {
                     if (size == 1) {

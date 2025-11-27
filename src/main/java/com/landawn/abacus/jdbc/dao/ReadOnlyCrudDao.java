@@ -69,16 +69,16 @@ import com.landawn.abacus.query.SQLBuilder;
  * Report report2 = reportDao.gett(456L);
  *
  * // List reports by condition
- * List<Report> activeReports = reportDao.list(CF.eq("status", "ACTIVE"));
+ * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));
  *
  * // Find first report
- * Optional<Report> firstReport = reportDao.findFirst(CF.gt("createdDate", someDate));
+ * Optional<Report> firstReport = reportDao.findFirst(Filters.gt("createdDate", someDate));
  *
  * // Count reports
- * int count = reportDao.count(CF.eq("type", "MONTHLY"));
+ * int count = reportDao.count(Filters.eq("type", "MONTHLY"));
  *
  * // Check if report exists
- * boolean exists = reportDao.exists(CF.eq("id", 789L));
+ * boolean exists = reportDao.exists(Filters.eq("id", 789L));
  *
  * // Query single property by ID
  * Nullable<String> title = reportDao.queryForString("title", 123L);
@@ -103,8 +103,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see ReadOnlyDao
  * @see NoUpdateCrudDao
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta

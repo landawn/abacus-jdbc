@@ -35,11 +35,10 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
@@ -88,8 +87,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
@@ -334,8 +332,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalBoolean containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws SQLException;
@@ -354,8 +352,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalChar containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForChar()
      */
     OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException;
@@ -374,8 +372,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalByte containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForByte()
      */
     OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException;
@@ -394,8 +392,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalShort containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForShort()
      */
     OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException;
@@ -414,8 +412,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalInt containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForInt()
      */
     OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException;
@@ -434,8 +432,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalLong containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForLong()
      */
     OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException;
@@ -454,8 +452,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalFloat containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForFloat()
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException;
@@ -474,8 +472,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalDouble containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForDouble()
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException;
@@ -494,8 +492,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException;
@@ -514,8 +512,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException;
@@ -534,8 +532,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException;
@@ -554,8 +552,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
@@ -575,8 +573,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException;
@@ -597,8 +595,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
@@ -619,8 +617,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
@@ -641,8 +639,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Beta
@@ -667,8 +665,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
@@ -693,8 +691,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @return an Optional containing the unique non-null value if found, otherwise empty
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
@@ -718,8 +716,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
      * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
@@ -1155,15 +1153,15 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * <pre>{@code
      * User user = new User("john@example.com", "John Doe");
      * // Upsert based on email instead of ID
-     * User saved = userDao.upsert(user, CF.eq("email", user.getEmail()));
+     * User saved = userDao.upsert(user, Filters.eq("email", user.getEmail()));
      * }</pre>
      *
      * @param entity the entity to insert or update
      * @param cond the condition to check if the entity exists
      * @return the saved entity (either newly inserted or updated)
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws SQLException {
@@ -1309,11 +1307,11 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final List<T> dbEntities = propNameListForQuery.size() == 1
                 ? Seq.of(entities, SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor))))
+                        .flatmap(it -> list(Filters.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor))))
                         .toList()
                 : Seq.of(entities, SQLException.class) //
                         .split(batchSize)
-                        .flatmap(it -> list(CF.id2Cond(N.map(it, entityIdExtractor))))
+                        .flatmap(it -> list(Filters.id2Cond(N.map(it, entityIdExtractor))))
                         .toList();
 
         final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.ignoringMerger());

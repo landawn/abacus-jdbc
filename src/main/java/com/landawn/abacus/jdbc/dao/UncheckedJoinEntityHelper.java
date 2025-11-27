@@ -74,7 +74,7 @@ import com.landawn.abacus.util.stream.Stream;
  * Optional<User> user = userDao.findFirst(
  *     Arrays.asList("id", "name"),
  *     Order.class,  // Load orders automatically
- *     CF.eq("id", 1)
+ *     Filters.eq("id", 1)
  * );
  * 
  * // Load join entities manually
@@ -86,8 +86,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <T> the entity type
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD> the self-type of the DAO for method chaining
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("resource")
 public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
@@ -102,7 +101,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Optional<User> user = userDao.findFirst(
      *     {@code null},  // select all user properties
      *     Order.class,  // also load orders
-     *     CF.eq("email", "john@example.com")
+     *     Filters.eq("email", "john@example.com")
      * );
      * }</pre>
      *
@@ -134,7 +133,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Optional<User> user = userDao.findFirst(
      *     Arrays.asList("id", "name", "email"),
      *     Arrays.asList(Order.class, UserProfile.class),
-     *     CF.eq("status", "ACTIVE")
+     *     Filters.eq("status", "ACTIVE")
      * );
      * }</pre>
      *
@@ -168,7 +167,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Optional<User> user = userDao.findFirst(
      *     {@code null},  // select all properties
      *     {@code true},  // load all join entities
-     *     CF.eq("id", 1)
+     *     Filters.eq("id", 1)
      * );
      * }</pre>
      *
@@ -202,7 +201,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Optional<User> user = userDao.findOnlyOne(
      *     {@code null},
      *     UserProfile.class,
-     *     CF.eq("email", "unique@example.com")
+     *     Filters.eq("email", "unique@example.com")
      * );
      * }</pre>
      *
@@ -235,7 +234,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "name"),
      *     Arrays.asList(Order.class, UserProfile.class, Address.class),
-     *     CF.eq("username", "john_doe")
+     *     Filters.eq("username", "john_doe")
      * );
      * }</pre>
      *
@@ -270,7 +269,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "name", "email"),
      *     {@code true},  // load all join entities
-     *     CF.eq("accountNumber", "ACC-12345")
+     *     Filters.eq("accountNumber", "ACC-12345")
      * );
      * }</pre>
      *
@@ -305,7 +304,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * List<User> users = userDao.list(
      *     {@code null},  // select all user properties
      *     Order.class,  // load orders for each user
-     *     CF.eq("status", "ACTIVE")
+     *     Filters.eq("status", "ACTIVE")
      * );
      * }</pre>
      *
@@ -342,7 +341,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * List<User> users = userDao.list(
      *     Arrays.asList("id", "name", "email"),
      *     Arrays.asList(Order.class, UserProfile.class, Address.class),
-     *     CF.in("department", Arrays.asList("IT", "Sales"))
+     *     Filters.in("department", Arrays.asList("IT", "Sales"))
      * );
      * }</pre>
      *
@@ -386,7 +385,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * List<User> users = userDao.list(
      *     {@code null},
      *     {@code true},  // load all join entities
-     *     CF.eq("accountType", "PREMIUM")
+     *     Filters.eq("accountType", "PREMIUM")
      * );
      * }</pre>
      *
@@ -474,7 +473,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
+     * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
      * // Load orders for all users in batch
      * userDao.loadJoinEntities(users, Order.class);
      * }</pre>
@@ -493,7 +492,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.gt("createdDate", lastMonth));
+     * List<User> users = userDao.list(Filters.gt("createdDate", lastMonth));
      * // Load minimal order info for all users
      * userDao.loadJoinEntities(
      *     users,
@@ -576,7 +575,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("department", "Sales"));
+     * List<User> users = userDao.list(Filters.eq("department", "Sales"));
      * // Load orders for all users
      * userDao.loadJoinEntities(users, "orders");
      * }</pre>
@@ -712,7 +711,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
+     * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
      * // Load multiple properties for all users
      * userDao.loadJoinEntities(
      *     users,
@@ -774,7 +773,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService batchExecutor = Executors.newCachedThreadPool();
-     * List<User> users = userDao.list(CF.isNotNull("premiumAccount"));
+     * List<User> users = userDao.list(Filters.isNotNull("premiumAccount"));
      * 
      * userDao.loadJoinEntities(
      *     users,
@@ -878,7 +877,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("accountType", "PREMIUM"));
+     * List<User> users = userDao.list(Filters.eq("accountType", "PREMIUM"));
      * // Load all relationships for all users
      * userDao.loadAllJoinEntities(users);
      * }</pre>
@@ -929,7 +928,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService loadingPool = Executors.newWorkStealingPool();
-     * List<User> users = userDao.list(CF.isNotNull("vipStatus"));
+     * List<User> users = userDao.list(Filters.isNotNull("vipStatus"));
      * 
      * // Load all relationships with custom executor
      * userDao.loadAllJoinEntities(users, loadingPool);

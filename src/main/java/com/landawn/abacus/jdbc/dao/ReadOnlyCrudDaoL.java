@@ -59,8 +59,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * List<Report> reports = reportDao.batchGet(Arrays.asList(1L, 2L, 3L)); // Works
  *
  * // Query operations work normally:
- * List<Report> activeReports = reportDao.list(CF.eq("status", "ACTIVE"));
- * long count = reportDao.count(CF.ge("created_date", startDate));
+ * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));
+ * long count = reportDao.count(Filters.ge("created_date", startDate));
  *
  * // All modification operations throw UnsupportedOperationException:
  * reportDao.insert(new Report()); // Throws UnsupportedOperationException
@@ -74,8 +74,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * @see ReadOnlyCrudDao
  * @see NoUpdateCrudDaoL
  * @see CrudDaoL
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @Beta
 public interface ReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>

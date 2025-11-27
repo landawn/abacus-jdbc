@@ -51,8 +51,8 @@ import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.SQLParser;
-import com.landawn.abacus.query.condition.ConditionFactory.CB;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.Filters.CB;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
@@ -135,20 +135,20 @@ public class DaoTest {
 
         N.println("......"); // breakpoint here
 
-        userDao.stream(CF.gt("id", 0)).forEach(N::println);
+        userDao.stream(Filters.gt("id", 0)).forEach(N::println);
 
         N.println("......"); // breakpoint here
 
-        final Stream<User> stream = userDao.stream(CF.gt("id", 0));
+        final Stream<User> stream = userDao.stream(Filters.gt("id", 0));
         N.println(stream.hashCode());
 
         N.println("......"); // breakpoint here
 
-        userDao.stream(CF.gt("id", 0)).forEach(N::println);
+        userDao.stream(Filters.gt("id", 0)).forEach(N::println);
 
         N.println("......"); // breakpoint here
 
-        userDao.delete(CF.ge("id", 0));
+        userDao.delete(Filters.ge("id", 0));
     }
 
     @Test
@@ -160,7 +160,7 @@ public class DaoTest {
 
         userDao.batchInsertWithId(users);
 
-        userDao.paginate(CB.where(CF.gt(x.id, 0)).orderBy(x.id), 9, (q, r) -> {
+        userDao.paginate(CB.where(Filters.gt(x.id, 0)).orderBy(x.id), 9, (q, r) -> {
             if (r == null) {
                 q.setLong(1, -1);
             } else {
@@ -168,7 +168,7 @@ public class DaoTest {
             }
         }).forEach(N::println);
 
-        userDao.paginate(CB.where(CF.gt(x.id, 0).and(CF.ne(x.firstName, "aaaa"))).orderBy("id"), 9, (q, r) -> {
+        userDao.paginate(CB.where(Filters.gt(x.id, 0).and(Filters.ne(x.firstName, "aaaa"))).orderBy("id"), 9, (q, r) -> {
             if (r == null) {
                 q.setLong(1, -1);
             } else {
@@ -176,7 +176,7 @@ public class DaoTest {
             }
         }).forEach(N::println);
 
-        userDao.paginate(CF.expr("id > ? and firstName != 'aaaa' order by id"), 9, (q, r) -> {
+        userDao.paginate(Filters.expr("id > ? and firstName != 'aaaa' order by id"), 9, (q, r) -> {
             if (r == null) {
                 q.setLong(1, -1);
             } else {
@@ -184,7 +184,7 @@ public class DaoTest {
             }
         }).forEach(N::println);
 
-        userDao.delete(CF.ge("id", 0));
+        userDao.delete(Filters.ge("id", 0));
     }
 
     @Test
@@ -202,14 +202,14 @@ public class DaoTest {
     //
     //        List<Long> ids = userDao.batchInsert(users);
     //
-    //        assertTrue(userDao.anyMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) > 10));
-    //        assertFalse(userDao.anyMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) < 10));
+    //        assertTrue(userDao.anyMatch(N.asList("id"), Filters.ge("id", 10), rs -> rs.getLong(1) > 10));
+    //        assertFalse(userDao.anyMatch(N.asList("id"), Filters.ge("id", 10), rs -> rs.getLong(1) < 10));
     //
-    //        assertTrue(userDao.allMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) > 10));
-    //        assertFalse(userDao.allMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) < 200));
+    //        assertTrue(userDao.allMatch(N.asList("id"), Filters.ge("id", 10), rs -> rs.getLong(1) > 10));
+    //        assertFalse(userDao.allMatch(N.asList("id"), Filters.ge("id", 10), rs -> rs.getLong(1) < 200));
     //
-    //        assertTrue(userDao.noneMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) > 10000));
-    //        assertTrue(userDao.noneMatch(N.asList("id"), CF.ge("id", 10), rs -> rs.getLong(1) < 10));
+    //        assertTrue(userDao.noneMatch(N.asList("id"), Filters.ge("id", 10), rs -> rs.getLong(1) > 10000));
+    //        assertTrue(userDao.noneMatch(N.asList("id"), Filters.ge("id", 10), rs -> rs.getLong(1) < 10));
     //
     //        assertEquals(789, userDao.batchDeleteByIds(ids));
     //
@@ -227,12 +227,12 @@ public class DaoTest {
         final List<Long> ids = userDao.batchInsert(users);
 
         assertEquals(users.size(), userDao.count(ids));
-        assertEquals(users.size(), userDao.list(CF.criteria().distinct()).size());
+        assertEquals(users.size(), userDao.list(Filters.criteria().distinct()).size());
 
-        assertEquals(users.size(), userDao.list(CF.criteria().where(CF.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct()).size());
+        assertEquals(users.size(), userDao.list(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct()).size());
 
         assertEquals(users.size(),
-                userDao.prepareNamedQueryForBigResult(CF.criteria().where(CF.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
+                userDao.prepareNamedQueryForBigResult(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
                         .list()
                         .size());
 
@@ -272,7 +272,7 @@ public class DaoTest {
     //
     //        userDao.batchInsertWithId(users);
     //
-    //        List<User> dbUsers = userDao.prepareQueryForBigResult(CF.ge("id", users.get(0).getId()))
+    //        List<User> dbUsers = userDao.prepareQueryForBigResult(Filters.ge("id", users.get(0).getId()))
     //                .stream(User.class)
     //                .onEach(it -> it.setCreateTime(null))
     //                .sortedBy(it -> it.getId())
@@ -281,7 +281,7 @@ public class DaoTest {
     //        assertEquals(users.get(0), dbUsers.get(0));
     //        assertTrue(N.equals(users, dbUsers));
     //
-    //        dbUsers = userDao.prepareNamedQueryForBigResult(CF.ge("id", users.get(0).getId()))
+    //        dbUsers = userDao.prepareNamedQueryForBigResult(Filters.ge("id", users.get(0).getId()))
     //                .stream(User.class)
     //                .onEach(it -> it.setCreateTime(null))
     //                .sortedBy(it -> it.getId())
@@ -290,12 +290,12 @@ public class DaoTest {
     //        assertEquals(users.get(0), dbUsers.get(0));
     //        assertTrue(N.equals(users, dbUsers));
     //
-    //        PSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
-    //        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
-    //        NSC.deleteFrom(User.class).where(CF.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForMultiPositions(0, 1).update();
+    //        PSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
+    //        NSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
+    //        NSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForMultiPositions(0, 1).update();
     //
     //        NSC.deleteFrom(User.class)
-    //                .where(CF.ge("id", users.get(0).getId()))
+    //                .where(Filters.ge("id", users.get(0).getId()))
     //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.query, sp.parameters.toArray()));
     //    }
 
@@ -319,7 +319,7 @@ public class DaoTest {
         assertEquals(users.get(0), dbUsers.get(0));
         assertTrue(N.equals(users, dbUsers));
 
-        userDao.delete(CF.alwaysTrue());
+        userDao.delete(Filters.alwaysTrue());
     }
 
     @Test
@@ -342,7 +342,7 @@ public class DaoTest {
 
             userDao.batchUpsert(users);
 
-            final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+            final List<User> dbUsers = userDao.list(Filters.gt("id", 0));
 
             // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
 
@@ -362,7 +362,7 @@ public class DaoTest {
 
             userDao.batchUpsert(users, N.asList(s.email));
 
-            final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+            final List<User> dbUsers = userDao.list(Filters.gt("id", 0));
 
             // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
 
@@ -381,7 +381,7 @@ public class DaoTest {
 
             userDao.batchUpsert(users, N.asList(s.email, s.lastName));
 
-            final List<User> dbUsers = userDao.list(CF.gt("id", 0));
+            final List<User> dbUsers = userDao.list(Filters.gt("id", 0));
 
             // assertEquals(users.size(), StreamEx.of(users).innerJoin(dbUsers, it -> it.getFirstName(), Pair::of).count());
 
@@ -505,12 +505,12 @@ public class DaoTest {
         assertEquals(1, userDao.deleteByIdWithSqlFragment("user1", ids.get(0)));
         assertEquals(ids.size() - 1, userDao.deleteByIdsWithSqlFragment("user1", ids));
 
-        userDao.delete(CB.where(CF.ge("id", 0)).limit(10000));
+        userDao.delete(CB.where(Filters.ge("id", 0)).limit(10000));
     }
 
     //    @Test
     //    public void test_cacheSql() throws SQLException {
-    //        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).sql();
     //        userDao.cacheSql("selectById", sql);
     //
     //        assertEquals(sql, userDao.getCachedSql("selectById"));
@@ -536,7 +536,7 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        userDao.query(CF.criteria().groupBy("lastName").having(CF.ne("lastName", "aa")).orderBy("firstName")).println();
+        userDao.query(Filters.criteria().groupBy("lastName").having(Filters.ne("lastName", "aa")).orderBy("firstName")).println();
         userDao.deleteById(id);
 
         assertFalse(userDao.exists(id));
@@ -706,9 +706,9 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        userDao.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
+        userDao.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
 
-        userDao.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+        userDao.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
 
         userDao.deleteById(100L);
 
@@ -807,14 +807,14 @@ public class DaoTest {
         assertNotNull(userFromDB);
 
         userFromDB.setFirstName("updatedFN");
-        userDao.update(userFromDB, CF.eq("firstName", "Forrest"));
+        userDao.update(userFromDB, Filters.eq("firstName", "Forrest"));
 
         userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
         assertEquals("updatedFN", userFromDB.getFirstName());
 
         userFromDB.setFirstName("updatedFN2");
-        userDao.update(userFromDB, CF.eq("lastName", "Gump").and(CF.eq("id", userFromDB.getId())));
+        userDao.update(userFromDB, Filters.eq("lastName", "Gump").and(Filters.eq("id", userFromDB.getId())));
 
         userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
@@ -846,13 +846,13 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        assertEquals(100, userDao.queryForLong("id", CF.eq("firstName", "Forrest")).orElseZero());
+        assertEquals(100, userDao.queryForLong("id", Filters.eq("firstName", "Forrest")).orElseZero());
         assertEquals(100, userDao.queryForLong("id", 100L).orElseZero());
 
-        assertEquals("Forrest", userDao.queryForString("firstName", CF.eq("firstName", "Forrest")).orElseNull());
+        assertEquals("Forrest", userDao.queryForString("firstName", Filters.eq("firstName", "Forrest")).orElseNull());
         assertEquals("Forrest", userDao.queryForString("firstName", 100L).orElseNull());
 
-        assertTrue(userDao.queryForTimestamp("createTime", CF.eq("firstName", "Forrest")).orElseNull().before(Dates.currentTimestamp()));
+        assertTrue(userDao.queryForTimestamp("createTime", Filters.eq("firstName", "Forrest")).orElseNull().before(Dates.currentTimestamp()));
         assertTrue(userDao.queryForTimestamp("createTime", 100L).orElseNull().before(Dates.currentTimestamp()));
 
         userDao.deleteById(100L);
@@ -939,17 +939,17 @@ public class DaoTest {
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
-            userDao.findFirst(CF.eq("firstName", "Forrest")).ifPresent(Fn.println());
+            userDao.findFirst(Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
 
-            userDao.findFirst(CF.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).ifPresent(Fn.println());
+            userDao.findFirst(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).ifPresent(Fn.println());
 
-            userDao.findFirst(CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).ifPresent(Fn.println());
+            userDao.findFirst(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).ifPresent(Fn.println());
 
-            userDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest")).ifPresent(Fn.println());
+            userDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
 
-            userDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
+            userDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
 
-            userDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
+            userDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
         }
 
         userDao.prepareQuery("select * from user1").list(ImmutableUser.class).forEach(Fn.println());
@@ -973,21 +973,21 @@ public class DaoTest {
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
-            userDao.list(CF.eq("firstName", "Forrest")).forEach(Fn.println());
+            userDao.list(Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            userDao.list(CF.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
+            userDao.list(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
 
-            userDao.list(CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
+            userDao.list(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
 
-            userDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest")).forEach(Fn.println());
+            userDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            userDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
+            userDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
 
-            userDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
+            userDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
 
-            userDao.list("firstName", CF.eq("firstName", "Forrest")).forEach(Fn.println());
+            userDao.list("firstName", Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            userDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
+            userDao.stream("firstName", Filters.alwaysTrue()).forEach(Fn.println());
         }
 
         final Map<?, ?> map = userDao.selectIdBiggerThan(0);
@@ -1018,7 +1018,7 @@ public class DaoTest {
 
         userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
 
-        userDao.delete(CB.where(CF.ge("id", 0)).limit(10000));
+        userDao.delete(CB.where(Filters.ge("id", 0)).limit(10000));
 
         userDao.deleteById(100L);
     }
@@ -1035,31 +1035,31 @@ public class DaoTest {
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
-            userDao.stream(CF.eq("firstName", "Forrest")).forEach(Fnn.println());
+            userDao.stream(Filters.eq("firstName", "Forrest")).forEach(Fnn.println());
 
-            userDao.stream(CF.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fnn.println());
+            userDao.stream(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fnn.println());
 
-            userDao.stream(CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fnn.println());
+            userDao.stream(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fnn.println());
 
-            userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest")).forEach(Fnn.println());
+            userDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fnn.println());
 
-            userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fnn.println());
+            userDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fnn.println());
 
-            userDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
+            userDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        userDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList()).forEach(Fn.println());
+        userDao.list(Filters.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList()).forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
+        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
                 .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
                 .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
+        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
                 .forEach(Fn.println());
 
-        userDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
+        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 
         userDao.streamOne(0).forEach(Fn.println());
 
@@ -1318,14 +1318,14 @@ public class DaoTest {
         final EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
         N.println(entityId2);
 
-        final List<Employee> employees = employeeDao.list(CF.alwaysTrue());
+        final List<Employee> employees = employeeDao.list(Filters.alwaysTrue());
         employeeDao.loadAllJoinEntities(employees);
         System.out.println(employees);
 
         employeeDao.loadJoinEntities(employees, Project.class, N.asList("title"));
         System.out.println(employees);
 
-        final List<Project> projects = projectDao.list(CF.alwaysTrue());
+        final List<Project> projects = projectDao.list(Filters.alwaysTrue());
         projectDao.loadAllJoinEntities(projects);
         System.out.println(projects);
 
@@ -1348,8 +1348,8 @@ public class DaoTest {
 
         projectDao.deleteAllJoinEntities(projects.get(0));
 
-        employeeDao.delete(CF.alwaysTrue());
-        projectDao.delete(CF.alwaysTrue());
+        employeeDao.delete(Filters.alwaysTrue());
+        projectDao.delete(Filters.alwaysTrue());
         employeeProjectDao.deleteById(entityId);
         employeeProjectDao2.deleteById(entityId2);
 
@@ -1400,9 +1400,9 @@ public class DaoTest {
 
         N.println(employees);
 
-        employeeDao.delete(CF.alwaysTrue());
-        projectDao.delete(CF.alwaysTrue());
-        employeeProjectDao.delete(CF.alwaysTrue());
+        employeeDao.delete(Filters.alwaysTrue());
+        projectDao.delete(Filters.alwaysTrue());
+        employeeProjectDao.delete(Filters.alwaysTrue());
     }
 
     @Test
@@ -1420,17 +1420,17 @@ public class DaoTest {
         final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
         userDao.insertWithId(user);
 
-        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(a -> N.println(a.join(", "))));
-        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(User.class, a -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(a -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.RowConsumer.oneOff(User.class, a -> N.println(a.join(", "))));
 
-        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
-        userDao.forEach(CF.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff((cls, a) -> N.println(a.join(", "))));
+        userDao.forEach(Filters.eq("firstName", "Forrest"), Jdbc.BiRowConsumer.oneOff(User.class, (cls, a) -> N.println(a.join(", "))));
 
-        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray()).forEach(Fn.println());
-        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
+        userDao.stream(Filters.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray()).forEach(Fn.println());
+        userDao.stream(Filters.eq("firstName", "Forrest"), Jdbc.RowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
 
-        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.BiRowMapper.toDisposableObjArray()).forEach(Fn.println());
-        userDao.stream(CF.eq("firstName", "Forrest"), Jdbc.BiRowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
+        userDao.stream(Filters.eq("firstName", "Forrest"), Jdbc.BiRowMapper.toDisposableObjArray()).forEach(Fn.println());
+        userDao.stream(Filters.eq("firstName", "Forrest"), Jdbc.BiRowMapper.toDisposableObjArray(User.class)).forEach(Fn.println());
 
         userDao.deleteById(100L);
     }
@@ -1444,9 +1444,9 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        myUserDaoA.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
+        myUserDaoA.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
 
-        myUserDaoA.findFirst(CF.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+        myUserDaoA.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
 
         myUserDaoA.deleteById(100L);
 

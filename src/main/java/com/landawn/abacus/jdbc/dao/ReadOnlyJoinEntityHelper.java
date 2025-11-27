@@ -60,7 +60,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * userDao.loadAllJoinEntities(user);                    // Loads all defined join entities
  *
  * // Load join entities for multiple users (batch loading)
- * List<User> users = userDao.list(CF.alwaysTrue());
+ * List<User> users = userDao.list(Filters.alwaysTrue());
  * userDao.loadJoinEntities(users, Order.class);         // Batch loads orders for all users
  * userDao.loadAllJoinEntities(users);                   // Batch loads all join entities
  *

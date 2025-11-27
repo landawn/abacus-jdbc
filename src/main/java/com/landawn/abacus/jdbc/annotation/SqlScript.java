@@ -47,7 +47,7 @@ import java.lang.annotation.Target;
  *         @SqlScript
  *         static final String listUserWithBiggerId =
  *                 PSC.selectFrom(User.class)
- *                    .where(CF.gt("id"))
+ *                    .where(Filters.gt("id"))
  *                    .sql();
  *
  *         // Complex SQL query defined using a Java text block:
@@ -88,7 +88,7 @@ public @interface SqlScript {
      * <pre>{@code
      * @SqlScript(id = "sql_listUserWithBiggerId")
      * static final String listUserWithBiggerId =
-     *         PSC.selectFrom(User.class).where(CF.gt("id")).sql();
+     *         PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
      * }</pre>
      *
      * @return the identifier used to reference the SQL when invoking {@link Query#id()}, Actual field name is used when it's empty.

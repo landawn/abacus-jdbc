@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -170,12 +170,12 @@ public class PreparedQueryTest {
                 .setString(5, "123@email.com")
                 .insert();
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(CF.eq(s.firstName)).sql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).sql()) //
                 .setParameters(User.builder().firstName("Forrest").build(), N.asList(s.firstName))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(CF.eq(s.firstName)).sql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).sql()) //
                 .settParameters(1, N.asList("Forrest"))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
@@ -215,7 +215,7 @@ public class PreparedQueryTest {
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigInteger().ifPresent(Fn.println());
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigDecimal().ifPresent(Fn.println());
 
-        sql = PSC.deleteFrom(User.class).where(CF.eq(s.id)).sql();
+        sql = PSC.deleteFrom(User.class).where(Filters.eq(s.id)).sql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .update();

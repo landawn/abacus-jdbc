@@ -35,11 +35,10 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
@@ -89,8 +88,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("resource")
 @Beta
@@ -307,8 +305,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalBoolean containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForBoolean()
      */
     @Override
@@ -329,8 +327,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalChar containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForChar()
      */
     @Override
@@ -351,8 +349,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalByte containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForByte()
      */
     @Override
@@ -373,8 +371,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalShort containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForShort()
      */
     @Override
@@ -395,8 +393,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalInt containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForInt()
      */
     @Override
@@ -417,8 +415,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalLong containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForLong()
      */
     @Override
@@ -439,8 +437,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalFloat containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForFloat()
      */
     @Override
@@ -461,8 +459,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalDouble containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForDouble()
      */
     @Override
@@ -483,8 +481,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the String value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForString()
      */
     @Override
@@ -505,8 +503,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the Date value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForDate()
      */
     @Override
@@ -527,8 +525,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the Time value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForTime()
      */
     @Override
@@ -549,8 +547,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the Timestamp value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForTimestamp()
      */
     @Override
@@ -571,8 +569,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the byte array value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForBytes()
      */
     @Override
@@ -596,8 +594,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param targetValueClass the class of the target value type
      * @return a Nullable containing the converted value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     @Override
@@ -620,8 +618,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param targetValueClass the class of the target value type
      * @return an Optional containing the non-null value, or empty if no entity found or value is null
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -646,8 +644,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the non-null mapped value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -671,8 +669,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return a Nullable containing the unique result value, or empty if no entity found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
@@ -699,8 +697,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return an Optional containing the unique non-null value, or empty if no entity found or value is null
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -727,8 +725,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return an Optional containing the unique non-null mapped value, or empty if no entity found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see ConditionFactory
-     * @see ConditionFactory.CF
+     * @see Filters
+     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -1063,7 +1061,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.list(CF.eq("needsUpdate", true));
+     * List<User> users = userDao.list(Filters.eq("needsUpdate", true));
      * users.forEach(user -> {
      *     user.setProcessed(true);
      *     user.setProcessedDate(new Date());
@@ -1202,7 +1200,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
-        final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.eqAnd(entity, uniquePropNamesForQuery);
 
         return upsert(entity, cond);
     }
@@ -1220,9 +1218,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * user.setLastUpdated(new Date());
      * 
      * // Custom condition for upsert
-     * Condition cond = CF.and(
-     *     CF.eq("email", user.getEmail()),
-     *     CF.eq("department", user.getDepartment())
+     * Condition cond = Filters.and(
+     *     Filters.eq("email", user.getEmail()),
+     *     Filters.eq("department", user.getDepartment())
      * );
      * 
      * User result = userDao.upsert(user, cond);
@@ -1388,8 +1386,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = propNameListForQuery.size() == 1 ? singleKeyExtractor : entityIdExtractor;
 
         final List<T> dbEntities = propNameListForQuery.size() == 1
-                ? Stream.of(entities).split(batchSize).flatmap(it -> list(CF.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
-                : Stream.of(entities).split(batchSize).flatmap(it -> list(CF.id2Cond(N.map(it, entityIdExtractor)))).toList();
+                ? Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
+                : Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.id2Cond(N.map(it, entityIdExtractor)))).toList();
 
         final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.ignoringMerger());
         final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());

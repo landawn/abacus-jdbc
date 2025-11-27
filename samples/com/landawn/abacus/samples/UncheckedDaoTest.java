@@ -43,7 +43,7 @@ import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.query.SQLParser;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
@@ -95,7 +95,7 @@ public class UncheckedDaoTest {
 
     //    @Test
     //    public void test_cacheSql() {
-    //        String sql = NSC.selectFrom(User.class).where(CF.eq("id")).sql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).sql();
     //        uncheckedUserDao.cacheSql("selectById", sql);
     //
     //        assertEquals(sql, uncheckedUserDao.getCachedSql("selectById"));
@@ -121,7 +121,7 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        uncheckedUserDao.query(CF.criteria().groupBy("lastName").having(CF.ne("lastName", "aa")).orderBy("firstName")).println();
+        uncheckedUserDao.query(Filters.criteria().groupBy("lastName").having(Filters.ne("lastName", "aa")).orderBy("firstName")).println();
         uncheckedUserDao.deleteById(id);
 
         assertFalse(uncheckedUserDao.exists(id));
@@ -449,17 +449,17 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
-            uncheckedUserDao.findFirst(CF.eq("firstName", "Forrest")).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(CF.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest")).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
         }
 
         uncheckedUserDao.updateFirstAndLastName("Tom", "Hanks", 100);
@@ -478,21 +478,21 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
-            uncheckedUserDao.list(CF.eq("firstName", "Forrest")).forEach(Fn.println());
+            uncheckedUserDao.list(Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.list(CF.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
+            uncheckedUserDao.list(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
 
-            uncheckedUserDao.list(CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
+            uncheckedUserDao.list(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
 
-            uncheckedUserDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest")).forEach(Fn.println());
+            uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
+            uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
 
-            uncheckedUserDao.list(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
+            uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
 
-            uncheckedUserDao.list("firstName", CF.eq("firstName", "Forrest")).forEach(Fn.println());
+            uncheckedUserDao.list("firstName", Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.stream("firstName", CF.alwaysTrue()).forEach(Fn.println());
+            uncheckedUserDao.stream("firstName", Filters.alwaysTrue()).forEach(Fn.println());
         }
 
         uncheckedUserDao.listUserByAnnoSql(0).forEach(Fn.println());
@@ -520,34 +520,34 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
 
         for (int i = 0; i < 1000; i++) {
-            uncheckedUserDao.stream(CF.eq("firstName", "Forrest")).forEach(Fnn.println());
+            uncheckedUserDao.stream(Filters.eq("firstName", "Forrest")).forEach(Fnn.println());
 
-            uncheckedUserDao.stream(CF.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fnn.println());
+            uncheckedUserDao.stream(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fnn.println());
 
-            uncheckedUserDao.stream(CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fnn.println());
+            uncheckedUserDao.stream(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fnn.println());
 
-            uncheckedUserDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest")).forEach(Fnn.println());
+            uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fnn.println());
 
-            uncheckedUserDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fnn.println());
+            uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fnn.println());
 
-            uncheckedUserDao.stream(N.asList("firstName", "lastName"), CF.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
+            uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
         }
 
-        uncheckedUserDao.list(CF.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList())
+        uncheckedUserDao.list(Filters.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList())
                 .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
+                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
                 .forEach(Fn.println());
 
-        uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+        uncheckedUserDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
                 .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
+                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
                 .forEach(Fn.println());
 
-        uncheckedUserDao.list(CF.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
+        uncheckedUserDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 
         uncheckedUserDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
@@ -715,14 +715,14 @@ public class UncheckedDaoTest {
         final EmployeeProject entityId2 = employeeProjectDao2.insert(employeeProject);
         N.println(entityId2);
 
-        final List<Employee> employees = employeeDao.list(CF.alwaysTrue());
+        final List<Employee> employees = employeeDao.list(Filters.alwaysTrue());
         employeeDao.loadAllJoinEntities(employees);
         System.out.println(employees);
 
         employeeDao.loadJoinEntities(employees, Project.class, N.asList("title"));
         System.out.println(employees);
 
-        final List<Project> projects = projectDao.list(CF.alwaysTrue());
+        final List<Project> projects = projectDao.list(Filters.alwaysTrue());
         projectDao.loadAllJoinEntities(projects);
         System.out.println(projects);
 
@@ -735,8 +735,8 @@ public class UncheckedDaoTest {
         assertTrue(employeeProjectDao2.exists(entityId2));
         assertNotNull(employeeProjectDao2.gett(entityId2));
 
-        employeeDao.delete(CF.alwaysTrue());
-        projectDao.delete(CF.alwaysTrue());
+        employeeDao.delete(Filters.alwaysTrue());
+        projectDao.delete(Filters.alwaysTrue());
         employeeProjectDao.deleteById(entityId);
         employeeProjectDao2.deleteById(entityId2);
 

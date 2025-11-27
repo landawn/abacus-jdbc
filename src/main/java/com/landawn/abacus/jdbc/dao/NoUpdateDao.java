@@ -70,10 +70,10 @@ import com.landawn.abacus.util.Throwables;
  * // Supported operations - all work fine:
  *
  * // Read operations
- * List<AuditLog> logs = auditDao.list(CF.eq("userId", 123L));
- * Optional<AuditLog> firstLog = auditDao.findFirst(CF.gt("timestamp", yesterday));
- * int count = auditDao.count(CF.eq("action", "LOGIN"));
- * boolean exists = auditDao.exists(CF.eq("id", 456L));
+ * List<AuditLog> logs = auditDao.list(Filters.eq("userId", 123L));
+ * Optional<AuditLog> firstLog = auditDao.findFirst(Filters.gt("timestamp", yesterday));
+ * int count = auditDao.count(Filters.eq("action", "LOGIN"));
+ * boolean exists = auditDao.exists(Filters.eq("id", 456L));
  *
  * // Insert operations
  * AuditLog newLog = new AuditLog("USER_LOGIN", userId, timestamp);
@@ -94,9 +94,9 @@ import com.landawn.abacus.util.Throwables;
  *         .execute();
  *
  * // Unsupported operations - all throw UnsupportedOperationException:
- * auditDao.update("status", "MODIFIED", CF.eq("id", 123L));  // Throws exception
- * auditDao.delete(CF.eq("id", 123L));                         // Throws exception
- * auditDao.upsert(log, CF.eq("id", 123L));                   // Throws exception
+ * auditDao.update("status", "MODIFIED", Filters.eq("id", 123L));  // Throws exception
+ * auditDao.delete(Filters.eq("id", 123L));                         // Throws exception
+ * auditDao.upsert(log, Filters.eq("id", 123L));                   // Throws exception
  * auditDao.prepareCallableQuery("{call update_proc()}");     // Throws exception
  * auditDao.prepareQuery("UPDATE audit_log SET...");          // Throws exception
  * auditDao.prepareQuery("DELETE FROM audit_log...");         // Throws exception
@@ -105,8 +105,7 @@ import com.landawn.abacus.util.Throwables;
  * @param <T> the entity type managed by this DAO
  * @param <SB> the SQLBuilder type used for query construction
  * @param <TD> the self-referential type of the DAO for fluent API support
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  * @see Dao
  */
 @SuppressWarnings("RedundantThrows")

@@ -60,8 +60,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * @param <SB> The SQLBuilder type used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD> The self-type of the DAO for fluent interface support
  * 
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @Beta
 public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudDao<T, Long, SB, TD> {

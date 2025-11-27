@@ -46,7 +46,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * User user = userDao.gett(1L);
  * userDao.loadJoinEntities(user, "orders");  // Loads successfully
  *
- * List<User> users = userDao.list(CF.eq("status", "active"));
+ * List<User> users = userDao.list(Filters.eq("status", "active"));
  * userDao.loadAllJoinEntities(users);  // Loads all join entities
  *
  * // Delete operations are blocked

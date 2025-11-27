@@ -49,8 +49,8 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * // Insert and query operations work without checked exception handling:
  * dao.save(new EventLog("System startup"));
- * List<EventLog> logs = dao.list(CF.between("timestamp", startTime, endTime));
- * boolean hasErrors = dao.exists(CF.eq("severity", "ERROR"));
+ * List<EventLog> logs = dao.list(Filters.between("timestamp", startTime, endTime));
+ * boolean hasErrors = dao.exists(Filters.eq("severity", "ERROR"));
  *
  * // Batch inserts are also supported:
  * List<EventLog> newLogs = Arrays.asList(
@@ -64,15 +64,14 @@ import com.landawn.abacus.query.condition.Condition;
  *       .forEach(level -> dao.save(new EventLog("Log level: " + level)));
  *
  * // Update and delete operations throw UnsupportedOperationException:
- * // dao.update("status", "ARCHIVED", CF.lt("timestamp", cutoffTime));  // Throws exception
- * // dao.delete(CF.eq("id", 123));  // Throws exception
+ * // dao.update("status", "ARCHIVED", Filters.lt("timestamp", cutoffTime));  // Throws exception
+ * // dao.delete(Filters.eq("id", 123));  // Throws exception
  * }</pre>
  *
  * @param <T> the entity type
  * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
  * @param <TD> the self-type of the DAO for method chaining
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @Beta
 public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>

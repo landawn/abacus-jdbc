@@ -72,7 +72,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Query operations work:
  * List<AuditLog> userLogs = auditLogDao.findByUserId(123L);
- * int logCount = auditLogDao.count(CF.eq("action", "LOGIN"));
+ * int logCount = auditLogDao.count(Filters.eq("action", "LOGIN"));
  *
  * // All update and delete operations throw UnsupportedOperationException:
  * auditLogDao.update("status", "processed", id); // Throws UnsupportedOperationException
@@ -85,8 +85,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see NoUpdateCrudDao
  * @see CrudDaoL
- * @see com.landawn.abacus.query.condition.ConditionFactory
- * @see com.landawn.abacus.query.condition.ConditionFactory.CF
+ * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("RedundantThrows")
 @Beta

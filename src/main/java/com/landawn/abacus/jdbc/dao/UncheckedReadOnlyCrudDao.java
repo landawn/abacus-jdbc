@@ -45,9 +45,9 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Query operations work without checked exception handling:
  * Optional<User> user = userDao.get(userId);
- * List<User> users = userDao.list(CF.eq("status", "ACTIVE"));
- * boolean exists = userDao.exists(CF.eq("email", "test@example.com"));
- * long count = userDao.count(CF.gt("age", 18));
+ * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
+ * boolean exists = userDao.exists(Filters.eq("email", "test@example.com"));
+ * long count = userDao.count(Filters.gt("age", 18));
  *
  * // Can be used in functional contexts without try-catch:
  * List<Long> userIds = Arrays.asList(1L, 2L, 3L);

@@ -45,7 +45,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * Long id = dao.insert(new EventLog("User logged in"));
  * Optional<EventLog> log = dao.get(123L);
  * boolean exists = dao.exists(123L);
- * List<EventLog> logs = dao.list(CF.eq("severity", "ERROR"));
+ * List<EventLog> logs = dao.list(Filters.eq("severity", "ERROR"));
  *
  * // These operations throw UnsupportedOperationException:
  * // dao.update("status", "PROCESSED", 123L);  // not allowed

@@ -43,13 +43,12 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLMapper;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.condition.ConditionFactory;
-import com.landawn.abacus.query.condition.ConditionFactory.CF;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -137,8 +136,8 @@ import com.landawn.abacus.util.stream.Stream;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see CrudDao
- * @see ConditionFactory
- * @see ConditionFactory.CF
+ * @see Filters
+ * @see Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
@@ -317,14 +316,14 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * PreparedQuery query = dao.prepareQuery(CF.eq("status", "ACTIVE"));
+     * PreparedQuery query = dao.prepareQuery(Filters.eq("status", "ACTIVE"));
      * List<User> activeUsers = query.list(User.class);
      * }</pre>
      *
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery instance for the SELECT statement
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
+     * @see Filters
      */
     @Beta
     @NonDBOperation
@@ -340,7 +339,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * PreparedQuery query = dao.prepareQuery(
      *     Arrays.asList("id", "name", "email"),
-     *     CF.eq("status", "ACTIVE")
+     *     Filters.eq("status", "ACTIVE")
      * );
      * }</pre>
      *
@@ -818,7 +817,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * boolean hasActiveUsers = dao.exists(CF.eq("status", "ACTIVE"));
+     * boolean hasActiveUsers = dao.exists(Filters.eq("status", "ACTIVE"));
      * if (hasActiveUsers) {
      *     // Process active users
      * }
@@ -827,7 +826,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition to check
      * @return {@code true} if at least one matching record exists
      * @throws SQLException if a database access error occurs
-     * @see ConditionFactory
+     * @see Filters
      */
     boolean exists(final Condition cond) throws SQLException;
 
@@ -837,7 +836,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * if (dao.notExists(CF.eq("email", email))) {
+     * if (dao.notExists(Filters.eq("email", email))) {
      *     // Email is available, proceed with registration
      * }
      * }</pre>
@@ -857,7 +856,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int activeCount = dao.count(CF.eq("status", "ACTIVE"));
+     * int activeCount = dao.count(Filters.eq("status", "ACTIVE"));
      * System.out.println("Active users: " + activeCount);
      * }</pre>
      *
@@ -873,7 +872,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<User> user = dao.findFirst(CF.eq("email", "john@example.com"));
+     * Optional<User> user = dao.findFirst(Filters.eq("email", "john@example.com"));
      * user.ifPresent(u -> System.out.println("Found: " + u.getName()));
      * }</pre>
      *
@@ -890,7 +889,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> userName = dao.findFirst(
-     *     CF.eq("id", 123),
+     *     Filters.eq("id", 123),
      *     rs -> rs.getString("name")
      * );
      * }</pre>
@@ -925,7 +924,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Optional<User> user = dao.findFirst(
      *     Arrays.asList("id", "name", "email"),
-     *     CF.eq("status", "ACTIVE")
+     *     Filters.eq("status", "ACTIVE")
      * );
      * }</pre>
      *
@@ -972,7 +971,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<User> user = dao.findOnlyOne(CF.eq("email", "john@example.com"));
+     * Optional<User> user = dao.findOnlyOne(Filters.eq("email", "john@example.com"));
      * // Throws DuplicatedResultException if multiple users have this email
      * }</pre>
      *
@@ -1063,7 +1062,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalBoolean isActive = dao.queryForBoolean("is_active", CF.eq("id", 123));
+     * OptionalBoolean isActive = dao.queryForBoolean("is_active", Filters.eq("id", 123));
      * if (isActive.orElse(false)) {
      *     // User is active
      * }
@@ -1082,7 +1081,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalChar grade = dao.queryForChar("grade", CF.eq("student_id", 123));
+     * OptionalChar grade = dao.queryForChar("grade", Filters.eq("student_id", 123));
      * if (grade.isPresent()) {
      *     System.out.println("Grade: " + grade.getAsChar());
      * }
@@ -1101,7 +1100,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalByte status = dao.queryForByte("status", CF.eq("id", 1));
+     * OptionalByte status = dao.queryForByte("status", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1117,7 +1116,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalShort year = dao.queryForShort("year", CF.eq("id", 1));
+     * OptionalShort year = dao.queryForShort("year", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1133,7 +1132,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalInt age = dao.queryForInt("age", CF.eq("id", 123));
+     * OptionalInt age = dao.queryForInt("age", Filters.eq("id", 123));
      * System.out.println("Age: " + age.orElse(0));
      * }</pre>
      *
@@ -1150,7 +1149,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalLong count = dao.queryForLong("count", CF.eq("category", "A"));
+     * OptionalLong count = dao.queryForLong("count", Filters.eq("category", "A"));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1166,7 +1165,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalFloat temperature = dao.queryForFloat("temperature", CF.eq("city", "London"));
+     * OptionalFloat temperature = dao.queryForFloat("temperature", Filters.eq("city", "London"));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1182,7 +1181,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * OptionalDouble average = dao.queryForDouble("average", CF.eq("group_id", 1));
+     * OptionalDouble average = dao.queryForDouble("average", Filters.eq("group_id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1198,7 +1197,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> name = dao.queryForString("name", CF.eq("id", 123));
+     * Nullable<String> name = dao.queryForString("name", Filters.eq("id", 123));
      * System.out.println("Name: " + name.orElse("Unknown"));
      * }</pre>
      *
@@ -1215,7 +1214,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<java.sql.Date> birthDate = dao.queryForDate("birth_date", CF.eq("id", 1));
+     * Nullable<java.sql.Date> birthDate = dao.queryForDate("birth_date", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1231,7 +1230,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<java.sql.Time> startTime = dao.queryForTime("start_time", CF.eq("id", 1));
+     * Nullable<java.sql.Time> startTime = dao.queryForTime("start_time", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1247,7 +1246,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<java.sql.Timestamp> createdAt = dao.queryForTimestamp("created_at", CF.eq("id", 1));
+     * Nullable<java.sql.Timestamp> createdAt = dao.queryForTimestamp("created_at", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1263,7 +1262,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<byte[]> data = dao.queryForBytes("data", CF.eq("id", 1));
+     * Nullable<byte[]> data = dao.queryForBytes("data", Filters.eq("id", 1));
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
@@ -1281,7 +1280,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Nullable<BigDecimal> balance = dao.queryForSingleResult(
      *     "balance", 
-     *     CF.eq("account_id", 123), 
+     *     Filters.eq("account_id", 123), 
      *     BigDecimal.class
      * );
      * }</pre>
@@ -1303,7 +1302,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Optional<String> email = dao.queryForSingleNonNull(
      *     "email", 
-     *     CF.eq("id", 123), 
+     *     Filters.eq("id", 123), 
      *     String.class
      * );
      * }</pre>
@@ -1326,7 +1325,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Optional<LocalDateTime> createdDate = dao.queryForSingleNonNull(
      *     "created_at",
-     *     CF.eq("id", 123),
+     *     Filters.eq("id", 123),
      *     rs -> rs.getTimestamp(1).toLocalDateTime()
      * );
      * }</pre>
@@ -1350,7 +1349,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Nullable<String> uniqueEmail = dao.queryForUniqueResult(
      *     "email",
-     *     CF.eq("username", "john_doe"),
+     *     Filters.eq("username", "john_doe"),
      *     String.class
      * );
      * // Throws DuplicatedResultException if multiple users have this username
@@ -1375,7 +1374,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Optional<BigDecimal> balance = dao.queryForUniqueNonNull(
      *     "balance",
-     *     CF.eq("account_number", "ACC123"),
+     *     Filters.eq("account_number", "ACC123"),
      *     BigDecimal.class
      * );
      * balance.ifPresent(b -> System.out.println("Balance: $" + b));
@@ -1400,7 +1399,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * Optional<ZonedDateTime> lastLogin = dao.queryForUniqueNonNull(
      *     "last_login",
-     *     CF.eq("username", "john_doe"),
+     *     Filters.eq("username", "john_doe"),
      *     rs -> ZonedDateTime.ofInstant(
      *         rs.getTimestamp(1).toInstant(),
      *         ZoneId.systemDefault()
@@ -1426,7 +1425,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset ds = dao.query(CF.gt("age", 18));
+     * Dataset ds = dao.query(Filters.gt("age", 18));
      * for (int i = 0; i < ds.size(); i++) {
      *     System.out.println(ds.getString(i, "name"));
      * }
@@ -1456,7 +1455,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<Long, String> idToName = dao.query(
-     *     CF.isNotNull("id"),
+     *     Filters.isNotNull("id"),
      *     rs -> {
      *         Map<Long, String> map = new HashMap<>();
      *         while (rs.next()) {
@@ -1519,7 +1518,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> activeUsers = dao.list(CF.eq("status", "ACTIVE"));
+     * List<User> activeUsers = dao.list(Filters.eq("status", "ACTIVE"));
      * for (User user : activeUsers) {
      *     System.out.println(user.getName());
      * }
@@ -1538,7 +1537,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<String> names = dao.list(
-     *     CF.eq("active", true),
+     *     Filters.eq("active", true),
      *     rs -> rs.getString("name")
      * );
      * }</pre>
@@ -1570,7 +1569,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> adultUsers = dao.list(
-     *     CF.isNotNull("age"),
+     *     Filters.isNotNull("age"),
      *     rs -> rs.getInt("age") >= 18,  // filter
      *     rs -> mapToUser(rs)             // mapper
      * );
@@ -1606,7 +1605,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * List<User> users = dao.list(
      *     Arrays.asList("id", "name", "email"),
-     *     CF.eq("department", "IT")
+     *     Filters.eq("department", "IT")
      * );
      * }</pre>
      *
@@ -1679,7 +1678,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<String> emails = dao.list("email", CF.eq("newsletter", true));
+     * List<String> emails = dao.list("email", Filters.eq("newsletter", true));
      * }</pre>
      *
      * @param <R> the result type
@@ -1703,7 +1702,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * List<String> upperNames = dao.list(
      *     "name", 
-     *     CF.isNotNull("name"),
+     *     Filters.isNotNull("name"),
      *     rs -> rs.getString(1).toUpperCase()
      * );
      * }</pre>
@@ -1742,7 +1741,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Stream<User> users = dao.stream(CF.eq("status", "ACTIVE"))) {
+     * try (Stream<User> users = dao.stream(Filters.eq("status", "ACTIVE"))) {
      *     users.filter(u -> u.getAge() > 21)
      *          .map(User::getEmail)
      *          .forEach(System.out::println);
@@ -1751,7 +1750,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param cond the search condition
      * @return lazy stream of matching entities
-     * @see ConditionFactory
+     * @see Filters
      */
     @LazyEvaluation
     Stream<T> stream(final Condition cond);
@@ -1878,7 +1877,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Stream<String> emails = dao.stream("email", CF.eq("active", true))) {
+     * try (Stream<String> emails = dao.stream("email", Filters.eq("active", true))) {
      *     emails.distinct()
      *           .sorted()
      *           .forEach(System.out::println);
@@ -1937,7 +1936,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Stream<Dataset> pages = dao.paginate(
-     *     CF.criteria().where(CF.gt("id", 0)).orderBy("id"),
+     *     Filters.criteria().where(Filters.gt("id", 0)).orderBy("id"),
      *     100,
      *     (query, lastPageResult) -> {
      *         if (lastPageResult != {@code null} && lastPageResult.size() > 0) {
@@ -2045,7 +2044,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.forEach(
-     *     CF.eq("status", "PENDING"),
+     *     Filters.eq("status", "PENDING"),
      *     rs -> processRecord(rs.getLong("id"), rs.getString("data"))
      * );
      * }</pre>
@@ -2145,7 +2144,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * dao.foreach(
      *     Arrays.asList("id", "name", "age"),
-     *     CF.gt("age", 18),
+     *     Filters.gt("age", 18),
      *     row -> {
      *         Long id = (Long) row.get(0);
      *         String name = (String) row.get(1);
@@ -2184,7 +2183,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int updated = dao.update("status", "INACTIVE", CF.lt("lastLogin", thirtyDaysAgo));
+     * int updated = dao.update("status", "INACTIVE", Filters.lt("lastLogin", thirtyDaysAgo));
      * System.out.println("Deactivated " + updated + " users");
      * }</pre>
      *
@@ -2210,7 +2209,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("lastModified", new Date());
      * updates.put("modifiedBy", currentUser);
-     * int count = dao.update(updates, CF.eq("status", "PENDING"));
+     * int count = dao.update(updates, Filters.eq("status", "PENDING"));
      * }</pre>
      *
      * @param updateProps map of property names to new values
@@ -2229,7 +2228,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * User updates = new User();
      * updates.setStatus("ACTIVE");
      * updates.setLastLogin(new Date());
-     * int count = dao.update(updates, CF.eq("id", userId));
+     * int count = dao.update(updates, Filters.eq("id", userId));
      * }</pre>
      *
      * @param entity the entity containing update values
@@ -2256,7 +2255,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * int count = dao.update(
      *     user, 
      *     Arrays.asList("email", "phone"),
-     *     CF.eq("id", userId)
+     *     Filters.eq("id", userId)
      * );
      * }</pre>
      *
@@ -2288,7 +2287,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
-        final Condition cond = CF.eqAnd(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.eqAnd(entity, uniquePropNamesForQuery);
 
         return upsert(entity, cond);
     }
@@ -2303,9 +2302,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * user.setEmail("john@example.com");
      * user.setStatus("ACTIVE");
      * 
-     * Condition cond = CF.and(
-     *     CF.eq("email", user.getEmail()),
-     *     CF.eq("deleted", false)
+     * Condition cond = Filters.and(
+     *     Filters.eq("email", user.getEmail()),
+     *     Filters.eq("deleted", false)
      * );
      * 
      * User saved = dao.upsert(user, cond);
@@ -2338,7 +2337,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * int deleted = dao.delete(CF.lt("expiryDate", new Date()));
+     * int deleted = dao.delete(Filters.lt("expiryDate", new Date()));
      * System.out.println("Deleted " + deleted + " expired records");
      * }</pre>
      *
@@ -2356,7 +2355,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = dao.asyncCall(d -> 
-     *     d.list(CF.eq("status", "ACTIVE"))
+     *     d.list(Filters.eq("status", "ACTIVE"))
      * );
      * 
      * future.thenAccept(users -> 
@@ -2383,7 +2382,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
      * 
      * ContinuableFuture<Integer> future = dao.asyncCall(
-     *     d -> d.update("status", "PROCESSED", CF.eq("status", "PENDING")),
+     *     d -> d.update("status", "PROCESSED", Filters.eq("status", "PENDING")),
      *     customExecutor
      * );
      * }</pre>
@@ -2411,8 +2410,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.asyncRun(d -> {
-     *     d.delete(CF.lt("createdDate", oneYearAgo));
-     *     d.update("archived", {@code true}, CF.lt("lastAccess", sixMonthsAgo));
+     *     d.delete(Filters.lt("createdDate", oneYearAgo));
+     *     d.update("archived", {@code true}, Filters.lt("lastAccess", sixMonthsAgo));
      * });
      * }</pre>
      *
