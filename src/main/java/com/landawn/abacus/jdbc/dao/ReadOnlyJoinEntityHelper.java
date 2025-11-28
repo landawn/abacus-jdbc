@@ -55,23 +55,23 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Load join entities for a single user
  * User user = userDao.gett(1L);
- * userDao.loadJoinEntities(user, Order.class);          // Loads associated orders
- * userDao.loadJoinEntities(user, "addresses");          // Loads addresses by property name
- * userDao.loadAllJoinEntities(user);                    // Loads all defined join entities
+ * userDao.loadJoinEntities(user, Order.class);  // Loads associated orders
+ * userDao.loadJoinEntities(user, "addresses");  // Loads addresses by property name
+ * userDao.loadAllJoinEntities(user);  // Loads all defined join entities
  *
  * // Load join entities for multiple users (batch loading)
  * List<User> users = userDao.list(Filters.alwaysTrue());
- * userDao.loadJoinEntities(users, Order.class);         // Batch loads orders for all users
- * userDao.loadAllJoinEntities(users);                   // Batch loads all join entities
+ * userDao.loadJoinEntities(users, Order.class);  // Batch loads orders for all users
+ * userDao.loadAllJoinEntities(users);  // Batch loads all join entities
  *
  * // Load specific join entities by property names
  * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"));
  *
  * // Unsupported operations - all throw UnsupportedOperationException:
- * userDao.deleteJoinEntities(user, Order.class);        // Throws exception
- * userDao.deleteJoinEntities(user, "orders");           // Throws exception
- * userDao.deleteAllJoinEntities(user);                  // Throws exception
- * userDao.deleteJoinEntities(users, Order.class);       // Throws exception
+ * userDao.deleteJoinEntities(user, Order.class);  // Throws exception
+ * userDao.deleteJoinEntities(user, "orders");  // Throws exception
+ * userDao.deleteAllJoinEntities(user);  // Throws exception
+ * userDao.deleteJoinEntities(users, Order.class);  // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

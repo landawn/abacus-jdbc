@@ -1029,7 +1029,7 @@ public final class JoinInfo {
      * Employee employee = employeeDao.findById(123);
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
-     * String sql = builder._1.apply(null); // Use default columns
+     * String sql = builder._1.apply(null);  // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
      *                                   .setParameters(builder._2, employee)
      *                                   .list(Project.class);

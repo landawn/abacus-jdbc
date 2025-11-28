@@ -459,7 +459,7 @@ public @interface Query {
      * int[] logUserActions(@Bind("userId") List<Long> userIds,      // varies per batch item
      *                     @Bind("action") List<String> actions,    // varies per batch item
      *                     @Bind("category") String category,       // same for all items
-     *                     @Bind("timestamp") Date timestamp);      // same for all items
+     *                     @Bind("timestamp") Date timestamp);  // same for all items
      * }</pre>
      *
      * <p>Performance considerations:</p>

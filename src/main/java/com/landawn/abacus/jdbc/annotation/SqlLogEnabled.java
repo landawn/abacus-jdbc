@@ -49,8 +49,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * // Selective logging at class level
  * @SqlLogEnabled(filter = {"find.*", "search.*"})
  * public interface OrderDao extends CrudDao<Order, Long> {
- *     List<Order> findByCustomer(Long customerId); // Logged
- *     void updateStatus(Long id, String status);   // Not logged
+ *     List<Order> findByCustomer(Long customerId);  // Logged
+ *     void updateStatus(Long id, String status);  // Not logged
  * }
  * 
  * // Disable logging for specific method
@@ -142,10 +142,10 @@ public @interface SqlLogEnabled {
      * <pre>{@code
      * @SqlLogEnabled(filter = {"find.*", "get.*", "search.*"})
      * public interface UserDao {
-     *     User findById(Long id);          // Logged
-     *     List<User> searchByName(String name); // Logged
-     *     User getByEmail(String email);   // Logged
-     *     void updatePassword(Long id);    // Not logged
+     *     User findById(Long id);  // Logged
+     *     List<User> searchByName(String name);  // Logged
+     *     User getByEmail(String email);  // Logged
+     *     void updatePassword(Long id);  // Not logged
      * }
      * }</pre>
      *

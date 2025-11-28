@@ -649,7 +649,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DataSource dataSource = ...; // Obtain a DataSource instance
+     * DataSource dataSource = ...;  // Obtain a DataSource instance
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(dataSource);
      *
      * System.out.println("Database Product Name: " + dbInfo.productName());
@@ -689,7 +689,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Connection connection = ...; // Obtain a database Connection
+     * Connection connection = ...;  // Obtain a database Connection
      * DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(connection);
      *
      * System.out.println("Database Name: " + dbInfo.productName());
@@ -1118,7 +1118,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DataSource dataSource = ...; // Your configured DataSource
+     * DataSource dataSource = ...;  // Your configured DataSource
      * Connection connection = null;
      * try {
      *     connection = JdbcUtil.getConnection(dataSource);
@@ -1711,7 +1711,7 @@ public final class JdbcUtil {
      * } catch (SQLException e) {
      *     // ...
      * } finally {
-     *     JdbcUtil.closeQuietly(conn); // Deprecated practice
+     *     JdbcUtil.closeQuietly(conn);  // Deprecated practice
      * }
      * }</pre>
      *
@@ -1928,7 +1928,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * ResultSet rs = statement.executeQuery("SELECT id, name, email FROM users");
      * int count = JdbcUtil.getColumnCount(rs);
-     * System.out.println("The ResultSet has " + count + " columns."); // Prints 3
+     * System.out.println("The ResultSet has " + count + " columns.");  // Prints 3
      * }</pre>
      *
      * @param rs The {@link ResultSet} to get the column count from.
@@ -1996,7 +1996,7 @@ public final class JdbcUtil {
      *      ResultSet rs = stmt.executeQuery("SELECT user_id AS 'User ID', user_name AS 'User Name' FROM users")) {
      *
      *     List<String> labels = JdbcUtil.getColumnLabelList(rs);
-     *     System.out.println(labels); // Output: [User ID, User Name]
+     *     System.out.println(labels);  // Output: [User ID, User Name]
      * }
      * }</pre>
      *
@@ -2027,10 +2027,10 @@ public final class JdbcUtil {
      * <pre>{@code
      * ResultSetMetaData metaData = rs.getMetaData();
      * // For a query like "SELECT first_name AS name FROM users"
-     * String label = JdbcUtil.getColumnLabel(metaData, 1); // Returns "name"
+     * String label = JdbcUtil.getColumnLabel(metaData, 1);  // Returns "name"
      *
      * // For a query like "SELECT first_name FROM users"
-     * String sameLabel = JdbcUtil.getColumnLabel(metaData, 1); // Returns "first_name"
+     * String sameLabel = JdbcUtil.getColumnLabel(metaData, 1);  // Returns "first_name"
      * }</pre>
      *
      * @param rsmd The {@link ResultSetMetaData} to get the label from.
@@ -2055,10 +2055,10 @@ public final class JdbcUtil {
      * // For a query: "SELECT user_id, user_name AS name FROM users"
      * ResultSet rs = ...;
      *
-     * int indexByName = JdbcUtil.getColumnIndex(rs, "user_id"); // Returns 1
-     * int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");    // Returns 2
-     * int caseInsensitiveIndex = JdbcUtil.getColumnIndex(rs, "USERNAME"); // Still returns 2 if "user_name" is the original name
-     * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email"); // Returns -1
+     * int indexByName = JdbcUtil.getColumnIndex(rs, "user_id");  // Returns 1
+     * int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");  // Returns 2
+     * int caseInsensitiveIndex = JdbcUtil.getColumnIndex(rs, "USERNAME");  // Still returns 2 if "user_name" is the original name
+     * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email");  // Returns -1
      * }</pre>
      *
      * @param resultSet The {@link ResultSet} to search within.
@@ -2080,9 +2080,9 @@ public final class JdbcUtil {
      * ResultSetMetaData metaData = rs.getMetaData();
      * // For a query: "SELECT user_id, user_name AS name FROM users"
      *
-     * int indexByLabel = JdbcUtil.getColumnIndex(metaData, "name"); // Returns 2
-     * int indexByName = JdbcUtil.getColumnIndex(metaData, "user_id"); // Returns 1
-     * int notFoundIndex = JdbcUtil.getColumnIndex(metaData, "address"); // Returns -1
+     * int indexByLabel = JdbcUtil.getColumnIndex(metaData, "name");  // Returns 2
+     * int indexByName = JdbcUtil.getColumnIndex(metaData, "user_id");  // Returns 1
+     * int notFoundIndex = JdbcUtil.getColumnIndex(metaData, "address");  // Returns -1
      * }</pre>
      *
      * @param rsmd The {@link ResultSetMetaData} to search within.
@@ -2211,7 +2211,7 @@ public final class JdbcUtil {
      *     while (rs.next()) {
      *         long id = (long) JdbcUtil.getColumnValue(rs, 1);
      *         String name = (String) JdbcUtil.getColumnValue(rs, 2);
-     *         byte[] profilePic = (byte[]) JdbcUtil.getColumnValue(rs, 3); // Blob is converted to byte[]
+     *         byte[] profilePic = (byte[]) JdbcUtil.getColumnValue(rs, 3);  // Blob is converted to byte[]
      *         // ...
      *     }
      * }
@@ -2569,8 +2569,8 @@ public final class JdbcUtil {
      * // Assuming User class has fields like 'userId' and 'userName' mapped to columns 'user_id' and 'user_name'
      * ImmutableMap<String, String> columnToFieldMap = JdbcUtil.getColumn2FieldNameMap(User.class);
      *
-     * System.out.println(columnToFieldMap.get("user_id"));   // Output: userId
-     * System.out.println(columnToFieldMap.get("user_name")); // Output: userName
+     * System.out.println(columnToFieldMap.get("user_id"));  // Output: userId
+     * System.out.println(columnToFieldMap.get("user_name"));  // Output: userName
      * }</pre>
      *
      * @param entityClass The entity class to analyze for column-to-field mappings.
@@ -3147,7 +3147,7 @@ public final class JdbcUtil {
      *             (c, s) -> {
      *                 PreparedStatement stmt = c.prepareStatement(s);
      *                 stmt.setFetchSize(100);
-     *                 stmt.setQueryTimeout(30); // 30 seconds
+     *                 stmt.setQueryTimeout(30);  // 30 seconds
      *                 return stmt;
      *             })
      *         .stream(Record.class)
@@ -4216,7 +4216,7 @@ public final class JdbcUtil {
      * Throwables.BiFunction<Connection, String, CallableStatement, SQLException> creator =
      *     (conn, sql) -> {
      *         CallableStatement stmt = conn.prepareCall(sql);
-     *         stmt.setQueryTimeout(30); // 30 seconds timeout
+     *         stmt.setQueryTimeout(30);  // 30 seconds timeout
      *         return stmt;
      *     };
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource,
@@ -4857,7 +4857,7 @@ public final class JdbcUtil {
      * int totalRows = JdbcUtil.executeBatchUpdate(dataSource,
      *     "INSERT INTO users (name, age) VALUES (?, ?)",
      *     largeDataset,
-     *     500); // Process in batches of 500
+     *     500);  // Process in batches of 500
      *
      * // Update records with custom batch size for better memory management
      * List<Object[]> updates = Arrays.asList(
@@ -5546,7 +5546,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * Dataset dataset = JdbcUtil.extractData(rs, 10, 50); // Skip 10 rows, get next 50
+     * Dataset dataset = JdbcUtil.extractData(rs, 10, 50);  // Skip 10 rows, get next 50
      * }</pre>
      *
      * @param rs The ResultSet to extract data from
@@ -8150,8 +8150,8 @@ public final class JdbcUtil {
      * <pre>{@code
      * String sql = "SELECT * FROM users WHERE name = :name AND age > ?";
      * ParsedSql parsedSql = JdbcUtil.parseSql(sql);
-     * List<String> namedParams = parsedSql.getNamedParameters(); // ["name"]
-     * String convertedSql = parsedSql.getParameterizedSql(); // SQL with named params converted to ?
+     * List<String> namedParams = parsedSql.getNamedParameters();  // ["name"]
+     * String convertedSql = parsedSql.getParameterizedSql();  // SQL with named params converted to ?
      * }</pre>
      *
      * @param sql the SQL string to be parsed
@@ -8476,11 +8476,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.isNullOrDefault(null);        // true
-     * JdbcUtil.isNullOrDefault(0);           // true
-     * JdbcUtil.isNullOrDefault(false);       // true
-     * JdbcUtil.isNullOrDefault("");          // {@code false} (empty string is not default)
-     * JdbcUtil.isNullOrDefault(1);           // false
+     * JdbcUtil.isNullOrDefault(null);  // true
+     * JdbcUtil.isNullOrDefault(0);  // true
+     * JdbcUtil.isNullOrDefault(false);  // true
+     * JdbcUtil.isNullOrDefault("");  // {@code false} (empty string is not default)
+     * JdbcUtil.isNullOrDefault(1);  // false
      * }</pre>
      *
      * @param value the value to check
@@ -8655,7 +8655,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.enableSqlLog(2048); // Allow longer SQL statements in logs
+     * JdbcUtil.enableSqlLog(2048);  // Allow longer SQL statements in logs
      * // Execute SQL operations
      * // ...
      * JdbcUtil.disableSqlLog();
@@ -9066,9 +9066,9 @@ public final class JdbcUtil {
      * public void processOrder(Order order) {
      *     SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      *     try {
-     *         createOrder(order);      // Shares this transaction
+     *         createOrder(order);  // Shares this transaction
      *         updateInventory(order);  // Shares this transaction
-     *         sendNotification(order); // Shares this transaction
+     *         sendNotification(order);  // Shares this transaction
      *         tran.commit();
      *     } finally {
      *         tran.rollbackIfNotCommitted();
@@ -9138,8 +9138,8 @@ public final class JdbcUtil {
      *     final SQLTransaction tranA = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
      *     try {
      *         // Operations here share tranA
-     *         doSomethingB(); // Shares tranA (same thread, same dataSource1)
-     *         doSomethingC(); // Uses different transaction (different dataSource2)
+     *         doSomethingB();  // Shares tranA (same thread, same dataSource1)
+     *         doSomethingC();  // Uses different transaction (different dataSource2)
      *         tranA.commit();
      *     } finally {
      *         tranA.rollbackIfNotCommitted();
@@ -10381,8 +10381,8 @@ public final class JdbcUtil {
      * Jdbc.DaoCache cache = JdbcUtil.startDaoCacheOnCurrentThread();
      * try {
      *     // DAO operations here will use the cache
-     *     userDao.findById(1L); // First call hits database
-     *     userDao.findById(1L); // Second call uses cache
+     *     userDao.findById(1L);  // First call hits database
+     *     userDao.findById(1L);  // Second call uses cache
      * } finally {
      *     JdbcUtil.closeDaoCacheOnCurrentThread();
      * }
@@ -10441,7 +10441,7 @@ public final class JdbcUtil {
      * try {
      *     // Use cached DAO operations
      * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread(); // Always clean up
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();  // Always clean up
      * }
      * }</pre>
      *

@@ -95,11 +95,11 @@ import com.landawn.abacus.util.Throwables;
  *
  * // Unsupported operations - all throw UnsupportedOperationException:
  * auditDao.update("status", "MODIFIED", Filters.eq("id", 123L));  // Throws exception
- * auditDao.delete(Filters.eq("id", 123L));                         // Throws exception
- * auditDao.upsert(log, Filters.eq("id", 123L));                   // Throws exception
- * auditDao.prepareCallableQuery("{call update_proc()}");     // Throws exception
- * auditDao.prepareQuery("UPDATE audit_log SET...");          // Throws exception
- * auditDao.prepareQuery("DELETE FROM audit_log...");         // Throws exception
+ * auditDao.delete(Filters.eq("id", 123L));  // Throws exception
+ * auditDao.upsert(log, Filters.eq("id", 123L));  // Throws exception
+ * auditDao.prepareCallableQuery("{call update_proc()}");  // Throws exception
+ * auditDao.prepareQuery("UPDATE audit_log SET...");  // Throws exception
+ * auditDao.prepareQuery("DELETE FROM audit_log...");  // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

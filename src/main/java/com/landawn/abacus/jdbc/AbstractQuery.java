@@ -8410,10 +8410,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * // Process with type-guided retrieval
      * preparedQuery.foreach(User.class, row -> {
-     *     Long id = (Long) row.get(0);      // Retrieved as Long
-     *     String name = (String) row.get(1); // Retrieved as String
-     *     LocalDate birthDate = (LocalDate) row.get(2); // Retrieved as LocalDate
-     *     Boolean active = (Boolean) row.get(3); // Retrieved as Boolean
+     *     Long id = (Long) row.get(0);  // Retrieved as Long
+     *     String name = (String) row.get(1);  // Retrieved as String
+     *     LocalDate birthDate = (LocalDate) row.get(2);  // Retrieved as LocalDate
+     *     Boolean active = (Boolean) row.get(3);  // Retrieved as Boolean
      *     
      *     if (active) {
      *         sendBirthdayGreeting(id, name, birthDate);
@@ -8479,7 +8479,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         "INSERT INTO products (name, price) VALUES (?, ?)")
      *     .setString(1, "Widget")
      *     .setDouble(2, 19.99)
-     *     .insert(rs -> rs.getString("product_code")); // Custom column
+     *     .insert(rs -> rs.getString("product_code"));  // Custom column
      *     
      * // Insert with composite key
      * Optional<CompositeKey> key = preparedQuery.insert(rs -> 
@@ -9355,7 +9355,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     
      * // Do other work while query executes
      * 
-     * List<User> users = future.get(); // Wait for result
+     * List<User> users = future.get();  // Wait for result
      * }</pre>
      *
      * @param <R> the type of result produced by the SQL operation

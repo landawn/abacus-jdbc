@@ -124,7 +124,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * <pre>{@code
      * @Override
      * public Long generateId() throws SQLException {
-     *     return System.currentTimeMillis(); // Simple timestamp-based ID
+     *     return System.currentTimeMillis();  // Simple timestamp-based ID
      * }
      * }</pre>
      *
@@ -221,8 +221,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeUserList = loadUsers(); // 10000 users
-     * List<Long> ids = userDao.batchInsert(largeUserList, 1000); // Process in batches of 1000
+     * List<User> largeUserList = loadUsers();  // 10000 users
+     * List<Long> ids = userDao.batchInsert(largeUserList, 1000);  // Process in batches of 1000
      * }</pre>
      *
      * @param entities the collection of entities to insert
@@ -259,7 +259,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeUserList = loadUsers(); // 20000 users
+     * List<User> largeUserList = loadUsers();  // 20000 users
      * // Insert only name and email fields in batches of 1000
      * List<Long> ids = userDao.batchInsert(largeUserList, Arrays.asList("name", "email"), 1000);
      * }</pre>
@@ -302,7 +302,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * <pre>{@code
      * String sql = "INSERT INTO users (name, email, status, created_date) " +
      *              "VALUES (:name, :email, 'ACTIVE', CURRENT_TIMESTAMP)";
-     * List<User> largeUserList = loadNewUsers(); // 15000 users
+     * List<User> largeUserList = loadNewUsers();  // 15000 users
      * List<Long> ids = userDao.batchInsert(sql, largeUserList, 1000);
      * }</pre>
      *
@@ -830,7 +830,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<Long> largeIdList = getIdsFromReport(); // 50000 IDs
+     * List<Long> largeIdList = getIdsFromReport();  // 50000 IDs
      * // Process in batches of 1000 to avoid SQL query size limits
      * List<User> users = userDao.batchGet(largeIdList, 1000);
      * }</pre>
@@ -873,7 +873,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<Long> largeIdList = getAllUserIds(); // 30000 IDs
+     * List<Long> largeIdList = getAllUserIds();  // 30000 IDs
      * // Only fetch id, name, email in batches of 2000
      * List<User> users = userDao.batchGet(largeIdList,
      *                                     Arrays.asList("id", "name", "email"),
@@ -1057,7 +1057,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeUserList = loadUsers(); // 5000 users
+     * List<User> largeUserList = loadUsers();  // 5000 users
      * largeUserList.forEach(u -> u.setLastModified(new Date()));
      * // Process in batches of 500
      * int totalUpdated = userDao.batchUpdate(largeUserList, 500);
@@ -1100,7 +1100,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = loadLargeUserList(); // 10000 users
+     * List<User> users = loadLargeUserList();  // 10000 users
      * users.forEach(u -> {
      *     u.setStatus("VERIFIED");
      *     u.setVerifiedDate(new Date());
@@ -1128,7 +1128,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * user.setId(userId);
      * user.setName("John Doe");
      * user.setEmail("john@example.com");
-     * User savedUser = userDao.upsert(user); // Insert if new, update if exists
+     * User savedUser = userDao.upsert(user);  // Insert if new, update if exists
      * }</pre>
      *
      * @param entity the entity to insert or update
@@ -1207,7 +1207,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> importedUsers = loadUsersFromFile(); // 30000 users
+     * List<User> importedUsers = loadUsersFromFile();  // 30000 users
      * // Upsert in batches of 2000
      * List<User> savedUsers = userDao.batchUpsert(importedUsers, 2000);
      * System.out.println(savedUsers.size() + " users saved");
@@ -1260,7 +1260,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeUserList = importUsers(); // 25000 users from external system
+     * List<User> largeUserList = importUsers();  // 25000 users from external system
      * // Upsert based on email uniqueness in batches of 2000
      * List<User> saved = userDao.batchUpsert(largeUserList, Arrays.asList("email"), 2000);
      * }</pre>
@@ -1450,7 +1450,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> cachedUsers = getCachedUsers(); // 10000 cached entities
+     * List<User> cachedUsers = getCachedUsers();  // 10000 cached entities
      * int refreshedCount = userDao.batchRefresh(cachedUsers, 1000);
      * System.out.println(refreshedCount + " users refreshed from database");
      * }</pre>
@@ -1499,7 +1499,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> cachedUsers = getCachedUsers(); // 8000 cached entities
+     * List<User> cachedUsers = getCachedUsers();  // 8000 cached entities
      * // Refresh only balance and status fields in batches of 800
      * int count = userDao.batchRefresh(cachedUsers,
      *                                  Arrays.asList("balance", "status"),
@@ -1613,7 +1613,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeDeleteList = getInactiveUsers(); // 20000 inactive users
+     * List<User> largeDeleteList = getInactiveUsers();  // 20000 inactive users
      * int totalDeleted = userDao.batchDelete(largeDeleteList, 1000);
      * System.out.println(totalDeleted + " users deleted");
      * }</pre>
@@ -1674,7 +1674,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<Long> largeIdList = getExpiredUserIds(); // 40000 IDs
+     * List<Long> largeIdList = getExpiredUserIds();  // 40000 IDs
      * // Delete in batches of 2000 to avoid SQL query size limits
      * int deletedCount = userDao.batchDeleteByIds(largeIdList, 2000);
      * }</pre>

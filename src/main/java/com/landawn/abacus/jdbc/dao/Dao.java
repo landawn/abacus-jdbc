@@ -751,7 +751,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = generateLargeUserList();
-     * dao.batchSave(users, 1000); // Insert in batches of 1000
+     * dao.batchSave(users, 1000);  // Insert in batches of 1000
      * }</pre>
      *
      * @param entitiesToSave the collection of entities to insert

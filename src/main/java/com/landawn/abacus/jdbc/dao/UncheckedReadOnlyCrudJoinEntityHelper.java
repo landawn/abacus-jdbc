@@ -46,7 +46,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * // The user object now contains loaded Order entities
  * if (userWithOrders.isPresent()) {
  *     User user = userWithOrders.get();
- *     List<Order> orders = user.getOrders(); // Orders are loaded
+ *     List<Order> orders = user.getOrders();  // Orders are loaded
  *
  *     // But you cannot delete join entities through this DAO
  *     try {

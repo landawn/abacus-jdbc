@@ -64,14 +64,14 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * // Insert operations
  * Transaction txn = new Transaction("TXN001", customerId, amount);
- * String txnId = transactionDao.insert(txn);                    // Returns generated ID
+ * String txnId = transactionDao.insert(txn);  // Returns generated ID
  *
  * List<Transaction> newTransactions = createTransactions();
  * List<String> ids = transactionDao.batchInsert(newTransactions);  // Batch insert
  *
  * // Read by ID operations
- * Optional<Transaction> transaction = transactionDao.get(txnId);    // Returns Optional
- * Transaction txn2 = transactionDao.gett(txnId);                    // Returns null if not found
+ * Optional<Transaction> transaction = transactionDao.get(txnId);  // Returns Optional
+ * Transaction txn2 = transactionDao.gett(txnId);  // Returns null if not found
  *
  * // Query single property by ID
  * Nullable<String> status = transactionDao.queryForString("status", txnId);
@@ -94,12 +94,12 @@ import com.landawn.abacus.query.condition.Condition;
  *         .list(Transaction.class);
  *
  * // Unsupported operations - all throw UnsupportedOperationException:
- * transactionDao.update(txn);                              // Throws exception
- * transactionDao.update("status", "CANCELLED", txnId);     // Throws exception
- * transactionDao.deleteById(txnId);                        // Throws exception
- * transactionDao.delete(txn);                              // Throws exception
- * transactionDao.batchDelete(transactions);                // Throws exception
- * transactionDao.upsert(txn);                              // Throws exception
+ * transactionDao.update(txn);  // Throws exception
+ * transactionDao.update("status", "CANCELLED", txnId);  // Throws exception
+ * transactionDao.deleteById(txnId);  // Throws exception
+ * transactionDao.delete(txn);  // Throws exception
+ * transactionDao.batchDelete(transactions);  // Throws exception
+ * transactionDao.upsert(txn);  // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

@@ -3790,7 +3790,7 @@ public final class Jdbc {
          * BiRowMapper<User> userMapper = BiRowMapper.builder()
          * .getString("first_name")
          * .getInt("user_age")
-         * .to(User.class); // Assumes User has properties 'firstName' and 'userAge'
+         * .to(User.class);  // Assumes User has properties 'firstName' and 'userAge'
          * }</pre>
          */
         @SequentialOnly

@@ -34,8 +34,8 @@ package com.landawn.abacus.jdbc;
  * DBProductInfo dbInfo = new DBProductInfo(productName, productVersion, version);
  *
  * // Access product information
- * System.out.println("Database: " + dbInfo.productName()); // "MySQL"
- * System.out.println("Version: " + dbInfo.productVersion()); // "8.0.33"
+ * System.out.println("Database: " + dbInfo.productName());  // "MySQL"
+ * System.out.println("Version: " + dbInfo.productVersion());  // "8.0.33"
  *
  * // Use parsed version for logic
  * if (dbInfo.version().isMySQL()) {

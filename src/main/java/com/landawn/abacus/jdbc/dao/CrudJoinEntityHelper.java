@@ -93,7 +93,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * user.ifPresent(u -> {
      *     assert u.getOrders() != null;  // Orders are loaded
      *     assert u.getProfile() == null;  // Profile is not loaded
-     *     assert u.getRoles() == null;    // Roles are not loaded
+     *     assert u.getRoles() == null;  // Roles are not loaded
      * });
      * }</pre>
      *
@@ -605,7 +605,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * List<User> users = userDao.batchGet(userIds,
      *                                     Arrays.asList("id", "name", "email", "status"),
      *                                     200,   // larger batch size
-     *                                     true); // load all relationships
+     *                                     true);  // load all relationships
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve

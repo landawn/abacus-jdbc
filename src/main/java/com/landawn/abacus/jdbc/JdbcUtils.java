@@ -1178,7 +1178,7 @@ public final class JdbcUtils {
      * String insertSQL = "INSERT INTO users (name, age, email) VALUES (?, ?, ?)";
      * Function<String, Object[]> parser = line -> {
      *     String[] parts = line.split(",");
-     *     if (parts.length < 3) return null; // Skip invalid lines
+     *     if (parts.length < 3) return null;  // Skip invalid lines
      *     return new Object[] { parts[0], Integer.parseInt(parts[1]), parts[2] };
      * };
      * long rowsImported = JdbcUtils.importData(csvFile, connection, insertSQL, 1000, 100, parser);

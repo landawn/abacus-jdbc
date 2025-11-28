@@ -211,7 +211,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Boolean isManager = getManagerStatus(); // might return null
+     * Boolean isManager = getManagerStatus();  // might return null
      * query.setBoolean("isManager", isManager);
      * }</pre>
      *
@@ -255,7 +255,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Byte level = getUserLevel(); // might return null
+     * Byte level = getUserLevel();  // might return null
      * query.setByte("userLevel", level);
      * }</pre>
      *
@@ -299,7 +299,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Short quantity = getOrderQuantity(); // might return null
+     * Short quantity = getOrderQuantity();  // might return null
      * query.setShort("quantity", quantity);
      * }</pre>
      *
@@ -343,7 +343,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Integer managerId = getManagerId(); // might return {@code null} for CEO
+     * Integer managerId = getManagerId();  // might return {@code null} for CEO
      * query.setInt("managerId", managerId);
      * }</pre>
      *
@@ -387,7 +387,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Long transactionId = getTransactionId(); // might return null
+     * Long transactionId = getTransactionId();  // might return null
      * query.setLong("transactionId", transactionId);
      * }</pre>
      *
@@ -458,7 +458,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Float temperature = getTemperature(); // might return null
+     * Float temperature = getTemperature();  // might return null
      * query.setFloat("temperature", temperature);
      * }</pre>
      *
@@ -502,7 +502,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Double price = getProductPrice(); // might return null
+     * Double price = getProductPrice();  // might return null
      * query.setDouble("price", price);
      * }</pre>
      *
@@ -603,7 +603,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.setString("firstName", "John");
      *
      * // Setting NULL when value is absent
-     * String middleName = getMiddleName(); // might return null
+     * String middleName = getMiddleName();  // might return null
      * query.setString("middleName", middleName);
      * }</pre>
      *
@@ -659,7 +659,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Character initial = getMiddleInitial(); // might return null
+     * Character initial = getMiddleInitial();  // might return null
      * query.setString("middleInitial", initial);
      * }</pre>
      *
@@ -1998,7 +1998,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * query.registerOutParameters(config, (q, cfg) -> {
      *     int paramIndex = 1;
-     *     q.registerOutParameter(paramIndex++, Types.VARCHAR); // always return a status message
+     *     q.registerOutParameter(paramIndex++, Types.VARCHAR);  // always return a status message
      *
      *     if (cfg.includeTotal()) {
      *         q.registerOutParameter(paramIndex++, Types.DECIMAL);
@@ -2609,7 +2609,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *             (rs, columnLabels) -> JdbcUtil.extractResultSetToDataset(rs)
      *         );
      *
-     *     Dataset orders = result._1.get(0);      // First result set
+     *     Dataset orders = result._1.get(0);  // First result set
      *     Dataset orderItems = result._1.get(1);  // Second result set
      *     BigDecimal totalAmount = result._2.getOutParamValue(2);
      * }
@@ -3182,9 +3182,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *     Tuple2<List<List<Employee>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(Employee.class);
      *     
-     *     List<Employee> managers = result._1.get(0);     // First result set
-     *     List<Employee> developers = result._1.get(1);   // Second result set
-     *     List<Employee> interns = result._1.get(2);      // Third result set
+     *     List<Employee> managers = result._1.get(0);  // First result set
+     *     List<Employee> developers = result._1.get(1);  // Second result set
+     *     List<Employee> interns = result._1.get(2);  // Third result set
      *     
      *     int totalCount = result._2.getOutParamValue(1);
      *     System.out.println("Total employees: " + totalCount);

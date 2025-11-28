@@ -90,11 +90,11 @@ import com.landawn.abacus.query.SQLBuilder;
  *                                 .list(Report.class);
  *
  * // Unsupported operations - all throw UnsupportedOperationException:
- * reportDao.insert(new Report());              // Throws exception
- * reportDao.update(report2);                   // Throws exception
- * reportDao.deleteById(123L);                  // Throws exception
- * reportDao.batchInsert(reports);              // Throws exception
- * reportDao.upsert(report2);                   // Throws exception
+ * reportDao.insert(new Report());  // Throws exception
+ * reportDao.update(report2);  // Throws exception
+ * reportDao.deleteById(123L);  // Throws exception
+ * reportDao.batchInsert(reports);  // Throws exception
+ * reportDao.upsert(report2);  // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

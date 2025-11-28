@@ -45,26 +45,26 @@ import com.landawn.abacus.annotation.Beta;
  * @RefreshCache
  * public interface UserDao extends CrudDao<User, Long> {
  *     @Query("SELECT * FROM users WHERE id = :id")
- *     User findById(long id); // Results are cached
+ *     User findById(long id);  // Results are cached
  *     
  *     @Query("UPDATE users SET name = :name WHERE id = :id")
- *     int updateName(long id, String name); // Triggers cache refresh
+ *     int updateName(long id, String name);  // Triggers cache refresh
  * }
  * 
  * // Selective cache refresh
  * @CacheResult
  * @RefreshCache(filter = {"update.*", "delete.*"})
  * public interface ProductDao extends CrudDao<Product, Long> {
- *     List<Product> findAll(); // Cached
- *     void updatePrice(long id, BigDecimal price); // Refreshes cache
- *     void insertLog(String message); // Does not refresh cache
+ *     List<Product> findAll();  // Cached
+ *     void updatePrice(long id, BigDecimal price);  // Refreshes cache
+ *     void insertLog(String message);  // Does not refresh cache
  * }
  * 
  * // Disable refresh for specific method
  * @RefreshCache
  * public interface OrderDao extends CrudDao<Order, Long> {
  *     @RefreshCache(disabled = true)
- *     void updateLastAccessTime(long orderId); // Won't refresh cache
+ *     void updateLastAccessTime(long orderId);  // Won't refresh cache
  * }
  * }</pre>
  * 
@@ -93,7 +93,7 @@ public @interface RefreshCache {
      *     void updateLastSeen(long userId);
      *     
      *     @Query("UPDATE users SET email = :email WHERE id = :id")
-     *     void updateEmail(long userId, String email); // Will refresh cache
+     *     void updateEmail(long userId, String email);  // Will refresh cache
      * }
      * }</pre>
      * 
@@ -117,10 +117,10 @@ public @interface RefreshCache {
      * <pre>{@code
      * @RefreshCache(filter = {"save.*", "update.*", "delete.*", "remove.*"})
      * public interface CustomerDao {
-     *     void saveCustomer(Customer c);      // Triggers refresh
-     *     void updateAddress(long id, Address a); // Triggers refresh
-     *     void removeCustomer(long id);       // Triggers refresh
-     *     Customer findById(long id);         // Does not trigger refresh
+     *     void saveCustomer(Customer c);  // Triggers refresh
+     *     void updateAddress(long id, Address a);  // Triggers refresh
+     *     void removeCustomer(long id);  // Triggers refresh
+     *     Customer findById(long id);  // Does not trigger refresh
      * }
      * }</pre>
      *

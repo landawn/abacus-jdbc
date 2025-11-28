@@ -46,7 +46,7 @@ import com.landawn.abacus.util.Strings;
  * } else if (currentDbVersion == DBVersion.Oracle) {
  *     query = "SELECT * FROM (SELECT p.*, ROWNUM rnum FROM products p) WHERE rnum > 20 AND ROWNUM <= 10";
  * } else {
- *     query = "SELECT * FROM products"; // Fallback or generic SQL
+ *     query = "SELECT * FROM products";  // Fallback or generic SQL
  * }
  * System.out.println("Executing query: " + query);
  *

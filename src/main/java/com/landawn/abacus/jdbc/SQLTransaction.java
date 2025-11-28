@@ -45,7 +45,7 @@ import com.landawn.abacus.util.Throwables;
  *     dao.save(entity);
  *     dao.update(anotherEntity);
  *
- *     tran.commit(); // Commit the transaction
+ *     tran.commit();  // Commit the transaction
  * } // Auto-rollback if not committed
  * }</pre>
  * 
@@ -365,7 +365,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *     dao.save(entity);
      *     tran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted(); // Safer than rollback()
+     *     tran.rollbackIfNotCommitted();  // Safer than rollback()
      * }
      * }</pre>
      *
@@ -428,7 +428,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      *     tran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted(); // Ensures cleanup
+     *     tran.rollbackIfNotCommitted();  // Ensures cleanup
      * }
      * }</pre>
      *

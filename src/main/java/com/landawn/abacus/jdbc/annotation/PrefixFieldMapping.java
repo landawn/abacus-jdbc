@@ -58,7 +58,7 @@ import java.lang.annotation.Target;
  *     private String name;
  *     private String email;
  *     private Device device;  // Nested object
- *     private Contact contact; // Nested object
+ *     private Contact contact;  // Nested object
  *     // getters/setters
  * }
  * }</pre>
