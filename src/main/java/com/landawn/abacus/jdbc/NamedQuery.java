@@ -154,7 +154,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName); //NOSONAR
+                throw new IllegalArgumentException("Not found named parameter: " + parameterName);   //NOSONAR
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -320,7 +320,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Boolean isVerified = getUserVerificationStatus();  // might return null
+     * Boolean isVerified = getUserVerificationStatus();   // might return null
      * query.setBoolean("isVerified", isVerified);
      * }</pre>
      *
@@ -408,7 +408,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Byte priorityLevel = getPriorityLevel();  // might return null
+     * Byte priorityLevel = getPriorityLevel();   // might return null
      * query.setByte("priority", priorityLevel);
      * }</pre>
      *
@@ -496,7 +496,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Short categoryId = getCategoryId();  // might return null
+     * Short categoryId = getCategoryId();   // might return null
      * query.setShort("categoryId", categoryId);
      * }</pre>
      *
@@ -586,7 +586,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Integer age = getAge();  // might return null
+     * Integer age = getAge();   // might return null
      * query.setInt("age", age);
      * }</pre>
      *
@@ -613,7 +613,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setInt("grade", 'A');  // stores 65 (ASCII value of 'A')
+     * query.setInt("grade", 'A');   // stores 65 (ASCII value of 'A')
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -637,7 +637,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Character grade = getGrade();  // might return null
+     * Character grade = getGrade();   // might return null
      * query.setInt("grade", grade);
      * }</pre>
      *
@@ -728,7 +728,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Long accountId = getAccountId();  // might return null
+     * Long accountId = getAccountId();   // might return null
      * query.setLong("accountId", accountId);
      * }</pre>
      *
@@ -847,7 +847,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Float discount = getDiscount();  // might return null
+     * Float discount = getDiscount();   // might return null
      * query.setFloat("discount", discount);
      * }</pre>
      *
@@ -935,7 +935,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Double balance = getAccountBalance();  // might return null
+     * Double balance = getAccountBalance();   // might return null
      * query.setDouble("balance", balance);
      * }</pre>
      *
@@ -1150,7 +1150,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
-        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
+        return setString(parameterName, x == null ? (String) null : x.toString());   //NOSONAR
     }
 
     /**
@@ -1181,7 +1181,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Character initial = getMiddleInitial();  // might return null
+     * Character initial = getMiddleInitial();   // might return null
      * query.setString("middleInitial", initial);
      * }</pre>
      *
@@ -1192,7 +1192,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
-        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
+        return setString(parameterName, x == null ? (String) null : x.toString());   //NOSONAR
     }
 
     /**
@@ -1667,7 +1667,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * // Using Calendar
      * Calendar cal = Calendar.getInstance();
-     * cal.add(Calendar.DAY_OF_MONTH, -7);  // 7 days ago
+     * cal.add(Calendar.DAY_OF_MONTH, -7);   // 7 days ago
      * query.setTimestamp("weekAgo", cal.getTime());
      * }</pre>
      *
@@ -2257,7 +2257,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * // Limited portion of text
      * String fullText = getFullText();
      * StringReader reader = new StringReader(fullText);
-     * query.setCharacterStream("summary", reader, 1000);  // First 1000 characters
+     * query.setCharacterStream("summary", reader, 1000);   // First 1000 characters
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
@@ -2621,7 +2621,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * // Partial data from stream
      * byte[] fullData = getFullData();
      * ByteArrayInputStream bais = new ByteArrayInputStream(fullData);
-     * query.setBlob("preview", bais, 1024);  // First 1KB only
+     * query.setBlob("preview", bais, 1024);   // First 1KB only
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)

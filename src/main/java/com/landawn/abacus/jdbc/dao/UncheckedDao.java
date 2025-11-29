@@ -1694,7 +1694,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * User updates = new User();
      * updates.setEmail("newemail@example.com");
      * updates.setPhone("555-1234");
-     * updates.setAddress("123 Main St");  // This won't be updated
+     * updates.setAddress("123 Main St");   // This won't be updated
      * 
      * int updated = userDao.update(
      *     updates,

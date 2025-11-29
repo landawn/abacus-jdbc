@@ -57,7 +57,7 @@ import java.util.Map;
  * 
  * // Usage example
  * Map<Long, User> usersById = userDao.findUsersByStatus("ACTIVE");
- * User user = usersById.get(123L);  // Quick lookup by ID
+ * User user = usersById.get(123L);   // Quick lookup by ID
  * }</pre>
  * 
  * <p>Important considerations:</p>

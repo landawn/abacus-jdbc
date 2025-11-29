@@ -55,8 +55,8 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * // Usage with primitive long
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
- * Optional<User> user = userDao.get(123L);  // Can use primitive long
- * userDao.deleteById(456L);  // More convenient than Long.valueOf(456)
+ * Optional<User> user = userDao.get(123L);   // Can use primitive long
+ * userDao.deleteById(456L);   // More convenient than Long.valueOf(456)
  * }</pre>
  *
  * @param <T> the entity type

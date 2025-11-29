@@ -41,8 +41,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * ReadOnlyUserDao dao = JdbcUtil.createDao(ReadOnlyUserDao.class, readOnlyDataSource);
  *
  * // Read operations with join loading using primitive long - no checked exceptions
- * Optional<User> user = dao.get(123L, Order.class);  // loads user with orders
- * User userWithAll = dao.gett(123L, true);  // loads all relationships
+ * Optional<User> user = dao.get(123L, Order.class);   // loads user with orders
+ * User userWithAll = dao.gett(123L, true);   // loads all relationships
  *
  * // Batch operations with primitive long IDs
  * List<Long> ids = Arrays.asList(123L, 456L, 789L);
@@ -52,10 +52,10 @@ import com.landawn.abacus.query.SQLBuilder;
  * User user = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
  *
  * // All write operations are disabled:
- * // dao.insert(user);  // throws UnsupportedOperationException
- * // dao.update(user);  // throws UnsupportedOperationException
- * // dao.deleteById(123L);  // throws UnsupportedOperationException
- * // dao.deleteJoinEntities(...);  // throws UnsupportedOperationException
+ * // dao.insert(user);   // throws UnsupportedOperationException
+ * // dao.update(user);   // throws UnsupportedOperationException
+ * // dao.deleteById(123L);   // throws UnsupportedOperationException
+ * // dao.deleteJoinEntities(...);   // throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type

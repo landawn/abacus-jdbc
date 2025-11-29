@@ -44,10 +44,10 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Read operations work fine - no checked exceptions
  * User user = userDao.gett(1L);
- * userDao.loadJoinEntities(user, "orders");  // Loads successfully
+ * userDao.loadJoinEntities(user, "orders");   // Loads successfully
  *
  * List<User> users = userDao.list(Filters.eq("status", "active"));
- * userDao.loadAllJoinEntities(users);  // Loads all join entities
+ * userDao.loadAllJoinEntities(users);   // Loads all join entities
  *
  * // Delete operations are blocked
  * try {

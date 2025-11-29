@@ -60,24 +60,24 @@ import com.landawn.abacus.query.SQLBuilder;
  * log.setUserId(123L);
  * log.setAction("LOGIN");
  * log.setTimestamp(new Date());
- * Long id = auditLogDao.insert(log);  // Works - returns generated ID
+ * Long id = auditLogDao.insert(log);   // Works - returns generated ID
  *
- * AuditLog retrieved = auditLogDao.gett(id);  // Works (returns {@code null} if not found)
- * Optional<AuditLog> optional = auditLogDao.get(id);  // Works (returns Optional)
- * boolean exists = auditLogDao.exists(id);  // Works
+ * AuditLog retrieved = auditLogDao.gett(id);   // Works (returns {@code null} if not found)
+ * Optional<AuditLog> optional = auditLogDao.get(id);   // Works (returns Optional)
+ * boolean exists = auditLogDao.exists(id);   // Works
  *
  * // Batch operations work for insert:
  * List<AuditLog> logs = generateAuditLogs();
- * List<Long> ids = auditLogDao.batchInsert(logs);  // Works
+ * List<Long> ids = auditLogDao.batchInsert(logs);   // Works
  *
  * // Query operations work:
  * List<AuditLog> userLogs = auditLogDao.findByUserId(123L);
  * int logCount = auditLogDao.count(Filters.eq("action", "LOGIN"));
  *
  * // All update and delete operations throw UnsupportedOperationException:
- * auditLogDao.update("status", "processed", id);  // Throws UnsupportedOperationException
- * auditLogDao.deleteById(123L);  // Throws UnsupportedOperationException
- * auditLogDao.batchDelete(logs);  // Throws UnsupportedOperationException
+ * auditLogDao.update("status", "processed", id);   // Throws UnsupportedOperationException
+ * auditLogDao.deleteById(123L);   // Throws UnsupportedOperationException
+ * auditLogDao.batchDelete(logs);   // Throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

@@ -48,8 +48,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * List<EventLog> logs = dao.list(Filters.eq("severity", "ERROR"));
  *
  * // These operations throw UnsupportedOperationException:
- * // dao.update("status", "PROCESSED", 123L);  // not allowed
- * // dao.deleteById(123L);  // not allowed
+ * // dao.update("status", "PROCESSED", 123L);   // not allowed
+ * // dao.deleteById(123L);   // not allowed
  * }</pre>
  *
  * @param <T> the entity type

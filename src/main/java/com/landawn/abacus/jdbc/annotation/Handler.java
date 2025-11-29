@@ -177,13 +177,13 @@ public @interface Handler {
      *     User findById(@Bind("id") Long id);
      *
      *     default User findActiveById(Long id) {
-     *         User user = findById(id);  // TransactionHandler NOT applied here
+     *         User user = findById(id);   // TransactionHandler NOT applied here
      *         return user != null && user.isActive() ? user : null;
      *     }
      * }
      * 
      * // External call
-     * User user = userDao.findById(123L);  // TransactionHandler IS applied here
+     * User user = userDao.findById(123L);   // TransactionHandler IS applied here
      * }</pre>
      *
      * @return {@code true} if handler only applies to external calls, {@code false} otherwise

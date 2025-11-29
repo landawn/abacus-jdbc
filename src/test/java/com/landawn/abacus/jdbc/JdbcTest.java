@@ -141,7 +141,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testParametersSetterDoNothing() throws SQLException {
         Jdbc.ParametersSetter<Object> setter = Jdbc.ParametersSetter.DO_NOTHING;
-        setter.accept(mockPreparedStatement); // Should do nothing
+        setter.accept(mockPreparedStatement);   // Should do nothing
         verifyNoInteractions(mockPreparedStatement);
     }
 
@@ -1680,7 +1680,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testInvalidColumnIndex() {
         assertThrows(IllegalArgumentException.class, () -> {
-            Jdbc.RowMapper.builder().getInt(0); // Invalid index (should be 1-based)
+            Jdbc.RowMapper.builder().getInt(0);   // Invalid index (should be 1-based)
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
@@ -1720,7 +1720,7 @@ public class JdbcTest extends TestBase {
         Map<String, Integer> result = extractor.apply(mockResultSet);
         assertTrue(result instanceof TreeMap);
         assertEquals(2, result.size());
-        assertEquals(30, result.get("A")); // 10 + 20
+        assertEquals(30, result.get("A"));   // 10 + 20
         assertEquals(30, result.get("B"));
     }
 
@@ -1789,8 +1789,8 @@ public class JdbcTest extends TestBase {
         assertEquals((short) 100, result[2]);
         assertEquals(1.5f, result[3]);
         assertEquals(new BigDecimal("123.45"), result[4]);
-        assertNotNull(result[5]); // Date
-        assertNotNull(result[6]); // Time
+        assertNotNull(result[5]);   // Date
+        assertNotNull(result[6]);   // Time
         assertEquals("object", result[7]);
     }
 
@@ -1874,9 +1874,9 @@ public class JdbcTest extends TestBase {
         assertEquals(5.55, output[6]);
         assertEquals(new BigDecimal("555.55"), output[7]);
         assertEquals("test", output[8]);
-        assertNotNull(output[9]); // Date
-        assertNotNull(output[10]); // Time
-        assertNotNull(output[11]); // Timestamp
+        assertNotNull(output[9]);   // Date
+        assertNotNull(output[10]);   // Time
+        assertNotNull(output[11]);   // Timestamp
         assertEquals("obj", output[12]);
         assertEquals("typed", output[13]);
     }

@@ -180,7 +180,7 @@ import com.landawn.abacus.util.WD;
  *     50000,  // fetch size
  *     targetDataSource,
  *     "INSERT INTO customers (id, name, email) VALUES (?, ?, ?)",
- *     10000);  // batch size
+ *     10000);   // batch size
  * System.out.println("Migrated " + copiedRows + " customer records");
  *
  * // Export data to CSV file
@@ -953,7 +953,7 @@ public final class JdbcUtils {
     public static <E extends Exception> int importData(final Dataset dataset, final Throwables.Predicate<? super Object[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
             throws IllegalArgumentException, SQLException, E {
-        // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative"); //NOSONAR
+        // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative");   //NOSONAR
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 //NOSONAR
                 batchSize, batchIntervalInMillis);
@@ -1592,9 +1592,9 @@ public final class JdbcUtils {
      *
      * long rowsImported = JdbcUtils.importCSV(csvFile, dataSource, insertSQL,
      *     (stmt, row) -> {
-     *         stmt.setString(1, row[0]);  // name
-     *         stmt.setString(2, row[1]);  // email
-     *         stmt.setString(3, row[2]);  // phone
+     *         stmt.setString(1, row[0]);   // name
+     *         stmt.setString(2, row[1]);   // email
+     *         stmt.setString(3, row[2]);   // phone
      *     });
      *
      * System.out.println("Imported " + rowsImported + " customers from CSV");
@@ -1959,7 +1959,7 @@ public final class JdbcUtils {
      * long rowsImported = JdbcUtils.importCSV(reader, complexFilter, stmt, 2000, 0,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
-     *         query.setString(2, row[1].toLowerCase());  // normalize email
+     *         query.setString(2, row[1].toLowerCase());   // normalize email
      *         query.setInt(3, Integer.parseInt(row[2]));
      *         query.setString(4, row[3]);
      *     });
@@ -3335,7 +3335,7 @@ public final class JdbcUtils {
                 JdbcUtil.executeBatch(insertStmt);
             }
 
-            // insertStmt.clearBatch(); // clearBatch() is called in JdbcUtil.executeBatch(insertStmt)
+            // insertStmt.clearBatch();   // clearBatch() is called in JdbcUtil.executeBatch(insertStmt)
 
             return cnt;
         } finally {
@@ -3554,7 +3554,7 @@ public final class JdbcUtils {
     //            while (cnt < count && rs.next()) {
     //                cnt++;
     //
-    //                stmtSetter.accept(preparedQueryForInsert, rowMapper.apply(rs)); // TODO
+    //                stmtSetter.accept(preparedQueryForInsert, rowMapper.apply(rs));   // TODO
     //                insertStmt.addBatch();
     //
     //                if (cnt % batchSize == 0) {
@@ -3570,7 +3570,7 @@ public final class JdbcUtils {
     //                JdbcUtil.executeBatch(insertStmt);
     //            }
     //
-    //            // insertStmt.clearBatch(); // clearBatch() is called in JdbcUtil.executeBatch(insertStmt)
+    //            // insertStmt.clearBatch();   // clearBatch() is called in JdbcUtil.executeBatch(insertStmt)
     //
     //            return cnt;
     //        } finally {

@@ -39,7 +39,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Get user by primitive long ID with join entities
  * Optional<User> user = userDao.get(123L, Order.class);
- * User userWithAll = userDao.gett(123L, true);  // Load all join entities
+ * User userWithAll = userDao.gett(123L, true);   // Load all join entities
  *
  * // Batch operations with primitive long IDs
  * List<Long> ids = Arrays.asList(123L, 456L, 789L);
@@ -47,7 +47,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Load join entities for existing entity
  * User user = userDao.gett(123L);
- * userDao.loadJoinEntities(user, Role.class);  // Works fine
+ * userDao.loadJoinEntities(user, Role.class);   // Works fine
  *
  * // Delete operations are blocked
  * try {

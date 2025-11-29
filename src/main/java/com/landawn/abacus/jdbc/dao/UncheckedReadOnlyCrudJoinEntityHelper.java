@@ -38,7 +38,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Fetch a user with their orders - no checked exceptions
  * Optional<User> userWithOrders = userDao.get(123L, Order.class);
- * User userWithAll = userDao.gett(123L, true);  // Load all join entities
+ * User userWithAll = userDao.gett(123L, true);   // Load all join entities
  *
  * // Batch get with join entities
  * List<User> users = userDao.batchGet(Arrays.asList(1L, 2L, 3L), Order.class);
@@ -46,7 +46,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * // The user object now contains loaded Order entities
  * if (userWithOrders.isPresent()) {
  *     User user = userWithOrders.get();
- *     List<Order> orders = user.getOrders();  // Orders are loaded
+ *     List<Order> orders = user.getOrders();   // Orders are loaded
  *
  *     // But you cannot delete join entities through this DAO
  *     try {

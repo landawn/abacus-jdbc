@@ -333,7 +333,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Boolean value = getOptionalBoolean();
-     * query.setBoolean(1, value);  // handles {@code null} automatically
+     * query.setBoolean(1, value);   // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -377,7 +377,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Byte value = getOptionalByte();
-     * query.setByte(1, value);  // handles {@code null} automatically
+     * query.setByte(1, value);   // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -401,7 +401,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setByte(1, nullableByte, (byte)0);  // use 0 if null
+     * query.setByte(1, nullableByte, (byte)0);   // use 0 if null
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -446,7 +446,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Short value = getOptionalShort();
-     * query.setShort(1, value);  // handles {@code null} automatically
+     * query.setShort(1, value);   // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -470,7 +470,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setShort(1, nullableShort, (short)0);  // use 0 if null
+     * query.setShort(1, nullableShort, (short)0);   // use 0 if null
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -540,7 +540,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setInt(1, nullableCount, 0);  // use 0 if null
+     * query.setInt(1, nullableCount, 0);   // use 0 if null
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -594,7 +594,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setInt(1, 'A');  // stores 65
+     * query.setInt(1, 'A');   // stores 65
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -668,7 +668,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Long timestamp = getOptionalTimestamp();
-     * query.setLong(1, timestamp);  // handles {@code null} automatically
+     * query.setLong(1, timestamp);   // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -692,7 +692,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setLong(1, nullableId, -1L);  // use -1 if null
+     * query.setLong(1, nullableId, -1L);   // use -1 if null
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -747,7 +747,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigValue = new BigInteger("123456789");
-     * query.setLong(1, bigValue);  // converts to long
+     * query.setLong(1, bigValue);   // converts to long
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -826,7 +826,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setFloat(1, nullableRating, 0.0f);  // use 0.0 if null
+     * query.setFloat(1, nullableRating, 0.0f);   // use 0.0 if null
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -924,7 +924,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setDouble(1, nullablePrice, 0.0);  // use 0.0 if null
+     * query.setDouble(1, nullablePrice, 0.0);   // use 0.0 if null
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -997,7 +997,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigInt = new BigInteger("123456789012345678901234567890");
-     * query.setBigDecimal(1, bigInt);  // converts to BigDecimal
+     * query.setBigDecimal(1, bigInt);   // converts to BigDecimal
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1081,7 +1081,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setString(1, 'A');  // stores as "A"
+     * query.setString(1, 'A');   // stores as "A"
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1122,7 +1122,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger largeNumber = new BigInteger("99999999999999999999999999999");
-     * query.setString(1, largeNumber);  // stores as string
+     * query.setString(1, largeNumber);   // stores as string
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1147,7 +1147,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setNString(1, "こんにちは");  // Japanese text
+     * query.setNString(1, "こんにちは");   // Japanese text
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1208,7 +1208,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilDate = new java.util.Date();
-     * query.setDate(1, utilDate);  // converts to SQL Date
+     * query.setDate(1, utilDate);   // converts to SQL Date
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1290,7 +1290,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilDate = new java.util.Date();
-     * query.setTime(1, utilDate);  // extracts time portion
+     * query.setTime(1, utilDate);   // extracts time portion
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1371,7 +1371,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date date = new java.util.Date();
-     * query.setTimestamp(1, date);  // converts to Timestamp
+     * query.setTimestamp(1, date);   // converts to Timestamp
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -2060,7 +2060,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setObject(1, "123", Types.INTEGER);  // converts string to integer
+     * query.setObject(1, "123", Types.INTEGER);   // converts string to integer
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -2081,7 +2081,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setObject(1, 123.456, Types.DECIMAL, 2);  // 2 decimal places
+     * query.setObject(1, 123.456, Types.DECIMAL, 2);   // 2 decimal places
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -2207,7 +2207,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe")
-     *      .list();  // SELECT * FROM users WHERE first_name = ? AND last_name = ?
+     *      .list();   // SELECT * FROM users WHERE first_name = ? AND last_name = ?
      * }</pre>
      *
      * @param param1 the first String parameter
@@ -2229,7 +2229,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters("John", "Doe", "john@example.com")
-     *      .update();  // UPDATE users SET first_name = ?, last_name = ? WHERE email = ?
+     *      .update();   // UPDATE users SET first_name = ?, last_name = ? WHERE email = ?
      * }</pre>
      *
      * @param param1 the first String parameter
@@ -2621,7 +2621,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setParameters(new int[] {10, 20, 30})
-     *      .list();  // SELECT * FROM table WHERE col1 = ? AND col2 = ? AND col3 = ?
+     *      .list();   // SELECT * FROM table WHERE col1 = ? AND col2 = ? AND col3 = ?
      * }</pre>
      *
      * @param parameters the array of int values to set
@@ -2696,7 +2696,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
      * query.setParameters(names)
-     *      .list();  // SELECT * FROM users WHERE name IN (?, ?, ?)
+     *      .list();   // SELECT * FROM users WHERE name IN (?, ?, ?)
      * }</pre>
      *
      * @param parameters the collection of values to set
@@ -2841,7 +2841,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * query.setString(1, "Active")
      *      .settParameters(2, new int[] {10, 20, 30})
-     *      .list();  // WHERE status = ? AND id IN (?, ?, ?)
+     *      .list();   // WHERE status = ? AND id IN (?, ?, ?)
      * }</pre>
      *
      * @param startParameterIndex the starting parameter index (1-based)
@@ -4319,7 +4319,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalBoolean isActive = query
      *     .setString(1, userId)
-     *     .queryForBoolean();  // SELECT is_active FROM users WHERE id = ?
+     *     .queryForBoolean();   // SELECT is_active FROM users WHERE id = ?
      * }</pre>
      *
      * @return An {@code OptionalBoolean} containing the value if present, otherwise empty
@@ -4345,7 +4345,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalChar grade = query
      *     .setString(1, studentId)
-     *     .queryForChar();  // SELECT grade FROM students WHERE id = ?
+     *     .queryForChar();   // SELECT grade FROM students WHERE id = ?
      * }</pre>
      *
      * @return An {@code OptionalChar} containing the value if present, otherwise empty
@@ -4373,7 +4373,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalByte status = query
      *     .setInt(1, recordId)
-     *     .queryForByte();  // SELECT status_code FROM records WHERE id = ?
+     *     .queryForByte();   // SELECT status_code FROM records WHERE id = ?
      * }</pre>
      *
      * @return An {@code OptionalByte} containing the value if present, otherwise empty
@@ -4397,7 +4397,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalShort year = query
      *     .setString(1, movieId)
-     *     .queryForShort();  // SELECT release_year FROM movies WHERE id = ?
+     *     .queryForShort();   // SELECT release_year FROM movies WHERE id = ?
      * }</pre>
      *
      * @return An {@code OptionalShort} containing the value if present, otherwise empty
@@ -4422,7 +4422,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalInt count = query
      *     .setString(1, "Active")
-     *     .queryForInt();  // SELECT COUNT(*) FROM users WHERE status = ?
+     *     .queryForInt();   // SELECT COUNT(*) FROM users WHERE status = ?
      * 
      * int totalUsers = count.orElse(0);
      * }</pre>
@@ -4448,7 +4448,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalLong totalRevenue = query
      *     .setInt(1, year)
-     *     .queryForLong();  // SELECT SUM(amount) FROM sales WHERE year = ?
+     *     .queryForLong();   // SELECT SUM(amount) FROM sales WHERE year = ?
      * }</pre>
      *
      * @return An {@code OptionalLong} containing the value if present, otherwise empty
@@ -4472,7 +4472,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalFloat rating = query
      *     .setString(1, productId)
-     *     .queryForFloat();  // SELECT avg_rating FROM products WHERE id = ?
+     *     .queryForFloat();   // SELECT avg_rating FROM products WHERE id = ?
      * }</pre>
      *
      * @return An {@code OptionalFloat} containing the value if present, otherwise empty
@@ -4496,7 +4496,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * OptionalDouble average = query
      *     .setString(1, department)
-     *     .queryForDouble();  // SELECT AVG(salary) FROM employees WHERE dept = ?
+     *     .queryForDouble();   // SELECT AVG(salary) FROM employees WHERE dept = ?
      * }</pre>
      *
      * @return An {@code OptionalDouble} containing the value if present, otherwise empty
@@ -4520,7 +4520,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<String> name = query
      *     .setInt(1, userId)
-     *     .queryForString();  // SELECT name FROM users WHERE id = ?
+     *     .queryForString();   // SELECT name FROM users WHERE id = ?
      * 
      * String userName = name.orElse("Unknown");
      * }</pre>
@@ -4548,7 +4548,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<BigInteger> largeNumber = query
      *     .setString(1, accountId)
-     *     .queryForBigInteger();  // SELECT balance FROM accounts WHERE id = ?
+     *     .queryForBigInteger();   // SELECT balance FROM accounts WHERE id = ?
      * }</pre>
      *
      * @return A {@code Nullable<BigInteger>} containing the value if present, otherwise empty
@@ -4573,7 +4573,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<BigDecimal> price = query
      *     .setString(1, productCode)
-     *     .queryForBigDecimal();  // SELECT price FROM products WHERE code = ?
+     *     .queryForBigDecimal();   // SELECT price FROM products WHERE code = ?
      * }</pre>
      *
      * @return A {@code Nullable<BigDecimal>} containing the value if present, otherwise empty
@@ -4598,7 +4598,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = query
      *     .setString(1, employeeId)
-     *     .queryForDate();  // SELECT birth_date FROM employees WHERE id = ?
+     *     .queryForDate();   // SELECT birth_date FROM employees WHERE id = ?
      * }</pre>
      *
      * @return A {@code Nullable<java.sql.Date>} containing the value if present, otherwise empty
@@ -4622,7 +4622,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = query
      *     .setString(1, eventId)
-     *     .queryForTime();  // SELECT start_time FROM events WHERE id = ?
+     *     .queryForTime();   // SELECT start_time FROM events WHERE id = ?
      * }</pre>
      *
      * @return A {@code Nullable<java.sql.Time>} containing the value if present, otherwise empty
@@ -4646,7 +4646,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<Timestamp> lastLogin = query
      *     .setString(1, username)
-     *     .queryForTimestamp();  // SELECT last_login FROM users WHERE username = ?
+     *     .queryForTimestamp();   // SELECT last_login FROM users WHERE username = ?
      * }</pre>
      *
      * @return A {@code Nullable<java.sql.Timestamp>} containing the value if present, otherwise empty
@@ -4670,7 +4670,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<byte[]> avatar = query
      *     .setInt(1, userId)
-     *     .queryForBytes();  // SELECT avatar_data FROM users WHERE id = ?
+     *     .queryForBytes();   // SELECT avatar_data FROM users WHERE id = ?
      * }</pre>
      *
      * @return A {@code Nullable<byte[]>} containing the value if present, otherwise empty
@@ -4694,7 +4694,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<LocalDate> date = query
      *     .setString(1, orderId)
-     *     .queryForSingleResult(LocalDate.class);  // SELECT order_date FROM orders WHERE id = ?
+     *     .queryForSingleResult(LocalDate.class);   // SELECT order_date FROM orders WHERE id = ?
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
@@ -4747,7 +4747,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Optional<String> email = query
      *     .setInt(1, userId)
-     *     .queryForSingleNonNull(String.class);  // SELECT email FROM users WHERE id = ?
+     *     .queryForSingleNonNull(String.class);   // SELECT email FROM users WHERE id = ?
      * 
      * email.ifPresent(e -> sendNotification(e));
      * }</pre>
@@ -4804,7 +4804,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<String> username = query
      *     .setString(1, email)
-     *     .queryForUniqueResult(String.class);  // SELECT username FROM users WHERE email = ?
+     *     .queryForUniqueResult(String.class);   // SELECT username FROM users WHERE email = ?
      * // Throws exception if multiple users have the same email
      * }</pre>
      *
@@ -4833,7 +4833,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Type<BigDecimal> moneyType = Type.of(BigDecimal.class);
      * Nullable<BigDecimal> balance = query
      *     .setString(1, accountNumber)
-     *     .queryForUniqueResult(moneyType);  // SELECT balance FROM accounts WHERE account_no = ?
+     *     .queryForUniqueResult(moneyType);   // SELECT balance FROM accounts WHERE account_no = ?
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
@@ -4871,7 +4871,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Optional<Integer> userId = query
      *     .setString(1, sessionToken)
-     *     .queryForUniqueNonNull(Integer.class);  // SELECT user_id FROM sessions WHERE token = ?
+     *     .queryForUniqueNonNull(Integer.class);   // SELECT user_id FROM sessions WHERE token = ?
      * // Throws exception if multiple sessions exist for the token
      * }</pre>
      *
@@ -7750,7 +7750,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * // Instead of:
      * int count = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE status = ?")
      *     .setString(1, "active")
-     *     .count();  // Inefficient!
+     *     .count();   // Inefficient!
      * }</pre>
      *
      * @return The total number of records in the result set
@@ -8410,10 +8410,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * // Process with type-guided retrieval
      * preparedQuery.foreach(User.class, row -> {
-     *     Long id = (Long) row.get(0);  // Retrieved as Long
-     *     String name = (String) row.get(1);  // Retrieved as String
-     *     LocalDate birthDate = (LocalDate) row.get(2);  // Retrieved as LocalDate
-     *     Boolean active = (Boolean) row.get(3);  // Retrieved as Boolean
+     *     Long id = (Long) row.get(0);   // Retrieved as Long
+     *     String name = (String) row.get(1);   // Retrieved as String
+     *     LocalDate birthDate = (LocalDate) row.get(2);   // Retrieved as LocalDate
+     *     Boolean active = (Boolean) row.get(3);   // Retrieved as Boolean
      *     
      *     if (active) {
      *         sendBirthdayGreeting(id, name, birthDate);
@@ -8479,7 +8479,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         "INSERT INTO products (name, price) VALUES (?, ?)")
      *     .setString(1, "Widget")
      *     .setDouble(2, 19.99)
-     *     .insert(rs -> rs.getString("product_code"));  // Custom column
+     *     .insert(rs -> rs.getString("product_code"));   // Custom column
      *     
      * // Insert with composite key
      * Optional<CompositeKey> key = preparedQuery.insert(rs -> 
@@ -9355,7 +9355,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     
      * // Do other work while query executes
      * 
-     * List<User> users = future.get();  // Wait for result
+     * List<User> users = future.get();   // Wait for result
      * }</pre>
      *
      * @param <R> the type of result produced by the SQL operation
@@ -9630,7 +9630,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     protected void closeStatement() {
         try {
-            // stmt.clearParameters(); // cleared by JdbcUtil.clearParameters(stmt) after stmt.execute/executeQuery/executeUpdate.
+            // stmt.clearParameters();   // cleared by JdbcUtil.clearParameters(stmt) after stmt.execute/executeQuery/executeUpdate.
 
             // Reset batch action to default to prevent memory leaks
             addBatchAction = defaultAddBatchAction;

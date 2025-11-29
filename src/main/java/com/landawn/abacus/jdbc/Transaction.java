@@ -194,7 +194,7 @@ public interface Transaction {
      *     performDatabaseOperations();
      *     txn.commit();
      * } finally {
-     *     txn.rollbackIfNotCommitted();  // Ensures cleanup
+     *     txn.rollbackIfNotCommitted();   // Ensures cleanup
      * }
      * }</pre>
      *

@@ -132,7 +132,7 @@ public enum OnDeleteAction {
      * // Example: Storing the action value
      * OnDeleteAction action = OnDeleteAction.CASCADE;
      * int actionValue = action.value();
-     * System.out.println("Action code: " + actionValue);  // Prints: Action code: 2
+     * System.out.println("Action code: " + actionValue);   // Prints: Action code: 2
      *
      * // Example: Using value for conditional logic
      * if (action.value() == 0) {
@@ -168,7 +168,7 @@ public enum OnDeleteAction {
      * // Example: Parsing action from configuration
      * String configValue = "cascade";
      * OnDeleteAction action = OnDeleteAction.get(configValue);
-     * System.out.println("Parsed action: " + action);  // Prints: Parsed action: CASCADE
+     * System.out.println("Parsed action: " + action);   // Prints: Parsed action: CASCADE
      *
      * // Example: Case-insensitive parsing
      * OnDeleteAction action1 = OnDeleteAction.get("CASCADE");

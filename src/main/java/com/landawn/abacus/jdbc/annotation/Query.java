@@ -459,7 +459,7 @@ public @interface Query {
      * int[] logUserActions(@Bind("userId"); List<Long> userIds,      // varies per batch item
      *                     @Bind("action") List<String> actions,    // varies per batch item
      *                     @Bind("category") String category,       // same for all items
-     *                     @Bind("timestamp") Date timestamp);  // same for all items
+     *                     @Bind("timestamp") Date timestamp);   // same for all items
      * }</pre>
      *
      * <p>Performance considerations:</p>
@@ -805,7 +805,7 @@ public @interface Query {
      *
      * // Memory-constrained environment with small fetch size
      * @Query(value = "SELECT * FROM large_documents", fetchSize = 10)
-     * Stream<Document> streamDocuments();  // Smaller batches, more round trips
+     * Stream<Document> streamDocuments();   // Smaller batches, more round trips
      *
      * // Balancing memory and performance for reporting
      * @Query(value = "SELECT date, SUM(amount) as total FROM sales " +

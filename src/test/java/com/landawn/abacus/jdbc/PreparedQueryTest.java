@@ -302,7 +302,7 @@ public class PreparedQueryTest extends TestBase {
     public void testSetIntWithChar() throws SQLException {
         PreparedQuery result = query.setInt(1, 'A');
         assertSame(query, result);
-        verify(mockStmt).setInt(1, 65); // ASCII value of 'A'
+        verify(mockStmt).setInt(1, 65);   // ASCII value of 'A'
     }
 
     @Test
@@ -2618,7 +2618,7 @@ public class PreparedQueryTest extends TestBase {
 
         boolean result = query.allMatch(rs -> rs.getInt(1) > 5);
 
-        assertTrue(result); // Empty set matches all
+        assertTrue(result);   // Empty set matches all
         verify(mockResultSet).close();
     }
 
@@ -3047,7 +3047,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testCloseIdempotent() throws SQLException {
         query.close();
-        query.close(); // Should not throw
+        query.close();   // Should not throw
 
         verify(mockStmt, times(1)).close();
     }
@@ -3118,7 +3118,7 @@ public class PreparedQueryTest extends TestBase {
         query.close();
 
         verify(mockStmt).setFetchDirection(ResultSet.FETCH_FORWARD);
-        verify(mockStmt, times(2)).setFetchSize(anyInt()); // Once for set, once for reset
+        verify(mockStmt, times(2)).setFetchSize(anyInt());   // Once for set, once for reset
         verify(mockStmt, times(2)).setMaxFieldSize(anyInt());
         verify(mockStmt, times(2)).setQueryTimeout(anyInt());
     }

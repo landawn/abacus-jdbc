@@ -201,7 +201,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * // Load user with only essential fields but all relationships
      * Optional<User> user = userDao.get(userId,
      *     Arrays.asList("id", "name", "email", "status"),
-     *     true);  // Load all @JoinedBy fields
+     *     true);   // Load all @JoinedBy fields
      * }</pre>
      *
      * @param id the entity ID to retrieve
@@ -358,7 +358,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * // Get user with minimal fields and all relations
      * User user = userDao.gett(userId,
      *                         Arrays.asList("id", "name", "email"),
-     *                         true);  // Load all @JoinedBy fields
+     *                         true);   // Load all @JoinedBy fields
      * if (user != null) {
      *     performFullUserAnalysis(user);
      * }
@@ -493,7 +493,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * // Get users with selected properties and all relations
      * List<User> users = userDao.batchGet(userIds,
      *                                     Arrays.asList("id", "name", "email"),
-     *                                     true);  // Load all relationships
+     *                                     true);   // Load all relationships
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
@@ -605,7 +605,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * List<User> users = userDao.batchGet(userIds,
      *                                     Arrays.asList("id", "name", "email", "status"),
      *                                     200,   // larger batch size
-     *                                     true);  // load all relationships
+     *                                     true);   // load all relationships
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve

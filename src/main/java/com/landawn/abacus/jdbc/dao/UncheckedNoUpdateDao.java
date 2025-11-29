@@ -64,8 +64,8 @@ import com.landawn.abacus.query.condition.Condition;
  *       .forEach(level -> dao.save(new EventLog("Log level: " + level)));
  *
  * // Update and delete operations throw UnsupportedOperationException:
- * // dao.update("status", "ARCHIVED", Filters.lt("timestamp", cutoffTime));  // Throws exception
- * // dao.delete(Filters.eq("id", 123));  // Throws exception
+ * // dao.update("status", "ARCHIVED", Filters.lt("timestamp", cutoffTime));   // Throws exception
+ * // dao.delete(Filters.eq("id", 123));   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type

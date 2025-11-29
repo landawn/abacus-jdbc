@@ -45,7 +45,7 @@ import com.landawn.abacus.util.Throwables;
  *     dao.save(entity);
  *     dao.update(anotherEntity);
  *
- *     tran.commit();  // Commit the transaction
+ *     tran.commit();   // Commit the transaction
  * } // Auto-rollback if not committed
  * }</pre>
  * 
@@ -78,11 +78,11 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private Transaction.Status _status = Status.ACTIVE; //NOSONAR
 
-    private final AtomicInteger _refCount = new AtomicInteger(); //NOSONAR
+    private final AtomicInteger _refCount = new AtomicInteger();   //NOSONAR
 
-    private final Deque<IsolationLevel> _isolationLevelStack = new ConcurrentLinkedDeque<>(); //NOSONAR
+    private final Deque<IsolationLevel> _isolationLevelStack = new ConcurrentLinkedDeque<>();   //NOSONAR
 
-    private final Deque<Boolean> _isForUpdateOnlyStack = new ConcurrentLinkedDeque<>(); //NOSONAR
+    private final Deque<Boolean> _isForUpdateOnlyStack = new ConcurrentLinkedDeque<>();   //NOSONAR
 
     private volatile IsolationLevel _isolationLevel; //NOSONAR
 
@@ -320,7 +320,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         }
 
         if (_status != Status.ACTIVE) {
-            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It can not be committed"); //NOSONAR
+            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It can not be committed");   //NOSONAR
         }
 
         logger.info("Committing transaction(id={})", _timedId);
@@ -365,7 +365,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *     dao.save(entity);
      *     tran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted();  // Safer than rollback()
+     *     tran.rollbackIfNotCommitted();   // Safer than rollback()
      * }
      * }</pre>
      *
@@ -428,7 +428,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      *     tran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted();  // Ensures cleanup
+     *     tran.rollbackIfNotCommitted();   // Ensures cleanup
      * }
      * }</pre>
      *
@@ -710,7 +710,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 cmd.run();
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'."); //NOSONAR
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'.");   //NOSONAR
                 }
             }
         }
@@ -761,7 +761,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 return cmd.call();
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'."); //NOSONAR
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'.");   //NOSONAR
                 }
             }
         }

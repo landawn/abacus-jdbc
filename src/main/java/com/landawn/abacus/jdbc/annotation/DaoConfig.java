@@ -44,12 +44,12 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * public interface UserDao extends CrudDao<User, Long> {
  *     // Single query methods will automatically add LIMIT 1
  *     @Query("SELECT * FROM users WHERE email = :email")
- *     User findByEmail(@Bind("email") String email);  // LIMIT 1 added automatically
+ *     User findByEmail(@Bind("email") String email);   // LIMIT 1 added automatically
  *
  *     // ID generation will be called if user.id is null or 0
  *     default User createUser(String name, String email) {
  *         User user = new User(name, email);
- *         insert(user);  // generateId() called automatically if needed
+ *         insert(user);   // generateId() called automatically if needed
  *         return user;
  *     }
  * }
@@ -118,7 +118,7 @@ public @interface DaoConfig {
      * 
      * // Usage
      * User user = new User("John", "john@example.com");
-     * userDao.insert(user);  // generateId() called automatically
+     * userDao.insert(user);   // generateId() called automatically
      * }</pre>
      *
      * @return {@code true} to auto-generate IDs for insert operations
@@ -140,7 +140,7 @@ public @interface DaoConfig {
      *     default void insertWithAudit(Order order) {
      *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
      *                     "VALUES (:id, :customerId, :total, CURRENT_USER())";
-     *         insert(sql, order);  // generateId() called if order.id not set
+     *         insert(sql, order);   // generateId() called if order.id not set
      *     }
      * }
      * }</pre>

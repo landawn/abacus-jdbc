@@ -48,8 +48,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * List<User> users = userDao.list(Filters.eq("status", "ACTIVE"));
  *
  * // Write operations will throw UnsupportedOperationException
- * // userDao.insert(newUser);  // This will fail
- * // userDao.deleteById(123L);  // This will fail
+ * // userDao.insert(newUser);   // This will fail
+ * // userDao.deleteById(123L);   // This will fail
  * }</pre>
  *
  * @param <T> the entity type

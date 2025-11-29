@@ -231,7 +231,7 @@ public final class JoinInfo {
         referencedBeanInfo = ParserUtil.getBeanInfo(referencedEntityClass);
 
         final JoinedBy joinedByAnno = joinPropInfo.getAnnotation(JoinedBy.class);
-        final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB(); // TODO should be defined/implemented on DB server side.
+        final boolean cascadeDeleteDefinedInDB = true; // joinedByAnno.cascadeDeleteDefinedInDB();   // TODO should be defined/implemented on DB server side.
         final String joinByVal = Strings.join(joinedByAnno.value(), ", ");
 
         if (Strings.isEmpty(joinByVal)) {
@@ -309,7 +309,7 @@ public final class JoinInfo {
             }
 
             final List<Integer> dummyList = N.asList(1, 2, 3);
-            final Condition cond = Filters.in(right[1], dummyList); //
+            final Condition cond = Filters.in(right[1], dummyList);   //
             final String inCondToReplace = Strings.repeat("?", dummyList.size(), ", ");
 
             final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
@@ -793,7 +793,7 @@ public final class JoinInfo {
      *     batchDelete = joinInfo.getBatchDeleteSQLBuilderAndParamSetter(PSC.class);
      *
      * List<Employee> employees = getEmployeesToDelete();
-     * String deleteSql = batchDelete._1.apply(employees.size());  // Main delete SQL
+     * String deleteSql = batchDelete._1.apply(employees.size());   // Main delete SQL
      * String middleTableDeleteSql = batchDelete._2 != null ? batchDelete._2.apply(employees.size()) : null;
      * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDelete._3;
      * }</pre>
@@ -1029,7 +1029,7 @@ public final class JoinInfo {
      * Employee employee = employeeDao.findById(123);
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
-     * String sql = builder._1.apply(null);  // Use default columns
+     * String sql = builder._1.apply(null);   // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
      *                                   .setParameters(builder._2, employee)
      *                                   .list(Project.class);

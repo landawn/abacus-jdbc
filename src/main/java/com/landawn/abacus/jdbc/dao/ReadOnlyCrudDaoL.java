@@ -53,19 +53,19 @@ import com.landawn.abacus.query.SQLBuilder;
  * }
  *
  * // Usage with primitive long IDs:
- * Report report = reportDao.gett(123L);  // Works - returns {@code null} if not found
- * Optional<Report> optReport = reportDao.get(456L);  // Works - returns Optional
- * boolean exists = reportDao.exists(789L);  // Works
- * List<Report> reports = reportDao.batchGet(Arrays.asList(1L, 2L, 3L));  // Works
+ * Report report = reportDao.gett(123L);   // Works - returns {@code null} if not found
+ * Optional<Report> optReport = reportDao.get(456L);   // Works - returns Optional
+ * boolean exists = reportDao.exists(789L);   // Works
+ * List<Report> reports = reportDao.batchGet(Arrays.asList(1L, 2L, 3L));   // Works
  *
  * // Query operations work normally:
  * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));
  * long count = reportDao.count(Filters.ge("created_date", startDate));
  *
  * // All modification operations throw UnsupportedOperationException:
- * reportDao.insert(new Report());  // Throws UnsupportedOperationException
- * reportDao.update("status", "ARCHIVED", 123L);  // Throws UnsupportedOperationException
- * reportDao.deleteById(123L);  // Throws UnsupportedOperationException
+ * reportDao.insert(new Report());   // Throws UnsupportedOperationException
+ * reportDao.update("status", "ARCHIVED", 123L);   // Throws UnsupportedOperationException
+ * reportDao.deleteById(123L);   // Throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

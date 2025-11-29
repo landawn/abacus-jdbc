@@ -94,11 +94,11 @@ import com.landawn.abacus.query.SQLBuilder;
  *    .list(Customer.class);
  *
  * // Unsupported operations - all throw UnsupportedOperationException:
- * dao.save(new Customer());  // Throws exception
- * dao.batchSave(customers);  // Throws exception
- * dao.prepareQuery("INSERT INTO customers...");  // Throws exception
- * dao.prepareQuery("UPDATE customers...");  // Throws exception
- * dao.prepareQuery("DELETE FROM customers...");  // Throws exception
+ * dao.save(new Customer());   // Throws exception
+ * dao.batchSave(customers);   // Throws exception
+ * dao.prepareQuery("INSERT INTO customers...");   // Throws exception
+ * dao.prepareQuery("UPDATE customers...");   // Throws exception
+ * dao.prepareQuery("DELETE FROM customers...");   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO

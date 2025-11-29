@@ -133,20 +133,20 @@ public class DaoTest {
 
         userDao.batchInsertWithId(users);
 
-        N.println("......"); // breakpoint here
+        N.println("......");   // breakpoint here
 
         userDao.stream(Filters.gt("id", 0)).forEach(N::println);
 
-        N.println("......"); // breakpoint here
+        N.println("......");   // breakpoint here
 
         final Stream<User> stream = userDao.stream(Filters.gt("id", 0));
         N.println(stream.hashCode());
 
-        N.println("......"); // breakpoint here
+        N.println("......");   // breakpoint here
 
         userDao.stream(Filters.gt("id", 0)).forEach(N::println);
 
-        N.println("......"); // breakpoint here
+        N.println("......");   // breakpoint here
 
         userDao.delete(Filters.ge("id", 0));
     }

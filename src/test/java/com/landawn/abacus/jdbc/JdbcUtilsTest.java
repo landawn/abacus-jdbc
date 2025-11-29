@@ -185,7 +185,7 @@ public class JdbcUtilsTest extends TestBase {
         int result = JdbcUtils.importData(mockDataset, selectColumns, filter, mockConnection, insertSQL, 1, 0);
 
         // Verify
-        assertEquals(2, result); // Only 2 valid rows
+        assertEquals(2, result);   // Only 2 valid rows
         verify(mockPreparedStatement, times(2)).addBatch();
     }
 
@@ -248,7 +248,7 @@ public class JdbcUtilsTest extends TestBase {
         long result = JdbcUtils.importData(tempFile, mockDataSource, insertSQL, func);
 
         // Verify
-        assertEquals(0, result); // Empty file
+        assertEquals(0, result);   // Empty file
         verify(mockDataSource).getConnection();
     }
 
@@ -305,7 +305,7 @@ public class JdbcUtilsTest extends TestBase {
 
         // Verify
         assertEquals(3, result);
-        verify(mockPreparedStatement, times(2)).executeBatch(); // 3 rows with batch size 2
+        verify(mockPreparedStatement, times(2)).executeBatch();   // 3 rows with batch size 2
     }
 
     // Tests for importData methods with Iterator
@@ -341,7 +341,7 @@ public class JdbcUtilsTest extends TestBase {
 
         // Verify
         assertEquals(5, result);
-        verify(mockPreparedStatement, times(2)).executeBatch(); // 5 rows with batch size 3
+        verify(mockPreparedStatement, times(2)).executeBatch();   // 5 rows with batch size 3
     }
 
     // Tests for importCSV methods
@@ -365,7 +365,7 @@ public class JdbcUtilsTest extends TestBase {
         long result = JdbcUtils.importCSV(tempFile, mockDataSource, insertSQL, stmtSetter);
 
         // Verify
-        assertEquals(1, result); // 1 data row (header skipped)
+        assertEquals(1, result);   // 1 data row (header skipped)
         verify(mockDataSource).getConnection();
     }
 
@@ -389,7 +389,7 @@ public class JdbcUtilsTest extends TestBase {
         long result = JdbcUtils.importCSV(tempFile, filter, mockPreparedStatement, 1, 0, stmtSetter);
 
         // Verify
-        assertEquals(2, result); // 2 valid rows
+        assertEquals(2, result);   // 2 valid rows
         verify(mockPreparedStatement, times(2)).addBatch();
     }
 
@@ -409,7 +409,7 @@ public class JdbcUtilsTest extends TestBase {
         long result = JdbcUtils.importCSV(reader, mockDataSource, insertSQL, stmtSetter);
 
         // Verify
-        assertEquals(2, result); // 2 data rows
+        assertEquals(2, result);   // 2 data rows
         verify(mockDataSource).getConnection();
     }
 
@@ -659,7 +659,7 @@ public class JdbcUtilsTest extends TestBase {
 
         // Verify
         assertEquals(3, result);
-        verify(targetPreparedStatement, times(2)).executeBatch(); // 3 rows with batch size 2
+        verify(targetPreparedStatement, times(2)).executeBatch();   // 3 rows with batch size 2
     }
 
     // Test for createParamSetter
@@ -767,7 +767,7 @@ public class JdbcUtilsTest extends TestBase {
         long result = JdbcUtils.importCSV(reader, filter, mockPreparedStatement, 1, 0, stmtSetter);
 
         // Verify
-        assertEquals(1, result); // Only 1 row matches filter
+        assertEquals(1, result);   // Only 1 row matches filter
         verify(mockPreparedStatement, times(1)).addBatch();
     }
 
@@ -785,13 +785,13 @@ public class JdbcUtilsTest extends TestBase {
         long startTime = System.currentTimeMillis();
 
         // Execute
-        long result = JdbcUtils.copy(mockPreparedStatement, targetPreparedStatement, 1, 50, stmtSetter); // 50ms interval
+        long result = JdbcUtils.copy(mockPreparedStatement, targetPreparedStatement, 1, 50, stmtSetter);   // 50ms interval
 
         long endTime = System.currentTimeMillis();
 
         // Verify
         assertEquals(2, result);
         verify(targetPreparedStatement, times(2)).executeBatch();
-        assertTrue((endTime - startTime) >= 50); // At least one interval delay
+        assertTrue((endTime - startTime) >= 50);   // At least one interval delay
     }
 }

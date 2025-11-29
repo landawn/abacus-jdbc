@@ -564,9 +564,9 @@ public final class JdbcUtil {
     private static final Set<String> sqlStateForTableNotExists = N.newHashSet();
 
     static {
-        sqlStateForTableNotExists.add("42S02"); // for MySQFilters.
-        sqlStateForTableNotExists.add("42P01"); // for PostgreSQFilters.
-        sqlStateForTableNotExists.add("42501"); // for HSQLDB.
+        sqlStateForTableNotExists.add("42S02");   // for MySQFilters.
+        sqlStateForTableNotExists.add("42P01");   // for PostgreSQFilters.
+        sqlStateForTableNotExists.add("42501");   // for HSQLDB.
     }
 
     static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "load",
@@ -1453,7 +1453,7 @@ public final class JdbcUtil {
                     stmt.close();
                 }
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e); //NOSONAR
+                throw new UncheckedSQLException(e);   //NOSONAR
             }
         }
     }
@@ -1497,7 +1497,7 @@ public final class JdbcUtil {
                     conn.close();
                 }
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e); //NOSONAR
+                throw new UncheckedSQLException(e);   //NOSONAR
             }
         }
     }
@@ -1543,14 +1543,14 @@ public final class JdbcUtil {
                     stmt.close();
                 }
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e); //NOSONAR
+                throw new UncheckedSQLException(e);   //NOSONAR
             } finally {
                 try {
                     if (conn != null) {
                         conn.close();
                     }
                 } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e); //NOSONAR
+                    throw new UncheckedSQLException(e);   //NOSONAR
                 }
             }
         }
@@ -1711,7 +1711,7 @@ public final class JdbcUtil {
      * } catch (SQLException e) {
      *     // ...
      * } finally {
-     *     JdbcUtil.closeQuietly(conn);  // Deprecated practice
+     *     JdbcUtil.closeQuietly(conn);   // Deprecated practice
      * }
      * }</pre>
      *
@@ -1928,7 +1928,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * ResultSet rs = statement.executeQuery("SELECT id, name, email FROM users");
      * int count = JdbcUtil.getColumnCount(rs);
-     * System.out.println("The ResultSet has " + count + " columns.");  // Prints 3
+     * System.out.println("The ResultSet has " + count + " columns.");   // Prints 3
      * }</pre>
      *
      * @param rs The {@link ResultSet} to get the column count from.
@@ -1996,7 +1996,7 @@ public final class JdbcUtil {
      *      ResultSet rs = stmt.executeQuery("SELECT user_id AS 'User ID', user_name AS 'User Name' FROM users")) {
      *
      *     List<String> labels = JdbcUtil.getColumnLabelList(rs);
-     *     System.out.println(labels);  // Output: [User ID, User Name]
+     *     System.out.println(labels);   // Output: [User ID, User Name]
      * }
      * }</pre>
      *
@@ -2027,10 +2027,10 @@ public final class JdbcUtil {
      * <pre>{@code
      * ResultSetMetaData metaData = rs.getMetaData();
      * // For a query like "SELECT first_name AS name FROM users"
-     * String label = JdbcUtil.getColumnLabel(metaData, 1);  // Returns "name"
+     * String label = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "name"
      *
      * // For a query like "SELECT first_name FROM users"
-     * String sameLabel = JdbcUtil.getColumnLabel(metaData, 1);  // Returns "first_name"
+     * String sameLabel = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "first_name"
      * }</pre>
      *
      * @param rsmd The {@link ResultSetMetaData} to get the label from.
@@ -2142,7 +2142,7 @@ public final class JdbcUtil {
                         (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());
             } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(), // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue(),
-                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue()); // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
+                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());   // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
             } else if (className.startsWith("oracle.sql.DATE")) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
                     final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
@@ -2211,7 +2211,7 @@ public final class JdbcUtil {
      *     while (rs.next()) {
      *         long id = (long) JdbcUtil.getColumnValue(rs, 1);
      *         String name = (String) JdbcUtil.getColumnValue(rs, 2);
-     *         byte[] profilePic = (byte[]) JdbcUtil.getColumnValue(rs, 3);  // Blob is converted to byte[]
+     *         byte[] profilePic = (byte[]) JdbcUtil.getColumnValue(rs, 3);   // Blob is converted to byte[]
      *         // ...
      *     }
      * }
@@ -3147,7 +3147,7 @@ public final class JdbcUtil {
      *             (c, s) -> {
      *                 PreparedStatement stmt = c.prepareStatement(s);
      *                 stmt.setFetchSize(100);
-     *                 stmt.setQueryTimeout(30);  // 30 seconds
+     *                 stmt.setQueryTimeout(30);   // 30 seconds
      *                 return stmt;
      *             })
      *         .stream(Record.class)
@@ -4216,7 +4216,7 @@ public final class JdbcUtil {
      * Throwables.BiFunction<Connection, String, CallableStatement, SQLException> creator =
      *     (conn, sql) -> {
      *         CallableStatement stmt = conn.prepareCall(sql);
-     *         stmt.setQueryTimeout(30);  // 30 seconds timeout
+     *         stmt.setQueryTimeout(30);   // 30 seconds timeout
      *         return stmt;
      *     };
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource,
@@ -4729,7 +4729,7 @@ public final class JdbcUtil {
      *
      * // DELETE all records (use with caution!)
      * int allDeleted = JdbcUtil.executeUpdate(dataSource,
-     *     "DELETE FROM temp_data");  // No parameters needed
+     *     "DELETE FROM temp_data");   // No parameters needed
      *
      * // Conditional update
      * if (needsUpdate) {
@@ -4857,7 +4857,7 @@ public final class JdbcUtil {
      * int totalRows = JdbcUtil.executeBatchUpdate(dataSource,
      *     "INSERT INTO users (name, age) VALUES (?, ?)",
      *     largeDataset,
-     *     500);  // Process in batches of 500
+     *     500);   // Process in batches of 500
      *
      * // Update records with custom batch size for better memory management
      * List<Object[]> updates = Arrays.asList(
@@ -5546,7 +5546,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     * Dataset dataset = JdbcUtil.extractData(rs, 10, 50);  // Skip 10 rows, get next 50
+     * Dataset dataset = JdbcUtil.extractData(rs, 10, 50);   // Skip 10 rows, get next 50
      * }</pre>
      *
      * @param rs The ResultSet to extract data from
@@ -8525,14 +8525,14 @@ public final class JdbcUtil {
             }
         }
 
-        propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
+        propInfo = entityInfo.getPropInfo(prefix + "s");   // Trying to do something smart?
         final int len = prefix.length() + 1;
 
         if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
                 && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
             // good
         } else {
-            propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
+            propInfo = entityInfo.getPropInfo(prefix + "es");   // Trying to do something smart?
             final int len2 = prefix.length() + 2;
 
             if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
@@ -8655,7 +8655,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.enableSqlLog(2048);  // Allow longer SQL statements in logs
+     * JdbcUtil.enableSqlLog(2048);   // Allow longer SQL statements in logs
      * // Execute SQL operations
      * // ...
      * JdbcUtil.disableSqlLog();
@@ -9066,9 +9066,9 @@ public final class JdbcUtil {
      * public void processOrder(Order order) {
      *     SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
      *     try {
-     *         createOrder(order);  // Shares this transaction
-     *         updateInventory(order);  // Shares this transaction
-     *         sendNotification(order);  // Shares this transaction
+     *         createOrder(order);   // Shares this transaction
+     *         updateInventory(order);   // Shares this transaction
+     *         sendNotification(order);   // Shares this transaction
      *         tran.commit();
      *     } finally {
      *         tran.rollbackIfNotCommitted();
@@ -9138,8 +9138,8 @@ public final class JdbcUtil {
      *     final SQLTransaction tranA = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
      *     try {
      *         // Operations here share tranA
-     *         doSomethingB();  // Shares tranA (same thread, same dataSource1)
-     *         doSomethingC();  // Uses different transaction (different dataSource2)
+     *         doSomethingB();   // Shares tranA (same thread, same dataSource1)
+     *         doSomethingC();   // Uses different transaction (different dataSource2)
      *         tranA.commit();
      *     } finally {
      *         tranA.rollbackIfNotCommitted();
@@ -9178,7 +9178,7 @@ public final class JdbcUtil {
 
             try { //NOSONAR
                 conn = JdbcUtil.getConnection(dataSource);
-                tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true); //NOSONAR
+                tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true);   //NOSONAR
                 tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
 
                 noException = true;
@@ -10381,8 +10381,8 @@ public final class JdbcUtil {
      * Jdbc.DaoCache cache = JdbcUtil.startDaoCacheOnCurrentThread();
      * try {
      *     // DAO operations here will use the cache
-     *     userDao.findById(1L);  // First call hits database
-     *     userDao.findById(1L);  // Second call uses cache
+     *     userDao.findById(1L);   // First call hits database
+     *     userDao.findById(1L);   // Second call uses cache
      * } finally {
      *     JdbcUtil.closeDaoCacheOnCurrentThread();
      * }
@@ -10441,7 +10441,7 @@ public final class JdbcUtil {
      * try {
      *     // Use cached DAO operations
      * } finally {
-     *     JdbcUtil.closeDaoCacheOnCurrentThread();  // Always clean up
+     *     JdbcUtil.closeDaoCacheOnCurrentThread();   // Always clean up
      * }
      * }</pre>
      *

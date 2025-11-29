@@ -372,7 +372,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 ResultSet rs = stmt.executeQuery()) {
 
             return generateEntityClass(entityName, rs, config);
@@ -630,7 +630,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append(LINE_SEPARATOR);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append(LINE_SEPARATOR); //NOSONAR
+                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append(LINE_SEPARATOR);   //NOSONAR
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {
@@ -684,7 +684,7 @@ public final class JdbcCodeGenerationUtil {
                         .append(" copy = new ")
                         .append(className)
                         .append("();")
-                        .append(LINE_SEPARATOR); //
+                        .append(LINE_SEPARATOR);   //
 
                 for (final String fieldName : fieldNameList) {
                     sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";").append(LINE_SEPARATOR);
@@ -711,7 +711,7 @@ public final class JdbcCodeGenerationUtil {
                         .append(" {")
                         .append(Character.isLowerCase(X.charAt(0)) ? " // NOSONAR" : "")
                         .append(LINE_SEPARATOR)
-                        .append(LINE_SEPARATOR); //
+                        .append(LINE_SEPARATOR);   //
 
                 for (final String fieldName : fieldNameList) {
                     sb.append("        /** Property(field) name {@code \"")
@@ -858,7 +858,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -924,7 +924,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
@@ -987,7 +987,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -1053,7 +1053,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
@@ -1117,7 +1117,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -1184,7 +1184,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
@@ -1250,7 +1250,7 @@ public final class JdbcCodeGenerationUtil {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -1310,7 +1310,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -1400,7 +1400,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
@@ -1476,7 +1476,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -1538,7 +1538,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
@@ -1623,7 +1623,7 @@ public final class JdbcCodeGenerationUtil {
 
         final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
 
-        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query); //
+        try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);   //
                 final ResultSet rs = stmt.executeQuery()) {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)

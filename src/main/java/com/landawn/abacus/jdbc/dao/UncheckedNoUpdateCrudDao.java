@@ -71,8 +71,8 @@ import com.landawn.abacus.query.condition.Condition;
  * logIds.forEach(logId -> auditDao.get(logId).ifPresent(System.out::println));
  *
  * // Update operations throw UnsupportedOperationException:
- * // auditDao.update(log);  // Throws exception
- * // auditDao.upsert(log);  // Throws exception
+ * // auditDao.update(log);   // Throws exception
+ * // auditDao.upsert(log);   // Throws exception
  *
  * // Delete operations work normally:
  * auditDao.deleteById(id);

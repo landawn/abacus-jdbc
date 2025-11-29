@@ -63,10 +63,10 @@ import java.lang.annotation.Target;
  * in the SQL using dot notation:</p>
  * <pre>{@code
  * @Query("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
- * void insertUser(User user);  // Properties bound automatically without @Bind
+ * void insertUser(User user);   // Properties bound automatically without @Bind
  * 
  * @Query("INSERT INTO users (name, email, age) VALUES (:u.name, :u.email, :u.age)")
- * void insertUser(@Bind("u") User user);  // Explicit binding with prefix
+ * void insertUser(@Bind("u") User user);   // Explicit binding with prefix
  * }</pre>
  *
  * <p>Best practices:</p>

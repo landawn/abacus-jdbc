@@ -442,7 +442,7 @@ public class JdbcTest {
         try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
-            userDao.queryForBoolean("firstName", Filters.eq("id", 100)); // throw exception.
+            userDao.queryForBoolean("firstName", Filters.eq("id", 100));   // throw exception.
             tran.commit();
         } catch (final SQLException e) {
             // ignore

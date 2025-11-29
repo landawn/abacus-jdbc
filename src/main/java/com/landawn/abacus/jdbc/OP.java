@@ -283,10 +283,10 @@ public enum OP {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query("SELECT * FROM users")  // op defaults to OP.DEFAULT
-     * List<User> getAllUsers();  // Framework infers OP.list
+     * List<User> getAllUsers();   // Framework infers OP.list
      * 
      * @Query("DELETE FROM users WHERE id = ?")  // op defaults to OP.DEFAULT  
-     * int deleteUser(long id);  // Framework infers OP.update
+     * int deleteUser(long id);   // Framework infers OP.update
      * }</pre>
      */
     DEFAULT

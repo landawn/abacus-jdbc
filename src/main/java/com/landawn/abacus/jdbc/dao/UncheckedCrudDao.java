@@ -994,7 +994,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * user.setId(userId);
      * user.setEmail("newemail@example.com");
      * user.setPhone("555-1234");
-     * user.setAddress("123 Main St");  // This won't be updated
+     * user.setAddress("123 Main St");   // This won't be updated
      * 
      * // Only update email and phone
      * int updated = userDao.update(user, Arrays.asList("email", "phone"));
@@ -1168,7 +1168,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
 
         return upsert(entity, idPropNameList);
     }
@@ -1301,7 +1301,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -1488,7 +1488,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
@@ -1611,7 +1611,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);

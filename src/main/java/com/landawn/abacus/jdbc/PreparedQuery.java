@@ -49,7 +49,7 @@ import java.sql.PreparedStatement;
  *                                   .closeAfterExecution(false);
  * List<User> adults = reusableQuery.setInt(1, 18).list(User.class);
  * List<User> seniors = reusableQuery.setInt(1, 65).list(User.class);
- * reusableQuery.close();  // Remember to close manually
+ * reusableQuery.close();   // Remember to close manually
  * }</pre>
  * 
  * <p>This class is thread-safe only if the underlying {@code PreparedStatement} is not accessed concurrently

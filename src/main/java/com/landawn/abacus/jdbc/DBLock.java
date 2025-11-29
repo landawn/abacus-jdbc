@@ -497,7 +497,7 @@ public final class DBLock {
      * <pre>{@code
      * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "configuration_update";
-     * String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);  // Acquire lock for 30s, wait 5s
+     * String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
      *
      * if (lockCode != null) {
      *     try {

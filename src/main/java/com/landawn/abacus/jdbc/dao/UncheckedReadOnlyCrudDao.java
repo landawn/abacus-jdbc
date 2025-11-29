@@ -58,9 +58,9 @@ import com.landawn.abacus.query.SQLBuilder;
  *     .collect(Collectors.toList());
  *
  * // Write operations throw UnsupportedOperationException:
- * // userDao.insert(user);  // Throws UnsupportedOperationException
- * // userDao.update(user);  // Throws UnsupportedOperationException
- * // userDao.deleteById(id);  // Throws UnsupportedOperationException
+ * // userDao.insert(user);   // Throws UnsupportedOperationException
+ * // userDao.update(user);   // Throws UnsupportedOperationException
+ * // userDao.deleteById(id);   // Throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type

@@ -211,7 +211,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Boolean isManager = getManagerStatus();  // might return null
+     * Boolean isManager = getManagerStatus();   // might return null
      * query.setBoolean("isManager", isManager);
      * }</pre>
      *
@@ -255,7 +255,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Byte level = getUserLevel();  // might return null
+     * Byte level = getUserLevel();   // might return null
      * query.setByte("userLevel", level);
      * }</pre>
      *
@@ -299,7 +299,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Short quantity = getOrderQuantity();  // might return null
+     * Short quantity = getOrderQuantity();   // might return null
      * query.setShort("quantity", quantity);
      * }</pre>
      *
@@ -343,7 +343,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Integer managerId = getManagerId();  // might return {@code null} for CEO
+     * Integer managerId = getManagerId();   // might return {@code null} for CEO
      * query.setInt("managerId", managerId);
      * }</pre>
      *
@@ -387,7 +387,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Long transactionId = getTransactionId();  // might return null
+     * Long transactionId = getTransactionId();   // might return null
      * query.setLong("transactionId", transactionId);
      * }</pre>
      *
@@ -458,7 +458,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Float temperature = getTemperature();  // might return null
+     * Float temperature = getTemperature();   // might return null
      * query.setFloat("temperature", temperature);
      * }</pre>
      *
@@ -502,7 +502,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Double price = getProductPrice();  // might return null
+     * Double price = getProductPrice();   // might return null
      * query.setDouble("price", price);
      * }</pre>
      *
@@ -603,7 +603,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.setString("firstName", "John");
      *
      * // Setting NULL when value is absent
-     * String middleName = getMiddleName();  // might return null
+     * String middleName = getMiddleName();   // might return null
      * query.setString("middleName", middleName);
      * }</pre>
      *
@@ -659,7 +659,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Character initial = getMiddleInitial();  // might return null
+     * Character initial = getMiddleInitial();   // might return null
      * query.setString("middleInitial", initial);
      * }</pre>
      *
@@ -669,7 +669,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final Character x) throws SQLException {
-        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
+        return setString(parameterName, x == null ? (String) null : x.toString());   //NOSONAR
     }
 
     /**
@@ -1462,7 +1462,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setObject("price", 123.456789, Types.DECIMAL, 2);  // Scale to 2 decimal places
+     * query.setObject("price", 123.456789, Types.DECIMAL, 2);   // Scale to 2 decimal places
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1604,7 +1604,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *      .registerOutParameter(2, Types.DECIMAL, 2)  // For monetary values
      *      .execute();
      * 
-     * BigDecimal price = query.getBigDecimal(2);  // e.g., 123.45
+     * BigDecimal price = query.getBigDecimal(2);   // e.g., 123.45
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
@@ -1998,7 +1998,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * query.registerOutParameters(config, (q, cfg) -> {
      *     int paramIndex = 1;
-     *     q.registerOutParameter(paramIndex++, Types.VARCHAR);  // always return a status message
+     *     q.registerOutParameter(paramIndex++, Types.VARCHAR);   // always return a status message
      *
      *     if (cfg.includeTotal()) {
      *         q.registerOutParameter(paramIndex++, Types.DECIMAL);
@@ -2602,15 +2602,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * // Stored procedure that returns customer orders and order items as separate result sets
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_customer_order_details(?, ?)}")) {
      *     query.setInt(1, customerId)
-     *          .registerOutParameter(2, Types.DECIMAL);  // total amount
+     *          .registerOutParameter(2, Types.DECIMAL);   // total amount
      *
      *     Tuple2<List<Dataset>, Jdbc.OutParamResult> result =
      *         query.queryAllResultsetsAndGetOutParameters(
      *             (rs, columnLabels) -> JdbcUtil.extractResultSetToDataset(rs)
      *         );
      *
-     *     Dataset orders = result._1.get(0);  // First result set
-     *     Dataset orderItems = result._1.get(1);  // Second result set
+     *     Dataset orders = result._1.get(0);   // First result set
+     *     Dataset orderItems = result._1.get(1);   // Second result set
      *     BigDecimal totalAmount = result._2.getOutParamValue(2);
      * }
      * }</pre>
@@ -2676,7 +2676,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_sales_report(?, ?, ?)}")) {
      *     query.setDate(1, startDate)
      *          .setDate(2, endDate)
-     *          .registerOutParameter(3, Types.DECIMAL);  // grand total
+     *          .registerOutParameter(3, Types.DECIMAL);   // grand total
      *
      *     Tuple3<SalesSummary, List<SalesDetail>, Jdbc.OutParamResult> result =
      *         query.query2ResultsetsAndGetOutParameters(
@@ -2854,7 +2854,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * // Simple stored procedure returning employees
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call find_employees_by_dept(?, ?)}")) {
      *     query.setString(1, "Engineering")
-     *          .registerOutParameter(2, Types.INTEGER);  // employee count
+     *          .registerOutParameter(2, Types.INTEGER);   // employee count
      *     
      *     Tuple2<List<Employee>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(Employee.class);
@@ -2901,7 +2901,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * // Custom mapping for complex types
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_product_inventory(?, ?)}")) {
      *     query.setString(1, warehouseCode)
-     *          .registerOutParameter(2, Types.DECIMAL);  // total value
+     *          .registerOutParameter(2, Types.DECIMAL);   // total value
      *     
      *     Tuple2<List<ProductInfo>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(rs -> {
@@ -2966,7 +2966,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * // Filter and map only active accounts with balance > 1000
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_all_accounts(?)}")) {
-     *     query.registerOutParameter(1, Types.INTEGER);  // total count
+     *     query.registerOutParameter(1, Types.INTEGER);   // total count
      *     
      *     Tuple2<List<Account>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(
@@ -3032,7 +3032,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * // Dynamic mapping based on column presence
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_customer_data(?, ?)}")) {
      *     query.setInt(1, customerId)
-     *          .registerOutParameter(2, Types.VARCHAR);  // status
+     *          .registerOutParameter(2, Types.VARCHAR);   // status
      *     
      *     Tuple2<List<Map<String, Object>>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters((rs, columnLabels) -> {
@@ -3098,7 +3098,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call search_products(?, ?, ?)}")) {
      *     query.setString(1, searchTerm)
      *          .setInt(2, maxResults)
-     *          .registerOutParameter(3, Types.INTEGER);  // total matches
+     *          .registerOutParameter(3, Types.INTEGER);   // total matches
      *     
      *     Tuple2<List<Product>, Jdbc.OutParamResult> result = 
      *         query.listAndGetOutParameters(
@@ -3177,14 +3177,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * // Stored procedure that returns multiple employee groups
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_employees_by_categories(?)}")) {
-     *     query.registerOutParameter(1, Types.INTEGER);  // total count
+     *     query.registerOutParameter(1, Types.INTEGER);   // total count
      *     
      *     Tuple2<List<List<Employee>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(Employee.class);
      *     
-     *     List<Employee> managers = result._1.get(0);  // First result set
-     *     List<Employee> developers = result._1.get(1);  // Second result set
-     *     List<Employee> interns = result._1.get(2);  // Third result set
+     *     List<Employee> managers = result._1.get(0);   // First result set
+     *     List<Employee> developers = result._1.get(1);   // Second result set
+     *     List<Employee> interns = result._1.get(2);   // Third result set
      *     
      *     int totalCount = result._2.getOutParamValue(1);
      *     System.out.println("Total employees: " + totalCount);
@@ -3234,7 +3234,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * // Process multiple result sets with custom mapping
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call generate_reports(?, ?)}")) {
      *     query.setDate(1, reportDate)
-     *          .registerOutParameter(2, Types.VARCHAR);  // report status
+     *          .registerOutParameter(2, Types.VARCHAR);   // report status
      *     
      *     Tuple2<List<List<ReportRow>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(rs -> {
@@ -3295,7 +3295,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * // Filter and process only significant transactions across multiple accounts
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_all_transactions(?, ?)}")) {
      *     query.setDate(1, startDate)
-     *          .registerOutParameter(2, Types.INTEGER);  // total transactions
+     *          .registerOutParameter(2, Types.INTEGER);   // total transactions
      *     
      *     Tuple2<List<List<Transaction>>, Jdbc.OutParamResult> result = 
      *         query.listAllResultsetsAndGetOutParameters(

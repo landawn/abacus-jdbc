@@ -38,7 +38,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * // Get user by ID with join entities loaded
  * Optional<User> user = userDao.get(1L, Order.class);
- * User userWithAll = userDao.gett(1L, true);  // Load all join entities
+ * User userWithAll = userDao.gett(1L, true);   // Load all join entities
  *
  * // Batch get with join entities
  * List<User> users = userDao.batchGet(Arrays.asList(1L, 2L, 3L), Order.class);

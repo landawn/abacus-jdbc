@@ -120,10 +120,10 @@ public @interface PerfLog {
      * <pre>{@code
      * @PerfLog(filter = {"find.*", "search.*", ".*Complex.*"})
      * public interface UserDao {
-     *     User findById(Long id);  // Logged (matches "find.*")
-     *     List<User> searchByName(String name);  // Logged (matches "search.*")
-     *     void updateUser(User user);  // Not logged
-     *     List<User> executeComplexQuery();  // Logged (matches ".*Complex.*")
+     *     User findById(Long id);   // Logged (matches "find.*")
+     *     List<User> searchByName(String name);   // Logged (matches "search.*")
+     *     void updateUser(User user);   // Not logged
+     *     List<User> executeComplexQuery();   // Logged (matches ".*Complex.*")
      * }
      * }</pre>
      *

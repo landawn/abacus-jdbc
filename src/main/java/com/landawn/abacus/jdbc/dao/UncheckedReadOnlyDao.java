@@ -61,10 +61,10 @@ import com.landawn.abacus.query.SQLBuilder;
  *       .forEach(report -> System.out.println(report.get()));
  *
  * // All write operations throw UnsupportedOperationException:
- * // dao.save(report);  // throws exception
- * // dao.update(...);  // throws exception
- * // dao.delete(...);  // throws exception
- * // dao.batchSave(reports);  // throws exception
+ * // dao.save(report);   // throws exception
+ * // dao.update(...);   // throws exception
+ * // dao.delete(...);   // throws exception
+ * // dao.batchSave(reports);   // throws exception
  * }</pre>
  *
  * @param <T> the entity type

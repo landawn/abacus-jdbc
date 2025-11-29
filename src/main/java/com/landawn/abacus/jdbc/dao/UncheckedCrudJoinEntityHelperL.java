@@ -48,7 +48,7 @@ import com.landawn.abacus.util.u.Optional;
  *     Arrays.asList(Order.class, Address.class));
  * 
  * // Load all join entities for a user
- * Optional<User> fullUser = userDao.get(123L, true);  // includeAllJoinEntities = true
+ * Optional<User> fullUser = userDao.get(123L, true);   // includeAllJoinEntities = true
  * }</pre>
  * 
  * <p>All methods in this interface throw {@link UncheckedSQLException} instead of checked exceptions,
@@ -79,7 +79,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * 
      * if (userWithOrders.isPresent()) {
      *     User user = userWithOrders.get();
-     *     List<Order> orders = user.getOrders();  // Orders are already loaded
+     *     List<Order> orders = user.getOrders();   // Orders are already loaded
      * }
      * }</pre>
      *
@@ -195,12 +195,12 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * // Fetch minimal user data with all relationships
      * Optional<User> user = userDao.get(123L,
      *     Arrays.asList("id", "name"),
-     *     true);  // Load all join entities
+     *     true);   // Load all join entities
      * 
      * // Fetch complete user data without relationships  
      * Optional<User> userOnly = userDao.get(123L,
      *     {@code null}, // Select all properties
-     *     false);  // Don't load join entities
+     *     false);   // Don't load join entities
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
@@ -230,7 +230,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * // Get a user with orders loaded
      * User user = userDao.gett(123L, Order.class);
      * if (user != null) {
-     *     List<Order> orders = user.getOrders();  // Orders are already loaded
+     *     List<Order> orders = user.getOrders();   // Orders are already loaded
      * }
      * }</pre>
      *
@@ -378,7 +378,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * // Get minimal user data but with all relationships
      * User user = userDao.gett(123L,
      *     Arrays.asList("id", "name"), // Only these fields
-     *     true);  // But load all join entities
+     *     true);   // But load all join entities
      *
      * if (user != null) {
      *     // Process user with all relationships
@@ -387,7 +387,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * // Get complete user data without any relationships
      * User userOnly = userDao.gett(123L,
      *     {@code null}, // All fields
-     *     false);  // No join entities
+     *     false);   // No join entities
      * }</pre>
      *
      * @param id The primary key value of the entity to retrieve
