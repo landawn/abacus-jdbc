@@ -2055,10 +2055,10 @@ public final class JdbcUtil {
      * // For a query: "SELECT user_id, user_name AS name FROM users"
      * ResultSet rs = ...;
      *
-     * int indexByName = JdbcUtil.getColumnIndex(rs, "user_id");  // Returns 1
-     * int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");  // Returns 2
-     * int caseInsensitiveIndex = JdbcUtil.getColumnIndex(rs, "USERNAME");  // Still returns 2 if "user_name" is the original name
-     * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email");  // Returns -1
+     * int indexByName = JdbcUtil.getColumnIndex(rs, "user_id");             // Returns 1
+     * int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");               // Returns 2
+     * int caseInsensitiveIndex = JdbcUtil.getColumnIndex(rs, "USERNAME");   // Still returns 2 if "user_name" is the original name
+     * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email");             // Returns -1
      * }</pre>
      *
      * @param resultSet The {@link ResultSet} to search within.
@@ -2080,9 +2080,9 @@ public final class JdbcUtil {
      * ResultSetMetaData metaData = rs.getMetaData();
      * // For a query: "SELECT user_id, user_name AS name FROM users"
      *
-     * int indexByLabel = JdbcUtil.getColumnIndex(metaData, "name");  // Returns 2
-     * int indexByName = JdbcUtil.getColumnIndex(metaData, "user_id");  // Returns 1
-     * int notFoundIndex = JdbcUtil.getColumnIndex(metaData, "address");  // Returns -1
+     * int indexByLabel = JdbcUtil.getColumnIndex(metaData, "name");       // Returns 2
+     * int indexByName = JdbcUtil.getColumnIndex(metaData, "user_id");     // Returns 1
+     * int notFoundIndex = JdbcUtil.getColumnIndex(metaData, "address");   // Returns -1
      * }</pre>
      *
      * @param rsmd The {@link ResultSetMetaData} to search within.
@@ -2569,8 +2569,8 @@ public final class JdbcUtil {
      * // Assuming User class has fields like 'userId' and 'userName' mapped to columns 'user_id' and 'user_name'
      * ImmutableMap<String, String> columnToFieldMap = JdbcUtil.getColumn2FieldNameMap(User.class);
      *
-     * System.out.println(columnToFieldMap.get("user_id"));  // Output: userId
-     * System.out.println(columnToFieldMap.get("user_name"));  // Output: userName
+     * System.out.println(columnToFieldMap.get("user_id"));     // Output: userId
+     * System.out.println(columnToFieldMap.get("user_name"));   // Output: userName
      * }</pre>
      *
      * @param entityClass The entity class to analyze for column-to-field mappings.
@@ -8150,8 +8150,8 @@ public final class JdbcUtil {
      * <pre>{@code
      * String sql = "SELECT * FROM users WHERE name = :name AND age > ?";
      * ParsedSql parsedSql = JdbcUtil.parseSql(sql);
-     * List<String> namedParams = parsedSql.getNamedParameters();  // ["name"]
-     * String convertedSql = parsedSql.getParameterizedSql();  // SQL with named params converted to ?
+     * List<String> namedParams = parsedSql.getNamedParameters();   // ["name"]
+     * String convertedSql = parsedSql.getParameterizedSql();       // SQL with named params converted to ?
      * }</pre>
      *
      * @param sql the SQL string to be parsed
@@ -8476,11 +8476,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.isNullOrDefault(null);  // true
-     * JdbcUtil.isNullOrDefault(0);  // true
-     * JdbcUtil.isNullOrDefault(false);  // true
-     * JdbcUtil.isNullOrDefault("");  // {@code false} (empty string is not default)
-     * JdbcUtil.isNullOrDefault(1);  // false
+     * JdbcUtil.isNullOrDefault(null);    // true
+     * JdbcUtil.isNullOrDefault(0);       // true
+     * JdbcUtil.isNullOrDefault(false);   // true
+     * JdbcUtil.isNullOrDefault("");      // {@code false} (empty string is not default)
+     * JdbcUtil.isNullOrDefault(1);       // false
      * }</pre>
      *
      * @param value the value to check

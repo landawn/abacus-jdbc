@@ -221,8 +221,8 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> largeUserList = loadUsers();  // 10000 users
-     * List<Long> ids = userDao.batchInsert(largeUserList, 1000);  // Process in batches of 1000
+     * List<User> largeUserList = loadUsers();                      // 10000 users
+     * List<Long> ids = userDao.batchInsert(largeUserList, 1000);   // Process in batches of 1000
      * }</pre>
      *
      * @param entities the collection of entities to insert

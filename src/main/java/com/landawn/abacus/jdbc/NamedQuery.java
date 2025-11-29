@@ -1529,8 +1529,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * java.util.Date date = new java.util.Date();  // Current date and time
-     * query.setTime("startTime", date);  // Only time portion is used
+     * java.util.Date date = new java.util.Date();   // Current date and time
+     * query.setTime("startTime", date);             // Only time portion is used
      *
      * // Using Calendar
      * Calendar cal = Calendar.getInstance();

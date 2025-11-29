@@ -1416,9 +1416,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setObject("value", 123);  // Integer
-     * query.setObject("name", "John");  // String
-     * query.setObject("data", customObject);  // Custom object
+     * query.setObject("value", 123);           // Integer
+     * query.setObject("name", "John");         // String
+     * query.setObject("data", customObject);   // Custom object
      * }</pre>
      *
      * @param parameterName the name of the parameter

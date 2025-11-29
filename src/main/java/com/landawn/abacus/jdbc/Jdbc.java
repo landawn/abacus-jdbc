@@ -797,7 +797,7 @@ public final class Jdbc {
          * // Counts the number of items per category, storing results in a TreeMap.
          * ResultExtractor<TreeMap<String, Long>> extractor = ResultExtractor.groupTo(
          * rs -> rs.getString("category"),
-         * rs -> rs.getInt("item_id"), // Value extractor can be anything, it's just for the collector
+         * rs -> rs.getInt("item_id");, // Value extractor can be anything, it's just for the collector
          * Collectors.counting(),
          * TreeMap::new
          * );
@@ -1098,8 +1098,8 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
-         * rs -> rs.getInt("status") > 0,      // Filter for positive status
-         * RowExtractor.createBy(User.class)   // Use User class for type info
+         * rs -> rs.getInt("status");           // Filter for positive status
+         * RowExtractor.createBy(User.class);   // Use User class for type info
          * );
          * }</pre>
          *
@@ -1509,7 +1509,7 @@ public final class Jdbc {
          * <pre>{@code
          * BiResultExtractor<TreeMap<String, Long>> extractor = BiResultExtractor.groupTo(
          * (rs, cols) -> rs.getString("category"),
-         * (rs, cols) -> rs.getInt("count"), // Value extractor provides input to collector
+         * (rs, cols) -> rs.getInt("count");, // Value extractor provides input to collector
          * Collectors.counting(),
          * TreeMap::new
          * );
@@ -1589,7 +1589,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(
-         * (rs, cols) -> rs.getInt("age") >= 18,  // Filter for adults
+         * (rs, cols) -> rs.getInt("age"); >= 18,  // Filter for adults
          * (rs, cols) -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
@@ -2798,7 +2798,7 @@ public final class Jdbc {
          * <pre>{@code
          * BiRowMapper<User> mapper = BiRowMapper.to(
          * User.class,
-         * colName -> !colName.startsWith("temp_"),  // Filter out temporary columns
+         * colName -> !colName.startsWith("temp_");,  // Filter out temporary columns
          * String::toLowerCase                      // Convert column names to lowercase before matching
          * );
          * }</pre>

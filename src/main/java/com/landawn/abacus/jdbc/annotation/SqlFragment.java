@@ -120,8 +120,8 @@ public @interface SqlFragment {
      * List<User> findUsers(@SqlFragment("{filter -> WHERE active = true}") String customFilter);
      * 
      * // Usage:
-     * findUsers("WHERE role = 'ADMIN'");  // Replaces the entire {filter -> ...} block
-     * findUsers(null);  // Uses the default "WHERE active = true"
+     * findUsers("WHERE role = 'ADMIN'");   // Replaces the entire {filter -> ...} block
+     * findUsers(null);                     // Uses the default "WHERE active = true"
      * }</pre>
      * 
      * <p>Using parameter name when value is empty:</p>

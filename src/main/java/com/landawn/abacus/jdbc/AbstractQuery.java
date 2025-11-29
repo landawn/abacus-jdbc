@@ -515,8 +515,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Integer age = user.getAge();  // might be null
-     * query.setInt(1, age);  // handles {@code null} automatically
+     * Integer age = user.getAge();   // might be null
+     * query.setInt(1, age);          // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -618,8 +618,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Character grade = getGrade();  // might be null
-     * query.setInt(1, grade);  // stores as integer or NULL
+     * Character grade = getGrade();   // might be null
+     * query.setInt(1, grade);         // stores as integer or NULL
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -801,8 +801,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Float percentage = calculatePercentage();  // might return null
-     * query.setFloat(1, percentage);  // handles {@code null} automatically
+     * Float percentage = calculatePercentage();   // might return null
+     * query.setFloat(1, percentage);              // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -899,8 +899,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Double amount = calculateAmount();  // might return null
-     * query.setDouble(1, amount);  // handles {@code null} automatically
+     * Double amount = calculateAmount();   // might return null
+     * query.setDouble(1, amount);          // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
@@ -1100,8 +1100,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Character initial = user.getMiddleInitial();  // might be null
-     * query.setString(1, initial);  // handles {@code null} automatically
+     * Character initial = user.getMiddleInitial();   // might be null
+     * query.setString(1, initial);                   // handles {@code null} automatically
      * }</pre>
      *
      * @param parameterIndex the index of the parameter to set, starting from 1
