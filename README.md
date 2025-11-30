@@ -17,9 +17,9 @@ This library focuses on three main aspects:
 String query = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?";
 
 // Or by SQLBuilder
-String query = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(CF.eq("firstName")).sql();
+String query = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(Filters.eq("firstName")).sql();
 // Or if select all columns from user:
-String query = PSC.selectFrom(User.class).where(CF.eq("firstName")).sql();
+String query = PSC.selectFrom(User.class).where(Filters.eq("firstName")).sql();
 
 // Sql scripts can also be placed in sql mapper xml file and then associated with a DAO object.
 UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
@@ -86,7 +86,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
 
     static final class SqlTable {
         @SqlField
-        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(CF.eq("first")).sql();
+        static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(Filters.eq("first")).sql();
     }
 }
 
@@ -98,7 +98,7 @@ UserDao userDao =  JdbcUtil.createDao(UserDao.class, dataSource, ...);
 [Dao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dao_view.html)/[CrudDao](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/CrudDao_view.html)/[JoinEntityHelper](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JoinEntityHelper_view.html), 
 [Jdbc](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Jdbc_view.html),
 [Dataset](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Dataset_view.html), 
-[ConditionFactory(CF)](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/ConditionFactory_view.html), 
+[Filters](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/Filters_view.html), 
 [JdbcUtil](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtil_view.html),
 [JdbcUtils](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/JdbcUtils_view.html).
 
