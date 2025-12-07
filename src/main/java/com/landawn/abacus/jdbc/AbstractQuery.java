@@ -4742,6 +4742,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the first non-null value from the result set as the specified type.
+     * <br />
+     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4758,9 +4760,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
+     * @throws NullPointerException if a null value is encountered in the result set
      */
     public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, SQLException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4769,6 +4772,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the first non-null value from the result set using a custom Type handler.
+     * <br />
+     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4784,8 +4789,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
+     * @throws NullPointerException if a null value is encountered in the result set
      */
-    public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+    public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetValueType)
+            throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4865,7 +4872,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the unique non-null result value as the specified type.
-     * Throws DuplicatedResultException if more than one row is found.
+     * <br />
+     * If more than one row is found, a DuplicatedResultException is thrown.
+     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4882,9 +4891,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws DuplicatedResultException If more than one row is found
      * @throws SQLException if a database access error occurs
+     * @throws NullPointerException if a null value is encountered in the result set
      */
     public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
+            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4893,7 +4903,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the unique non-null result value using a custom Type handler.
-     * Throws DuplicatedResultException if more than one row is found.
+     * <br />
+     * If more than one row is found, a DuplicatedResultException is thrown.
+     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4910,9 +4922,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws DuplicatedResultException If more than one row is found
      * @throws SQLException if a database access error occurs
+     * @throws NullPointerException if a null value is encountered in the result set
      */
     public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
+            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
