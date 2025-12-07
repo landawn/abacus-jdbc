@@ -17,7 +17,7 @@ package com.landawn.abacus.jdbc;
 /**
  * Archive class containing historical SQL execution implementation.
  *
- * <p>This class has been deprecated and replaced by {@link JdbcUtil#prepareQuery}, {@link JdbcUtil#prepareUpdate},
+ * <p>This class has been deprecated and replaced by {@link AbstractQuery}, {@link PreparedQuery}, {@link NamedQuery},
  * and DAO interfaces. It is retained for historical reference only and should not be used in new code.</p>
  *
  * <p>The commented code in this class represents a comprehensive SQL executor that was previously
@@ -81,9 +81,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p>For current JDBC operations, use:</p>
  * <ul>
- *   <li>{@link JdbcUtil#prepareQuery} - for SELECT queries</li>
- *   <li>{@link JdbcUtil#prepareUpdate} - for INSERT, UPDATE, DELETE operations</li>
- *   <li>{@link JdbcUtil#prepareBatch} - for batch operations</li>
+ *   <li>{@link JdbcUtil#prepareQuery} - for SELECT/UPDATE/DELETE queries</li>
  *   <li>{@link JdbcUtil#createDao} - for DAO-based data access</li>
  *   <li>{@link JdbcUtil#beginTransaction} - for transaction management</li>
  * </ul>
