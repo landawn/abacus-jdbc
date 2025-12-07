@@ -57,7 +57,7 @@ import com.landawn.abacus.util.N;
  * 
  * <p>The backed {@code PreparedStatement/CallableStatement} will be closed by default
  * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, 
- * for example: get/query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
+ * for example: query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
  * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
  * <p>Generally, don't cache or reuse the instance of this class,

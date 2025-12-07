@@ -211,7 +211,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li><b>Update Operations:</b> {@code executeUpdate()}, {@code prepareQuery()}, {@code insert()}, {@code update()}, {@code delete()}</li>
  *   <li><b>Batch Operations:</b> {@code executeBatch()}, {@code prepareQuery()}, {@code batchInsert()}, {@code batchUpdate()}</li>
  *   <li><b>Transaction Support:</b> {@code beginTransaction()}, {@code runInTransaction()}, {@code asyncRunInTransaction()}</li>
- *   <li><b>DAO Creation:</b> {@code createDao()}, {@code createCrudDao()}, {@code createReadOnlyDao()}</li>
+ *   <li><b>DAO Creation:</b> {@code createDao()}</li>
  * </ul>
  *
  * <p><b>Common Usage Patterns:</b>

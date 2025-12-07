@@ -101,7 +101,7 @@ import com.landawn.abacus.util.stream.Stream;
  * </ul>
  *
  * <p>By default, the underlying {@code PreparedStatement} or {@code CallableStatement} is closed
- * immediately after any execution method is invoked (such as {@code get}, {@code query},
+ * immediately after any execution method is invoked (such as {@code query},
  * {@code queryForInt}, {@code queryForLong}, {@code findFirst}, {@code findOnlyOne},
  * {@code list}, {@code execute}, and similar), regardless of whether the call completes
  * normally or throws an exception. To keep the statement open, invoke
