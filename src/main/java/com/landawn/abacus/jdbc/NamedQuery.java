@@ -73,7 +73,7 @@ import com.landawn.abacus.util.N;
  * try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, sql)) {
  *     List<User> users = query.setString("name", "John")
  *                             .setInt("age", 25)
- *                             .query(ResultExtractor.toList(User.class));
+ *                             .query(Jdbc.ResultExtractor.toList(User.class));
  * }
  * }</pre>
  *

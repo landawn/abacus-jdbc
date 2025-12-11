@@ -118,8 +118,8 @@ import com.landawn.abacus.util.stream.Stream;
  * <pre>{@code
  * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
- *     userDao.getById(id);
- *     userDao.update(...);
+ *     User user = userDao.gett(id);
+ *     userDao.update(user);
  *     tran.commit();
  * } finally {
  *     tran.rollbackIfNotCommitted();
@@ -1687,6 +1687,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return list of property values
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
@@ -1891,6 +1892,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) {
+        @SuppressWarnings("deprecation")
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
@@ -2159,6 +2161,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
         forEach(selectPropNames, cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
@@ -2172,6 +2175,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowConsumer consumer that receives reusable row array
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws SQLException {
         forEach(cond, Jdbc.RowConsumer.oneOff(targetEntityClass(), rowConsumer));
@@ -2367,6 +2371,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param sqlAction function that performs database operations
      * @return ContinuableFuture with the operation result
      */
+    @SuppressWarnings("deprecation")
     @Beta
     @NonDBOperation
     default <R> ContinuableFuture<R> asyncCall(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) {
@@ -2418,6 +2423,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param sqlAction consumer that performs database operations
      * @return ContinuableFuture that completes when operation finishes
      */
+    @SuppressWarnings("deprecation")
     @Beta
     @NonDBOperation
     default ContinuableFuture<Void> asyncRun(final Throwables.Consumer<? super TD, SQLException> sqlAction) {

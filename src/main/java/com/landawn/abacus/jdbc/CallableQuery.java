@@ -2606,7 +2606,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      *     Tuple2<List<Dataset>, Jdbc.OutParamResult> result =
      *         query.queryAllResultsetsAndGetOutParameters(
-     *             (rs, columnLabels) -> JdbcUtil.extractResultSetToDataset(rs)
+     *             (rs, columnLabels) -> JdbcUtil.extractData(rs)
      *         );
      *
      *     Dataset orders = result._1.get(0);   // First result set

@@ -537,7 +537,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+        @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
+        @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
@@ -584,7 +586,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+        @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
+        @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
@@ -731,6 +735,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -809,6 +814,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -861,6 +867,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param entity the entity for which to load all join entities
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default void loadAllJoinEntities(final T entity) throws SQLException {
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
@@ -880,6 +887,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadAllJoinEntities(final T entity, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -904,6 +912,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
@@ -923,6 +932,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param entities the collection of entities for which to load all join entities
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default void loadAllJoinEntities(final Collection<T> entities) throws SQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -946,6 +956,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -970,6 +981,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws SQLException {
         if (N.isEmpty(entities)) {
@@ -1016,7 +1028,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws SQLException if a database access error occurs
      */
     default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+        @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
+        @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
@@ -1068,7 +1082,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return;
         }
 
+        @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
+        @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
@@ -1219,6 +1235,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntitiesIfNull(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -1299,6 +1316,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
             throws SQLException {
@@ -1353,6 +1371,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param entity the entity for which to load join entities
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default void loadJoinEntitiesIfNull(final T entity) throws SQLException {
         loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
@@ -1372,6 +1391,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntitiesIfNull(final T entity, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -1396,6 +1416,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntitiesIfNull(final T entity, final Executor executor) throws SQLException {
         loadJoinEntitiesIfNull(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
@@ -1415,6 +1436,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param entities the collection of entities for which to load join entities
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default void loadJoinEntitiesIfNull(final Collection<T> entities) throws SQLException {
         if (N.isEmpty(entities)) {
             return;
@@ -1438,6 +1460,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final boolean inParallel) throws SQLException {
         if (inParallel) {
@@ -1462,6 +1485,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param executor the executor to use for parallel loading
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     @Beta
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Executor executor) throws SQLException {
         if (N.isEmpty(entities)) {
@@ -1497,7 +1521,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws SQLException if a database access error occurs
      */
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
+        @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
+        @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
@@ -1540,7 +1566,9 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @throws SQLException if a database access error occurs
      */
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+        @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
+        @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
@@ -1835,6 +1863,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default int deleteAllJoinEntities(final T entity) throws SQLException {
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
@@ -1904,6 +1933,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @return the total number of deleted records
      * @throws SQLException if a database access error occurs
      */
+    @SuppressWarnings("deprecation")
     default int deleteAllJoinEntities(final Collection<T> entities) throws SQLException {
         if (N.isEmpty(entities)) {
             return 0;

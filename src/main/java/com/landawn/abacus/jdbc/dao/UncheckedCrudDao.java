@@ -305,8 +305,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalBoolean containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForBoolean()
      */
     @Override
@@ -327,8 +325,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalChar containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForChar()
      */
     @Override
@@ -349,8 +345,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalByte containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForByte()
      */
     @Override
@@ -371,8 +365,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalShort containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForShort()
      */
     @Override
@@ -393,8 +385,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalInt containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForInt()
      */
     @Override
@@ -415,8 +405,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalLong containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForLong()
      */
     @Override
@@ -437,8 +425,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalFloat containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForFloat()
      */
     @Override
@@ -459,8 +445,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return an OptionalDouble containing the value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForDouble()
      */
     @Override
@@ -481,8 +465,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the String value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForString()
      */
     @Override
@@ -503,8 +485,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the Date value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForDate()
      */
     @Override
@@ -525,8 +505,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the Time value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForTime()
      */
     @Override
@@ -547,8 +525,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the Timestamp value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForTimestamp()
      */
     @Override
@@ -569,8 +545,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @return a Nullable containing the byte array value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForBytes()
      */
     @Override
@@ -594,8 +568,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param targetValueClass the class of the target value type
      * @return a Nullable containing the converted value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     @Override
@@ -618,8 +590,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param targetValueClass the class of the target value type
      * @return an Optional containing the non-null value, or empty if no entity found or value is null
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -644,8 +614,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the non-null mapped value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -669,8 +637,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return a Nullable containing the unique result value, or empty if no entity found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
@@ -697,8 +663,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return an Optional containing the unique non-null value, or empty if no entity found or value is null
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -725,8 +689,6 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @return an Optional containing the unique non-null mapped value, or empty if no entity found
      * @throws DuplicatedResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see Filters
-     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override

@@ -2437,7 +2437,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setParameters("John Doe", 25, LocalDate.now(), {@code true}, new BigDecimal("50000.00"))
+     * query.setParameters("John Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"))
      *      .list(Employee.class);
      * }</pre>
      *
@@ -2465,7 +2465,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setParameters("John Doe", 25, LocalDate.now(), {@code true}, new BigDecimal("50000.00"), "IT")
+     * query.setParameters("John Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT")
      *      .list(Employee.class);
      * }</pre>
      *
@@ -2496,7 +2496,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setParameters("John", "Doe", 25, LocalDate.now(), {@code true}, new BigDecimal("50000.00"), "IT")
+     * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT")
      *      .list(Employee.class);
      * }</pre>
      *
@@ -2529,7 +2529,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setParameters("John", "Doe", 25, LocalDate.now(), {@code true}, new BigDecimal("50000.00"), "IT", "Manager")
+     * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT", "Manager")
      *      .list(Employee.class);
      * }</pre>
      *
@@ -2564,7 +2564,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setParameters("John", "Doe", 25, LocalDate.now(), {@code true}, new BigDecimal("50000.00"), "IT", "Manager", LocalDateTime.now())
+     * query.setParameters("John", "Doe", 25, LocalDate.now(), true, new BigDecimal("50000.00"), "IT", "Manager", LocalDateTime.now())
      *      .list(Employee.class);
      * }</pre>
      *
@@ -6241,6 +6241,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.RowMapper
      * @see #list(Jdbc.BiRowMapper)
      */
+    @SuppressWarnings("deprecation")
     public <T> List<T> list(final Jdbc.RowMapper<? extends T> rowMapper) throws SQLException {
         return list(rowMapper, Integer.MAX_VALUE);
     }
@@ -6395,6 +6396,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.BiRowMapper
      * @see #list(Jdbc.RowMapper)
      */
+    @SuppressWarnings("deprecation")
     public <T> List<T> list(final Jdbc.BiRowMapper<? extends T> rowMapper) throws SQLException {
         return list(rowMapper, Integer.MAX_VALUE);
     }

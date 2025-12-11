@@ -72,7 +72,7 @@ import com.landawn.abacus.util.Strings;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Initialize DBLock with a DataSource and a table name
- * DBLock dbLock = new DBLock(dataSource, "app_distributed_locks");
+ * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "app_distributed_locks");
  *
  * String resourceId = "inventory_item_123";
  * long lockLiveTimeMillis = 60 * 1000;  // Lock for 1 minute
@@ -268,7 +268,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "report_generation_task";
      *
      * String lockCode = dbLock.lock(resourceIdentifier);
@@ -312,7 +312,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "data_export_job";
      * long customTimeout = 15 * 1000;  // Wait up to 15 seconds
      *
@@ -355,7 +355,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "batch_processing_queue";
      * long lockDuration = 10 * 60 * 1000;  // Lock for 10 minutes
      * long waitTimeout = 30 * 1000;  // Wait up to 30 seconds to acquire
@@ -400,7 +400,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "inventory_update_process";
      * long lockDuration = 5 * 60 * 1000;  // Lock for 5 minutes
      * long acquisitionTimeout = 10 * 1000;  // Wait up to 10 seconds
@@ -495,7 +495,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * String resourceIdentifier = "configuration_update";
      * String lockCode = dbLock.lock(resourceIdentifier, 30000, 5000);   // Acquire lock for 30s, wait 5s
      *
@@ -550,7 +550,7 @@ public final class DBLock {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock dbLock = new DBLock(dataSource, "my_locks_table");
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table");
      * try {
      *     // Perform operations using the DBLock instance
      *     String lockCode = dbLock.lock("some_resource");
