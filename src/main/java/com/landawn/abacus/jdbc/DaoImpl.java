@@ -5015,8 +5015,8 @@ final class DaoImpl {
                     final OP op = queryInfo.op;
                     final boolean isSingleParameter = queryInfo.isSingleParameter;
                     final boolean isProcedure = queryInfo.isProcedure;
-                    final boolean isUpdate = queryInfo.isSelect || queryInfo.isInsert ? false
-                            : (op == OP.update || op == OP.largeUpdate || (op == OP.DEFAULT && isUpdateReturnType));
+                    final boolean isUpdate =
+                            !queryInfo.isSelect && !queryInfo.isInsert && (op == OP.update || op == OP.largeUpdate || (op == OP.DEFAULT && isUpdateReturnType));
 
                     final boolean isQuery = queryInfo.isSelect
                             || (isProcedure && !(op == OP.update || op == OP.largeUpdate) && (op != OP.DEFAULT || !isUpdateReturnType));
