@@ -27,7 +27,6 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
@@ -36,6 +35,9 @@ import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.SQLBuilder.NSC;
+import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.samples.dao.AddressDao;
 import com.landawn.abacus.samples.dao.DeviceDao;
 import com.landawn.abacus.samples.dao.EmployeeDao;
@@ -54,8 +56,6 @@ import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.query.SQLBuilder.NSC;
-import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -174,7 +174,7 @@ public class JdbcTest {
                     CREATE TABLE IF NOT EXISTS project (\
                     project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
                     title varchar(50) DEFAULT NULL, \
-                    start_date datetime)
+                    start_date timestamp)
                     """;
 
             JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);
