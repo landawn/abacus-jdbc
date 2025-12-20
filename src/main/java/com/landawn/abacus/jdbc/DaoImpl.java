@@ -262,7 +262,7 @@ final class DaoImpl {
             }
 
             if (N.notEmpty(tmp.id()) && Stream.of(tmp.id()).anyMatch(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches())) {
-                throw new IllegalArgumentException("Invalid query identifiers. Query ids don't match java identitfier specification: "
+                throw new IllegalArgumentException("Invalid query identifiers. Query IDs don't match Java identifier specification: "
                         + Stream.of(tmp.id()).filter(it -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(it).matches()).toList());
             }
 
@@ -274,7 +274,7 @@ final class DaoImpl {
 
             if (Strings.isNotEmpty(id)) {
                 if (sqlMapper == null || sqlMapper.get(id) == null || Strings.isEmpty(sqlMapper.get(id).getParameterizedSql())) {
-                    throw new IllegalArgumentException("No predefined sql found by id: " + id);
+                    throw new IllegalArgumentException("No predefined SQL found by id: " + id);
                 }
 
                 parsedSql = sqlMapper.get(id);
@@ -1787,7 +1787,7 @@ final class DaoImpl {
 
         if (Stream.of(newSQLMapper.keySet()).anyMatch(key -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(key).matches())) {
             throw new IllegalArgumentException(
-                    "Invalid query identifiers for Dao interface: " + daoClassName + ". Query ids don't match java identitfier specification: "
+                    "Invalid query identifiers for DAO interface: " + daoClassName + ". Query IDs don't match Java identifier specification: "
                             + Stream.of(newSQLMapper.keySet()).filter(key -> !RegExUtil.JAVA_IDENTIFIER_MATCHER.matcher(key).matches()).toList());
         }
 

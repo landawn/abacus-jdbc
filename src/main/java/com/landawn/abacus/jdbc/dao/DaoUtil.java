@@ -269,7 +269,7 @@ final class DaoUtil {
         if (dao instanceof CrudDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extend interface JoinEntityHelper");   //NOSONAR
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement CrudDao interface");   //NOSONAR
         }
     }
 
@@ -305,7 +305,7 @@ final class DaoUtil {
         if (dao instanceof Dao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extend interface JoinEntityHelper");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement Dao interface");
         }
     }
 
@@ -341,7 +341,7 @@ final class DaoUtil {
         if (dao instanceof UncheckedDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extend interface JoinEntityHelper");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement UncheckedDao interface");
         }
     }
 
@@ -378,7 +378,7 @@ final class DaoUtil {
         if (dao instanceof UncheckedCrudDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't extend interface JoinEntityHelper");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement UncheckedCrudDao interface");
         }
     }
 

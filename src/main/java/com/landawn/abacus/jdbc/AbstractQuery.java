@@ -9536,7 +9536,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 close();
             } catch (final Exception e) {
-                JdbcUtil.logger.error("Failed to close PreparedQuery", e);
+                JdbcUtil.logger.error("Failed to close Query", e);
                 iae.addSuppressed(e);
             }
 
@@ -9561,7 +9561,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 close();
             } catch (final Exception e) {
-                JdbcUtil.logger.error("Failed to close PreparedQuery", e);
+                JdbcUtil.logger.error("Failed to close Query", e);
                 iae.addSuppressed(e);
             }
 
@@ -9666,7 +9666,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 stmt.setQueryTimeout(defaultQueryTimeout);
             }
         } catch (final SQLException e) {
-            logger.warn("failed to reset statement", e);
+            logger.warn("Failed to reset statement", e);
         } finally {
             JdbcUtil.closeQuietly(stmt);
         }

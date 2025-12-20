@@ -215,16 +215,16 @@ public final class JoinInfo {
             throw new IllegalArgumentException(
                     "No property found by name: '" + joinEntityPropName + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
         } else if (!joinPropInfo.isAnnotationPresent(JoinedBy.class)) {
-            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not annotated by @JoinedBy");
+            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + " is not annotated with @JoinedBy");
         } else if (joinPropInfo.columnName.isPresent()) {
-            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is annotated by @Column");
+            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + " cannot be annotated with @Column");
         }
 
         referencedEntityType = joinPropInfo.type.isMap() ? joinPropInfo.type.getParameterTypes()[1]
                 : (joinPropInfo.type.isCollection() ? joinPropInfo.type.getElementType() : joinPropInfo.type);
 
         if (!referencedEntityType.isBean()) {
-            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + entityClass + " is not an entity type");
+            throw new IllegalArgumentException("Property '" + joinPropInfo.name + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + " is not an entity type");
         }
 
         referencedEntityClass = referencedEntityType.clazz();
@@ -236,7 +236,7 @@ public final class JoinInfo {
 
         if (Strings.isEmpty(joinByVal)) {
             throw new IllegalArgumentException(
-                    "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
+                    "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
         }
 
         final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
@@ -263,12 +263,12 @@ public final class JoinInfo {
 
             if ((srcPropInfos[0] = entityInfo.getPropInfo(left[0])) == null) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass + ". No property found with name: '" + left[0] + "' in the class: " + entityClass);
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + left[0] + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
             }
 
             if ((referencedPropInfos[0] = referencedBeanInfo.getPropInfo(right[1])) == null) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in class: " + entityClass + ". No referenced property found with name: '" + right[1] + "' in the class: " + referencedEntityClass);
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No referenced property found with name: '" + right[1] + "' in referenced class: " + ClassUtil.getCanonicalClassName(referencedEntityClass));
             }
 
             final String middleEntity = left[1].substring(0, left[1].indexOf('.'));
@@ -287,12 +287,12 @@ public final class JoinInfo {
                 tmpMiddleEntityClass = ClassUtil.forClass(middleEntityClassName);
             } catch (final Throwable e) {
                 throw new IllegalArgumentException(
-                        "For many to many mapping/join, the join entity class is required but it's not defined or found by name: " + middleEntityClassName, e);
+                        "For many-to-many join, the intermediate entity class is required but not found: " + middleEntityClassName, e);
             }
 
             if (tmpMiddleEntityClass == null) {
                 throw new IllegalArgumentException(
-                        "For many to many mapping/join, the join entity class is required but it's not defined or found by name: " + middleEntityClassName);
+                        "For many-to-many join, the intermediate entity class is required but not found: " + middleEntityClassName);
             }
 
             final Class<?> middleEntityClass = tmpMiddleEntityClass;
@@ -301,7 +301,7 @@ public final class JoinInfo {
             if (!ClassUtil.wrap(srcPropInfos[0].clazz).equals(ClassUtil.wrap(middleEntityInfo.getPropInfo(left[1]).clazz))
                     || !ClassUtil.wrap(referencedPropInfos[0].clazz).equals(ClassUtil.wrap(middleEntityInfo.getPropInfo(right[0]).clazz))) {
                 throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in the class: " + entityClass + ". The types of source property and referenced are not same: " + Stream
+                        + "' in the class: " + entityClass + ". The types of source property and referenced do not match: " + Stream
                                 .of(srcPropInfos[0].clazz, middleEntityInfo.getPropInfo(left[1]).clazz, referencedPropInfos[0].clazz,
                                         middleEntityInfo.getPropInfo(right[0]).clazz)
                                 .map(ClassUtil::getSimpleClassName)
@@ -471,23 +471,23 @@ public final class JoinInfo {
 
                 if (tmp.length > 2) {
                     throw new IllegalArgumentException(
-                            "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + entityClass);
+                            "Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
                 }
 
                 if ((srcPropInfos[i] = entityInfo.getPropInfo(tmp[0])) == null) {
                     throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                            + "' in class: " + entityClass + ". No property found with name: '" + tmp[0] + "' in the class: " + entityClass);
+                            + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + tmp[0] + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
                 }
 
                 if ((referencedPropInfos[i] = referencedBeanInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
                     throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                            + "' in class: " + entityClass + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1])
-                            + "' in the class: " + referencedEntityClass);
+                            + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No referenced property found with name: '" + (tmp.length == 1 ? tmp[0] : tmp[1])
+                            + "' in referenced class: " + ClassUtil.getCanonicalClassName(referencedEntityClass));
                 }
 
                 if (!ClassUtil.wrap(srcPropInfos[i].clazz).equals(ClassUtil.wrap(referencedPropInfos[i].clazz))) {
                     throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                            + "' in the class: " + entityClass + ". The types of source property and referenced are not same: "
+                            + "' in the class: " + entityClass + ". The types of source property and referenced do not match: "
                             + Stream.of(srcPropInfos[i].clazz, referencedPropInfos[i].clazz).map(ClassUtil::getSimpleClassName).toList());
                 }
 

@@ -108,7 +108,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         parameterCount = namedSql.getParameterCount();
 
         if (N.size(namedSql.getNamedParameters()) != parameterCount) {
-            throw new IllegalArgumentException("Invalid named sql: " + namedSql.sql());
+            throw new IllegalArgumentException("Invalid named SQL: " + namedSql.sql());
         }
     }
 
@@ -154,7 +154,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);   //NOSONAR
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);   //NOSONAR
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -165,7 +165,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNull(indexes.get(0), sqlType);
@@ -219,7 +219,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -230,7 +230,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNull(indexes.get(0), sqlType, typeName);
@@ -281,7 +281,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -292,7 +292,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBoolean(indexes.get(0), x);
@@ -369,7 +369,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -380,7 +380,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setByte(indexes.get(0), x);
@@ -457,7 +457,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -468,7 +468,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setShort(indexes.get(0), x);
@@ -545,7 +545,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -556,7 +556,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setInt(indexes.get(0), x);
@@ -689,7 +689,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -700,7 +700,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setLong(indexes.get(0), x);
@@ -808,7 +808,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -819,7 +819,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setFloat(indexes.get(0), x);
@@ -896,7 +896,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -907,7 +907,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setDouble(indexes.get(0), x);
@@ -985,7 +985,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -996,7 +996,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBigDecimal(indexes.get(0), x);
@@ -1098,7 +1098,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1109,7 +1109,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setString(indexes.get(0), x);
@@ -1251,7 +1251,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1262,7 +1262,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNString(indexes.get(0), x);
@@ -1315,7 +1315,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1326,7 +1326,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNString(indexes.get(0), x);
@@ -1378,7 +1378,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1389,7 +1389,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setDate(indexes.get(0), x);
@@ -1487,7 +1487,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1498,7 +1498,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setTime(indexes.get(0), x);
@@ -1620,7 +1620,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1631,7 +1631,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setTimestamp(indexes.get(0), x);
@@ -1844,7 +1844,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1855,7 +1855,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBytes(indexes.get(0), x);
@@ -1916,7 +1916,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1927,7 +1927,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setAsciiStream(indexes.get(0), x);
@@ -1989,7 +1989,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2000,7 +2000,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setAsciiStream(indexes.get(0), x, length);
@@ -2061,7 +2061,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2072,7 +2072,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBinaryStream(indexes.get(0), x);
@@ -2135,7 +2135,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2146,7 +2146,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBinaryStream(indexes.get(0), x, length);
@@ -2207,7 +2207,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2218,7 +2218,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setCharacterStream(indexes.get(0), x);
@@ -2281,7 +2281,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2292,7 +2292,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setCharacterStream(indexes.get(0), x, length);
@@ -2353,7 +2353,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2364,7 +2364,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNCharacterStream(indexes.get(0), x);
@@ -2426,7 +2426,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2437,7 +2437,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNCharacterStream(indexes.get(0), x, length);
@@ -2500,7 +2500,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2511,7 +2511,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBlob(indexes.get(0), x);
@@ -2571,7 +2571,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2582,7 +2582,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBlob(indexes.get(0), x);
@@ -2644,7 +2644,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2655,7 +2655,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setBlob(indexes.get(0), x, length);
@@ -2718,7 +2718,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2729,7 +2729,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setClob(indexes.get(0), x);
@@ -2782,7 +2782,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2793,7 +2793,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setClob(indexes.get(0), x);
@@ -2849,7 +2849,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2860,7 +2860,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setClob(indexes.get(0), x, length);
@@ -2914,7 +2914,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2925,7 +2925,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNClob(indexes.get(0), x);
@@ -2978,7 +2978,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -2989,7 +2989,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNClob(indexes.get(0), x);
@@ -3045,7 +3045,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3056,7 +3056,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setNClob(indexes.get(0), x, length);
@@ -3108,7 +3108,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3119,7 +3119,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setURL(indexes.get(0), x);
@@ -3173,7 +3173,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3184,7 +3184,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setSQLXML(indexes.get(0), x);
@@ -3237,7 +3237,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3248,7 +3248,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setRowId(indexes.get(0), x);
@@ -3301,7 +3301,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3312,7 +3312,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setRef(indexes.get(0), x);
@@ -3366,7 +3366,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3377,7 +3377,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setArray(indexes.get(0), x);
@@ -3442,7 +3442,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3453,7 +3453,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), x);
@@ -3512,7 +3512,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3523,7 +3523,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), x, sqlType);
@@ -3591,7 +3591,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3602,7 +3602,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), x, sqlType, scaleOrLength);
@@ -3660,7 +3660,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3671,7 +3671,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), x, sqlType);
@@ -3735,7 +3735,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3746,7 +3746,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     setObject(indexes.get(0), x, sqlType, scaleOrLength);
@@ -3809,7 +3809,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -3820,7 +3820,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (indexes == null) {
                 close();
-                throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName);
             } else {
                 if (indexes.size() == 1) {
                     type.set(stmt, indexes.get(0), x);
@@ -3955,7 +3955,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             setObject(1, parameters);
         } else {
             close();
-            throw new IllegalArgumentException("Unsupported named parameter type: " + parameters.getClass() + " for named sql: " + namedSql.sql());
+            throw new IllegalArgumentException("Unsupported named parameter type: " + parameters.getClass() + " for SQL: " + namedSql.sql());
         }
 
         return this;
@@ -4021,7 +4021,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                 if (indexes == null) {
                     close();
-                    throw new IllegalArgumentException("Not found named parameter: " + parameterName);
+                    throw new IllegalArgumentException("Named parameter not found: " + parameterName);
                 } else {
                     if (indexes.size() == 1) {
                         dbType.set(stmt, indexes.get(0), propValue);
@@ -4216,7 +4216,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (first == null) {
                 if (parameterCount != 1) {
-                    throw new IllegalArgumentException("Unsupported named parameter type: null for named sql: " + namedSql.sql());
+                    throw new IllegalArgumentException("Unsupported named parameter type: null for SQL: " + namedSql.sql());
                 }
 
                 stmt.setObject(1, first);
@@ -4313,7 +4313,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else {
-                    throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for named sql: " + namedSql.sql());
+                    throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for SQL: " + namedSql.sql());
                 }
             }
 

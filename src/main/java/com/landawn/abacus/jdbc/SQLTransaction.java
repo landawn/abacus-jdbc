@@ -309,7 +309,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         if (refCount > 0) {
             return;
         } else if (refCount < 0) {
-            logger.warn("Transaction(id={}) is already: {}. This committing is ignored", _timedId, _status);
+            logger.warn("Transaction(id={}) is already: {}. Commit operation ignored", _timedId, _status);
             return;
         }
 
@@ -320,7 +320,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         }
 
         if (_status != Status.ACTIVE) {
-            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It can not be committed");   //NOSONAR
+            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be committed");   //NOSONAR
         }
 
         logger.info("Committing transaction(id={})", _timedId);
@@ -334,7 +334,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
             _status = Status.COMMITTED;
         } catch (final SQLException e) {
-            throw new UncheckedSQLException("Failed to commit transaction(id=" + _id + ")", e);
+            throw new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
         } finally {
             if (_status == Status.COMMITTED) {
                 logger.info("Transaction(id={}) has been committed successfully", _timedId);
@@ -343,7 +343,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
                 actionAfterCommit.run();
             } else {
-                logger.warn("Failed to commit transaction(id={}). It will automatically be rolled back ", _timedId);
+                logger.warn("Failed to commit transaction(id={}). Automatically rolling back", _timedId);
                 executeRollback();
             }
         }
@@ -398,7 +398,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             _status = Status.MARKED_ROLLBACK;
             return;
         } else if (refCount < 0) {
-            logger.warn("Transaction(id={}) is already: {}. This rollback is ignored", _timedId, _status);
+            logger.warn("Transaction(id={}) is already: {}. Rollback operation ignored", _timedId, _status);
             return;
         }
 
@@ -454,7 +454,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 if (_status == Status.ACTIVE) {
                     executeRollback();
                 } else {
-                    logger.warn("Transaction(id={}) is already: {}. This rollback is ignored", _timedId, _status);
+                    logger.warn("Transaction(id={}) is already: {}. Rollback operation ignored", _timedId, _status);
                 }
             }
 
@@ -462,7 +462,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         }
 
         if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK || _status == Status.FAILED_COMMIT || _status == Status.FAILED_ROLLBACK)) {
-            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It can not be rolled back");
+            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be rolled back");
         }
 
         executeRollback();

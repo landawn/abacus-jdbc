@@ -206,7 +206,7 @@ public final class DBLock {
             JdbcUtil.createTableIfNotExists(conn, tableName, schema);
 
             if (!JdbcUtil.doesTableExist(conn, tableName)) {
-                throw new RuntimeException("Failed to create table: " + tableName);
+                throw new IllegalStateException("Lock table does not exist after creation attempt: " + tableName);
             }
 
             final String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
@@ -437,11 +437,11 @@ public final class DBLock {
         try {
             if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, DateUtil.currentTimestamp(),
                     DateUtil.addMilliseconds(DateUtil.currentTimestamp(), -MAX_IDLE_TIME)) > 0) && logger.isWarnEnabled()) {
-                logger.warn("Succeeded to remove expired lock for target: " + target);
+                logger.warn("Removed expired lock for target: " + target);
             }
         } catch (final Exception e) {
             if (logger.isWarnEnabled()) {
-                logger.warn("Error occurred when try to remove expired lock for target: " + target, e);
+                logger.warn("Error occurred while trying to remove expired lock for target: " + target, e);
             }
         }
 
@@ -583,7 +583,7 @@ public final class DBLock {
 
     private void assertNotClosed() {
         if (isClosed) {
-            throw new RuntimeException("This DBLock has been closed");
+            throw new IllegalStateException("This DBLock has been closed");
         }
     }
 }

@@ -1067,7 +1067,7 @@ public final class JdbcUtil {
 
             return DriverManager.getConnection(url, user, password);
         } catch (final SQLException e) {
-            throw new UncheckedSQLException("Failed to close create connection", e);
+            throw new UncheckedSQLException("Failed to create connection", e);
         }
     }
 
@@ -1105,7 +1105,7 @@ public final class JdbcUtil {
             driverClass = ClassUtil.forClass("com.ibm.db2.jcc.DB2Driver");
         } else {
             throw new IllegalArgumentException(
-                    "Can not identity the driver class by url: " + url + ". Only mysql, postgresql, hsqldb, sqlserver, oracle and db2 are supported currently");
+                    "Cannot identify the driver class by URL: " + url + ". Only MySQL, PostgreSQL, H2, HSQLDB, Oracle, SQL Server and DB2 are supported");
         }
         return driverClass;
     }
@@ -5407,7 +5407,7 @@ public final class JdbcUtil {
             return;
         } else if (N.isEmpty(parameters)) {
             throw new IllegalArgumentException(
-                    "The count of parameter in sql is: " + parsedSql.getParameterCount() + ". But the specified parameters is null or empty");
+                    "SQL requires " + parsedSql.getParameterCount() + " parameter(s), but the specified parameters are null or empty");
         }
 
         @SuppressWarnings("rawtypes")
@@ -5446,7 +5446,7 @@ public final class JdbcUtil {
                     parameterValues[i] = m.get(namedParameters.get(i));
 
                     if ((parameterValues[i] == null) && !m.containsKey(namedParameters.get(i))) {
-                        throw new IllegalArgumentException("Parameter for property '" + namedParameters.get(i) + "' is missed");
+                        throw new IllegalArgumentException("Missing parameter for property: '" + namedParameters.get(i) + "'");
                     }
                 }
             } else {
@@ -5456,7 +5456,7 @@ public final class JdbcUtil {
                     parameterValues[i] = entityId.get(namedParameters.get(i));
 
                     if ((parameterValues[i] == null) && !entityId.containsKey(namedParameters.get(i))) {
-                        throw new IllegalArgumentException("Parameter for property '" + namedParameters.get(i) + "' is missed");
+                        throw new IllegalArgumentException("Missing parameter for property: '" + namedParameters.get(i) + "'");
                     }
                 }
             }
@@ -8622,9 +8622,9 @@ public final class JdbcUtil {
         // synchronized (isSQLLogEnabled_TL) {
         if (logger.isDebugEnabled() && config.isEnabled != b) {
             if (b) {
-                logger.debug("Turn on [SQL] log");
+                logger.debug("Enabled SQL logging");
             } else {
-                logger.debug("Turn off [SQL] log");
+                logger.debug("Disabled SQL logging");
             }
         }
 
@@ -8865,9 +8865,9 @@ public final class JdbcUtil {
         // synchronized (minExecutionTimeForSqlPerfLog_TL) {
         if (logger.isDebugEnabled() && config.minExecutionTimeForSqlPerfLog != minExecutionTimeForSqlPerfLog) {
             if (minExecutionTimeForSqlPerfLog >= 0) {
-                logger.debug("set 'minExecutionTimeForSqlPerfLog' to: " + minExecutionTimeForSqlPerfLog);
+                logger.debug("Set minExecutionTimeForSqlPerfLog to: " + minExecutionTimeForSqlPerfLog);
             } else {
-                logger.debug("Turn off SQL performance log");
+                logger.debug("Disabled SQL performance logging");
             }
         }
 
@@ -9190,7 +9190,7 @@ public final class JdbcUtil {
                 }
             }
 
-            logger.info("Create a new SQLTransaction(id={})", tran.id());
+            logger.info("Created new SQLTransaction(id={})", tran.id());
             SQLTransaction.putTransaction(tran);
         } else {
             logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
@@ -9647,15 +9647,15 @@ public final class JdbcUtil {
         if (isInSpring) {
             if (logger.isWarnEnabled() && isSpringTransactionalDisabled_TL.get() != b) { //NOSONAR
                 if (b) {
-                    logger.warn("Disable Spring Transactional");
+                    logger.warn("Disabled Spring Transactional integration");
                 } else {
-                    logger.warn("Enable Spring Transactional again");
+                    logger.warn("Re-enabled Spring Transactional integration");
                 }
             }
 
             isSpringTransactionalDisabled_TL.set(b);
         } else {
-            logger.warn("Not in Spring or not able to retrieve Spring Transactional");
+            logger.warn("Spring framework not detected or unable to retrieve Spring Transactional");
         }
         // }
     }
