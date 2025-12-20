@@ -80,9 +80,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * userDao.deleteById(id);
  * }</pre>
  *
- * @param <T> the entity type
- * @param <ID> the ID type (use {@code Void} if there is no id defined/annotated with {@code @Id} in target entity class {@code T})
- * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <T> the entity type managed by this DAO
+ * @param <ID> the ID type of the entity
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)

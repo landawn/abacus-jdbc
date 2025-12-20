@@ -123,7 +123,7 @@ final class DaoUtil {
      * }</pre>
      *
      * @param <T> the entity type
-     * @param <ID> the ID type (either a simple type or {@link Seid} for composite IDs)
+     * @param <ID> the ID type of the entity
      * @param entity the entity instance from which to extract the ID. Must not be {@code null}
      * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
      * @param entityInfo the bean information for the entity class
@@ -171,8 +171,8 @@ final class DaoUtil {
      * Seid id = compositeIdExtractor.apply(orderLine);
      * }</pre>
      *
-     * @param <T> the entity type
-     * @param <ID> the ID type (either a simple type or {@link Seid} for composite IDs)
+     * @param <T> the entity type managed by this DAO
+     * @param <ID> the ID type of the entity
      * @param idPropNameList the list of ID property names. Must not be {@code null} or empty
      * @param entityInfo the bean information for the entity class
      * @return a function that extracts ID values from entities
@@ -257,9 +257,9 @@ final class DaoUtil {
      * // Successfully casts to CrudDao
      * }</pre>
      *
-     * @param <T> the entity type
-     * @param <ID> the ID type
-     * @param <SB> the SQL builder type
+     * @param <T> the entity type managed by this DAO
+     * @param <ID> the ID type of the entity
+     * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to CrudDao
@@ -294,8 +294,8 @@ final class DaoUtil {
      * // Successfully casts to Dao
      * }</pre>
      *
-     * @param <T> the entity type
-     * @param <SB> the SQL builder type
+     * @param <T> the entity type managed by this DAO
+     * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
      * @param <TD> the DAO type
      * @param dao the JoinEntityHelper instance to cast
      * @return the DAO instance cast to Dao
@@ -330,8 +330,8 @@ final class DaoUtil {
      * // Successfully casts to UncheckedDao
      * }</pre>
      *
-     * @param <T> the entity type
-     * @param <SB> the SQL builder type
+     * @param <T> the entity type managed by this DAO
+     * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedDao
@@ -366,9 +366,9 @@ final class DaoUtil {
      * // Successfully casts to UncheckedCrudDao
      * }</pre>
      *
-     * @param <T> the entity type
-     * @param <ID> the ID type
-     * @param <SB> the SQL builder type
+     * @param <T> the entity type managed by this DAO
+     * @param <ID> the ID type of the entity
+     * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedCrudDao

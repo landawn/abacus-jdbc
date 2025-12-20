@@ -313,21 +313,21 @@ final class DaoImpl {
     static {
         final Map<Class<?>, Predicate<?>> tmp = N.newHashMap(20);
 
-        tmp.put(u.Nullable.class, (final u.Nullable<?> t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.Optional.class, (final u.Optional<?> t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalBoolean.class, (final u.OptionalBoolean t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalChar.class, (final u.OptionalChar t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalByte.class, (final u.OptionalByte t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalShort.class, (final u.OptionalShort t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalInt.class, (final u.OptionalInt t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalLong.class, (final u.OptionalLong t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalFloat.class, (final u.OptionalFloat t) -> t.isPresent());   // NOSONAR
-        tmp.put(u.OptionalDouble.class, (final u.OptionalDouble t) -> t.isPresent());   // NOSONAR
+        tmp.put(u.Nullable.class, (final u.Nullable<?> t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.Optional.class, (final u.Optional<?> t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalBoolean.class, (final u.OptionalBoolean t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalChar.class, (final u.OptionalChar t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalByte.class, (final u.OptionalByte t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalShort.class, (final u.OptionalShort t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalInt.class, (final u.OptionalInt t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalLong.class, (final u.OptionalLong t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalFloat.class, (final u.OptionalFloat t) -> t.isPresent()); // NOSONAR
+        tmp.put(u.OptionalDouble.class, (final u.OptionalDouble t) -> t.isPresent()); // NOSONAR
 
-        tmp.put(java.util.Optional.class, (final java.util.Optional<?> t) -> t.isPresent());   // NOSONAR
-        tmp.put(java.util.OptionalInt.class, (final java.util.OptionalInt t) -> t.isPresent());   // NOSONAR
-        tmp.put(java.util.OptionalLong.class, (final java.util.OptionalLong t) -> t.isPresent());   // NOSONAR
-        tmp.put(java.util.OptionalDouble.class, (final java.util.OptionalDouble t) -> t.isPresent());   // NOSONAR
+        tmp.put(java.util.Optional.class, (final java.util.Optional<?> t) -> t.isPresent()); // NOSONAR
+        tmp.put(java.util.OptionalInt.class, (final java.util.OptionalInt t) -> t.isPresent()); // NOSONAR
+        tmp.put(java.util.OptionalLong.class, (final java.util.OptionalLong t) -> t.isPresent()); // NOSONAR
+        tmp.put(java.util.OptionalDouble.class, (final java.util.OptionalDouble t) -> t.isPresent()); // NOSONAR
 
         isValuePresentMap.putAll(tmp);
     }
@@ -1450,7 +1450,7 @@ final class DaoImpl {
                 preparedQuery.setFetchSize(queryInfo.fetchSize);
             } else if (queryInfo.isSelect) {
                 if (mergedByIdAnno != null) {
-                    preparedQuery.configStmt(JdbcUtil.stmtSetterForBigQueryResult);   // ?
+                    preparedQuery.configStmt(JdbcUtil.stmtSetterForBigQueryResult); // ?
                 } else if (op == OP.findOnlyOne || op == OP.queryForUnique) {
                     preparedQuery.setFetchSize(2);
                 } else if (op == OP.findFirst || op == OP.queryForSingle || op == OP.exists || isExistsQuery(method, op, fullClassMethodName)
@@ -2283,6 +2283,8 @@ final class DaoImpl {
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = StreamEx.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
+                final boolean throwsUncheckedSQLException = StreamEx.of(method.getExceptionTypes())
+                        .anyMatch(e -> e.isAssignableFrom(UncheckedSQLException.class));
                 final Annotation sqlAnno = StreamEx.of(method.getAnnotations())
                         .filter(anno -> sqlAnnoMap.containsKey(anno.annotationType()))
                         .first()
@@ -4992,14 +4994,21 @@ final class DaoImpl {
                                 + ". Please use the OptionalXXX classes defined in com.landawn.abacus.util.u");
                     }
 
-                    if (!(isNonDBOperation || isUncheckedDao || throwsSQLException || isStreamReturn)) {
-                        throw new UnsupportedOperationException("'throws SQLException' is not declared in method: " + fullClassMethodName
-                                + ". It's required for Dao interface extends Dao. Don't want to throw SQLException? extends UncheckedDao");
+                    if (!(isNonDBOperation || isUncheckedDao || throwsSQLException || throwsUncheckedSQLException || isStreamReturn)) {
+                        throw new UnsupportedOperationException("Neither 'throws SQLException' nor 'throws UncheckedSQLException' is declared on method: "
+                                + fullClassMethodName
+                                + ". This is required for interface extending Dao. If you do not want to declare SQLException, extend UncheckedDao instead");
                     }
 
-                    if (isStreamReturn && throwsSQLException) {
-                        throw new UnsupportedOperationException("'throws SQLException' is not allowed in method: " + fullClassMethodName
-                                + " because its return type is Stream which will be lazy evaluation");
+                    if (isStreamReturn && (throwsSQLException || throwsUncheckedSQLException)) {
+                        throw new UnsupportedOperationException("'throws SQLException' or 'throws UncheckedSQLException' is not allowed on method: "
+                                + fullClassMethodName + " because its return type is Stream, which is lazily evaluated");
+                    }
+
+                    if (throwsSQLException && throwsUncheckedSQLException) {
+                        throw new UnsupportedOperationException(
+                                "Invalid method declaration: both 'throws SQLException' and 'throws UncheckedSQLException' are declared on method: "
+                                        + fullClassMethodName);
                     }
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
@@ -5015,8 +5024,8 @@ final class DaoImpl {
                     final OP op = queryInfo.op;
                     final boolean isSingleParameter = queryInfo.isSingleParameter;
                     final boolean isProcedure = queryInfo.isProcedure;
-                    final boolean isUpdate =
-                            !queryInfo.isSelect && !queryInfo.isInsert && (op == OP.update || op == OP.largeUpdate || (op == OP.DEFAULT && isUpdateReturnType));
+                    final boolean isUpdate = !queryInfo.isSelect && !queryInfo.isInsert
+                            && (op == OP.update || op == OP.largeUpdate || (op == OP.DEFAULT && isUpdateReturnType));
 
                     final boolean isQuery = queryInfo.isSelect
                             || (isProcedure && !(op == OP.update || op == OP.largeUpdate) && (op != OP.DEFAULT || !isUpdateReturnType));
@@ -5430,7 +5439,7 @@ final class DaoImpl {
                         final TriFunction<Optional<Object>, Object, Boolean, ?> insertResultConvertor = void.class.equals(returnType)
                                 ? (ret, entity, isEntity) -> null
                                 : (u.Optional.class.equals(returnType) ? (ret, entity, isEntity) -> ret
-                                        : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType)));   //NOSONAR
+                                        : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType))); //NOSONAR
 
                         if (!isBatch) {
                             if (!(returnType.isAssignableFrom(void.class) || idClass == null

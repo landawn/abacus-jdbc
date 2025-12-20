@@ -126,7 +126,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }
  * }</pre>
  *
- * @param <T> the entity type that this DAO manages
+ * @param <T> the entity type managed by this DAO
  * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type parameter for fluent API support
  *

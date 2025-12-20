@@ -1001,4 +1001,122 @@ public @interface Query {
      * @see JdbcUtil#DEFAULT_BATCH_SIZE
      */
     int batchSize() default JdbcUtil.DEFAULT_BATCH_SIZE;
+
+    // conflicts in UncheckedDAO
+    //    /**
+    //     * Specifies whether this query method should throw {@code UncheckedSQLException} instead of the checked {@code SQLException}.
+    //     * When {@code true}, any {@code SQLException} that occurs during query execution will be wrapped and thrown as an
+    //     * {@code UncheckedSQLException}, eliminating the need for explicit exception handling.
+    //     *
+    //     * <p>This feature provides flexibility in exception handling strategies:</p>
+    //     * <ul>
+    //     *   <li><strong>Checked exceptions (default):</strong> Methods throw {@code SQLException}, requiring explicit try-catch or throws declaration</li>
+    //     *   <li><strong>Unchecked exceptions:</strong> Methods throw {@code UncheckedSQLException}, allowing exception propagation without explicit handling</li>
+    //     * </ul>
+    //     *
+    //     * <p>When to use unchecked exceptions:</p>
+    //     * <ul>
+    //     *   <li>When working in frameworks or contexts that prefer unchecked exceptions (e.g., Spring, reactive programming)</li>
+    //     *   <li>When database errors are considered unrecoverable and should propagate to a global error handler</li>
+    //     *   <li>When you want to reduce boilerplate exception handling code in application logic</li>
+    //     *   <li>When mixing with unchecked DAO interfaces (e.g., {@code UncheckedDao}, {@code UncheckedCrudDao})</li>
+    //     *   <li>In situations where checked exceptions make code less readable without providing meaningful recovery options</li>
+    //     * </ul>
+    //     *
+    //     * <p>When to use checked exceptions (default):</p>
+    //     * <ul>
+    //     *   <li>When you want compile-time enforcement of exception handling</li>
+    //     *   <li>When database errors might be recoverable and should be handled at the call site</li>
+    //     *   <li>When following traditional Java JDBC patterns and best practices</li>
+    //     *   <li>When integrating with legacy code that expects checked exceptions</li>
+    //     * </ul>
+    //     *
+    //     * <p>Basic examples:</p>
+    //     * <pre>{@code
+    //     * public interface UserDao extends CrudDao<User, Long> {
+    //     *     // Default: throws checked SQLException
+    //     *     @Query("SELECT * FROM users WHERE id = :id")
+    //     *     User findById(@Bind("id") long id) throws SQLException;
+    //     *
+    //     *     // With unchecked exceptions: no throws clause needed
+    //     *     @Query(value = "SELECT * FROM users WHERE email = :email",
+    //     *            throwsUncheckedSQLException = true)
+    //     *     User findByEmail(@Bind("email") String email);
+    //     *     // Can be called without try-catch or throws declaration
+    //     * }
+    //     * }</pre>
+    //     *
+    //     * <p>Usage with unchecked DAO interfaces:</p>
+    //     * <pre>{@code
+    //     * // When extending UncheckedDao, methods automatically throw UncheckedSQLException
+    //     * // Use this flag for consistency with custom query methods
+    //     * public interface UserDao extends UncheckedCrudDao<User, Long, UserDao> {
+    //     *     @Query(value = "SELECT * FROM users WHERE status = :status")
+    //     *     List<User> findByStatus(@Bind("status") String status);
+    //     *     // Consistent with other methods in UncheckedCrudDao
+    //     * }
+    //     * }</pre>
+    //     *
+    //     * <p>Integration with application code:</p>
+    //     * <pre>{@code
+    //     * // With checked exceptions (default)
+    //     * public User getUserById(long id) {
+    //     *     try {
+    //     *         return userDao.findById(id);
+    //     *     } catch (SQLException e) {
+    //     *         // Must handle explicitly
+    //     *         throw new DataAccessException("Failed to fetch user", e);
+    //     *     }
+    //     * }
+    //     *
+    //     * // With unchecked exceptions
+    //     * public User getUserByEmail(String email) {
+    //     *     return userDao.findByEmail(email);
+    //     *     // No try-catch needed; UncheckedSQLException propagates automatically
+    //     * }
+    //     * }</pre>
+    //     *
+    //     * <p>Exception handling patterns:</p>
+    //     * <pre>{@code
+    //     * // Checked exception handling
+    //     * @Query("SELECT * FROM orders WHERE user_id = :userId")
+    //     * List<Order> findOrdersByUser(@Bind("userId") long userId) throws SQLException;
+    //     *
+    //     * // Usage
+    //     * try {
+    //     *     List<Order> orders = orderDao.findOrdersByUser(123L);
+    //     *     processOrders(orders);
+    //     * } catch (SQLException e) {
+    //     *     logger.error("Database error", e);
+    //     *     // Handle or rethrow
+    //     * }
+    //     *
+    //     * // Unchecked exception handling
+    //     * @Query(value = "SELECT * FROM orders WHERE user_id = :userId",
+    //     *        throwsUncheckedSQLException = true)
+    //     * List<Order> findOrdersByUserUnchecked(@Bind("userId") long userId);
+    //     *
+    //     * // Usage - cleaner for unrecoverable errors
+    //     * List<Order> orders = orderDao.findOrdersByUserUnchecked(123L);
+    //     * processOrders(orders);
+    //     * // Let UncheckedSQLException propagate to global handler
+    //     * }</pre>
+    //     *
+    //     * <p>Important considerations:</p>
+    //     * <ul>
+    //     *   <li>The exception type affects method signatures - unchecked exceptions don't require {@code throws} declaration</li>
+    //     *   <li>Choose consistency within your application - mixing checked and unchecked can be confusing</li>
+    //     *   <li>Global exception handlers can catch {@code UncheckedSQLException} for centralized error handling</li>
+    //     *   <li>The underlying {@code SQLException} is preserved as the cause in {@code UncheckedSQLException}</li>
+    //     *   <li>All SQL errors are wrapped, including connection errors, constraint violations, and syntax errors</li>
+    //     * </ul>
+    //     *
+    //     * @return {@code true} if the method should throw {@code UncheckedSQLException} instead of {@code SQLException};
+    //     *         {@code false} (default) to throw checked {@code SQLException}
+    //     * @see com.landawn.abacus.exception.UncheckedSQLException
+    //     * @see com.landawn.abacus.jdbc.dao.UncheckedDao
+    //     * @see com.landawn.abacus.jdbc.dao.UncheckedCrudDao
+    //     */
+    //    @Beta
+    //    boolean throwsUncheckedSQLException() default false;
 }

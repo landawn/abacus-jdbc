@@ -77,9 +77,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * Optional<User> retrieved = userDao.get(id);
  * }</pre>
  *
- * @param <T> The entity type this DAO manages
- * @param <ID> The ID type of the entity. Use {@code Void} if there is no id defined/annotated with {@code @Id} in target entity class {@code T}
- * @param <SB> The SQLBuilder type used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <T> the entity type managed by this DAO
+ * @param <ID> the ID type of the entity
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> The self-type of the DAO for fluent interface support
  * 
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)

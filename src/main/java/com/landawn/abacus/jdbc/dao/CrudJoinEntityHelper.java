@@ -22,8 +22,8 @@ import java.util.List;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.util.N;
 import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -71,9 +71,9 @@ import com.landawn.abacus.util.u.Optional;
  * List<User> users = userDao.batchGet(userIds, Order.class);
  * }</pre>
  *
- * @param <T> the entity type managed by this DAO
+ * @param <T> The entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used for query construction
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy

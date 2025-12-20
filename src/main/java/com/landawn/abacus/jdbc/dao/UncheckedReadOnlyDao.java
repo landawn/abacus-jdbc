@@ -67,8 +67,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * // dao.batchSave(reports);   // throws exception
  * }</pre>
  *
- * @param <T> the entity type
- * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+* @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedNoUpdateDao
  * @see ReadOnlyDao

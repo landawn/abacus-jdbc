@@ -55,9 +55,9 @@ import com.landawn.abacus.util.u.Optional;
  * );
  * }</pre>
  *
- * @param <T> the entity type
- * @param <ID> the ID type
- * @param <SB> {@code SQLBuilder} used to generate sql scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <T> The entity type that this helper manages
+ * @param <ID> the ID type of the entity
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedJoinEntityHelper
  * @see UncheckedCrudDao

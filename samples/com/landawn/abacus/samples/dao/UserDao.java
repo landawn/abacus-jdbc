@@ -42,9 +42,9 @@ import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLBuilder.PSC;
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ImmutableList;
@@ -83,7 +83,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     Stream<User> allUsers();
 
     @Query(value = "INSERT INTO user1 (id, first_name, last_name, prop1, email) VALUES (:id, :firstName, :lastName, :nickName, :email)", isBatch = true)
-    List<Long> batchInsertWithId(List<User> users) throws SQLException;
+    List<Long> batchInsertWithId(List<User> users) throws UncheckedSQLException;
 
     @Query(value = "INSERT INTO user1 (first_name, last_name, email, create_time) VALUES (:firstName, :lastName, :email, :sysTime)", isBatch = true, batchSize = 123, autoSetSysTimeParam = true)
     List<Long> batchInsertWithoutId(List<User> users) throws SQLException;

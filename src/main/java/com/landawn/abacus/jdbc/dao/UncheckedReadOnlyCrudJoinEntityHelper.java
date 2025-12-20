@@ -62,8 +62,8 @@ import com.landawn.abacus.query.SQLBuilder;
  * inheriting read operations from both while overriding modification operations to throw {@link UnsupportedOperationException}.</p>
  *
  * @param <T> The entity type that this helper manages
- * @param <ID> The type of the entity's primary key (ID)
- * @param <SB> The type of {@link SQLBuilder} used to generate SQL scripts
+ * @param <ID> the ID type of the entity
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> The self-referential type parameter for the DAO, extending {@link UncheckedCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelper

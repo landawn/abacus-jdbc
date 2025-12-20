@@ -70,7 +70,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used for query construction
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy

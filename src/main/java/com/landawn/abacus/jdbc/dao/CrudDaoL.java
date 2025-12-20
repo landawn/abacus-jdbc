@@ -56,8 +56,8 @@ import com.landawn.abacus.util.u.OptionalShort;
  * userDao.deleteById(456L);   // More convenient than Long.valueOf(456)
  * }</pre>
  *
- * @param <T> The entity type this DAO manages
- * @param <SB> The SQLBuilder type used to generate SQL scripts. Only can be {@code SQLBuilder.PSC/PAC/PLC}
+ * @param <T> the entity type managed by this DAO
+ * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> The self-type of the DAO for fluent interface support
  * 
  * @see com.landawn.abacus.query.Filters
