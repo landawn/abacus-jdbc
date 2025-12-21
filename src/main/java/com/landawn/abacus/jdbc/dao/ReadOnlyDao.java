@@ -143,7 +143,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     @Override
     default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isSelectQuery(query)) {
-            throw new UnsupportedOperationException("Only select query is supported in read-only DAO");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
         }
 
         return JdbcUtil.prepareQuery(dataSource(), query);
@@ -234,7 +234,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isSelectQuery(namedQuery)) {
-            throw new UnsupportedOperationException("Only select query is supported in read-only DAO");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
@@ -326,7 +326,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
         if (!DaoUtil.isSelectQuery(namedQuery.sql())) {
-            throw new UnsupportedOperationException("Only select query is supported in read-only DAO");
+            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);

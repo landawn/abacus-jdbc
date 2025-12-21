@@ -239,7 +239,7 @@ public enum IsolationLevel {
                 return SERIALIZABLE;
 
             default:
-                throw new IllegalArgumentException("Invalid isolation level value: " + intValue + ".");
+                throw new IllegalArgumentException("Invalid isolation level value: " + intValue);
         }
     }
 }

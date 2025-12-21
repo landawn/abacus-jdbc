@@ -1105,7 +1105,7 @@ public final class JdbcUtil {
             driverClass = ClassUtil.forClass("com.ibm.db2.jcc.DB2Driver");
         } else {
             throw new IllegalArgumentException(
-                    "Cannot identify the driver class by URL: " + url + ". Only MySQL, PostgreSQL, H2, HSQLDB, Oracle, SQL Server and DB2 are supported");
+                    "Cannot identify the driver class from URL: " + url + ". Only MySQL, PostgreSQL, H2, HSQLDB, Oracle, SQL Server, and DB2 are supported");
         }
         return driverClass;
     }
@@ -1312,7 +1312,7 @@ public final class JdbcUtil {
     public static void close(final ResultSet rs, final boolean closeStatement, final boolean closeConnection)
             throws IllegalArgumentException, UncheckedSQLException {
         if (closeConnection && !closeStatement) {
-            throw new IllegalArgumentException("'closeStatement' can't be false while 'closeConnection' is true");
+            throw new IllegalArgumentException("'closeStatement' cannot be false while 'closeConnection' is true");
         }
 
         if (rs == null) {
@@ -1643,7 +1643,7 @@ public final class JdbcUtil {
      */
     public static void closeQuietly(final ResultSet rs, final boolean closeStatement, final boolean closeConnection) throws IllegalArgumentException {
         if (closeConnection && !closeStatement) {
-            throw new IllegalArgumentException("'closeStatement' can't be false while 'closeConnection' is true");
+            throw new IllegalArgumentException("'closeStatement' cannot be false while 'closeConnection' is true");
         }
 
         if (rs == null) {
@@ -1662,7 +1662,7 @@ public final class JdbcUtil {
                 conn = stmt.getConnection();
             }
         } catch (final SQLException e) {
-            logger.error("Failed to get Statement or Connection by ResultSet", e);
+            logger.error("Failed to get Statement or Connection from ResultSet", e);
         } finally {
             closeQuietly(rs, stmt, conn);
         }
@@ -2483,7 +2483,7 @@ public final class JdbcUtil {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
 
         if (columnIndex < 1) {
-            throw new IllegalArgumentException("No column found by name: " + columnLabel + " in result set: " + JdbcUtil.getColumnLabelList(rs));
+            throw new IllegalArgumentException("No column found with name: " + columnLabel + " in result set: " + JdbcUtil.getColumnLabelList(rs));
         }
 
         return getAllColumnValues(rs, columnIndex);
@@ -4540,7 +4540,7 @@ public final class JdbcUtil {
 
     private static void validateNamedSql(final ParsedSql namedSql) {
         if (namedSql.getNamedParameters().size() != namedSql.getParameterCount()) {
-            throw new IllegalArgumentException("\"" + namedSql.sql() + "\" is not a valid named sql:");
+            throw new IllegalArgumentException("\"" + namedSql.sql() + "\" is not a valid named SQL");
         }
     }
 
@@ -6776,7 +6776,7 @@ public final class JdbcUtil {
 
     static <R> R checkNotResultSet(final R result) {
         if (result instanceof ResultSet) {
-            throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply can't be ResultSet");
+            throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply cannot be ResultSet");
         }
 
         return result;
@@ -9211,7 +9211,7 @@ public final class JdbcUtil {
             logger.info("Created new SQLTransaction(id={})", tran.id());
             SQLTransaction.putTransaction(tran);
         } else {
-            logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
+            logger.info("Reusing existing SQLTransaction(id={})", tran.id());
             tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
         }
 
@@ -9673,7 +9673,7 @@ public final class JdbcUtil {
 
             isSpringTransactionalDisabled_TL.set(b);
         } else {
-            logger.warn("Spring framework not detected or unable to retrieve Spring Transactional");
+            logger.warn("Spring framework not detected or unable to retrieve Spring transaction context");
         }
         // }
     }
@@ -9850,7 +9850,7 @@ public final class JdbcUtil {
                                         }
                                     }
                                 } else {
-                                    logger.warn("Can't set generated keys by id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                    logger.warn("Cannot set generated keys for id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             } : (id, entity) -> {
                                 if (id != null && Beans.isBeanClass(id.getClass())) {
@@ -9862,7 +9862,7 @@ public final class JdbcUtil {
                                     }
                                 } else {
                                     logger.warn(
-                                            "Can't set generated keys by id type: " + (id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass())));
+                                            "Cannot set generated keys for id type: " + (id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass())));
                                 }
                             }));
 

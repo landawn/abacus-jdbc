@@ -314,7 +314,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         }
 
         if (_status == Status.MARKED_ROLLBACK) {
-            logger.warn("Transaction(id={}) will be rolled back because it's marked for roll back only", _timedId);
+            logger.warn("Transaction(id={}) will be rolled back because it is marked for rollback only", _timedId);
             executeRollback();
             return;
         }

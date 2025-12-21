@@ -153,7 +153,7 @@ public enum FetchDirection {
                 return UNKNOWN;
 
             default:
-                throw new IllegalArgumentException("No FetchDirection mapping to int value: " + intValue);
+                throw new IllegalArgumentException("No FetchDirection found for int value: " + intValue);
 
         }
     }

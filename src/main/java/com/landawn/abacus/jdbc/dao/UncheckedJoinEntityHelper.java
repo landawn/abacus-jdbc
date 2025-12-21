@@ -460,7 +460,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
-        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entity, joinEntityPropName, selectPropNames);
@@ -518,7 +518,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
-        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName, selectPropNames);
@@ -995,7 +995,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
-        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntitiesIfNull(entity, joinEntityPropName, selectPropNames);
@@ -1052,7 +1052,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
-        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         if (joinEntityPropNames.size() == 1) {
             loadJoinEntitiesIfNull(entities, joinEntityPropNames.get(0), selectPropNames);
@@ -1525,7 +1525,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
-        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         if (joinEntityPropNames.size() == 1) {
             return deleteJoinEntities(entity, joinEntityPropNames.get(0));
@@ -1569,7 +1569,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
-        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property found by type {} in class {}", joinEntityClass, targetEntityClass);
+        N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
 
         if (N.isEmpty(entities)) {
             return 0;

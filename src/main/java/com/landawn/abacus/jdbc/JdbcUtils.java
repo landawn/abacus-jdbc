@@ -2475,7 +2475,7 @@ public final class JdbcUtils {
             }
 
             if (columnNameSet != null && columnNameSet.size() > 0) {
-                throw new IllegalArgumentException(columnNameSet + " are not included in query result");
+                throw new IllegalArgumentException(columnNameSet + " are not included in the query result");
             }
 
             final char separator = WD._COMMA;

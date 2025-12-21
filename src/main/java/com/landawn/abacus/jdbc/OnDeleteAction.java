@@ -199,7 +199,7 @@ public enum OnDeleteAction {
         } else if ("cascade".equalsIgnoreCase(name)) {
             return CASCADE;
         } else {
-            throw new IllegalArgumentException("Invalid OnDeleteAction value[" + name + "]. ");
+            throw new IllegalArgumentException("Invalid OnDeleteAction value: " + name);
         }
     }
 }

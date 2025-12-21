@@ -263,13 +263,13 @@ final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to CrudDao
-     * @throws UnsupportedOperationException if the DAO doesn't implement CrudDao interface
+     * @throws UnsupportedOperationException if the DAO does not implement CrudDao interface
      */
     static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> TD getCrudDao(final CrudJoinEntityHelper<T, ID, SB, TD> dao) {
         if (dao instanceof CrudDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement CrudDao interface"); //NOSONAR
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement CrudDao interface"); //NOSONAR
         }
     }
 
@@ -299,13 +299,13 @@ final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the JoinEntityHelper instance to cast
      * @return the DAO instance cast to Dao
-     * @throws UnsupportedOperationException if the DAO doesn't implement Dao interface
+     * @throws UnsupportedOperationException if the DAO does not implement Dao interface
      */
     static <T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> TD getDao(final JoinEntityHelper<T, SB, TD> dao) {
         if (dao instanceof Dao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement Dao interface");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement Dao interface");
         }
     }
 
@@ -335,13 +335,13 @@ final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedDao
-     * @throws UnsupportedOperationException if the DAO doesn't implement UncheckedDao interface
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedDao interface
      */
     static <T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> TD getDao(final UncheckedJoinEntityHelper<T, SB, TD> dao) {
         if (dao instanceof UncheckedDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement UncheckedDao interface");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedDao interface");
         }
     }
 
@@ -372,13 +372,13 @@ final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedCrudDao
-     * @throws UnsupportedOperationException if the DAO doesn't implement UncheckedCrudDao interface
+     * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudDao interface
      */
     static <T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>> TD getCrudDao(final UncheckedCrudJoinEntityHelper<T, ID, SB, TD> dao) {
         if (dao instanceof UncheckedCrudDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement UncheckedCrudDao interface");
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " does not implement UncheckedCrudDao interface");
         }
     }
 
@@ -735,7 +735,7 @@ final class DaoUtil {
                     return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
                 });
             } else {
-                throw new IllegalArgumentException("SQLBuilder Type parameter must be: SQLBuilder.PSC/PAC/PLC/PSB. Can't be: " + sbc);
+                throw new IllegalArgumentException("SQLBuilder type parameter must be SQLBuilder.PSC/PAC/PLC/PSB, but was: " + sbc);
             }
 
             daoPrepareQueryFuncPool.put(daoInterface, tp);

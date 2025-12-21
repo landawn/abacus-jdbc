@@ -5631,7 +5631,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = Objects.requireNonNull(getRow(rs, targetType));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("More than one record found by the query");
+                    throw new DuplicatedResultException("More than one record found");
                 }
 
                 return result;
@@ -5675,7 +5675,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = Objects.requireNonNull(rowMapper.apply(rs));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("More than one record found by the query");
+                    throw new DuplicatedResultException("More than one record found");
                 }
 
                 return result;
@@ -5720,7 +5720,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = Objects.requireNonNull(rowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs)));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("More than one record found by the query");
+                    throw new DuplicatedResultException("More than one record found");
                 }
 
                 return result;

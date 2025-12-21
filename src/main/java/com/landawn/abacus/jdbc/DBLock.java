@@ -247,7 +247,7 @@ public final class DBLock {
                     }
                 } catch (final Exception e) {
                     if (logger.isWarnEnabled()) {
-                        logger.warn("Error in refresh task", e);
+                        logger.warn("Error occurred in lock refresh task", e);
                     }
                 } finally {
                     Objectory.recycle(m);
@@ -441,7 +441,7 @@ public final class DBLock {
             }
         } catch (final Exception e) {
             if (logger.isWarnEnabled()) {
-                logger.warn("Error occurred while trying to remove expired lock for target: " + target, e);
+                logger.warn("Failed to remove expired lock for target: " + target, e);
             }
         }
 
