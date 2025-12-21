@@ -269,7 +269,7 @@ final class DaoUtil {
         if (dao instanceof CrudDao) {
             return (TD) dao;
         } else {
-            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement CrudDao interface");   //NOSONAR
+            throw new UnsupportedOperationException(ClassUtil.getCanonicalClassName(dao.getClass()) + " doesn't implement CrudDao interface"); //NOSONAR
         }
     }
 

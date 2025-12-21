@@ -564,9 +564,9 @@ public final class JdbcUtil {
     private static final Set<String> sqlStateForTableNotExists = N.newHashSet();
 
     static {
-        sqlStateForTableNotExists.add("42S02");   // for MySQFilters.
-        sqlStateForTableNotExists.add("42P01");   // for PostgreSQFilters.
-        sqlStateForTableNotExists.add("42501");   // for HSQLDB.
+        sqlStateForTableNotExists.add("42S02"); // for MySQFilters.
+        sqlStateForTableNotExists.add("42P01"); // for PostgreSQFilters.
+        sqlStateForTableNotExists.add("42501"); // for HSQLDB.
     }
 
     static final Set<String> QUERY_METHOD_NAME_SET = N.asSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "load",
@@ -1453,7 +1453,7 @@ public final class JdbcUtil {
                     stmt.close();
                 }
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);   //NOSONAR
+                throw new UncheckedSQLException(e); //NOSONAR
             }
         }
     }
@@ -1497,7 +1497,7 @@ public final class JdbcUtil {
                     conn.close();
                 }
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);   //NOSONAR
+                throw new UncheckedSQLException(e); //NOSONAR
             }
         }
     }
@@ -1543,14 +1543,14 @@ public final class JdbcUtil {
                     stmt.close();
                 }
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);   //NOSONAR
+                throw new UncheckedSQLException(e); //NOSONAR
             } finally {
                 try {
                     if (conn != null) {
                         conn.close();
                     }
                 } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e);   //NOSONAR
+                    throw new UncheckedSQLException(e); //NOSONAR
                 }
             }
         }
@@ -2142,7 +2142,7 @@ public final class JdbcUtil {
                         (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());
             } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(), // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue(),
-                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());   // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
+                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue()); // ((oracle.sql.TIMESTAMPTZ) val).zonedDateTimeValue());
             } else if (className.startsWith("oracle.sql.DATE")) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> {
                     final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
@@ -8525,14 +8525,14 @@ public final class JdbcUtil {
             }
         }
 
-        propInfo = entityInfo.getPropInfo(prefix + "s");   // Trying to do something smart?
+        propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
         final int len = prefix.length() + 1;
 
         if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
                 && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
             // good
         } else {
-            propInfo = entityInfo.getPropInfo(prefix + "es");   // Trying to do something smart?
+            propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
             final int len2 = prefix.length() + 2;
 
             if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
@@ -9178,7 +9178,7 @@ public final class JdbcUtil {
 
             try { //NOSONAR
                 conn = JdbcUtil.getConnection(dataSource);
-                tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true);   //NOSONAR
+                tran = new SQLTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true); //NOSONAR
                 tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
 
                 noException = true;

@@ -6338,7 +6338,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-        checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
+        checkArg(maxResult >= 0, "'maxResult' can't be negative:" + maxResult);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
@@ -6496,7 +6496,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
-        checkArg(maxResult >= 0, "'maxResult' can' be negative: " + maxResult);
+        checkArg(maxResult >= 0, "'maxResult' can't be negative:" + maxResult);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {

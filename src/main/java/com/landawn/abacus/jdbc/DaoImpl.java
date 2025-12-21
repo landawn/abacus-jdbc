@@ -4516,7 +4516,7 @@ final class DaoImpl {
                                     } else if (isMap) {
                                         result += proxy.count(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
                                     } else {
-                                        result += proxy.count(Filters.eqAndOr(idList.subList(ids.size() - remaining, idList.size()), idPropNameList));
+                                        result += proxy.count(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
                                     }
                                 }
                             }

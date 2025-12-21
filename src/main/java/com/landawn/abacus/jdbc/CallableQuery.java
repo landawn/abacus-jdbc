@@ -669,7 +669,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws SQLException if a database access error occurs
      */
     public CallableQuery setString(final String parameterName, final Character x) throws SQLException {
-        return setString(parameterName, x == null ? (String) null : x.toString());   //NOSONAR
+        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
     /**

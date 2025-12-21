@@ -2376,7 +2376,7 @@ public final class JdbcUtils {
         final ParsedSql sql = ParsedSql.parse(querySQL);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-                ResultSet rs = JdbcUtil.executeQuery(stmt)) {
+             ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             setFetchForBigResult(conn, stmt);
 

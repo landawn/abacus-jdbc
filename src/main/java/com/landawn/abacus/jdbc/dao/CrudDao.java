@@ -1121,7 +1121,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
 
         return upsert(entity, idPropNameList);
     }
@@ -1209,7 +1209,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -1388,7 +1388,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
@@ -1504,7 +1504,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);   // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);

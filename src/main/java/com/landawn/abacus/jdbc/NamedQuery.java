@@ -154,7 +154,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (cnt == 0) {
                 close();
-                throw new IllegalArgumentException("Named parameter not found: " + parameterName);   //NOSONAR
+                throw new IllegalArgumentException("Named parameter not found: " + parameterName); //NOSONAR
             }
         } else {
             if (paramNameIndexMap == null) {
@@ -1150,7 +1150,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final CharSequence x) throws IllegalArgumentException, SQLException {
-        return setString(parameterName, x == null ? (String) null : x.toString());   //NOSONAR
+        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
     /**
@@ -1192,7 +1192,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setString(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
-        return setString(parameterName, x == null ? (String) null : x.toString());   //NOSONAR
+        return setString(parameterName, x == null ? (String) null : x.toString()); //NOSONAR
     }
 
     /**
