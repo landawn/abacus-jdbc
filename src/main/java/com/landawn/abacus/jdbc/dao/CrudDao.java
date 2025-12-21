@@ -802,7 +802,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, (Collection<String>) null);
+        return batchGet(ids, null);
     }
 
     /**
@@ -824,7 +824,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, (Collection<String>) null, batchSize);
+        return batchGet(ids, null, batchSize);
     }
 
     /**

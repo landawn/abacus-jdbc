@@ -634,17 +634,17 @@ final class DaoImpl {
                     if (hasRowMapperOrExtractor) {
                         if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
                                         (Jdbc.RowMapper) args[paramLen - 1]);
                             } else {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
                             }
                         } else if (Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2],
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2],
                                         (Jdbc.BiRowMapper) args[paramLen - 1]);
                             } else {
-                                return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]);
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]);
                             }
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
@@ -694,9 +694,9 @@ final class DaoImpl {
 
                     if (hasRowMapperOrExtractor) {
                         if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
-                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
+                            return (preparedQuery, args) -> (R) preparedQuery.queryAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
                         } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
-                            return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
+                            return (preparedQuery, args) -> (R) preparedQuery.queryAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
                                     + " is not supported the specified op: " + op);
@@ -718,9 +718,9 @@ final class DaoImpl {
 
                 if (hasRowMapperOrExtractor) {
                     if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.streamAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
                     } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.streamAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                     } else {
                         throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
                                 + " is not supported the specified op: " + op);
@@ -2995,7 +2995,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            return Stream.just(Holder.of((Object) null)) //
+                            return Stream.just(Holder.of(null)) //
                                     .cycled()
                                     .map(it -> {
                                         try {
@@ -3030,7 +3030,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectFromSQLBuilderFunc.apply(limitedCond);
 
-                            return Stream.just(Holder.of((Object) null)) //
+                            return Stream.just(Holder.of(null)) //
                                     .cycled()
                                     .map(it -> {
                                         try {
@@ -3104,7 +3104,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).build();
 
-                            return Stream.just(Holder.of((Object) null)) //
+                            return Stream.just(Holder.of(null)) //
                                     .cycled()
                                     .map(it -> {
                                         try {
@@ -3141,7 +3141,7 @@ final class DaoImpl {
                             final Condition limitedCond = handleLimit(cond, pageSize, dbVersion);
                             final SP sp = selectSQLBuilderFunc.apply(selectPropNames, limitedCond).build();
 
-                            return Stream.just(Holder.of((Object) null)) //
+                            return Stream.just(Holder.of(null)) //
                                     .cycled()
                                     .map(it -> {
                                         try {

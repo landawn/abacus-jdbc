@@ -630,7 +630,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append(LINE_SEPARATOR);
 
                 if (idFields.remove(fieldName) || idFields.remove(columnName)) {
-                    sb.append(isJavaPersistenceId ? "    @Id" : "    @Id").append(LINE_SEPARATOR); //NOSONAR
+                    sb.append("    @Id").append(LINE_SEPARATOR); //NOSONAR
                 }
 
                 if (readOnlyFields.remove(fieldName) || readOnlyFields.remove(columnName)) {

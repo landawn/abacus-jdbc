@@ -1,3 +1,7 @@
+## 4.0.2
+
+* Improve javadoc and add unit tests
+
 ## 4.0.1
 
 * Improve javadoc and add unit tests
