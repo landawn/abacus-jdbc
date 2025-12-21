@@ -631,8 +631,8 @@ final class DaoUtil {
             }
 
             final Class<? extends SQLBuilder> sbc = N.isEmpty(typeArguments) ? PSC.class
-                    : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
-                            : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2]
+                    : (typeArguments.length >= 2 && typeArguments[1] instanceof Class && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
+                            : (typeArguments.length >= 3 && typeArguments[2] instanceof Class && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2]
                                     : PSC.class));
 
             @SuppressWarnings("deprecation")

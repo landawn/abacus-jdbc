@@ -276,7 +276,14 @@ public final class JoinInfo {
                         + "' in referenced class: " + ClassUtil.getCanonicalClassName(referencedEntityClass));
             }
 
-            final String middleEntity = left[1].substring(0, left[1].indexOf('.'));
+            final int dotIndexInLeft1 = left[1].indexOf('.');
+
+            if (dotIndexInLeft1 < 0) {
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in class: " + entityClass + ". Expected dot notation format in: '" + left[1] + "'");
+            }
+
+            final String middleEntity = left[1].substring(0, dotIndexInLeft1);
 
             if (!right[0].startsWith(middleEntity + ".")) {
                 throw new IllegalArgumentException(
@@ -302,12 +309,24 @@ public final class JoinInfo {
             final Class<?> middleEntityClass = tmpMiddleEntityClass;
             final ParserUtil.BeanInfo middleEntityInfo = ParserUtil.getBeanInfo(middleEntityClass);
 
-            if (!ClassUtil.wrap(srcPropInfos[0].clazz).equals(ClassUtil.wrap(middleEntityInfo.getPropInfo(left[1]).clazz))
-                    || !ClassUtil.wrap(referencedPropInfos[0].clazz).equals(ClassUtil.wrap(middleEntityInfo.getPropInfo(right[0]).clazz))) {
+            final PropInfo leftMiddlePropInfo = middleEntityInfo.getPropInfo(left[1]);
+            final PropInfo rightMiddlePropInfo = middleEntityInfo.getPropInfo(right[0]);
+
+            if (leftMiddlePropInfo == null) {
                 throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                        + "' in the class: " + entityClass + ". The types of source property and referenced do not match: " + Stream
-                                .of(srcPropInfos[0].clazz, middleEntityInfo.getPropInfo(left[1]).clazz, referencedPropInfos[0].clazz,
-                                        middleEntityInfo.getPropInfo(right[0]).clazz)
+                        + "' in class: " + entityClass + ". No property found with name: '" + left[1] + "' in middle entity class: " + middleEntityClass);
+            }
+
+            if (rightMiddlePropInfo == null) {
+                throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in class: " + entityClass + ". No property found with name: '" + right[0] + "' in middle entity class: " + middleEntityClass);
+            }
+
+            if (!ClassUtil.wrap(srcPropInfos[0].clazz).equals(ClassUtil.wrap(leftMiddlePropInfo.clazz))
+                    || !ClassUtil.wrap(referencedPropInfos[0].clazz).equals(ClassUtil.wrap(rightMiddlePropInfo.clazz))) {
+                throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in the class: " + entityClass + ". The types of source property and referenced do not match: "
+                        + Stream.of(srcPropInfos[0].clazz, leftMiddlePropInfo.clazz, referencedPropInfos[0].clazz, rightMiddlePropInfo.clazz)
                                 .map(ClassUtil::getSimpleClassName)
                                 .toList());
             }

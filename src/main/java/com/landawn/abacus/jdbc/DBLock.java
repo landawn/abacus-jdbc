@@ -526,9 +526,8 @@ public final class DBLock {
     public boolean unlock(final String target, final String code) throws IllegalStateException {
         assertNotClosed();
 
-        if (N.equals(targetCodePool.get(target), code)) {
-            targetCodePool.remove(target);
-        }
+        // Use atomic remove with value check to avoid race condition
+        targetCodePool.remove(target, code);
 
         try {
             return JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
