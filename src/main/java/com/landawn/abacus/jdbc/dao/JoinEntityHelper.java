@@ -630,6 +630,10 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
      * and populates the specified property in the entity.</p>
      *
+     * <p>The implementation should handle both collection-type properties (List, Set, etc.) and
+     * single-entity properties. For collection types, all matching join entities are loaded into
+     * the collection. For single entities, only one matching entity is loaded.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.findById(1L).orElseThrow();
@@ -640,11 +644,17 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * userDao.loadJoinEntities(user, "orders", null);
      * }</pre>
      *
-     * @param entity the entity for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to load
+     * @param entity the entity for which to load join entities. Must not be {@code null}
+     * @param joinEntityPropName the property name of the join entities to load. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If {@code null}, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected.
+     *                       This parameter is useful for performance optimization when only
+     *                       specific fields are needed
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
 
@@ -674,7 +684,15 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *
      * <p>This method is the core batch implementation for loading join entities. It efficiently loads
      * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
-     * The implementation typically uses an IN clause to fetch all related entities in one query.</p>
+     * The implementation typically uses an IN clause to fetch all related entities in one query, then
+     * distributes them to the appropriate parent entities based on the foreign key relationship.</p>
+     *
+     * <p>Performance characteristics:</p>
+     * <ul>
+     *   <li>For N parent entities, this method executes O(1) queries instead of O(N)</li>
+     *   <li>Large collections may be automatically batched to prevent excessive memory usage</li>
+     *   <li>Selecting fewer properties via {@code selectPropNames} can significantly improve performance</li>
+     * </ul>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -686,11 +704,18 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * userDao.loadJoinEntities(users, "orders", null);
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
-     * @param joinEntityPropName the property name of the join entities to load
+     * @param entities the collection of entities for which to load join entities. Can be empty
+     *                 but not {@code null}. If empty, this method returns immediately
+     * @param joinEntityPropName the property name of the join entities to load. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If {@code null}, all properties of the join entities are selected
+     *                       If {@code null}, all properties of the join entities are selected.
+     *                       Specifying only needed properties can significantly improve query
+     *                       performance and reduce memory usage
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException;
 
@@ -1604,7 +1629,17 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * This is an abstract method that must be implemented by concrete DAO classes.
      *
      * <p>This method deletes all related entities for the specified join property. The deletion
-     * is based on the foreign key relationship defined in the {@code @JoinedBy} annotation.</p>
+     * is based on the foreign key relationship defined in the {@code @JoinedBy} annotation. The
+     * method constructs and executes a DELETE statement targeting the join entity table with a
+     * WHERE clause matching the foreign key value(s) from the parent entity.</p>
+     *
+     * <p>Important notes:</p>
+     * <ul>
+     *   <li>This operation does NOT modify the in-memory join property of the entity</li>
+     *   <li>The deletion is permanent and cannot be rolled back unless within a transaction</li>
+     *   <li>Cascade deletion of further nested entities depends on database constraints</li>
+     *   <li>For transactional deletion of multiple properties, use {@link #deleteJoinEntities(Object, Collection)}</li>
+     * </ul>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1614,10 +1649,14 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * System.out.println("Deleted " + deletedCount + " addresses");
      * }</pre>
      *
-     * @param entity the entity for which to delete join entities
-     * @param joinEntityPropName the property name of the join entities to delete
-     * @return the total number of deleted records
+     * @param entity the entity for which to delete join entities. Must not be {@code null}
+     * @param joinEntityPropName the property name of the join entities to delete. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
+     * @return the total number of deleted records. Returns 0 if no matching records were found
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException;
 
@@ -1627,7 +1666,23 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * This is an abstract method that must be implemented by concrete DAO classes.
      *
      * <p>This method efficiently deletes all related entities for multiple parent entities in a batch operation.
-     * The implementation typically uses an IN clause to delete all related records in one or more SQL statements.</p>
+     * The implementation typically uses an IN clause to delete all related records in one or more SQL statements,
+     * avoiding the N+1 delete problem. For large collections, the deletion may be automatically batched to
+     * prevent SQL statement size limits from being exceeded.</p>
+     *
+     * <p>Performance characteristics:</p>
+     * <ul>
+     *   <li>For N parent entities, executes O(1) or O(N/batch_size) DELETE statements instead of O(N)</li>
+     *   <li>Much more efficient than deleting join entities one parent at a time</li>
+     *   <li>The actual number of deleted records may be less than or greater than the number of parent entities</li>
+     * </ul>
+     *
+     * <p>Important notes:</p>
+     * <ul>
+     *   <li>This operation does NOT modify the in-memory join properties of the entities</li>
+     *   <li>All deletions are permanent unless executed within a transaction</li>
+     *   <li>For transactional deletion of multiple properties, use {@link #deleteJoinEntities(Collection, Collection)}</li>
+     * </ul>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1637,10 +1692,16 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * System.out.println("Deleted " + deletedCount + " reviews for " + users.size() + " users");
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities
-     * @param joinEntityPropName the property name of the join entities to delete
-     * @return the total number of deleted records
+     * @param entities the collection of entities for which to delete join entities. Can be empty
+     *                 but not {@code null}. If empty, this method returns 0 immediately
+     * @param joinEntityPropName the property name of the join entities to delete. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
+     * @return the total number of deleted records across all parent entities. Returns 0 if no
+     *         matching records were found or if {@code entities} is empty
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException;
 

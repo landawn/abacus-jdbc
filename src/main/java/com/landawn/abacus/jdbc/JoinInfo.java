@@ -331,9 +331,9 @@ public final class JoinInfo {
                                 .toList());
             }
 
-            final List<Integer> dummyList = N.asList(1, 2, 3);
-            final Condition cond = Filters.in(right[1], dummyList); //
-            final String inCondToReplace = Strings.repeat("?", dummyList.size(), ", ");
+            final List<Integer> placeholderList = N.asList(1, 2, 3);
+            final Condition cond = Filters.in(right[1], placeholderList); //
+            final String inCondToReplace = Strings.repeat("?", placeholderList.size(), ", ");
 
             final List<String> middleSelectPropNames = N.asList(right[0].substring(right[0].indexOf('.') + 1));
             final Condition middleEntityCond = Filters.eq(left[1].substring(left[1].indexOf('.') + 1));
@@ -490,23 +490,24 @@ public final class JoinInfo {
             final List<Condition> conds = new ArrayList<>(joinColumnPairs.length);
 
             for (int i = 0, len = joinColumnPairs.length; i < len; i++) {
-                final String[] tmp = Strings.split(joinColumnPairs[i], '=', true);
+                final String[] columnPair = Strings.split(joinColumnPairs[i], '=', true);
 
-                if (tmp.length > 2) {
+                if (columnPair.length > 2) {
                     throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                             + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
                 }
 
-                if ((srcPropInfos[i] = entityInfo.getPropInfo(tmp[0])) == null) {
+                if ((srcPropInfos[i] = entityInfo.getPropInfo(columnPair[0])) == null) {
                     throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
-                            + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + tmp[0] + "' in class: "
-                            + ClassUtil.getCanonicalClassName(entityClass));
+                            + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + columnPair[0]
+                            + "' in class: " + ClassUtil.getCanonicalClassName(entityClass));
                 }
 
-                if ((referencedPropInfos[i] = referencedBeanInfo.getPropInfo(tmp.length == 1 ? tmp[0] : tmp[1])) == null) {
+                if ((referencedPropInfos[i] = referencedBeanInfo.getPropInfo(columnPair.length == 1 ? columnPair[0] : columnPair[1])) == null) {
                     throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                             + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No referenced property found with name: '"
-                            + (tmp.length == 1 ? tmp[0] : tmp[1]) + "' in referenced class: " + ClassUtil.getCanonicalClassName(referencedEntityClass));
+                            + (columnPair.length == 1 ? columnPair[0] : columnPair[1]) + "' in referenced class: "
+                            + ClassUtil.getCanonicalClassName(referencedEntityClass));
                 }
 
                 if (!ClassUtil.wrap(srcPropInfos[i].clazz).equals(ClassUtil.wrap(referencedPropInfos[i].clazz))) {

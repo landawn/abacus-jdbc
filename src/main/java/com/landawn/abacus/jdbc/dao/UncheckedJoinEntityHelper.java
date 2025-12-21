@@ -549,7 +549,18 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      * Loads join entities for a specific property name with selected properties for a single entity.
-     * 
+     * This is the core implementation method for loading join entities in unchecked mode.
+     *
+     * <p>This method is the core implementation for loading join entities. It queries the database
+     * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
+     * and populates the specified property in the entity. Unlike the checked version in {@link JoinEntityHelper},
+     * this method throws {@link UncheckedSQLException} instead of {@link java.sql.SQLException}, making it
+     * suitable for use in functional programming contexts and lambda expressions.</p>
+     *
+     * <p>The implementation should handle both collection-type properties (List, Set, etc.) and
+     * single-entity properties. For collection types, all matching join entities are loaded into
+     * the collection. For single entities, only one matching entity is loaded.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -559,13 +570,23 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *     "orders",
      *     Arrays.asList("id", "orderDate", "total", "status")
      * );
+     *
+     * // Use in functional context without try-catch
+     * Optional.ofNullable(user)
+     *     .ifPresent(u -> userDao.loadJoinEntities(u, "addresses", null));
      * }</pre>
      *
-     * @param entity the entity to load join entities for
-     * @param joinEntityPropName the property name of the join entities to load
+     * @param entity the entity to load join entities for. Must not be {@code null}
+     * @param joinEntityPropName the property name of the join entities to load. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If {@code null}, all properties of the join entities are selected
-     * @throws UncheckedSQLException if a database access error occurs
+     *                       If {@code null}, all properties of the join entities are selected.
+     *                       This parameter is useful for performance optimization when only
+     *                       specific fields are needed
+     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
@@ -591,7 +612,24 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      * Loads join entities for a specific property name with selected properties for multiple entities.
-     * 
+     * This is the core batch implementation method for loading join entities in unchecked mode.
+     *
+     * <p>This method is the core batch implementation for loading join entities. It efficiently loads
+     * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
+     * The implementation typically uses an IN clause to fetch all related entities in one query, then
+     * distributes them to the appropriate parent entities based on the foreign key relationship.</p>
+     *
+     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
+     * such as Stream operations and lambda expressions without requiring explicit exception handling.</p>
+     *
+     * <p>Performance characteristics:</p>
+     * <ul>
+     *   <li>For N parent entities, this method executes O(1) queries instead of O(N)</li>
+     *   <li>Large collections may be automatically batched to prevent excessive memory usage</li>
+     *   <li>Selecting fewer properties via {@code selectPropNames} can significantly improve performance</li>
+     * </ul>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.batchGet(userIds);
@@ -601,13 +639,26 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *     "addresses",
      *     Arrays.asList("street", "city", "country", "isPrimary")
      * );
+     *
+     * // Use in stream operations without try-catch
+     * users.stream()
+     *     .peek(u -> userDao.loadJoinEntities(u, "orders", null))
+     *     .filter(u -> u.getOrders().size() > 5)
+     *     .collect(Collectors.toList());
      * }</pre>
      *
-     * @param entities the collection of entities to load join entities for
-     * @param joinEntityPropName the property name of the join entities to load
+     * @param entities the collection of entities to load join entities for. Can be empty
+     *                 but not {@code null}. If empty, this method returns immediately
+     * @param joinEntityPropName the property name of the join entities to load. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
      * @param selectPropNames the properties (columns) to be selected from the join entities.
-     *                       If {@code null}, all properties of the join entities are selected
-     * @throws UncheckedSQLException if a database access error occurs
+     *                       If {@code null}, all properties of the join entities are selected.
+     *                       Specifying only needed properties can significantly improve query
+     *                       performance and reduce memory usage
+     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> selectPropNames) throws UncheckedSQLException;
@@ -1597,36 +1648,101 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
     /**
      * Deletes join entities for a specific property name of a single entity.
-     * 
+     * This is the core implementation method for deleting join entities in unchecked mode.
+     *
+     * <p>This method deletes all related entities for the specified join property. The deletion
+     * is based on the foreign key relationship defined in the {@code @JoinedBy} annotation. The
+     * method constructs and executes a DELETE statement targeting the join entity table with a
+     * WHERE clause matching the foreign key value(s) from the parent entity.</p>
+     *
+     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
+     * and lambda expressions without requiring explicit exception handling.</p>
+     *
+     * <p>Important notes:</p>
+     * <ul>
+     *   <li>This operation does NOT modify the in-memory join property of the entity</li>
+     *   <li>The deletion is permanent and cannot be rolled back unless within a transaction</li>
+     *   <li>Cascade deletion of further nested entities depends on database constraints</li>
+     *   <li>For transactional deletion of multiple properties, use {@link #deleteJoinEntities(Object, Collection)}</li>
+     * </ul>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
      * // Delete all addresses for this user
      * int deleted = userDao.deleteJoinEntities(user, "addresses");
+     *
+     * // Use in functional context without try-catch
+     * Optional.ofNullable(user)
+     *     .map(u -> userDao.deleteJoinEntities(u, "temporaryData"))
+     *     .ifPresent(count -> System.out.println("Deleted " + count + " records"));
      * }</pre>
      *
-     * @param entity the entity whose join entities should be deleted
-     * @param joinEntityPropName the property name of the join entities to delete
-     * @return the total count of deleted records
-     * @throws UncheckedSQLException if a database access error occurs
+     * @param entity the entity whose join entities should be deleted. Must not be {@code null}
+     * @param joinEntityPropName the property name of the join entities to delete. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
+     * @return the total count of deleted records. Returns 0 if no matching records were found
+     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
     int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException;
 
     /**
      * Deletes join entities for a specific property name for multiple entities.
-     * 
+     * This is the core batch implementation method for deleting join entities in unchecked mode.
+     *
+     * <p>This method efficiently deletes all related entities for multiple parent entities in a batch operation.
+     * The implementation typically uses an IN clause to delete all related records in one or more SQL statements,
+     * avoiding the N+1 delete problem. For large collections, the deletion may be automatically batched to
+     * prevent SQL statement size limits from being exceeded.</p>
+     *
+     * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
+     * such as Stream operations and lambda expressions without requiring explicit exception handling.</p>
+     *
+     * <p>Performance characteristics:</p>
+     * <ul>
+     *   <li>For N parent entities, executes O(1) or O(N/batch_size) DELETE statements instead of O(N)</li>
+     *   <li>Much more efficient than deleting join entities one parent at a time</li>
+     *   <li>The actual number of deleted records may be less than or greater than the number of parent entities</li>
+     * </ul>
+     *
+     * <p>Important notes:</p>
+     * <ul>
+     *   <li>This operation does NOT modify the in-memory join properties of the entities</li>
+     *   <li>All deletions are permanent unless executed within a transaction</li>
+     *   <li>For transactional deletion of multiple properties, use {@link #deleteJoinEntities(Collection, Collection)}</li>
+     * </ul>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getDeactivatedUsers();
      * // Delete all payment methods for these users
      * int totalDeleted = userDao.deleteJoinEntities(users, "paymentMethods");
+     *
+     * // Use in stream context
+     * int deletedOrders = userDao.list(Filters.eq("status", "INACTIVE"))
+     *     .stream()
+     *     .collect(Collectors.collectingAndThen(
+     *         Collectors.toList(),
+     *         list -> userDao.deleteJoinEntities(list, "orders")
+     *     ));
      * }</pre>
      *
-     * @param entities the collection of entities whose join entities should be deleted
-     * @param joinEntityPropName the property name of the join entities to delete
-     * @return the total count of deleted records
-     * @throws UncheckedSQLException if a database access error occurs
+     * @param entities the collection of entities whose join entities should be deleted. Can be empty
+     *                 but not {@code null}. If empty, this method returns 0 immediately
+     * @param joinEntityPropName the property name of the join entities to delete. Must be a valid
+     *                           property name that exists in the entity class and is annotated
+     *                           with {@code @JoinedBy}
+     * @return the total count of deleted records across all parent entities. Returns 0 if no
+     *         matching records were found or if {@code entities} is empty
+     * @throws UncheckedSQLException if a database access error occurs (wraps {@link java.sql.SQLException})
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
+     *                                  properly annotated with {@code @JoinedBy}
      */
     @Override
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException;

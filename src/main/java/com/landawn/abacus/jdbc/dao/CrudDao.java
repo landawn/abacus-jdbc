@@ -1267,7 +1267,18 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final PropInfo uniquePropInfo = entityInfo.getPropInfo(propNameListForQuery.get(0));
+
+        if (uniquePropInfo == null) {
+            throw new IllegalArgumentException("No property found with name: '" + propNameListForQuery.get(0) + "' in class: " + cls.getName());
+        }
+
         final List<PropInfo> uniquePropInfos = N.map(propNameListForQuery, entityInfo::getPropInfo);
+
+        for (int i = 0; i < uniquePropInfos.size(); i++) {
+            if (uniquePropInfos.get(i) == null) {
+                throw new IllegalArgumentException("No property found with name: '" + propNameListForQuery.get(i) + "' in class: " + cls.getName());
+            }
+        }
 
         final com.landawn.abacus.util.function.Function<T, Object> singleKeyExtractor = uniquePropInfo::getPropValue;
 
@@ -1518,15 +1529,15 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         } else {
             return dbEntities.stream().mapToInt(dbEntity -> {
                 final ID id = idExtractorFunc.apply(dbEntity);
-                final List<T> tmp = idEntityMap.get(id);
+                final List<T> matchingEntities = idEntityMap.get(id);
 
-                if (N.notEmpty(tmp)) {
-                    for (final T entity : tmp) {
+                if (N.notEmpty(matchingEntities)) {
+                    for (final T entity : matchingEntities) {
                         Beans.merge(dbEntity, entity, propNamesToRefresh);
                     }
                 }
 
-                return N.size(tmp);
+                return N.size(matchingEntities);
             }).sum();
         }
     }
