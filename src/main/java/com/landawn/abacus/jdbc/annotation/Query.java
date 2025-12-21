@@ -456,10 +456,10 @@ public @interface Query {
      * @Query(value = "INSERT INTO user_actions (user_id, action, category, timestamp) " +
      *               "VALUES (:userId, :action, :category, :timestamp)",
      *        isBatch = true)
-     * int[] logUserActions(@Bind("userId"); List<Long> userIds,      // varies per batch item
+     * int[] logUserActions(@Bind("userId") List<Long> userIds,     // varies per batch item
      *                     @Bind("action") List<String> actions,    // varies per batch item
      *                     @Bind("category") String category,       // same for all items
-     *                     @Bind("timestamp") Date timestamp);   // same for all items
+     *                     @Bind("timestamp") Date timestamp);      // same for all items
      * }</pre>
      *
      * <p>Performance considerations:</p>

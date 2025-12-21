@@ -777,6 +777,9 @@ final class DaoUtil {
      * @throws UnsupportedOperationException if the operation is not supported
      */
     static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
+        if (sql == null || sql.isEmpty()) {
+            return false;
+        }
         return sql.startsWith("select ") || sql.startsWith("SELECT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "select ");
     }
 
@@ -813,6 +816,9 @@ final class DaoUtil {
      * @throws UnsupportedOperationException if the operation is not supported
      */
     static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {
+        if (sql == null || sql.isEmpty()) {
+            return false;
+        }
         return sql.startsWith("insert ") || sql.startsWith("INSERT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "insert ");
     }
 

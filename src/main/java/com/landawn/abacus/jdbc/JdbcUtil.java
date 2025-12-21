@@ -8113,9 +8113,17 @@ public final class JdbcUtil {
                     JdbcUtil.closeQuietly(rs);
                 }
             } else if (value instanceof final Blob blob) {
-                value = blob.getBytes(1, (int) blob.length());
+                try {
+                    value = blob.getBytes(1, (int) blob.length());
+                } finally {
+                    blob.free();
+                }
             } else if (value instanceof final Clob clob) {
-                value = clob.getSubString(1, (int) clob.length());
+                try {
+                    value = clob.getSubString(1, (int) clob.length());
+                } finally {
+                    clob.free();
+                }
             }
 
             outParamValues.put(key, value);
@@ -8353,12 +8361,14 @@ public final class JdbcUtil {
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
     public static String blob2String(final Blob blob) throws SQLException {
+        if (blob == null) {
+            return null;
+        }
+
         try {
             return new String(blob.getBytes(1, (int) blob.length()), Charsets.UTF_8);
         } finally {
-            if (blob != null) {
-                blob.free();
-            }
+            blob.free();
         }
     }
 
@@ -8379,12 +8389,14 @@ public final class JdbcUtil {
      * @throws SQLException if a SQL exception occurs while accessing the Blob
      */
     public static String blob2String(final Blob blob, final Charset charset) throws SQLException {
+        if (blob == null) {
+            return null;
+        }
+
         try {
             return new String(blob.getBytes(1, (int) blob.length()), charset);
         } finally {
-            if (blob != null) {
-                blob.free();
-            }
+            blob.free();
         }
     }
 
@@ -8407,12 +8419,14 @@ public final class JdbcUtil {
      * @throws IOException if an I/O error occurs while writing to the file
      */
     public static long writeBlobToFile(final Blob blob, final File output) throws SQLException, IOException {
+        if (blob == null) {
+            return 0;
+        }
+
         try {
             return IOUtil.write(blob.getBinaryStream(), output);
         } finally {
-            if (blob != null) {
-                blob.free();
-            }
+            blob.free();
         }
     }
 
@@ -8432,12 +8446,14 @@ public final class JdbcUtil {
      * @throws SQLException if a SQL exception occurs while accessing the Clob
      */
     public static String clob2String(final Clob clob) throws SQLException {
+        if (clob == null) {
+            return null;
+        }
+
         try {
             return clob.getSubString(1, (int) clob.length());
         } finally {
-            if (clob != null) {
-                clob.free();
-            }
+            clob.free();
         }
     }
 
@@ -8460,12 +8476,14 @@ public final class JdbcUtil {
      * @throws IOException if an I/O exception occurs while writing to the file
      */
     public static long writeClobToFile(final Clob clob, final File output) throws SQLException, IOException {
+        if (clob == null) {
+            return 0;
+        }
+
         try {
             return IOUtil.write(clob.getCharacterStream(), output);
         } finally {
-            if (clob != null) {
-                clob.free();
-            }
+            clob.free();
         }
     }
 
