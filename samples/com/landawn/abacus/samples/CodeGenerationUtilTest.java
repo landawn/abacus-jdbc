@@ -14,7 +14,7 @@
 package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.samples.JdbcTest.dataSource;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.Collection;
