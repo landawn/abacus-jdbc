@@ -5286,21 +5286,13 @@ public final class JdbcUtil {
             } finally {
                 JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTime);
 
-                try {
-                    stmt.clearBatch();
-                } catch (final SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
-                }
+                clearParameters(stmt);
             }
         } else {
             try {
                 return stmt.executeLargeUpdate();
             } finally {
-                try {
-                    stmt.clearBatch();
-                } catch (final SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeLargeUpdate", e);
-                }
+                clearParameters(stmt);
             }
         }
     }
@@ -5464,6 +5456,11 @@ public final class JdbcUtil {
             parameterValues = getParameterValues(parsedSql, parameters);
         }
 
+        if (parameterValues.length < parameterCount) {
+            throw new IllegalArgumentException(
+                    "SQL requires " + parameterCount + " parameter(s), but only " + parameterValues.length + " specified");
+        }
+
         setParameters(stmt, parameterCount, parameterValues, parameterTypes);
     }
 
@@ -5498,7 +5495,7 @@ public final class JdbcUtil {
         if ((parameters.length == 1) && (parameters[0] != null)) {
             if (parameters[0] instanceof Object[] && ((((Object[]) parameters[0]).length) >= parsedSql.getParameterCount())) {
                 return (Object[]) parameters[0];
-            } else if (parameters[0] instanceof final Collection<?> c && (((List<?>) parameters[0]).size() >= parsedSql.getParameterCount())) {
+            } else if (parameters[0] instanceof final Collection<?> c && (c.size() >= parsedSql.getParameterCount())) {
                 return c.toArray(new Object[0]);
             }
         }

@@ -2195,9 +2195,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
-            outParams = outParams == null ? N.emptyList() : outParams;
+            final List<Jdbc.OutParam> outParamsToUse = outParams == null ? N.emptyList() : outParams;
 
-            return getter.apply(cstmt, outParams, isFirstResultSet);
+            return getter.apply(cstmt, outParamsToUse, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -2307,9 +2307,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
-            outParams = outParams == null ? N.emptyList() : outParams;
+            final List<Jdbc.OutParam> outParamsToUse = outParams == null ? N.emptyList() : outParams;
 
-            consumer.accept(cstmt, outParams, isFirstResultSet);
+            consumer.accept(cstmt, outParamsToUse, isFirstResultSet);
         } finally {
             closeAfterExecutionIfAllowed();
         }

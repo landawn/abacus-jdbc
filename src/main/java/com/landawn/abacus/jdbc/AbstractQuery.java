@@ -4070,7 +4070,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setFetchDirection(final FetchDirection direction) throws SQLException {
         assertNotClosed();
 
-        defaultFetchDirection = stmt.getFetchDirection();
+        if (defaultFetchDirection < 0) {
+            defaultFetchDirection = stmt.getFetchDirection();
+        }
 
         stmt.setFetchDirection(direction.intValue);
 
@@ -4118,7 +4120,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setFetchSize(final int fetchSize) throws SQLException {
         assertNotClosed();
 
-        defaultFetchSize = stmt.getFetchSize();
+        if (defaultFetchSize < 0) {
+            defaultFetchSize = stmt.getFetchSize();
+        }
 
         stmt.setFetchSize(fetchSize);
 
@@ -4144,7 +4148,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setMaxFieldSize(final int max) throws SQLException {
         assertNotClosed();
 
-        defaultMaxFieldSize = stmt.getMaxFieldSize();
+        if (defaultMaxFieldSize < 0) {
+            defaultMaxFieldSize = stmt.getMaxFieldSize();
+        }
 
         stmt.setMaxFieldSize(max);
 
@@ -4215,7 +4221,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setQueryTimeout(final int seconds) throws SQLException {
         assertNotClosed();
 
-        defaultQueryTimeout = stmt.getQueryTimeout();
+        if (defaultQueryTimeout < 0) {
+            defaultQueryTimeout = stmt.getQueryTimeout();
+        }
 
         stmt.setQueryTimeout(seconds);
 
