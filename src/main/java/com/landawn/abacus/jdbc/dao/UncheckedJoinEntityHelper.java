@@ -1308,7 +1308,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
 
         final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
                 .filter(joinEntityPropName -> Beans.getPropValue(entity, joinEntityPropName) == null)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfNull(entity, joinEntityPropName), executor))
+                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
                 .toList();
 
         DaoUtil.uncheckedComplete(futures);

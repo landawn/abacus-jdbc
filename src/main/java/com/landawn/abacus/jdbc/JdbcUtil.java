@@ -1899,8 +1899,8 @@ public final class JdbcUtil {
         } else {
             final int currentRow = rs.getRow();
 
-            if ((n > Integer.MAX_VALUE) || (n > Integer.MAX_VALUE - currentRow
-                    || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass())))) {
+            if ((n > Integer.MAX_VALUE) || (n > Integer.MAX_VALUE - currentRow)
+                    || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
                 while (n-- > 0L && rs.next()) {
                     // continue.
                 }
@@ -2446,7 +2446,7 @@ public final class JdbcUtil {
                     result.add(val);
 
                     while (rs.next()) {
-                        result.add(rs.getDate(columnIndex));
+                        result.add(rs.getObject(columnIndex));
                     }
                 }
             }
