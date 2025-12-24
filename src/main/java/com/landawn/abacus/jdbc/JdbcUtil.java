@@ -8288,7 +8288,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Include properties of related entities (e.g., user.address.street)
-     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, {@code true}, null);
+     * Collection<String> propNames = JdbcUtil.getSelectPropNames(User.class, true, null);
      * // Returns property names including sub-entity properties
      * }</pre>
      *
