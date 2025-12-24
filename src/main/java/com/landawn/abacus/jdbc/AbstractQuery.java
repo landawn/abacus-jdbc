@@ -170,7 +170,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     boolean isCloseAfterExecution = true;
 
-    boolean isClosed = false;
+    volatile boolean isClosed = false;
 
     Runnable closeHandler;
 
