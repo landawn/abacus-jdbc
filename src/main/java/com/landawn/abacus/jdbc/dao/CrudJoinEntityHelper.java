@@ -340,7 +340,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
             throws DuplicatedResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
-        if (result != null) {
+        if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }

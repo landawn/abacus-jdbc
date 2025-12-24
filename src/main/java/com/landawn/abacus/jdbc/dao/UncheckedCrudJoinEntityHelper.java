@@ -329,7 +329,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
             throws DuplicatedResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
-        if (result != null) {
+        if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }

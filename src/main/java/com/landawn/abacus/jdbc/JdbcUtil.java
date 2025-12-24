@@ -5457,8 +5457,7 @@ public final class JdbcUtil {
         }
 
         if (parameterValues.length < parameterCount) {
-            throw new IllegalArgumentException(
-                    "SQL requires " + parameterCount + " parameter(s), but only " + parameterValues.length + " specified");
+            throw new IllegalArgumentException("SQL requires " + parameterCount + " parameter(s), but only " + parameterValues.length + " specified");
         }
 
         setParameters(stmt, parameterCount, parameterValues, parameterTypes);
@@ -6309,7 +6308,7 @@ public final class JdbcUtil {
         N.checkArgPositive(columnIndex, cs.columnIndex);
 
         final boolean checkDateType = JdbcUtil.checkDateType(resultSet);
-        final RowMapper<? extends T> rowMapper = rs -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
+        final RowMapper<? extends T> rowMapper = rs -> (T) getColumnValue(rs, columnIndex, checkDateType);
 
         return stream(resultSet, rowMapper);
     }
@@ -6345,11 +6344,11 @@ public final class JdbcUtil {
             @Override
             public T apply(final ResultSet rs) throws SQLException {
                 if (columnIndex == -1) {
-                    columnIndex = getColumnIndex(resultSet, columnName);
-                    checkDateType = JdbcUtil.checkDateType(resultSet);
+                    columnIndex = getColumnIndex(rs, columnName);
+                    checkDateType = JdbcUtil.checkDateType(rs);
                 }
 
-                return (T) getColumnValue(resultSet, columnIndex, checkDateType);
+                return (T) getColumnValue(rs, columnIndex, checkDateType);
             }
         };
 
@@ -9840,8 +9839,6 @@ public final class JdbcUtil {
                                     PropInfo propInfo = null;
 
                                     for (final String propName : entityId.keySet()) {
-                                        propInfo = entityInfo.getPropInfo(propName);
-
                                         if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
                                             propInfo.setPropValue(entity, entityId.get(propName));
                                         }
@@ -9866,7 +9863,7 @@ public final class JdbcUtil {
             map = new EnumMap<>(NamingPolicy.class);
 
             for (final NamingPolicy np : NamingPolicy.values()) {
-                final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, namingPolicy);
+                final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, np);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
                         .inversed()

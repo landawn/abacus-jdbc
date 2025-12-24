@@ -634,8 +634,8 @@ final class DaoImpl {
                     if (hasRowMapperOrExtractor) {
                         if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowFilter) args[paramLen - 2],
-                                        (Jdbc.RowMapper) args[paramLen - 1]);
+                                return (preparedQuery,
+                                        args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
                             } else {
                                 return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
                             }
@@ -973,12 +973,12 @@ final class DaoImpl {
                 return (R) Stream.of(entities).toMap(keyExtractor, Fn.identity(), Suppliers.ofMap(targetMapClass));
             };
         } else if (N.notEmpty(mergedByIds)) {
-            if (returnType.isAssignableFrom(Collection.class) || returnType.isAssignableFrom(u.Optional.class)
-                    || returnType.isAssignableFrom(java.util.Optional.class)) {
+            if (Collection.class.isAssignableFrom(returnType) || u.Optional.class.isAssignableFrom(returnType)
+                    || java.util.Optional.class.isAssignableFrom(returnType)) {
                 final Class<?> targetEntityClass = !Beans.isBeanClass(firstReturnEleType) ? entityClass : firstReturnEleType;
                 ParserUtil.getBeanInfo(targetEntityClass);
-                final boolean isCollection = returnType.isAssignableFrom(Collection.class);
-                final boolean isJavaOption = returnType.isAssignableFrom(java.util.Optional.class);
+                final boolean isCollection = Collection.class.isAssignableFrom(returnType);
+                final boolean isJavaOption = java.util.Optional.class.isAssignableFrom(returnType);
 
                 return (preparedQuery, args) -> {
                     final Dataset dataset = (Dataset) preparedQuery.query(Jdbc.ResultExtractor.toDataset(targetEntityClass, prefixFieldMap));
@@ -3843,7 +3843,7 @@ final class DaoImpl {
                                 return new ArrayList<>();
                             }
 
-                            final boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
+                            boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
 
                             if (!allDefaultIdValue && callGenerateIdForInsert) {
                                 final CrudDao crudDao = (CrudDao) proxy;
@@ -3853,6 +3853,8 @@ final class DaoImpl {
                                         idSetter.accept(crudDao.generateId(), entity);
                                     }
                                 }
+
+                                allDefaultIdValue = false;
                             }
 
                             final ParsedSql namedInsertSQL = allDefaultIdValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
@@ -3964,7 +3966,7 @@ final class DaoImpl {
                                 }
                             }
 
-                            if ((N.notEmpty(ids) && ids.size() != entities.size()) && daoLogger.isWarnEnabled()) {
+                            if ((N.notEmpty(ids) && N.size(ids) != N.size(entities)) && daoLogger.isWarnEnabled()) {
                                 daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
                                         entities.size());
                             }
@@ -4282,9 +4284,9 @@ final class DaoImpl {
                             N.checkArgNotNull(id, cs.id);
                             N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.query).setFetchSize(1).settParameters(id, idParamSetter).findOnlyOne(rowMapper);
+                            return proxy.prepareNamedQuery(sp.query).setFetchSize(2).settParameters(id, idParamSetter).findOnlyOne(rowMapper);
                         };
                     } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
@@ -5357,8 +5359,8 @@ final class DaoImpl {
 
                             final Class<?> firstReturnEleType = getFirstReturnEleType(method);
 
-                            if (!(((returnType.isAssignableFrom(Collection.class) && (op == OP.list || op == OP.DEFAULT))
-                                    || ((returnType.isAssignableFrom(u.Optional.class) || returnType.isAssignableFrom(java.util.Optional.class))
+                            if (!(((Collection.class.isAssignableFrom(returnType) && (op == OP.list || op == OP.DEFAULT))
+                                    || ((u.Optional.class.isAssignableFrom(returnType) || java.util.Optional.class.isAssignableFrom(returnType))
                                             && (op == OP.findFirst || op == OP.findOnlyOne || op == OP.DEFAULT)))
                                     && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
                                 throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
@@ -5381,8 +5383,8 @@ final class DaoImpl {
 
                         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
 
-                        if (!(Strings.isNotEmpty(mappedByKey) || N.notEmpty(mergedByIds) || returnType.isAssignableFrom(Dataset.class)
-                                || returnType.isAssignableFrom(entityClass)
+                        if (!(Strings.isNotEmpty(mappedByKey) || N.notEmpty(mergedByIds) || Dataset.class.isAssignableFrom(returnType)
+                                || entityClass.isAssignableFrom(returnType)
                                 || (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
                             throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
                                     + ") annotated by @PrefixFieldMapping must be: Optional/List/Collection<? super "
@@ -5442,8 +5444,8 @@ final class DaoImpl {
                                         : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType))); //NOSONAR
 
                         if (!isBatch) {
-                            if (!(returnType.isAssignableFrom(void.class) || idClass == null
-                                    || ClassUtil.wrap(idClass).isAssignableFrom(ClassUtil.wrap(returnType)) || returnType.isAssignableFrom(u.Optional.class))) {
+                            if (!(returnType.equals(void.class) || idClass == null || ClassUtil.wrap(idClass).isAssignableFrom(ClassUtil.wrap(returnType))
+                                    || u.Optional.class.isAssignableFrom(returnType))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                         + ") only can be: void or 'ID' type. It can't be: " + returnType);
                             }
@@ -5465,7 +5467,7 @@ final class DaoImpl {
                                 return insertResultConvertor.apply(id, entity, isEntity);
                             };
                         } else {
-                            if (!(returnType.equals(void.class) || returnType.isAssignableFrom(List.class))) {
+                            if (!(returnType.equals(void.class) || List.class.isAssignableFrom(returnType))) {
                                 throw new UnsupportedOperationException("The return type of batch insert operations(" + fullClassMethodName
                                         + ")  only can be: void/List<ID>/Collection<ID>. It can't be: " + returnType);
                             }
@@ -5489,7 +5491,7 @@ final class DaoImpl {
 
                                 if (N.isEmpty(batchParameters)) {
                                     ids = new ArrayList<>(0);
-                                } else if (batchParameters.size() < batchSize) {
+                                } else if (batchParameters.size() <= batchSize) {
                                     AbstractQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
@@ -5531,7 +5533,8 @@ final class DaoImpl {
                                     }
                                 }
 
-                                final boolean isEntity = Beans.isBeanClass(N.firstOrNullIfEmpty(batchParameters).getClass());
+                                final Object firstElement = N.firstOrNullIfEmpty(batchParameters);
+                                final boolean isEntity = firstElement != null && Beans.isBeanClass(firstElement.getClass());
 
                                 if (JdbcUtil.isAllNullIds(ids)) {
                                     ids = new ArrayList<>();
@@ -5554,7 +5557,7 @@ final class DaoImpl {
                                     }
                                 }
 
-                                if ((N.notEmpty(ids) && ids.size() != batchParameters.size()) && daoLogger.isWarnEnabled()) {
+                                if ((N.notEmpty(ids) && N.size(ids) != N.size(batchParameters)) && daoLogger.isWarnEnabled()) {
                                     daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
                                             batchParameters.size());
                                 }
@@ -5605,7 +5608,7 @@ final class DaoImpl {
 
                                 if (N.isEmpty(batchParameters)) {
                                     updatedRecordCount = 0;
-                                } else if (batchParameters.size() < batchSize) {
+                                } else if (batchParameters.size() <= batchSize) {
                                     AbstractQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
@@ -5770,9 +5773,9 @@ final class DaoImpl {
                             final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                            final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
-                            final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                            final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                            final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                             if (hasSqlLogAnno) {
                                 JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
@@ -5840,9 +5843,9 @@ final class DaoImpl {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                                final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
-                                final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                                final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
                                     JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());
@@ -5914,9 +5917,9 @@ final class DaoImpl {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig SqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
-                                final long prevMinExecutionTimeForSqlPerfLog = SqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
-                                final int prevMaxPerfSqlLogLength = SqlPerfLogConfig.maxSqlLogLength;
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.minExecutionTimeForSqlPerfLog_TL.get();
+                                final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.minExecutionTimeForSqlPerfLog;
+                                final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
                                 if (hasSqlLogAnno) {
                                     JdbcUtil.enableSqlLog(sqlLogAnno.value(), sqlLogAnno.maxSqlLogLength());

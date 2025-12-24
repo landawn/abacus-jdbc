@@ -6232,22 +6232,22 @@ public final class Jdbc {
          * A simple implementation of {@link DaoCache} that uses a standard {@code java.util.Map}
          * as the backing cache. It does not support automatic eviction or TTL.
          */
-        record DaoCacheByMap(Map<String, Object> cache) implements DaoCache {
-            /**
-             * Creates a {@code DaoCacheByMap} with a new {@code HashMap}.
-             */
-            public DaoCacheByMap() {
-                this(new HashMap<>());
-            }
+    record DaoCacheByMap(Map<String, Object> cache) implements DaoCache {
+        /**
+         * Creates a {@code DaoCacheByMap} with a new {@code HashMap}.
+         */
+        public DaoCacheByMap() {
+            this(new HashMap<>());
+        }
 
-            /**
-             * Creates a {@code DaoCacheByMap} with a {@code HashMap} of a specified initial capacity.
-             *
-             * @param capacity the initial capacity for the backing {@code HashMap}.
-             */
-            public DaoCacheByMap(final int capacity) {
-                this(new HashMap<>(capacity));
-            }
+        /**
+         * Creates a {@code DaoCacheByMap} with a {@code HashMap} of a specified initial capacity.
+         *
+         * @param capacity the initial capacity for the backing {@code HashMap}.
+         */
+        public DaoCacheByMap(final int capacity) {
+            this(new HashMap<>(capacity));
+        }
 
         /**
          * Creates a {@code DaoCacheByMap} backed by a provided map instance.
@@ -6257,54 +6257,54 @@ public final class Jdbc {
         DaoCacheByMap {
         }
 
-            @Override
-            @SuppressWarnings("unused")
-            public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
-                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-                return cache.get(defaultCacheKey);
-            }
+        @Override
+        @SuppressWarnings("unused")
+        public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return cache.get(defaultCacheKey);
+        }
 
-            @Override
-            @SuppressWarnings("unused")
-            public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
-                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-                cache.put(defaultCacheKey, result);
+        @Override
+        @SuppressWarnings("unused")
+        public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            cache.put(defaultCacheKey, result);
 
-                return true;
-            }
+            return true;
+        }
 
-            @Override
-            public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
-                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-                cache.put(defaultCacheKey, result);
+        @Override
+        public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            cache.put(defaultCacheKey, result);
 
-                return true;
-            }
+            return true;
+        }
 
-            /**
-             * Implements cache invalidation. If the table name can be determined from the cache key,
-             * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache.
-             * No action is taken for update operations that affect zero rows.
-             */
-            @Override
-            @SuppressWarnings("unused")
-            public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
-                    final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-                final Method method = methodSignature._1;
+        /**
+         * Implements cache invalidation. If the table name can be determined from the cache key,
+         * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache.
+         * No action is taken for update operations that affect zero rows.
+         */
+        @Override
+        @SuppressWarnings("unused")
+        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            final Method method = methodSignature._1;
 
-                if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
-                    if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
-                        return;
-                    }
+            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+                if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
+                    return;
                 }
+            }
 
-                final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
+            final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR);
 
-                if (Strings.isEmpty(updatedTableName)) {
-                    cache.clear();
-                } else {
-                    cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName));
-                }
+            if (Strings.isEmpty(updatedTableName)) {
+                cache.clear();
+            } else {
+                cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName));
             }
         }
+    }
 }
