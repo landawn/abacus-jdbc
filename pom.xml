@@ -5,7 +5,7 @@
 
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>4.0.4</version>
+	<version>4.0.6</version>
 	<packaging>jar</packaging>
 	<name>abacus-jdbc</name>
 	<description>abacus jdbc</description>
@@ -62,6 +62,13 @@
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-query</artifactId>
 			<version>4.0.2</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>jakarta.platform</groupId>
+			<artifactId>jakarta.jakartaee-api</artifactId>
+			<version>11.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -253,13 +260,13 @@
 					<source>${maven.compiler.source}</source>
 					<target>${maven.compiler.target}</target>
 					<release>${maven.compiler.release}</release>
-			        <annotationProcessorPaths>
-			          <path>
-			            <groupId>org.projectlombok</groupId>
-			            <artifactId>lombok</artifactId>
-			            <version>1.18.42</version>
-			          </path>
-			        </annotationProcessorPaths>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>1.18.42</version>
+						</path>
+					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 
@@ -276,7 +283,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
@@ -284,9 +291,9 @@
 				<configuration>
 					<doctitle>abacus-jdbc</doctitle>
 					<show>public</show>
-			        <source>17</source>
-			        <encoding>UTF-8</encoding>
-			        <doclint>all</doclint>    
+					<source>17</source>
+					<encoding>UTF-8</encoding>
+					<doclint>all</doclint>
 					<source>${maven.compiler.source}</source>
 					<detectJavaApiLink>false</detectJavaApiLink>
 
@@ -314,9 +321,10 @@
 						<include>**/AbacusJdbcTestSuite.java</include>
 					</includes>
 					<useModulePath>false</useModulePath>
-					<testFailureIgnore>true</testFailureIgnore> <!-- set to false if you want failures to fail the build -->
+					<testFailureIgnore>true</testFailureIgnore> <!-- set to false
+					if you want failures to fail the build -->
 					<argLine>
-          				-Dfile.encoding=UTF-8
+						-Dfile.encoding=UTF-8
 						--add-opens java.base/java.lang=ALL-UNNAMED
 						--add-opens java.base/java.lang.reflect=ALL-UNNAMED
 						--add-opens java.base/java.io=ALL-UNNAMED
@@ -352,31 +360,31 @@
 				</executions>
 			</plugin>
 
-	        <plugin>
-	          <groupId>org.sonatype.central</groupId>
-	          <artifactId>central-publishing-maven-plugin</artifactId>
-	          <version>0.9.0</version>
-	          <extensions>true</extensions>
-	          <configuration>
-	             <publishingServerId>central</publishingServerId>
-	             <autoPublish>true</autoPublish>
-	          </configuration>
-	        </plugin>
+			<plugin>
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<version>0.9.0</version>
+				<extensions>true</extensions>
+				<configuration>
+					<publishingServerId>central</publishingServerId>
+					<autoPublish>true</autoPublish>
+				</configuration>
+			</plugin>
 
-		    <plugin>
-		      <groupId>org.apache.maven.plugins</groupId>
-		      <artifactId>maven-gpg-plugin</artifactId>
-		      <version>3.2.8</version>
-		      <executions>
-		        <execution>
-		          <id>sign-artifacts</id>
-		          <phase>verify</phase> <!-- or deploy -->
-		          <goals>
-		            <goal>sign</goal>
-		          </goals>
-		        </execution>
-		      </executions>
-		    </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>3.2.8</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase> <!-- or deploy -->
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>

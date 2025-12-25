@@ -152,9 +152,9 @@ public final class JdbcCodeGenerationUtil {
     private static final String LINE_SEPARATOR = IOUtil.LINE_SEPARATOR_UNIX;
 
     private static final String eccImports = """
-            import javax.persistence.Column;
-            import javax.persistence.Id;
-            import javax.persistence.Table;
+            import jakarta.persistence.Column;
+            import jakarta.persistence.Id;
+            import jakarta.persistence.Table;
 
             import com.landawn.abacus.annotation.Column;
             import com.landawn.abacus.annotation.Id;
@@ -519,26 +519,26 @@ public final class JdbcCodeGenerationUtil {
 
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
-                headPart = headPart.replace("javax.persistence.Table", tableAnnotationClassName);
+                headPart = headPart.replace("jakarta.persistence.Table", tableAnnotationClassName);
             } else {
-                headPart = headPart.replace("import javax.persistence.Table;\n", "");
+                headPart = headPart.replace("import jakarta.persistence.Table;\n", "");
             }
 
             if (isJavaPersistenceColumn) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
-                headPart = headPart.replace("javax.persistence.Column", columnAnnotationClassName);
+                headPart = headPart.replace("jakarta.persistence.Column", columnAnnotationClassName);
             } else {
-                headPart = headPart.replace("import javax.persistence.Column;\n", "");
+                headPart = headPart.replace("import jakarta.persistence.Column;\n", "");
             }
 
             if (N.isEmpty(idFields) || N.intersection(idFields, fieldNameList).isEmpty()) {
-                headPart = headPart.replace("import javax.persistence.Id;\n", "");
+                headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
             } else if (isJavaPersistenceId) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
-                headPart = headPart.replace("javax.persistence.Id", idAnnotationClassName);
+                headPart = headPart.replace("jakarta.persistence.Id", idAnnotationClassName);
             } else {
-                headPart = headPart.replace("import javax.persistence.Id;\n", "");
+                headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
             }
 
             if (N.isEmpty(nonUpdatableFields) || N.intersection(nonUpdatableFields, fieldNameList).isEmpty()) {
@@ -573,7 +573,7 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import lombok.experimental.Accessors;\n", "").replace("@Accessors(chain = true)\n", "");
             }
 
-            if (headPart.contains("javax.persistence.")) {
+            if (headPart.contains("jakarta.persistence.")) {
                 sb.append(LINE_SEPARATOR);
             }
 
@@ -615,7 +615,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("@JsonXmlConfig").append(Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPARATOR);
             }
 
-            sb.append(isJavaPersistenceTable ? "@Table(name = \"" + entityName + "\")" : "@Table(\"" + entityName + "\")")
+            sb.append("@Table(name = \"" + entityName + "\")")
                     .append(LINE_SEPARATOR)
                     .append("public class ")
                     .append(finalClassName)
@@ -639,7 +639,7 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
-                sb.append(isJavaPersistenceColumn ? "    @Column(name = \"" + columnName + "\")" : "    @Column(\"" + columnName + "\")")
+                sb.append("    @Column(name = \"" + columnName + "\")")
                         .append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
@@ -1781,9 +1781,9 @@ public final class JdbcCodeGenerationUtil {
      *        .useBoxedType(false)
      *        .readOnlyFields(N.asSet("id"))
      *        .nonUpdatableFields(N.asSet("create_time"))
-     *        .idAnnotationClass(javax.persistence.Id.class)
-     *        .columnAnnotationClass(javax.persistence.Column.class)
-     *        .tableAnnotationClass(javax.persistence.Table.class)
+     *        .idAnnotationClass(jakarta.persistence.Id.class)
+     *        .columnAnnotationClass(jakarta.persistence.Column.class)
+     *        .tableAnnotationClass(jakarta.persistence.Table.class)
      *        .customizedFields(N.asList(Tuple.of("columnName", "fieldName", java.util.Date.class)))
      *        .customizedFieldDbTypes(N.asList(Tuple.of("fieldName", "List<String>")))
      *        .generateBuilder(true)
