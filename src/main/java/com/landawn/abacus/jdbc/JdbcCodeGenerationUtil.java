@@ -165,7 +165,9 @@ public final class JdbcCodeGenerationUtil {
             import com.landawn.abacus.annotation.Type;
             import com.landawn.abacus.annotation.Type.EnumBy;
             import com.landawn.abacus.util.NamingPolicy;
+            """;
 
+    private static final String lombokImports = """
             import lombok.AllArgsConstructor;
             import lombok.Builder;
             import lombok.Data;
@@ -515,7 +517,7 @@ public final class JdbcCodeGenerationUtil {
                 headPart += LINE_SEPARATOR;
             }
 
-            headPart += LINE_SEPARATOR + eccImports + LINE_SEPARATOR + eccClassAnnos;
+            headPart += LINE_SEPARATOR + eccImports;
 
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
@@ -576,6 +578,15 @@ public final class JdbcCodeGenerationUtil {
             if (headPart.contains("jakarta.persistence.")) {
                 sb.append(LINE_SEPARATOR);
             }
+
+            String finalHeadPart = headPart;
+            List<String> classNamesToImport = Stream.of(configToUse.getClassNamesToImport()).filter(it -> !finalHeadPart.contains(it)).distinct().toList();
+
+            if (N.notEmpty(classNamesToImport)) {
+                headPart += Stream.of(classNamesToImport).map(it -> "import " + it + ";").join(LINE_SEPARATOR, LINE_SEPARATOR, LINE_SEPARATOR);
+            }
+
+            headPart += LINE_SEPARATOR + lombokImports + LINE_SEPARATOR + eccClassAnnos;
 
             sb.append(headPart);
 
@@ -639,13 +650,12 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
-                sb.append("    @Column(name = \"" + columnName + "\")")
-                        .append(LINE_SEPARATOR);
+                sb.append("    @Column(name = \"" + columnName + "\")").append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
                 if (dbType != null) {
-                    sb.append("    @Type(name = \"").append(dbType._2).append("\")").append(LINE_SEPARATOR);
+                    sb.append("    @Type(").append(dbType._2).append(")").append(LINE_SEPARATOR);
                 }
 
                 sb.append("    private ").append(columnClassName).append(" ").append(fieldName).append(";").append(LINE_SEPARATOR);
@@ -1863,6 +1873,7 @@ public final class JdbcCodeGenerationUtil {
 
         private Collection<String> excludedFields;
         private String additionalFieldsOrLines;
+        private List<String> classNamesToImport;
 
         private Class<? extends Annotation> tableAnnotationClass;
         private Class<? extends Annotation> columnAnnotationClass;
