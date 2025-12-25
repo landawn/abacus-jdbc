@@ -88,7 +88,7 @@ class CodeGenerationUtilTest {
                 .columnAnnotationClass(jakarta.persistence.Column.class)
                 .tableAnnotationClass(com.landawn.abacus.annotation.Table.class)
                 .customizedFields(N.asList(Tuple.of("create_time", "create_time", java.util.Date.class)))
-                .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "List<String>")))
+                .customizedFieldDbTypes(N.asList(Tuple.of("create_time", "name = \"List<String>\"")))
                 .chainAccessor(true)
                 .generateBuilder(true)
                 .generateCopyMethod(true)

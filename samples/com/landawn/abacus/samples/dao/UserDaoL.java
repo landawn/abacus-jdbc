@@ -20,6 +20,6 @@ import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.samples.entity.User;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
-public abstract class UserDaoL implements CrudDaoL<User, SQLBuilder.PSC, UserDaoL>, JoinEntityHelper<User, SQLBuilder.PSC, UserDaoL> {
+public interface UserDaoL extends CrudDaoL<User, SQLBuilder.PSC, UserDaoL>, JoinEntityHelper<User, SQLBuilder.PSC, UserDaoL> {
 
 }

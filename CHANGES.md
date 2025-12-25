@@ -1,3 +1,7 @@
+## 4.0.9
+
+* Improve `JdbcCodeGenerationUtil`.
+
 ## 4.0.8
 
 * Improve javadoc and add unit tests

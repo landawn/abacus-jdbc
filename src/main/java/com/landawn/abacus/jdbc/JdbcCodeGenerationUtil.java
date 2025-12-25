@@ -158,6 +158,7 @@ public final class JdbcCodeGenerationUtil {
 
             import com.landawn.abacus.annotation.Column;
             import com.landawn.abacus.annotation.Id;
+            import com.landawn.abacus.annotation.JoinedBy;
             import com.landawn.abacus.annotation.JsonXmlConfig;
             import com.landawn.abacus.annotation.NonUpdatable;
             import com.landawn.abacus.annotation.ReadOnly;
@@ -556,25 +557,25 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
             }
 
-            if (N.isEmpty(readOnlyFields) || N.intersection(readOnlyFields, fieldNameList).isEmpty()) {
-                headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
-            }
-
-            if (N.isEmpty(customizedFieldDbTypeMap) || N.intersection(customizedFieldDbTypeMap.keySet(), fieldNameList).isEmpty()) {
-                headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\n", "");
-            }
-
-            if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getNamingPolicy() == null) {
-                headPart = headPart.replace("import com.landawn.abacus.util.NamingPolicy;\n", "");
-            }
-
-            if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getEnumerated() == null) {
-                headPart = headPart.replace("import com.landawn.abacus.annotation.Type.EnumBy;\n", "");
-            }
-
-            if (configToUse.getJsonXmlConfig() == null) {
-                headPart = headPart.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\n", "");
-            }
+            //    if (N.isEmpty(readOnlyFields) || N.intersection(readOnlyFields, fieldNameList).isEmpty()) {
+            //        headPart = headPart.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
+            //    }
+            //
+            //    if (N.isEmpty(customizedFieldDbTypeMap) || N.intersection(customizedFieldDbTypeMap.keySet(), fieldNameList).isEmpty()) {
+            //        headPart = headPart.replace("import com.landawn.abacus.annotation.Type;\n", "");
+            //    }
+            //
+            //    if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getNamingPolicy() == null) {
+            //        headPart = headPart.replace("import com.landawn.abacus.util.NamingPolicy;\n", "");
+            //    }
+            //
+            //    if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getEnumerated() == null) {
+            //        headPart = headPart.replace("import com.landawn.abacus.annotation.Type.EnumBy;\n", "");
+            //    }
+            //
+            //    if (configToUse.getJsonXmlConfig() == null) {
+            //        headPart = headPart.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\n", "");
+            //    }
 
             if (!configToUse.isGenerateBuilder()) {
                 headPart = headPart.replace("import lombok.Builder;\n", "").replace("@Builder\n", "");
@@ -742,7 +743,37 @@ public final class JdbcCodeGenerationUtil {
 
             sb.append(LINE_SEPARATOR).append("}").append(LINE_SEPARATOR);
 
-            final String result = sb.toString();
+            String result = sb.toString();
+
+            final String[] lines = Strings.split(result, LINE_SEPARATOR);
+
+            if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@NonUpdatable"))) {
+                result = result.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
+            }
+
+            if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@ReadOnly"))) {
+                result = result.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
+            }
+
+            if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JoinedBy"))) {
+                result = result.replace("import com.landawn.abacus.annotation.JoinedBy;\n", "");
+            }
+
+            if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@Type"))) {
+                result = result.replace("import com.landawn.abacus.annotation.Type;\n", "");
+            }
+
+            if (N.noneMatch(lines, e -> Strings.startsWithAny(e.trim(), "@Type", "@JsonXmlConfig") && Strings.contains(e, "EnumBy"))) {
+                result = result.replace("import com.landawn.abacus.annotation.Type.EnumBy;\n", "");
+            }
+
+            if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JsonXmlConfig"))) {
+                result = result.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\n", "");
+            }
+
+            if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JsonXmlConfig") && Strings.contains(e, "NamingPolicy"))) {
+                result = result.replace("import com.landawn.abacus.util.NamingPolicy;\n", "");
+            }
 
             if (Strings.isNotEmpty(srcDir)) {
                 String packageDir = srcDir;
