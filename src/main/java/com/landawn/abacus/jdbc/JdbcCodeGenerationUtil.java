@@ -519,6 +519,15 @@ public final class JdbcCodeGenerationUtil {
 
             headPart += LINE_SEPARATOR + eccImports;
 
+            String finalHeadPart = headPart;
+            List<String> classNamesToImport = Stream.of(configToUse.getClassNamesToImport()).filter(it -> !finalHeadPart.contains(it)).distinct().toList();
+
+            if (N.notEmpty(classNamesToImport)) {
+                headPart += Stream.of(classNamesToImport).map(it -> "import " + it + ";").join(LINE_SEPARATOR, LINE_SEPARATOR, LINE_SEPARATOR);
+            }
+
+            headPart += LINE_SEPARATOR + lombokImports + LINE_SEPARATOR + eccClassAnnos;
+
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Table", tableAnnotationClassName);
@@ -578,15 +587,6 @@ public final class JdbcCodeGenerationUtil {
             if (headPart.contains("jakarta.persistence.")) {
                 sb.append(LINE_SEPARATOR);
             }
-
-            String finalHeadPart = headPart;
-            List<String> classNamesToImport = Stream.of(configToUse.getClassNamesToImport()).filter(it -> !finalHeadPart.contains(it)).distinct().toList();
-
-            if (N.notEmpty(classNamesToImport)) {
-                headPart += Stream.of(classNamesToImport).map(it -> "import " + it + ";").join(LINE_SEPARATOR, LINE_SEPARATOR, LINE_SEPARATOR);
-            }
-
-            headPart += LINE_SEPARATOR + lombokImports + LINE_SEPARATOR + eccClassAnnos;
 
             sb.append(headPart);
 
