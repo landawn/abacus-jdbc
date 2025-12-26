@@ -32,6 +32,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
@@ -1291,6 +1292,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param targetValueType the class of the target value type
      * @return Nullable containing the value
      * @throws SQLException if a database access error occurs
+     * @see AbstractQuery#queryForSingleResult(Class)
      */
     <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
 
@@ -1313,6 +1315,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param targetValueType the class of the target value type
      * @return Optional containing the non-null value
      * @throws SQLException if a database access error occurs
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws SQLException;
@@ -1336,6 +1339,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped value
      * @throws SQLException if a database access error occurs
+     * @see AbstractQuery#queryForSingleNonNull(Type)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -1362,6 +1366,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return Nullable containing the unique value
      * @throws DuplicatedResultException if more than one row matches
      * @throws SQLException if a database access error occurs
+     * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
@@ -1387,6 +1392,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the unique non-null value
      * @throws DuplicatedResultException if more than one row matches
      * @throws SQLException if a database access error occurs
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicatedResultException, SQLException;
@@ -1414,6 +1420,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the unique mapped value
      * @throws DuplicatedResultException if more than one row matches
      * @throws SQLException if a database access error occurs
+     * @see AbstractQuery#queryForUniqueNonNull(Type)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)

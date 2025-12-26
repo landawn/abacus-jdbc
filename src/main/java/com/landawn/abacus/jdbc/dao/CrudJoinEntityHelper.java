@@ -406,7 +406,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
+        return batchGet(ids, null, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -429,7 +429,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
-        return batchGet(ids, null, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
+        return batchGet(ids, null, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -455,7 +455,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
+        return batchGet(ids, selectPropNames, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -481,7 +481,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, joinEntitiesToLoad);
+        return batchGet(ids, selectPropNames, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -508,7 +508,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicatedResultException, SQLException {
-        return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE, includeAllJoinEntities);
+        return batchGet(ids, selectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -527,16 +527,16 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
+     * @param joinEntitiesToLoad the class of join entities to load for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @param joinEntitiesToLoad the class of join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-            final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad,
+            final int batchSize) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result)) {
@@ -566,16 +566,16 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
+     * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @param joinEntitiesToLoad the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-            final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
+            final int batchSize) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
@@ -611,17 +611,17 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select from each entity, excluding join entity properties.
      *                       If {@code null}, all properties of the entities are selected
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
+     * @param batchSize the number of entities to process in each batch. The operation will split
+     *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and join entities as specified
      * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize,
-            final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities,
+            final int batchSize) throws DuplicatedResultException, SQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {
