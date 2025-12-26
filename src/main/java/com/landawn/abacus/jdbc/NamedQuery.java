@@ -55,15 +55,15 @@ import com.landawn.abacus.util.N;
  * This class wraps a {@link PreparedStatement} and allows you to use named parameters (e.g., :name, :age) instead of 
  * positional parameters (?) in your SQL queries.
  * 
- * <p>The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods(which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed, 
- * for example: query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
- * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * <p>The backing {@code PreparedStatement} is closed by default
+ * after any execution methods (which will trigger the backing {@code PreparedStatement} to be executed,
+ * for example: query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...),
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
  * <p>Generally, don't cache or reuse the instance of this class,
- * except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  *
- * <p>The {@code ResultSet} returned by query will always be closed after execution, even {@code 'closeAfterExecution'} flag is set to {@code false}.
+ * <p>The {@code ResultSet} returned by query will always be closed after execution, even if {@code 'closeAfterExecution'} flag is set to {@code false}.
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
@@ -3903,7 +3903,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Single value</b>: Used only if the query has exactly one parameter</li>
      * </ul>
      * 
-     * <p><b>Usage Examples:</b>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Using a bean
      * User user = new User("John", 30, "john@example.com");

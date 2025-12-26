@@ -65,18 +65,18 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * and handling OUT parameters. This class extends {@link AbstractQuery} and provides comprehensive support
  * for calling database stored procedures with both IN and OUT parameters.
  * 
- * <p>The backed {@code CallableStatement} will be closed by default after any execution methods
- * (which will trigger the backed {@code CallableStatement} to be executed, for example,
- * query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/..). 
- * Except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
+ * <p>The backing {@code CallableStatement} is closed by default after any execution methods
+ * (which will trigger the backing {@code CallableStatement} to be executed, for example,
+ * query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/..),
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
  *
- * <p>Generally, don't cache or reuse the instance of this class, except the {@code 'closeAfterExecution'} 
+ * <p>Generally, don't cache or reuse the instance of this class, unless the {@code 'closeAfterExecution'}
  * flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
  *
- * <p>The {@code ResultSet} returned by query will always be closed after execution, 
- * even {@code 'closeAfterExecution'} flag is set to {@code false}.</p>
+ * <p>The {@code ResultSet} returned by query will always be closed after execution,
+ * even if {@code 'closeAfterExecution'} flag is set to {@code false}.</p>
  *
- * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
+ * <p>Remember: parameter/column index in {@code CallableStatement/ResultSet} starts from 1, not 0.</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

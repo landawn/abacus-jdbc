@@ -23,16 +23,16 @@ import java.sql.PreparedStatement;
  * This class simplifies the execution of prepared statements by providing convenient methods for parameter binding,
  * result retrieval, and resource management.
  * 
- * <p>The backed {@code PreparedStatement/CallableStatement} will be closed by default
- * after any execution methods (which will trigger the backed {@code PreparedStatement/CallableStatement} to be executed,
- * for example, query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...).
- * Except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * <p>The backing {@code PreparedStatement} is closed by default
+ * after any execution methods (which will trigger the backing {@code PreparedStatement} to be executed,
+ * for example, query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...),
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
  * 
  * <p><b>Important Notes:</b>
  * <ul>
  *   <li>Generally, don't cache or reuse the instance of this class,
- *       except the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</li>
- *   <li>The {@code ResultSet} returned by query will always be closed after execution, even {@code 'closeAfterExecution'} flag is set to {@code false}.</li>
+ *       unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</li>
+ *   <li>The {@code ResultSet} returned by query will always be closed after execution, even if {@code 'closeAfterExecution'} flag is set to {@code false}.</li>
  *   <li>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</li>
  * </ul>
  *
