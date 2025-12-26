@@ -21,7 +21,7 @@ import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.annotation.Type.EnumBy;
+import com.landawn.abacus.util.EnumType;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig;
 import com.landawn.abacus.query.SQLBuilder.SCSB;
@@ -98,7 +98,7 @@ class CodeGenerationUtilTest {
                         .dateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
                         .numberFormat("#.###")
                         .timeZone("PDT")
-                        .enumerated(EnumBy.ORDINAL)
+                        .enumerated(EnumType.ORDINAL)
                         .build())
                 .build();
 

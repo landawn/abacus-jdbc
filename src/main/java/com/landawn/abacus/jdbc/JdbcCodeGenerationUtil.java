@@ -39,12 +39,12 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
-import com.landawn.abacus.annotation.Type.EnumBy;
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.BiMap;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.CodeGenerationUtil;
+import com.landawn.abacus.util.EnumType;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
@@ -164,7 +164,7 @@ public final class JdbcCodeGenerationUtil {
             import com.landawn.abacus.annotation.ReadOnly;
             import com.landawn.abacus.annotation.Table;
             import com.landawn.abacus.annotation.Type;
-            import com.landawn.abacus.annotation.Type.EnumBy;
+            import com.landawn.abacus.util.EnumType;
             import com.landawn.abacus.util.NamingPolicy;
             """;
 
@@ -442,7 +442,7 @@ public final class JdbcCodeGenerationUtil {
                     : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
                             .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
                             .map(Strings::strip)
-                            .peek(Fn.println())
+                            // .peek(Fn.println())
                             .filter(Fn.notEmpty())
                             .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
                             .map(it -> Strings.substringBetween(it, " ", ";").trim())
@@ -570,7 +570,7 @@ public final class JdbcCodeGenerationUtil {
             //    }
             //
             //    if (configToUse.getJsonXmlConfig() == null || configToUse.getJsonXmlConfig().getEnumerated() == null) {
-            //        headPart = headPart.replace("import com.landawn.abacus.annotation.Type.EnumBy;\n", "");
+            //        headPart = headPart.replace("import com.landawn.abacus.util.EnumType;\n", "");
             //    }
             //
             //    if (configToUse.getJsonXmlConfig() == null) {
@@ -621,7 +621,7 @@ public final class JdbcCodeGenerationUtil {
                 }
 
                 if (eccJsonXmlConfig.getEnumerated() != null) {
-                    tmp.add("enumerated = EnumBy." + eccJsonXmlConfig.getEnumerated().name());
+                    tmp.add("enumerated = EnumType." + eccJsonXmlConfig.getEnumerated().name());
                 }
 
                 sb.append("@JsonXmlConfig").append(Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPARATOR);
@@ -763,8 +763,8 @@ public final class JdbcCodeGenerationUtil {
                 result = result.replace("import com.landawn.abacus.annotation.Type;\n", "");
             }
 
-            if (N.noneMatch(lines, e -> Strings.startsWithAny(e.trim(), "@Type", "@JsonXmlConfig") && Strings.contains(e, "EnumBy"))) {
-                result = result.replace("import com.landawn.abacus.annotation.Type.EnumBy;\n", "");
+            if (N.noneMatch(lines, e -> Strings.startsWithAny(e.trim(), "@Type", "@JsonXmlConfig") && Strings.contains(e, "EnumType"))) {
+                result = result.replace("import com.landawn.abacus.util.EnumType;\n", "");
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JsonXmlConfig"))) {
@@ -1946,7 +1946,7 @@ public final class JdbcCodeGenerationUtil {
 
             private String numberFormat;
 
-            private EnumBy enumerated;
+            private EnumType enumerated;
 
             /**
              * Constructs a new JsonXmlConfig instance with default values.

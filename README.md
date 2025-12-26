@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-4.0.9-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/4.0.9/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-4.1.0-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/4.1.0/index.html)
 
 Experience the simplicity of coding with SQL/DB as if you're working with Collections.
 
@@ -143,7 +143,7 @@ The biggest difference between this library and other data(database) access fram
 <dependency>
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>4.0.9</version> 
+	<version>4.1.0</version> 
 <dependency>
 ```
 
@@ -151,7 +151,7 @@ The biggest difference between this library and other data(database) access fram
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn:abacus-jdbc:4.0.9'
+compile 'com.landawn:abacus-jdbc:4.1.0'
 ```
 
 ## User Guide:
