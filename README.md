@@ -85,7 +85,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     User selectByIdWithDefine(@Define("tableName") String tableName, @Define("{{orderBy}}") String orderBy, @Bind("id") long id);
 
     static final class SqlTable {
-        @SqlField
+        @SqlScript
         static final String selectUserByFirstName = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(Filters.eq("first")).sql();
     }
 }
