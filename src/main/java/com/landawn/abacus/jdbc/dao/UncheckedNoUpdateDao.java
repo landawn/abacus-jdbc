@@ -68,7 +68,7 @@ import com.landawn.abacus.query.condition.Condition;
  * // dao.delete(Filters.eq("id", 123));   // Throws exception
  * }</pre>
  *
-* @param <T> the entity type managed by this DAO
+ * @param <T> the entity type managed by this DAO
  * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.Filters

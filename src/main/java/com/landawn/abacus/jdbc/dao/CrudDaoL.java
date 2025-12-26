@@ -43,7 +43,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * which is a common pattern in many database schemas. All methods delegate to their
  * corresponding CrudDao methods after boxing the primitive long to Long.</p>
  * 
- * <p>Usage example:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDaoL<User, SQLBuilder.PSC, UserDao> {
  *     // Inherits all CrudDao methods with Long ID type
@@ -68,6 +68,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalBoolean if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -89,6 +90,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalChar if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -148,6 +150,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalInt if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -167,6 +170,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalLong if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -206,6 +210,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalDouble if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

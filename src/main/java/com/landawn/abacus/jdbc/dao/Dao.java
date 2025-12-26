@@ -92,7 +92,7 @@ import com.landawn.abacus.util.stream.Stream;
  *   <li>Index is the key point in a lot of database performance issues</li>
  * </ul>
  * 
- * <h2>Usage Example:</h2>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC> {
  *     @Query("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
@@ -115,7 +115,7 @@ import com.landawn.abacus.util.stream.Stream;
  * User user = userDao.getFirstAndLastNameBy(123L);
  * }</pre>
  * 
- * <h2>Transaction Example:</h2>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
@@ -137,7 +137,6 @@ import com.landawn.abacus.util.stream.Stream;
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see CrudDao
- * @see Filters
  * @see Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })

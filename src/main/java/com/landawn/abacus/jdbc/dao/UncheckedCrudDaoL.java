@@ -72,6 +72,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalBoolean if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -94,6 +95,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalChar if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -114,6 +116,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalByte if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -136,6 +139,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalShort if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -158,6 +162,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalInt if no record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -176,8 +181,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalLong} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a long value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalLong if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -185,8 +191,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalLong containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalLong containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -195,8 +201,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalFloat} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a float value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalFloat if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -204,8 +211,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalFloat containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalFloat containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -214,8 +221,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code OptionalDouble} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a double value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty OptionalDouble if no record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -223,8 +231,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return an OptionalDouble containing the value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return an OptionalDouble containing the value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -233,8 +241,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable<String>} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a String value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -245,8 +253,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return a Nullable containing the String value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -255,8 +263,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable<java.sql.Date>} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a Date value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -264,8 +272,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return a Nullable containing the Date value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -274,8 +282,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable<java.sql.Time>} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a Time value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -283,8 +291,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return a Nullable containing the Time value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -293,8 +301,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable<java.sql.Timestamp>} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a Timestamp value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -302,8 +310,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return a Nullable containing the Timestamp value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -312,8 +320,10 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable<byte[]>} describing the value of a single property for the entity with the specified ID.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a byte array value from a single property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
+     * This is typically used for BLOB data.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -321,8 +331,8 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @return a Nullable containing the byte array value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -331,19 +341,20 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable<V>} describing the value of a single property converted to the target type.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a single value of the specified type from a property of the entity with the specified ID.
+     * This is a convenience method that accepts a primitive long ID.
+     * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", 123L, BigDecimal.class);
      * }</pre>
      *
-     * @param <V> the target value type
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @param targetValueType the class of the target value type
-     * @return a Nullable containing the converted value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -353,19 +364,20 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code Optional} describing the non-null value of a single property.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a single non-null value of the specified type from a property of the entity.
+     * This is a convenience method that accepts a primitive long ID.
+     * Returns an empty Optional if no record is found or if the value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", 123L, String.class);
      * }</pre>
      *
-     * @param <V> the value type
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @param targetValueType the class of the target value type
-     * @return an Optional containing the non-null value, or empty if no entity found or value is null
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return an Optional containing the non-null value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -375,8 +387,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code Optional} describing the non-null value mapped by the row mapper.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a single non-null value using a custom row mapper.
+     * This is a convenience method that accepts a primitive long ID.
+     * This allows for complex transformations of the result.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -387,11 +400,11 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * );
      * }</pre>
      *
-     * @param <V> the value type
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @param rowMapper the function to map the result set row
-     * @return an Optional containing the non-null mapped value, or empty if no entity found
+     * @param id the primitive long ID of the entity
+     * @param rowMapper the custom mapper to transform the result
+     * @return an Optional containing the mapped non-null value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -401,21 +414,23 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns a {@code Nullable} describing the unique result value.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a unique single result of the specified type.
+     * This is a convenience method that accepts a primitive long ID.
+     * Throws DuplicatedResultException if more than one record is found.
+     *
+     * <p>This method ensures that at most one record matches the query.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> uniqueCode = userDao.queryForUniqueResult("code", 123L, String.class);
      * }</pre>
      *
-     * @param <V> the value type
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @param targetValueType the class of the target value type
-     * @return a Nullable containing the unique result value, or empty if no entity found
-     * @throws DuplicatedResultException if more than one record is found
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -425,21 +440,22 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code Optional} describing the unique non-null value.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a unique non-null result of the specified type.
+     * This is a convenience method that accepts a primitive long ID.
+     * Throws DuplicatedResultException if more than one record is found.
+     * Returns empty Optional if no record found or value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Integer> level = userDao.queryForUniqueNonNull("level", 123L, Integer.class);
      * }</pre>
      *
-     * @param <V> the value type
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @param targetValueType the class of the target value type
-     * @return an Optional containing the unique non-null value, or empty if no entity found or value is null
-     * @throws DuplicatedResultException if more than one record is found
+     * @param id the primitive long ID of the entity
+     * @param targetValueType the class of the value type to convert to
+     * @return an Optional containing the unique non-null value if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -449,9 +465,9 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     }
 
     /**
-     * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
-     * This method accepts a primitive long ID for convenience.
+     * Queries for a unique non-null result using a custom row mapper.
+     * This is a convenience method that accepts a primitive long ID.
+     * Throws DuplicatedResultException if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -462,12 +478,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * );
      * }</pre>
      *
-     * @param <V> the value type
+     * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
-     * @param id the entity ID as primitive long
-     * @param rowMapper the function to map the result set row
-     * @return an Optional containing the unique non-null mapped value, or empty if no entity found
-     * @throws DuplicatedResultException if more than one record is found
+     * @param id the primitive long ID of the entity
+     * @param rowMapper the custom mapper to transform the result
+     * @return an Optional containing the mapped unique non-null value if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

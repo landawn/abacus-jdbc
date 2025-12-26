@@ -35,7 +35,7 @@ import com.landawn.abacus.util.u.Optional;
  * related entities when retrieving records from the database. This eliminates the N+1 query problem
  * and simplifies working with entity relationships.</p>
  * 
- * <p>Usage example:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Entity
  * public class User {

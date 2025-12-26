@@ -31,7 +31,7 @@ import com.landawn.abacus.util.u.Optional;
  * <p>This interface is designed to work with entities that have relationships defined using the {@code @JoinedBy} annotation.
  * It automatically handles the loading of related entities when retrieving records from the database.</p>
  * 
- * <p>Usage example:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @Entity
  * public class User {

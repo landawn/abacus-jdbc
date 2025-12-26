@@ -64,7 +64,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p>The interface supports batch operations, unique result queries, and various data type conversions.
  * It extends the base {@link Dao} interface and adds entity-specific CRUD functionality.</p>
  * 
- * <p>Usage example:</p>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Custom query methods can be added here
