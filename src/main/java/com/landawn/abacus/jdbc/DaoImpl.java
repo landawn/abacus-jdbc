@@ -976,7 +976,6 @@ final class DaoImpl {
             if (Collection.class.isAssignableFrom(returnType) || u.Optional.class.isAssignableFrom(returnType)
                     || java.util.Optional.class.isAssignableFrom(returnType)) {
                 final Class<?> targetEntityClass = !Beans.isBeanClass(firstReturnEleType) ? entityClass : firstReturnEleType;
-                ParserUtil.getBeanInfo(targetEntityClass);
                 final boolean isCollection = Collection.class.isAssignableFrom(returnType);
                 final boolean isJavaOption = java.util.Optional.class.isAssignableFrom(returnType);
 
@@ -999,9 +998,9 @@ final class DaoImpl {
                         }
 
                         if (isJavaOption) {
-                            return (R) java.util.Optional.ofNullable(N.firstOrNullIfEmpty(mergedEntities));
+                            return (R) (N.isEmpty(mergedEntities) ? java.util.Optional.empty() : java.util.Optional.of(N.firstOrNullIfEmpty(mergedEntities)));
                         } else {
-                            return (R) N.firstNonNull(mergedEntities);
+                            return (R) (N.isEmpty(mergedEntities) ? Optional.empty() : Optional.of(N.firstOrNullIfEmpty(mergedEntities)));
                         }
                     }
                 };
@@ -1258,14 +1257,22 @@ final class DaoImpl {
             }
         } else {
             if (queryInfo.isProcedure) {
-                @SuppressWarnings("resource")
-                final String[] paramNames = IntStreamEx.of(stmtParamIndexes)
+                final Bind[] paramBinds = IntStreamEx.of(stmtParamIndexes)
                         .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
-                        .skipNulls()
-                        .map(Bind::value)
-                        .toArray(IntFunctions.ofStringArray());
+                        .toArray(Bind[]::new);
 
-                if (N.notEmpty(paramNames)) {
+                final boolean hasBind = StreamEx.of(paramBinds).anyMatch(it -> it != null);
+                final boolean hasNoBind = StreamEx.of(paramBinds).anyMatch(it -> it == null);
+
+                if (hasBind) {
+                    if (hasNoBind) {
+                        throw new UnsupportedOperationException(
+                                "In method: " + fullClassMethodName + ", either all procedure parameters must be bound with @Bind or none");
+                    }
+
+                    @SuppressWarnings("resource")
+                    final String[] paramNames = StreamEx.of(paramBinds).map(Bind::value).toArray(IntFunctions.ofStringArray());
+
                     parametersSetter = (preparedQuery, args) -> {
                         final CallableQuery namedQuery = ((CallableQuery) preparedQuery);
 
