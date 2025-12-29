@@ -140,6 +140,7 @@ Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A
 
 * While high-level abstractions such as JPA or Spring’s `CrudRepository` enhance development productivity, preserving the ability for users to write and execute SQL offers essential flexibility. SQL is a simple, expressive, and powerful language, and should be leveraged instead of being avoided without justification.
 
+* High-level abstraction APIs should simplify implementation, improve productivity, and avoid increasing complexity or reducing performance.
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
