@@ -3,7 +3,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
 [![Javadocs](https://img.shields.io/badge/javadoc-4.1.0-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/4.1.0/index.html)
 
-Experience the simplicity of coding with SQL/DB as if you're working with Collections.
+Experience the simplicity of working with SQL/DB as naturally as working with Collections.
 
 ## Features:
 
@@ -131,9 +131,15 @@ userDao.selectUserByFirstName(firstName)
 
 ## Why abacus-jdbc?
 
-The biggest difference between this library and other data(database) access frameworks is the simplicity/consistency/integrity in the APIs design. Also refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A Comparative Analysis](https://github.com/landawn/abacus-jdbc/blob/master/docs/Abacus-JDBC%20vs%20Spring%20Data%20(JPA%20%26%20JDBC)%2C%20MyBatis%2C%20and%20Hibernate%20%E2%80%93%20A%20Comparative%20Analysis.pdf)
+The biggest difference between this library and other data(database) access frameworks is the simplicity/consistency/integrity in the APIs design.
+Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A Comparative Analysis](https://github.com/landawn/abacus-jdbc/blob/master/docs/Abacus-JDBC%20vs%20Spring%20Data%20(JPA%20%26%20JDBC)%2C%20MyBatis%2C%20and%20Hibernate%20%E2%80%93%20A%20Comparative%20Analysis.pdf)
 
-<br />
+## Design and Implementation Considerations:
+
+* In general, embedding SQL scripts where they are used is easier to review and maintain than saving them in separate files.
+
+* While high-level abstractions such as JPA or Spring’s `CrudRepository` enhance development productivity, preserving the ability for users to write and execute SQL offers essential flexibility. SQL is a simple, expressive, and powerful language, and should be leveraged instead of being avoided without justification.
+
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
