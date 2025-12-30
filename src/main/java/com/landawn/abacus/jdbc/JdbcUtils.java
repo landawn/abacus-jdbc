@@ -958,6 +958,7 @@ public final class JdbcUtils {
                 //NOSONAR
                 batchSize, batchIntervalInMillis);
 
+        final Type<Object> objType = N.typeOf(Object.class);
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = new Throwables.BiConsumer<>() {
             private int columnCount = 0;
             private Type<Object>[] columnTypes = null;
@@ -979,6 +980,8 @@ public final class JdbcUtils {
                         if (columnTypeMap.containsKey(columnName)) {
                             columnTypes[i] = N.requireNonNull(columnTypeMap.get(columnName));
                             columnNameSet.add(columnName);
+                        } else {
+                            columnTypes[i] = objType;
                         }
                     }
 
@@ -990,9 +993,7 @@ public final class JdbcUtils {
                 }
 
                 for (int i = 0; i < columnCount; i++) {
-                    if (columnTypes[i] != null) {
-                        columnTypes[i].set(stmt, i + 1, u[i]);
-                    }
+                    columnTypes[i].set(stmt, i + 1, u[i]);
                 }
             }
         };

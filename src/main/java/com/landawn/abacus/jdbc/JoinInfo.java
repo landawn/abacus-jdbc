@@ -906,6 +906,7 @@ public final class JoinInfo {
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
+        final boolean isMapProp = joinPropInfo.type.isMap();
         final boolean isListProp = joinPropInfo.clazz.isAssignableFrom(List.class);
 
         List<Object> propEntities = null;
@@ -923,6 +924,15 @@ public final class JoinInfo {
                         c.addAll(propEntities);
                         joinPropInfo.setPropValue(entity, c);
                     }
+                } else if (isMapProp) {
+                    if (propEntities.size() > 1) {
+                        throw new IllegalArgumentException("Multiple join entities found for map property: " + joinPropInfo.name);
+                    }
+
+                    @SuppressWarnings("rawtypes")
+                    final Map<Object, Object> m = N.newMap((Class) joinPropInfo.clazz, 1);
+                    m.put(srcEntityKeyExtractor.apply(entity), propEntities.get(0));
+                    joinPropInfo.setPropValue(entity, m);
                 } else {
                     joinPropInfo.setPropValue(entity, propEntities.get(0));
                 }
