@@ -4321,17 +4321,21 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first boolean value from the result set.
-     * 
-     * <p><b>Usage Examples:</b></p>
+     * Executes this query and returns the first column of the first row as a boolean value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalBoolean} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Usage example:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = query
      *     .setString(1, userId)
      *     .queryForBoolean();   // SELECT is_active FROM users WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalBoolean} containing the value if present, otherwise empty
-     * @throws IllegalStateException if this query is closed
+     * @return an {@code OptionalBoolean} containing the boolean value if at least one
+     *         row is returned; otherwise {@code OptionalBoolean.empty()}
+     * @throws IllegalStateException if this query has been closed
      * @throws SQLException if a database access error occurs
      */
     public OptionalBoolean queryForBoolean() throws IllegalStateException, SQLException {
@@ -4347,7 +4351,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     static final Type<Character> charType = TypeFactory.getType(char.class);
 
     /**
-     * Executes the query and returns the first character value from the result set.
+     * Executes this query and returns the first column of the first row as a char value.
+     *
+     * <p>If the query produces no rows, an empty {@link queryForChar} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4356,7 +4363,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForChar();   // SELECT grade FROM students WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalChar} containing the value if present, otherwise empty
+     * @return An {@code OptionalChar} containing the char value if at least one
+     *         row is returned; otherwise {@code OptionalChar.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4375,7 +4383,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first byte value from the result set.
+     * Executes this query and returns the first column of the first row as a byte value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalByte} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4384,7 +4395,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForByte();   // SELECT status_code FROM records WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalByte} containing the value if present, otherwise empty
+     * @return An {@code OptionalByte} containing the byte value if at least one
+     *         row is returned; otherwise {@code OptionalByte.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4399,7 +4411,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first short value from the result set.
+     * Executes this query and returns the first column of the first row as a short value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalShort} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4408,7 +4423,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForShort();   // SELECT release_year FROM movies WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalShort} containing the value if present, otherwise empty
+     * @return An {@code OptionalShort} containing the short value if at least one
+     *         row is returned; otherwise {@code OptionalShort.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4423,7 +4439,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first integer value from the result set.
+     * Executes this query and returns the first column of the first row as an int value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalInt} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * Commonly used for COUNT queries.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4435,7 +4454,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * int totalUsers = count.orElse(0);
      * }</pre>
      *
-     * @return An {@code OptionalInt} containing the value if present, otherwise empty
+     * @return An {@code OptionalInt} containing the int value if at least one
+     *         row is returned; otherwise {@code OptionalInt.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4450,7 +4470,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first long value from the result set.
+     * Executes this query and returns the first column of the first row as a long value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalLong} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4459,7 +4482,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForLong();   // SELECT SUM(amount) FROM sales WHERE year = ?
      * }</pre>
      *
-     * @return An {@code OptionalLong} containing the value if present, otherwise empty
+     * @return An {@code OptionalLong} containing the long value if at least one
+     *         row is returned; otherwise {@code OptionalLong.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4474,7 +4498,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first float value from the result set.
+     * Executes this query and returns the first column of the first row as a float value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalFloat} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4483,7 +4510,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForFloat();   // SELECT avg_rating FROM products WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalFloat} containing the value if present, otherwise empty
+     * @return An {@code OptionalFloat} containing the float value if at least one
+     *         row is returned; otherwise {@code OptionalFloat.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4498,7 +4526,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first double value from the result set.
+     * Executes this query and returns the first column of the first row as a double value.
+     *
+     * <p>If the query produces no rows, an empty {@link OptionalDouble} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4507,7 +4538,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForDouble();   // SELECT AVG(salary) FROM employees WHERE dept = ?
      * }</pre>
      *
-     * @return An {@code OptionalDouble} containing the value if present, otherwise empty
+     * @return An {@code OptionalDouble} containing the double value if at least one
+     *         row is returned; otherwise {@code OptionalDouble.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4522,7 +4554,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first String value from the result set.
+     * Executes this query and returns the first column of the first row as a string value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<String>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4533,7 +4568,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * String userName = name.orElse("Unknown");
      * }</pre>
      *
-     * @return A {@code Nullable<String>} containing the value if present, otherwise empty
+     * @return A {@code Nullable<String>} containing the string value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4550,7 +4586,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     private static final Type<BigInteger> BIG_INTEGER_TYPE = Type.of(BigInteger.class);
 
     /**
-     * Executes the query and returns the first BigInteger value from the result set.
+     * Executes this query and returns the first column of the first row as a BigInteger value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<BigInteger>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4559,7 +4598,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBigInteger();   // SELECT balance FROM accounts WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<BigInteger>} containing the value if present, otherwise empty
+     * @return A {@code Nullable<BigInteger>} containing the BigInteger value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4575,7 +4615,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first BigDecimal value from the result set.
+     * Executes this query and returns the first column of the first row as a BigDecimal value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<BigDecimal>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4584,7 +4627,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBigDecimal();   // SELECT price FROM products WHERE code = ?
      * }</pre>
      *
-     * @return A {@code Nullable<BigDecimal>} containing the value if present, otherwise empty
+     * @return A {@code Nullable<BigDecimal>} containing the BigDecimal value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4600,7 +4644,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first Date value from the result set.
+     * Executes this query and returns the first column of the first row as a Date value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<java.sql.Date>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p> 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4609,8 +4656,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForDate();   // SELECT birth_date FROM employees WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<java.sql.Date>} containing the value if present, otherwise empty
-     * @throws IllegalStateException if this query is closed
+     * @return A {@code Nullable<java.sql.Date>} containing the Date value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws SQLException if a database access error occurs
      */
     public Nullable<java.sql.Date> queryForDate() throws IllegalStateException, SQLException {
@@ -4624,7 +4671,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first Time value from the result set.
+     * Executes this query and returns the first column of the first row as a Time value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<java.sql.Time>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4633,7 +4683,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForTime();   // SELECT start_time FROM events WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<java.sql.Time>} containing the value if present, otherwise empty
+     * @return A {@code Nullable<java.sql.Time>} containing the Time value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4648,7 +4699,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first Timestamp value from the result set.
+     * Executes this query and returns the first column of the first row as a Timestamp value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<java.sql.Timestamp>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4657,7 +4711,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForTimestamp();   // SELECT last_login FROM users WHERE username = ?
      * }</pre>
      *
-     * @return A {@code Nullable<java.sql.Timestamp>} containing the value if present, otherwise empty
+     * @return A {@code Nullable<java.sql.Timestamp>} containing the Timestamp value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4672,7 +4727,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first byte array value from the result set.
+     * Executes this query and returns the first column of the first row as a byte[] value.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<byte[]>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4681,7 +4739,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBytes();   // SELECT avatar_data FROM users WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<byte[]>} containing the value if present, otherwise empty
+     * @return A {@code Nullable<byte[]>} containing the byte[] value if at least one
+     *         row is returned; otherwise {@code Nullable.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4696,7 +4755,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first value from the result set as the specified type.
+     * Executes this query and returns the first column of the first row as the specified type.
+     *
+     * <p>If the query produces no rows, an empty {@link Nullable<V>} is returned.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

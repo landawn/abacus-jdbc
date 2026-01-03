@@ -2940,11 +2940,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final List<T> result = new ArrayList<>();
-            final ResultSet rs = executeQuery();
 
-            if (rs != null) {
-                while (rs.next()) {
-                    result.add(rowMapper.apply(rs));
+            try (ResultSet rs = executeQuery()) {
+                if (rs != null) {
+                    while (rs.next()) {
+                        result.add(rowMapper.apply(rs));
+                    }
                 }
             }
 
@@ -3003,12 +3004,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final List<T> result = new ArrayList<>();
-            final ResultSet rs = executeQuery();
 
-            if (rs != null) {
-                while (rs.next()) {
-                    if (rowFilter.test(rs)) {
-                        result.add(rowMapper.apply(rs));
+            try (ResultSet rs = executeQuery()) {
+                if (rs != null) {
+                    while (rs.next()) {
+                        if (rowFilter.test(rs)) {
+                            result.add(rowMapper.apply(rs));
+                        }
                     }
                 }
             }
@@ -3068,13 +3070,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final List<T> result = new ArrayList<>();
-            final ResultSet rs = executeQuery();
 
-            if (rs != null) {
-                final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+            try (ResultSet rs = executeQuery()) {
+                if (rs != null) {
+                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
-                while (rs.next()) {
-                    result.add(rowMapper.apply(rs, columnLabels));
+                    while (rs.next()) {
+                        result.add(rowMapper.apply(rs, columnLabels));
+                    }
                 }
             }
 
@@ -3146,14 +3149,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             final List<T> result = new ArrayList<>();
-            final ResultSet rs = executeQuery();
 
-            if (rs != null) {
-                final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+            try (ResultSet rs = executeQuery()) {
+                if (rs != null) {
+                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
 
-                while (rs.next()) {
-                    if (rowFilter.test(rs, columnLabels)) {
-                        result.add(rowMapper.apply(rs, columnLabels));
+                    while (rs.next()) {
+                        if (rowFilter.test(rs, columnLabels)) {
+                            result.add(rowMapper.apply(rs, columnLabels));
+                        }
                     }
                 }
             }

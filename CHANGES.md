@@ -1,3 +1,6 @@
+## 4.1.2
+* Improvements and bug fixes
+
 ## 4.1.1
 * Improvements and bug fixes
 
