@@ -2603,19 +2603,16 @@ public final class Jdbc {
          * A pre-defined mapper that converts a row into an {@code EntityId}. The property names
          * in the {@code EntityId} correspond to the column labels.
          */
-        BiRowMapper<EntityId> TO_ENTITY_ID = new BiRowMapper<>() {
-            @SuppressWarnings("deprecation")
-            @Override
-            public EntityId apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                final int columnCount = columnLabels.size();
-                final Seid entityId = Seid.of(Strings.EMPTY);
+        @SuppressWarnings("deprecation")
+        BiRowMapper<EntityId> TO_ENTITY_ID = (rs, columnLabels) -> {
+            final int columnCount = columnLabels.size();
+            final Seid entityId = Seid.of(Strings.EMPTY);
 
-                for (int i = 1; i <= columnCount; i++) {
-                    entityId.set(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
-                }
-
-                return entityId;
+            for (int i = 1; i <= columnCount; i++) {
+                entityId.set(columnLabels.get(i - 1), JdbcUtil.getColumnValue(rs, i));
             }
+
+            return entityId;
         };
 
         /**
@@ -5557,16 +5554,9 @@ public final class Jdbc {
              * @param type the {@code Type} of the value in the first column.
              * @return a {@code RowMapper} for the specified type.
              */
+            @SuppressWarnings("cast")
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
-                RowMapper<T> result = rowMapperPool.get(type);
-
-                if (result == null) {
-                    result = rs -> type.get(rs, 1);
-
-                    rowMapperPool.put(type, result);
-                }
-
-                return result;
+                return (RowMapper<T>) rowMapperPool.computeIfAbsent(type, k -> rs -> type.get(rs, 1));
             }
 
             /**

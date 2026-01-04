@@ -29,14 +29,7 @@ import java.lang.reflect.ParameterizedType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
@@ -332,7 +325,7 @@ final class DaoImpl {
         isValuePresentMap.putAll(tmp);
     }
 
-    private static final Predicate<? super Class<?>> isImmutableTester = cls -> Immutable.class.isAssignableFrom(cls);
+    private static final Predicate<? super Class<?>> isImmutableTester = Immutable.class::isAssignableFrom;
 
     private static final Set<Class<?>> notCacheableTypes = N.asSet(void.class, Void.class, Iterator.class, java.util.stream.BaseStream.class, BaseStream.class,
             EntryStream.class, Stream.class, Seq.class);
@@ -1261,8 +1254,8 @@ final class DaoImpl {
                         .mapToObj(i -> StreamEx.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElse(null))
                         .toArray(Bind[]::new);
 
-                final boolean hasBind = StreamEx.of(paramBinds).anyMatch(it -> it != null);
-                final boolean hasNoBind = StreamEx.of(paramBinds).anyMatch(it -> it == null);
+                final boolean hasBind = StreamEx.of(paramBinds).anyMatch(Objects::nonNull);
+                final boolean hasNoBind = StreamEx.of(paramBinds).anyMatch(Objects::isNull);
 
                 if (hasBind) {
                     if (hasNoBind) {
@@ -4882,7 +4875,7 @@ final class DaoImpl {
                                                 .setParameters(bp, tp._2)
                                                 .list(pairBiRowMapper);
 
-                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(it -> it.left(), it -> it.right()));
+                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(Pair::left, Pair::right));
                                     } else {
                                         final List<?> joinPropEntities = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)

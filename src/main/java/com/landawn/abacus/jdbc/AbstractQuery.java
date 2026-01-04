@@ -4323,7 +4323,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a boolean value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalBoolean} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalBoolean} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      *
      * <p><b>Usage example:</b></p>
@@ -4353,7 +4353,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a char value.
      *
-     * <p>If the query produces no rows, an empty {@link queryForChar} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalChar} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4385,7 +4385,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a byte value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalByte} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalByte} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4413,7 +4413,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a short value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalShort} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalShort} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4441,7 +4441,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as an int value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalInt} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalInt} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * Commonly used for COUNT queries.
      * 
@@ -4472,7 +4472,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a long value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalLong} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalLong} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4500,7 +4500,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a float value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalFloat} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalFloat} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4528,7 +4528,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a double value.
      *
-     * <p>If the query produces no rows, an empty {@link OptionalDouble} is returned.
+     * <p>If the query produces no rows, an empty {@code OptionalDouble} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
