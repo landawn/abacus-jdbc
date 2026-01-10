@@ -851,21 +851,17 @@ public final class JoinInfo {
      * based on the join key relationships.
      *
      * <p>For one-to-one or one-to-many joins, the method groups the joined entities by their keys
-     * and assigns them to the corresponding source entities.</p>
+     * and assigns them to the corresponding source entities. If the join property is declared as a
+     * {@code List} and the grouped value is already a {@code List}, the list is assigned directly;
+     * otherwise a new collection of the declared type is created and populated.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Load employees
-     * List<Employee> employees = employeeDao.list();
-     *
-     * // Load projects
-     * List<Project> projects = projectDao.list();
-     *
-     * // Get join info and populate relationships
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
+     * List<Employee> employees = Arrays.asList(new Employee(1L), new Employee(2L));
+     * List<Project> projects = Arrays.asList(new Project(1L), new Project(2L));
      * joinInfo.setJoinPropEntities(employees, projects);
-     * // Now each employee has their projects populated
      * }</pre>
      *
      * @param entities the source entities to populate with joined entities
@@ -887,17 +883,12 @@ public final class JoinInfo {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Load employees
-     * List<Employee> employees = employeeDao.list();
-     *
-     * // Load and group projects by employee ID
-     * List<Project> projects = projectDao.list();
-     * Map<Object, List<Object>> projectsByEmployeeId = Stream.of((Collection<Object>) projects)
-     *     .groupTo(p -> ((Project) p).getEmployeeId());
-     *
-     * // Get join info and populate relationships with pre-grouped data
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
+     * List<Employee> employees = Arrays.asList(new Employee(1L), new Employee(2L));
+     * Map<Object, List<Object>> projectsByEmployeeId = new HashMap<>();
+     * projectsByEmployeeId.put(1L, Arrays.asList(new Project(1L)));
+     * projectsByEmployeeId.put(2L, Arrays.asList(new Project(2L)));
      * joinInfo.setJoinPropEntities(employees, projectsByEmployeeId);
      * }</pre>
      *
@@ -907,7 +898,7 @@ public final class JoinInfo {
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
         final boolean isMapProp = joinPropInfo.type.isMap();
-        final boolean isListProp = joinPropInfo.clazz.isAssignableFrom(List.class);
+        final boolean isListProp = List.class.isAssignableFrom(joinPropInfo.clazz);
 
         List<Object> propEntities = null;
 

@@ -5550,6 +5550,13 @@ public final class Jdbc {
              * Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type} from the first column.
              * This method uses a cache for commonly used types.
              *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * Type<Integer> type = Type.of(Integer.class);
+             * RowMapper<Integer> mapper = Jdbc.ColumnOne.get(type);
+             * Integer value = mapper.apply(resultSet);
+             * }</pre>
+             *
              * @param <T> target type
              * @param type the {@code Type} of the value in the first column.
              * @return a {@code RowMapper} for the specified type.
