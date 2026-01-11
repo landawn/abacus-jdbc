@@ -85,7 +85,7 @@ public enum Propagation {
      * will never create a new transaction.</p>
      * 
      * <p>Use this for methods that must be part of a larger transactional operation
-     * and should never execute outside of a transaction context.</p>
+     * and should never execute outside a transaction context.</p>
      */
     MANDATORY,
 

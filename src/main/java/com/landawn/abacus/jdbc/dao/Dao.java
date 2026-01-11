@@ -2409,9 +2409,9 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         N.checkArgNotNull(sqlAction, cs.func);
         N.checkArgNotNull(executor, cs.executor);
 
-        final TD tdao = (TD) this;
+        final TD dao = (TD) this;
 
-        return ContinuableFuture.call(() -> sqlAction.apply(tdao), executor);
+        return ContinuableFuture.call(() -> sqlAction.apply(dao), executor);
     }
 
     /**
@@ -2462,8 +2462,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         N.checkArgNotNull(sqlAction, cs.action);
         N.checkArgNotNull(executor, cs.executor);
 
-        final TD tdao = (TD) this;
+        final TD dao = (TD) this;
 
-        return ContinuableFuture.run(() -> sqlAction.accept(tdao), executor);
+        return ContinuableFuture.run(() -> sqlAction.accept(dao), executor);
     }
 }

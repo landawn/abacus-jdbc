@@ -566,7 +566,7 @@ public final class DBLock {
      * }
      * }</pre>
      *
-     * @throws IllegalStateException if a database access error occurs during cleanup (unlikely, as tasks are cancelled).
+     * @throws IllegalStateException if a database access error occurs during cleanup (unlikely, as tasks are canceled).
      */
     public void close() {
         if (isClosed) {

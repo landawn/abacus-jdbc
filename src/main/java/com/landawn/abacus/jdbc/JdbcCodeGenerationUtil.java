@@ -627,7 +627,9 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("@JsonXmlConfig").append(Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPARATOR);
             }
 
-            sb.append("@Table(name = \"" + entityName + "\")")
+            sb.append("@Table(name = \"")
+                    .append(entityName)
+                    .append("\")")
                     .append(LINE_SEPARATOR)
                     .append("public class ")
                     .append(finalClassName)
@@ -651,7 +653,7 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
-                sb.append("    @Column(name = \"" + columnName + "\")").append(LINE_SEPARATOR);
+                sb.append("    @Column(name = \"").append(columnName).append("\")").append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
