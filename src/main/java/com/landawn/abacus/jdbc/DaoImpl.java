@@ -29,7 +29,15 @@ import java.lang.reflect.ParameterizedType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
@@ -76,9 +84,9 @@ import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.parser.JSONParser;
-import com.landawn.abacus.parser.JSONSerializationConfig;
-import com.landawn.abacus.parser.JSONSerializationConfig.JSC;
+import com.landawn.abacus.parser.JsonParser;
+import com.landawn.abacus.parser.JsonSerializationConfig;
+import com.landawn.abacus.parser.JsonSerializationConfig.JSC;
 import com.landawn.abacus.parser.KryoParser;
 import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
@@ -224,10 +232,10 @@ final class DaoImpl {
     private static final String PN_SYS_TIME = "sysTime";
     private static final String PN_SYS_DATE = "sysDate";
 
-    private static final JSONParser jsonParser = ParserFactory.createJSONParser();
-    private static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
+    private static final JsonParser jsonParser = ParserFactory.createJsonParser();
+    private static final KryoParser kryoParser = ParserFactory.isAvroParserAvailable() ? ParserFactory.createKryoParser() : null;
 
-    private static final JSONSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).bracketRootValue(false);
+    private static final JsonSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).bracketRootValue(false);
 
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
 
@@ -961,7 +969,7 @@ final class DaoImpl {
 
             return (preparedQuery, args) -> {
                 final Dataset dataset = (Dataset) preparedQuery.query(Jdbc.ResultExtractor.toDataset(targetEntityClass, prefixFieldMap));
-                final List<Object> entities = dataset.toMergedEntities(mergedByKey, dataset.columnNameList(), prefixFieldMap, targetEntityClass);
+                final List<Object> entities = dataset.toMergedEntities(mergedByKey, dataset.columnNames(), prefixFieldMap, targetEntityClass);
 
                 return (R) Stream.of(entities).toMap(keyExtractor, Fn.identity(), Suppliers.ofMap(targetMapClass));
             };
@@ -974,7 +982,7 @@ final class DaoImpl {
 
                 return (preparedQuery, args) -> {
                     final Dataset dataset = (Dataset) preparedQuery.query(Jdbc.ResultExtractor.toDataset(targetEntityClass, prefixFieldMap));
-                    final List<Object> mergedEntities = dataset.toMergedEntities(mergedByIds, dataset.columnNameList(), prefixFieldMap, targetEntityClass);
+                    final List<Object> mergedEntities = dataset.toMergedEntities(mergedByIds, dataset.columnNames(), prefixFieldMap, targetEntityClass);
 
                     if (isCollection) {
                         if (returnType.isAssignableFrom(mergedEntities.getClass())) {
@@ -1827,10 +1835,10 @@ final class DaoImpl {
                             + " must have at least one field annotated with @Id");
                 } else if (idFieldNames.size() == 1 && !SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
                     if (!(ClassUtil.wrap((Class) typeArguments[1]))
-                            .isAssignableFrom(ClassUtil.wrap(Beans.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
+                            .isAssignableFrom(ClassUtil.wrap(Beans.getPropGetter((Class) typeArguments[0], idFieldNames.get(0)).getReturnType()))) {
                         throw new IllegalArgumentException("The 'ID' type declared in Dao: " + ClassUtil.getCanonicalClassName(daoInterface)
                                 + " is not assignable from the id property type: "
-                                + Beans.getPropGetMethod((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
+                                + Beans.getPropGetter((Class) typeArguments[0], idFieldNames.get(0)).getReturnType());
                     }
                 } else if (idFieldNames.size() > 1 && !(EntityId.class.equals(typeArguments[1]) || Beans.isBeanClass((Class) typeArguments[1])
                         || Beans.isRecordClass((Class) typeArguments[1]))) {
@@ -1853,8 +1861,8 @@ final class DaoImpl {
                 : (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1]) ? (Class) typeArguments[1]
                         : (typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]) ? (Class) typeArguments[2] : PSC.class));
 
-        final NamingPolicy namingPolicy = sbc.equals(PSC.class) ? NamingPolicy.LOWER_CASE_WITH_UNDERSCORE
-                : (sbc.equals(PAC.class) ? NamingPolicy.UPPER_CASE_WITH_UNDERSCORE : NamingPolicy.LOWER_CAMEL_CASE);
+        final NamingPolicy namingPolicy = sbc.equals(PSC.class) ? NamingPolicy.SNAKE_CASE
+                : (sbc.equals(PAC.class) ? NamingPolicy.SCREAMING_SNAKE_CASE : NamingPolicy.CAMEL_CASE);
 
         final Class<Object> entityClass = N.isEmpty(typeArguments) ? null : (Class) typeArguments[0];
         final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
@@ -4351,7 +4359,7 @@ final class DaoImpl {
                                 sql_selectPart = sql_selectPart.substring(0, eqIndex) + "IN ";
 
                                 if (idList.size() >= batchSize) {
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
 
                                     for (int i = 0; i < batchSize; i++) {
                                         joiner.append('?');
@@ -4371,7 +4379,7 @@ final class DaoImpl {
 
                                 if (idList.size() % batchSize != 0) {
                                     final int remaining = idList.size() % batchSize;
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
 
                                     for (int i = 0; i < remaining; i++) {
                                         joiner.append('?');
@@ -4465,7 +4473,7 @@ final class DaoImpl {
 
                             if (idPropNameList.size() == 1) {
                                 if (idList.size() >= batchSize) {
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
 
                                     for (int i = 0; i < batchSize; i++) {
                                         joiner.append('?');
@@ -4484,7 +4492,7 @@ final class DaoImpl {
 
                                 if (idList.size() % batchSize != 0) {
                                     final int remaining = idList.size() % batchSize;
-                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseCachedBuffer();
+                                    final Joiner joiner = Joiner.with(", ", "(", ")").reuseBuffer();
 
                                     for (int i = 0; i < remaining; i++) {
                                         joiner.append('?');
@@ -5299,7 +5307,7 @@ final class DaoImpl {
                     }
 
                     if (Strings.isNotEmpty(mappedByKey)) {
-                        final Method mappedByKeyMethod = Beans.getPropGetMethod(entityClass, mappedByKey);
+                        final Method mappedByKeyMethod = Beans.getPropGetter(entityClass, mappedByKey);
 
                         if (mappedByKeyMethod == null) {
                             throw new IllegalArgumentException(
@@ -5344,7 +5352,7 @@ final class DaoImpl {
                             }
                         } else {
                             for (final String mergedById : mergedByIds) {
-                                final Method mergedByIdMethod = Beans.getPropGetMethod(entityClass, mergedById);
+                                final Method mergedByIdMethod = Beans.getPropGetter(entityClass, mergedById);
 
                                 if (mergedByIdMethod == null) {
                                     throw new IllegalArgumentException("No method found by merged id: " + mergedById + " in entity class: "

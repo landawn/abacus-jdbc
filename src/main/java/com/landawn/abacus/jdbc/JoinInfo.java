@@ -296,7 +296,7 @@ public final class JoinInfo {
             Class<?> tmpMiddleEntityClass = null;
 
             try {
-                tmpMiddleEntityClass = ClassUtil.forClass(middleEntityClassName);
+                tmpMiddleEntityClass = ClassUtil.forName(middleEntityClassName);
             } catch (final Throwable e) {
                 throw new IllegalArgumentException("For many-to-many join, the intermediate entity class is required but not found: " + middleEntityClassName,
                         e);

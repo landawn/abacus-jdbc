@@ -42,7 +42,7 @@ class CodeGenerationUtilTest {
     public void test_generatePropNameTableClasses() {
         N.println(CodeGenerationUtil.generatePropNameTableClass(Account.class, CodeGenerationUtil.X, "./samples"));
 
-        final Collection<Class<?>> classes = N.concat(ClassUtil.getClassesByPackage(User.class.getPackageName(), false, false));
+        final Collection<Class<?>> classes = N.concat(ClassUtil.findClassesInPackage(User.class.getPackageName(), false, false));
 
         final PropNameTableCodeConfig codeConfig = PropNameTableCodeConfig.builder()
                 .entityClasses(classes)
@@ -51,8 +51,8 @@ class CodeGenerationUtilTest {
                 .srcDir("./samples")
                 .propNameConverter((cls, propName) -> propName.equals("create_time") ? "createTime" : propName)
                 .generateClassPropNameList(true)
-                .generateLowerCaseWithUnderscore(true)
-                .generateUpperCaseWithUnderscore(true)
+                .generateSnakeCase(true)
+                .generateScreamingSnakeCase(true)
                 .generateFunctionPropName(true)
                 .functionClassName("f")
                 .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
@@ -93,7 +93,7 @@ class CodeGenerationUtilTest {
                 .generateBuilder(true)
                 .generateCopyMethod(true)
                 .jsonXmlConfig(EntityCodeConfig.JsonXmlConfig.builder()
-                        .namingPolicy(NamingPolicy.UPPER_CASE_WITH_UNDERSCORE)
+                        .namingPolicy(NamingPolicy.SCREAMING_SNAKE_CASE)
                         .ignoredFields("id,   create_time")
                         .dateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
                         .numberFormat("#.###")

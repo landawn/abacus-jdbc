@@ -504,7 +504,7 @@ public final class JdbcCodeGenerationUtil {
                     final String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
                     try { //NOSONAR
-                        if (ClassUtil.forClass("java.util." + clsName) != null) {
+                        if (ClassUtil.forName("java.util." + clsName) != null) {
                             //noinspection StringConcatenationInLoop
                             headPart += LINE_SEPARATOR + "import java.util." + clsName + ";"; //NOSONAR
                         }
@@ -813,7 +813,7 @@ public final class JdbcCodeGenerationUtil {
         String columnClassName = rsmd.getColumnClassName(columnIndex);
 
         try {
-            columnClassName = ClassUtil.getCanonicalClassName(ClassUtil.forClass(columnClassName));
+            columnClassName = ClassUtil.getCanonicalClassName(ClassUtil.forName(columnClassName));
         } catch (final Throwable e) {
             // ignore.
         }

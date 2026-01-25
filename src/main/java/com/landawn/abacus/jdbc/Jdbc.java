@@ -5563,7 +5563,8 @@ public final class Jdbc {
              */
             @SuppressWarnings("cast")
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
-                return (RowMapper<T>) rowMapperPool.computeIfAbsent(type, k -> rs -> type.get(rs, 1));
+                final RowMapper<T> rowMapper = rs -> type.get(rs, 1);
+                return (RowMapper<T>) rowMapperPool.computeIfAbsent(type, k -> rowMapper);
             }
 
             /**

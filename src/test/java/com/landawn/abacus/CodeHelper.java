@@ -29,7 +29,7 @@ public class CodeHelper {
     @Test
     public void compare_methods_in_UncheckedDaos() throws Exception {
 
-        final Map<String, Class<?>> daoClsMap = Stream.of(ClassUtil.getClassesByPackage("com.landawn.abacus.jdbc.dao", true, true))
+        final Map<String, Class<?>> daoClsMap = Stream.of(ClassUtil.findClassesInPackage("com.landawn.abacus.jdbc.dao", true, true))
                 .toMap(ClassUtil::getSimpleClassName, Fn.identity());
 
         Stream.ofValues(daoClsMap).filter(it -> ClassUtil.getSimpleClassName(it).startsWith("Unchecked")).forEach(Fn.println());

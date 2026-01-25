@@ -72,7 +72,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.parser.JSONParser;
+import com.landawn.abacus.parser.JsonParser;
 import com.landawn.abacus.parser.KryoParser;
 import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
@@ -536,9 +536,9 @@ public final class JdbcUtil {
         return stmtToUse.toString();
     };
 
-    static final JSONParser jsonParser = ParserFactory.createJSONParser();
+    static final JsonParser jsonParser = ParserFactory.createJsonParser();
 
-    static final KryoParser kryoParser = ParserFactory.isKryoAvailable() ? ParserFactory.createKryoParser() : null;
+    static final KryoParser kryoParser = ParserFactory.isAvroParserAvailable() ? ParserFactory.createKryoParser() : null;
 
     static final char CHAR_ZERO = 0;
 
@@ -575,7 +575,7 @@ public final class JdbcUtil {
     static final Set<String> UPDATE_METHOD_NAME_SET = N.asSet("update", "delete", "deleteById", "insert", "save", "batchUpdate", "batchDelete",
             "batchDeleteByIds", "batchInsert", "batchSave", "batchUpsert", "upsert", "execute");
 
-    static final Set<Method> BUILT_IN_DAO_QUERY_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
+    static final Set<Method> BUILT_IN_DAO_QUERY_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
             .filter(Dao.class::isAssignableFrom)
             .flattmap(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
@@ -583,7 +583,7 @@ public final class JdbcUtil {
             .filter(it -> N.anyMatch(QUERY_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
             .toImmutableSet();
 
-    static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.getClassesByPackage(Dao.class.getPackageName(), false, true)) //
+    static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
             .filter(Dao.class::isAssignableFrom)
             .flattmap(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
@@ -632,7 +632,7 @@ public final class JdbcUtil {
 
     static {
         try {
-            isInSpring = ClassUtil.forClass("org.springframework.jdbc.datasource.DataSourceUtils") != null;
+            isInSpring = ClassUtil.forName("org.springframework.jdbc.datasource.DataSourceUtils") != null;
         } catch (final Throwable e) {
             isInSpring = false;
         }
@@ -1026,7 +1026,7 @@ public final class JdbcUtil {
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
-        final Class<? extends Driver> cls = ClassUtil.forClass(driverClass);
+        final Class<? extends Driver> cls = ClassUtil.forName(driverClass);
 
         return createConnection(cls, url, user, password);
     }
@@ -1084,25 +1084,25 @@ public final class JdbcUtil {
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
         if (Strings.indexOfIgnoreCase(url, "mysql") >= 0) {
-            driverClass = ClassUtil.forClass("com.mysql.cj.jdbc.Driver");
+            driverClass = ClassUtil.forName("com.mysql.cj.jdbc.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
         } else if (Strings.indexOfIgnoreCase(url, "postgresql") >= 0) {
-            driverClass = ClassUtil.forClass("org.postgresql.Driver");
+            driverClass = ClassUtil.forName("org.postgresql.Driver");
             // jdbc:h2:hsql://<host>:<port>/<database>
         } else if (Strings.indexOfIgnoreCase(url, "h2") >= 0) {
-            driverClass = ClassUtil.forClass("org.h2.Driver");
+            driverClass = ClassUtil.forName("org.h2.Driver");
             // jdbc:hsqldb:hsql://localhost/abacustest
         } else if (Strings.indexOfIgnoreCase(url, "hsqldb") >= 0) {
-            driverClass = ClassUtil.forClass("org.hsqldb.JDBCDriver");
+            driverClass = ClassUtil.forName("org.hsqldb.JDBCDriver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
         } else if (Strings.indexOfIgnoreCase(url, "oracle") >= 0) {
-            driverClass = ClassUtil.forClass("oracle.jdbc.driver.OracleDriver");
+            driverClass = ClassUtil.forName("oracle.jdbc.driver.OracleDriver");
             // url=jdbc:sqlserver://localhost:1433;Database=abacustest
         } else if (Strings.indexOfIgnoreCase(url, "sqlserver") >= 0) {
-            driverClass = ClassUtil.forClass("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            driverClass = ClassUtil.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             // jdbc:db2://localhost:50000/abacustest
         } else if (Strings.indexOfIgnoreCase(url, "db2") >= 0) {
-            driverClass = ClassUtil.forClass("com.ibm.db2.jcc.DB2Driver");
+            driverClass = ClassUtil.forName("com.ibm.db2.jcc.DB2Driver");
         } else {
             throw new IllegalArgumentException(
                     "Cannot identify the driver class from URL: " + url + ". Only MySQL, PostgreSQL, H2, HSQLDB, Oracle, SQL Server, and DB2 are supported");
@@ -7499,7 +7499,7 @@ public final class JdbcUtil {
      *     JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", "active", userId);
      * });
      *
-     * future.thenRun(() -> System.out.println("Update completed"));
+     * future.thenRunAsync(() -> System.out.println("Update completed"));
      * }</pre>
      *
      * @param sqlAction The SQL action to be executed asynchronously
@@ -7525,7 +7525,7 @@ public final class JdbcUtil {
      *     () -> JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET processed = ?", true)
      * );
      *
-     * ContinuableFuture.allOf(futures._1, futures._2).thenRun(() ->
+     * ContinuableFuture.allOf(futures._1, futures._2).thenRunAsync(() ->
      *     System.out.println("Both updates completed")
      * );
      * }</pre>
@@ -7558,7 +7558,7 @@ public final class JdbcUtil {
      *         () -> JdbcUtil.executeUpdate(dataSource, "UPDATE inventory SET updated = ?", new Date())
      *     );
      *
-     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() ->
+     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRunAsync(() ->
      *     System.out.println("All updates completed")
      * );
      * }</pre>
@@ -7591,7 +7591,7 @@ public final class JdbcUtil {
      *     JdbcUtil.executeUpdate(dataSource, "INSERT INTO users (name, email) VALUES (?, ?)", e.getName(), e.getEmail());
      * });
      *
-     * future.thenRun(() -> System.out.println("User inserted"));
+     * future.thenRunAsync(() -> System.out.println("User inserted"));
      * }</pre>
      *
      * @param <T> The type of the parameter
@@ -7618,7 +7618,7 @@ public final class JdbcUtil {
      *     (id, st) -> JdbcUtil.update(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
      * );
      * 
-     * future.thenRun(() -> System.out.println("Status updated"));
+     * future.thenRunAsync(() -> System.out.println("Status updated"));
      * }</pre>
      *
      * @param <T> The type of the first parameter
@@ -7651,7 +7651,7 @@ public final class JdbcUtil {
      *     }
      * );
      * 
-     * future.thenRun(() -> System.out.println("Order status updated"));
+     * future.thenRunAsync(() -> System.out.println("Order status updated"));
      * }</pre>
      *
      * @param <A> The type of the first parameter
@@ -7744,7 +7744,7 @@ public final class JdbcUtil {
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
      *     );
      * 
-     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRun(() -> {
+     * ContinuableFuture.allOf(futures._1, futures._2, futures._3).thenRunAsync(() -> {
      *     System.out.println("All queries completed");
      * });
      * }</pre>

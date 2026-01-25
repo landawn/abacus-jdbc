@@ -88,7 +88,7 @@ public class JdbcUtilsTest extends TestBase {
     @Test
     public void testImportDataWithDatasetAndDataSource() throws SQLException {
         // Setup
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1", "col2"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(2);
         when(mockDataset.get(anyInt())).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
@@ -109,7 +109,7 @@ public class JdbcUtilsTest extends TestBase {
     @Test
     public void testImportDataWithDatasetAndConnection() throws SQLException {
         // Setup
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1", "col2"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(anyInt())).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -130,7 +130,7 @@ public class JdbcUtilsTest extends TestBase {
     public void testImportDataWithSelectedColumns() throws SQLException {
         // Setup
         List<String> selectColumns = Arrays.asList("col1");
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1", "col2"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
@@ -150,7 +150,7 @@ public class JdbcUtilsTest extends TestBase {
     public void testImportDataWithBatchSizeAndInterval() throws SQLException {
         // Setup
         List<String> selectColumns = Arrays.asList("col1");
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(5);
         when(mockDataset.get(anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
@@ -172,7 +172,7 @@ public class JdbcUtilsTest extends TestBase {
         List<String> selectColumns = Arrays.asList("col1");
         Throwables.Predicate<Object[], Exception> filter = row -> "valid".equals(row[0]);
 
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(3);
         when(mockDataset.get(0)).thenReturn("valid", "invalid", "valid");
 
@@ -195,7 +195,7 @@ public class JdbcUtilsTest extends TestBase {
         Map<String, Type> columnTypeMap = new HashMap<>();
         columnTypeMap.put("col1", N.typeOf(String.class));
 
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
@@ -216,7 +216,7 @@ public class JdbcUtilsTest extends TestBase {
         // Setup
         Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, (String) row[0]);
 
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(0)).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -702,7 +702,7 @@ public class JdbcUtilsTest extends TestBase {
     @Test
     public void testImportDataWithEmptyDataset() throws SQLException {
         // Setup
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(0);
 
         String insertSQL = "INSERT INTO test_table (col1) VALUES (?)";
@@ -735,7 +735,7 @@ public class JdbcUtilsTest extends TestBase {
     public void testImportDataWithNullFilter() throws SQLException, Exception {
         // Setup
         List<String> selectColumns = Arrays.asList("col1");
-        when(mockDataset.columnNameList()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
         when(mockDataset.get(0)).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);

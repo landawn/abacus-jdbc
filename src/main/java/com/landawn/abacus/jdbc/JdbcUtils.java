@@ -43,8 +43,8 @@ import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
-import com.landawn.abacus.util.BufferedCSVWriter;
-import com.landawn.abacus.util.CSVUtil;
+import com.landawn.abacus.util.BufferedCsvWriter;
+import com.landawn.abacus.util.CsvUtil;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
@@ -318,7 +318,7 @@ import com.landawn.abacus.util.WD;
  * </ul>
  *
  * @see Dataset
- * @see CSVUtil
+ * @see CsvUtil
  * @see JdbcUtil
  * @see Connection
  * @see PreparedStatement
@@ -354,7 +354,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -388,7 +388,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -400,7 +400,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSQL) throws SQLException {
-        return importData(dataset, dataset.columnNameList(), conn, insertSQL);
+        return importData(dataset, dataset.columnNames(), conn, insertSQL);
     }
 
     /**
@@ -417,7 +417,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -448,7 +448,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -483,7 +483,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -525,7 +525,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -562,7 +562,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -603,7 +603,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -744,7 +744,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final PreparedStatement stmt) throws SQLException {
-        return importData(dataset, dataset.columnNameList(), stmt);
+        return importData(dataset, dataset.columnNames(), stmt);
     }
 
     /**
@@ -761,7 +761,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -790,7 +790,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -826,7 +826,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(selectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -932,7 +932,7 @@ public final class JdbcUtils {
      *
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
-     * List<String> columnNameList = new ArrayList<>(dataset.columnNameList());
+     * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
      * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
@@ -966,7 +966,7 @@ public final class JdbcUtils {
             @Override
             public void accept(final PreparedQuery t, final Object[] u) throws SQLException {
                 if (columnTypes == null) {
-                    final List<String> columnNameList = dataset.columnNameList();
+                    final List<String> columnNameList = dataset.columnNames();
                     final Set<String> columnNameSet = N.newHashSet(columnCount);
 
                     columnCount = columnNameList.size();
@@ -1098,12 +1098,12 @@ public final class JdbcUtils {
 
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
 
-        final int columnCount = dataset.columnNameList().size();
+        final int columnCount = dataset.columnNames().size();
         final Object[] row = new Object[columnCount];
         int result = 0;
 
         for (int i = 0, size = dataset.size(); result < size && i < size; i++) {
-            dataset.absolute(i);
+            dataset.moveToRow(i);
 
             for (int j = 0; j < columnCount; j++) {
                 row[j] = dataset.get(j);
@@ -1989,8 +1989,8 @@ public final class JdbcUtils {
                 batchSize, batchIntervalInMillis);
 
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
-        final Function<String, String[]> headerParser = CSVUtil.getCurrentHeaderParser();
-        final BiConsumer<String, String[]> lineParser = CSVUtil.getCurrentLineParser();
+        final Function<String, String[]> headerParser = CsvUtil.getCurrentHeaderParser();
+        final BiConsumer<String, String[]> lineParser = CsvUtil.getCurrentLineParser();
         final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
         final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
         long result = 0;
@@ -2454,8 +2454,8 @@ public final class JdbcUtils {
         // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative");
 
         final Type<Object> strType = N.typeOf(String.class);
-        final boolean isBufferedWriter = output instanceof BufferedCSVWriter;
-        final BufferedCSVWriter bw = isBufferedWriter ? (BufferedCSVWriter) output : Objectory.createBufferedCSVWriter(output);
+        final boolean isBufferedWriter = output instanceof BufferedCsvWriter;
+        final BufferedCsvWriter bw = isBufferedWriter ? (BufferedCsvWriter) output : Objectory.createBufferedCsvWriter(output);
         long result = 0;
 
         try {
@@ -2490,7 +2490,7 @@ public final class JdbcUtils {
                     bw.write(separator);
                 }
 
-                CSVUtil.writeField(bw, strType, columnNames[i]);
+                CsvUtil.writeField(bw, strType, columnNames[i]);
             }
 
             bw.write(IOUtil.LINE_SEPARATOR_UNIX);
@@ -2524,10 +2524,10 @@ public final class JdbcUtils {
                             type = N.typeOf(value.getClass());
                             typeArray[i] = type;
 
-                            CSVUtil.writeField(bw, type, value);
+                            CsvUtil.writeField(bw, type, value);
                         }
                     } else {
-                        CSVUtil.writeField(bw, type, type.get(rs, i + 1));
+                        CsvUtil.writeField(bw, type, type.get(rs, i + 1));
                     }
                 }
             }

@@ -49,10 +49,10 @@ import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.Filters.CB;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.SQLParser;
-import com.landawn.abacus.query.Filters.CB;
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
@@ -329,9 +329,9 @@ public class DaoTest {
                 .mapToObj(i -> User.builder()
                         .id(i)
                         .firstName("Forrest" + i)
-                        .lastName(Strings.guid().substring(0, 32))
+                        .lastName(Strings.uuid32().substring(0, 32))
                         .nickName("Forrest")
-                        .email(Strings.guid().substring(0, 32))
+                        .email(Strings.uuid32().substring(0, 32))
                         .build())
                 .toList();
 
@@ -708,7 +708,7 @@ public class DaoTest {
 
         userDao.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
 
-        userDao.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+        userDao.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toScreamingSnakeCase())).ifPresent(Fn.println());
 
         userDao.deleteById(100L);
 
@@ -1272,7 +1272,7 @@ public class DaoTest {
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
-        Project project = Project.builder().projectId(1000).title("Project X").startDate(DateUtil.currentJUDateRolled(3, TimeUnit.DAYS)).build();
+        Project project = Project.builder().projectId(1000).title("Project X").startDate(DateUtil.currentJUDatePlus(3, TimeUnit.DAYS)).build();
         projectDao.insert(project);
 
         final Project projectFromDB = projectDao.gett(project.getProjectId());
@@ -1446,7 +1446,7 @@ public class DaoTest {
 
         myUserDaoA.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.TO_MAP).ifPresent(Fn.println());
 
-        myUserDaoA.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toUpperCaseWithUnderscore())).ifPresent(Fn.println());
+        myUserDaoA.findFirst(Filters.eq("id", 100L), Jdbc.BiRowMapper.toMap(Fn.toScreamingSnakeCase())).ifPresent(Fn.println());
 
         myUserDaoA.deleteById(100L);
 

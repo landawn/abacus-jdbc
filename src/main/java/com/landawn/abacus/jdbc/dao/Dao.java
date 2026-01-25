@@ -2447,7 +2447,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * dao.asyncRun(
      *     d -> d.save(generateDailyReport()),
      *     scheduler
-     * ).thenRun(() -> 
+     * ).thenRunAsync(() -> 
      *     System.out.println("Report saved")
      * );
      * }</pre>

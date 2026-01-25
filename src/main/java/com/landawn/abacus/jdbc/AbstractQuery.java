@@ -9527,7 +9527,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     });
      *     
      * // Continue with other work while update runs
-     * future.thenRun(() -> System.out.println("Batch update completed"));
+     * future.thenRunAsync(() -> System.out.println("Batch update completed"));
      * }</pre>
      *
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.

@@ -40,7 +40,7 @@ public class Maven {
         final File sourceDir = new File(sourcePath);
         final File targetDir = new File(targetPath);
 
-        IOUtil.deleteAllIfExists(targetDir);
+        IOUtil.deleteRecursivelyIfExists(targetDir);
 
         targetDir.mkdir();
 
