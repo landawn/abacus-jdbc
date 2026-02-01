@@ -9866,7 +9866,7 @@ public final class JdbcUtil {
                 final ImmutableMap<String, String> propColumnNameMap = QueryUtil.getProp2ColumnNameMap(entityClass, np);
 
                 final ImmutableMap<String, String> columnPropNameMap = EntryStream.of(propColumnNameMap)
-                        .inversed()
+                        .invert()
                         .flatmapKey(e -> N.asList(e, e.toLowerCase(), e.toUpperCase()))
                         .distinctByKey()
                         .toImmutableMap();

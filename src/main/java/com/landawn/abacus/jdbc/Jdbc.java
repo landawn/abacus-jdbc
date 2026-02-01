@@ -54,6 +54,7 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.pool.KeyedObjectPool;
 import com.landawn.abacus.pool.PoolFactory;
+import com.landawn.abacus.pool.Poolable;
 import com.landawn.abacus.pool.PoolableWrapper;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
@@ -6188,7 +6189,7 @@ public final class Jdbc {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
 
-            return pool.put(defaultCacheKey, PoolableWrapper.of(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME));
+            return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME));
         }
 
         @Override
@@ -6196,7 +6197,7 @@ public final class Jdbc {
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
 
-            return pool.put(defaultCacheKey, PoolableWrapper.of(result, liveTime, maxIdleTime));
+            return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime));
         }
 
         /**

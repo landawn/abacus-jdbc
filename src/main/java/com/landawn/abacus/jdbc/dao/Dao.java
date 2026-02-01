@@ -2335,7 +2335,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             save(entity);
             return entity;
         } else {
-            Beans.merge(entity, dbEntity);
+            Beans.copyInto(entity, dbEntity);
             update(dbEntity, cond);
             return dbEntity;
         }

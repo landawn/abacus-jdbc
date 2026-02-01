@@ -1157,7 +1157,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
-            Beans.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
             update(dbEntity);
             return dbEntity;
         }
@@ -1330,7 +1330,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
                 }
 
                 final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> Beans.merge(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
+                        .map(it -> Beans.copyInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
                         .toList();
 
                 batchUpdate(dbEntitiesToUpdate, batchSize);
@@ -1410,7 +1410,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
         if (dbEntity == null) {
             return false;
         } else {
-            Beans.merge(dbEntity, entity, propNamesToRefresh);
+            Beans.copyInto(dbEntity, entity, propNamesToRefresh);
 
             return true;
         }
@@ -1533,7 +1533,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
                 if (N.notEmpty(matchingEntities)) {
                     for (final T entity : matchingEntities) {
-                        Beans.merge(dbEntity, entity, propNamesToRefresh);
+                        Beans.copyInto(dbEntity, entity, propNamesToRefresh);
                     }
                 }
 

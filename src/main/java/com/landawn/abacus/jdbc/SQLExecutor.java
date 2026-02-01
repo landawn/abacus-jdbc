@@ -3598,7 +3598,7 @@ final class SQLExecutor {
     //        if (jdbcSettings != null && jdbcSettings.isQueryInParallel()) {
     //            final List<Dataset> resultList = Stream.of(sqls).parallel(sqls.size()).map(sql -> query(sql, statementSetter, jdbcSettings, parameters)).toList();
     //
-    //            return Beans.merge(resultList);
+    //            return Beans.copyInto(resultList);
     //        } else {
     //            final List<Dataset> resultList = new ArrayList<>(sqls.size());
     //
@@ -3606,7 +3606,7 @@ final class SQLExecutor {
     //                resultList.add(query(sql, statementSetter, jdbcSettings, parameters));
     //            }
     //
-    //            return Beans.merge(resultList);
+    //            return Beans.copyInto(resultList);
     //        }
     //    }
     //

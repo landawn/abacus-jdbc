@@ -1728,7 +1728,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             save(entity);
             return entity;
         } else {
-            Beans.merge(entity, dbEntity);
+            Beans.copyInto(entity, dbEntity);
             update(dbEntity, cond);
             return dbEntity;
         }

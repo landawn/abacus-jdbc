@@ -481,9 +481,9 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getInt("id")).thenReturn(1);
         when(mockResultSet.getString("name")).thenReturn("John");
 
-        Jdbc.RowMapper<Integer> mapper1 = rs -> rs.getInt("id");
-        Jdbc.RowMapper<String> mapper2 = rs -> rs.getString("name");
-        Jdbc.RowMapper<Tuple2<Integer, String>> combined = Jdbc.RowMapper.combine(mapper1, mapper2);
+        Jdbc.RowMapper<Integer> firstMapper = rs -> rs.getInt("id");
+        Jdbc.RowMapper<String> secondMapper = rs -> rs.getString("name");
+        Jdbc.RowMapper<Tuple2<Integer, String>> combined = Jdbc.RowMapper.combine(firstMapper, secondMapper);
 
         Tuple2<Integer, String> result = combined.apply(mockResultSet);
         assertEquals(1, result._1);
@@ -496,10 +496,10 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString("name")).thenReturn("John");
         when(mockResultSet.getInt("age")).thenReturn(25);
 
-        Jdbc.RowMapper<Integer> mapper1 = rs -> rs.getInt("id");
-        Jdbc.RowMapper<String> mapper2 = rs -> rs.getString("name");
-        Jdbc.RowMapper<Integer> mapper3 = rs -> rs.getInt("age");
-        Jdbc.RowMapper<Tuple3<Integer, String, Integer>> combined = Jdbc.RowMapper.combine(mapper1, mapper2, mapper3);
+        Jdbc.RowMapper<Integer> firstMapper = rs -> rs.getInt("id");
+        Jdbc.RowMapper<String> secondMapper = rs -> rs.getString("name");
+        Jdbc.RowMapper<Integer> thirdMapper = rs -> rs.getInt("age");
+        Jdbc.RowMapper<Tuple3<Integer, String, Integer>> combined = Jdbc.RowMapper.combine(firstMapper, secondMapper, thirdMapper);
 
         Tuple3<Integer, String, Integer> result = combined.apply(mockResultSet);
         assertEquals(1, result._1);
@@ -706,9 +706,9 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getInt(1)).thenReturn(1);
         when(mockResultSet.getString(2)).thenReturn("John");
 
-        Jdbc.BiRowMapper<Integer> mapper1 = (rs, cols) -> rs.getInt(1);
-        Jdbc.BiRowMapper<String> mapper2 = (rs, cols) -> rs.getString(2);
-        Jdbc.BiRowMapper<Tuple2<Integer, String>> combined = Jdbc.BiRowMapper.combine(mapper1, mapper2);
+        Jdbc.BiRowMapper<Integer> firstMapper = (rs, cols) -> rs.getInt(1);
+        Jdbc.BiRowMapper<String> secondMapper = (rs, cols) -> rs.getString(2);
+        Jdbc.BiRowMapper<Tuple2<Integer, String>> combined = Jdbc.BiRowMapper.combine(firstMapper, secondMapper);
 
         List<String> columnLabels = Arrays.asList("id", "name");
         Tuple2<Integer, String> result = combined.apply(mockResultSet, columnLabels);
@@ -722,10 +722,10 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(2)).thenReturn("John");
         when(mockResultSet.getInt(3)).thenReturn(25);
 
-        Jdbc.BiRowMapper<Integer> mapper1 = (rs, cols) -> rs.getInt(1);
-        Jdbc.BiRowMapper<String> mapper2 = (rs, cols) -> rs.getString(2);
-        Jdbc.BiRowMapper<Integer> mapper3 = (rs, cols) -> rs.getInt(3);
-        Jdbc.BiRowMapper<Tuple3<Integer, String, Integer>> combined = Jdbc.BiRowMapper.combine(mapper1, mapper2, mapper3);
+        Jdbc.BiRowMapper<Integer> firstMapper = (rs, cols) -> rs.getInt(1);
+        Jdbc.BiRowMapper<String> secondMapper = (rs, cols) -> rs.getString(2);
+        Jdbc.BiRowMapper<Integer> thirdMapper = (rs, cols) -> rs.getInt(3);
+        Jdbc.BiRowMapper<Tuple3<Integer, String, Integer>> combined = Jdbc.BiRowMapper.combine(firstMapper, secondMapper, thirdMapper);
 
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         Tuple3<Integer, String, Integer> result = combined.apply(mockResultSet, columnLabels);

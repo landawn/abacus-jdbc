@@ -1,3 +1,7 @@
+## 4.2.1
+* Naming convention improvements
+* Improvements and bug fixes
+
 ## 4.2.0
 * Naming convention improvements
 * Improvements and bug fixes

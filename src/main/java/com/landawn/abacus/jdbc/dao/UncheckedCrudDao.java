@@ -1206,7 +1206,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
-            Beans.merge(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
             update(dbEntity);
             return dbEntity;
         }
@@ -1387,7 +1387,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
                 }
 
                 final List<T> dbEntitiesToUpdate = StreamEx.of(entitiesToUpdate)
-                        .map(it -> Beans.merge(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
+                        .map(it -> Beans.copyInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
                         .toList();
 
                 batchUpdate(dbEntitiesToUpdate, batchSize);
@@ -1472,7 +1472,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         if (dbEntity == null) {
             return false;
         } else {
-            Beans.merge(dbEntity, entity, propNamesToRefresh);
+            Beans.copyInto(dbEntity, entity, propNamesToRefresh);
 
             return true;
         }
@@ -1602,7 +1602,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
                 if (N.notEmpty(matchingEntities)) {
                     for (final T entity : matchingEntities) {
-                        Beans.merge(dbEntity, entity, propNamesToRefresh);
+                        Beans.copyInto(dbEntity, entity, propNamesToRefresh);
                     }
                 }
 

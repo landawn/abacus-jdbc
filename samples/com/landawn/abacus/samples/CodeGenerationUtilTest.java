@@ -21,14 +21,15 @@ import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.util.EnumType;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig;
 import com.landawn.abacus.query.SQLBuilder.SCSB;
 import com.landawn.abacus.samples.entity.User;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.CodeGenerationUtil;
 import com.landawn.abacus.util.CodeGenerationUtil.PropNameTableCodeConfig;
+import com.landawn.abacus.util.EnumType;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
@@ -172,7 +173,7 @@ class CodeGenerationUtilTest {
 
     @Test
     public void test_convertInsertSqlToUpdateSql() {
-        User user = N.fill(User.class);
+        User user = Beans.newRandom(User.class);
         user.setEmail(null);
 
         String sql = SCSB.insert(user).into(User.class).sql();
