@@ -176,7 +176,7 @@ public class PreparedQueryTest {
                 .ifPresent(System.out::println);
 
         JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).sql()) //
-                .settParameters(1, N.asList("Forrest"))
+                .setParametersFrom(1, N.asList("Forrest"))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 

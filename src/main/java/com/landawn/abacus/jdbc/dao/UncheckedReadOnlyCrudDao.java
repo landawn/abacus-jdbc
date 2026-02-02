@@ -109,7 +109,7 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in a read-only DAO.
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named insert SQL (ignored)
+     * @param namedInsertSql the named insert SQL (ignored)
      * @param entityToSave the entity to save (ignored)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
@@ -117,7 +117,7 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      */
     @Deprecated
     @Override
-    default ID insert(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException {
+    default ID insert(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -190,7 +190,7 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in read-only DAO.
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named insert SQL (ignored)
+     * @param namedInsertSql the named insert SQL (ignored)
      * @param entities the entities to insert (ignored)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
@@ -198,7 +198,7 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UnsupportedOperationException {
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -206,7 +206,7 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in read-only DAO.
      * Always throws {@code UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named insert SQL (ignored)
+     * @param namedInsertSql the named insert SQL (ignored)
      * @param entities the entities to insert (ignored)
      * @param batchSize the batch size (ignored)
      * @return never returns normally
@@ -215,7 +215,7 @@ public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD exten
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize)
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }

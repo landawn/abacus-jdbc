@@ -377,7 +377,7 @@ public final class cs { // NOSONAR
     /**
      * Parameter name for named insert SQL statements.
      */
-    public static final String namedInsertSQL = "namedInsertSQL";
+    public static final String namedInsertSql = "namedInsertSql";
     /**
      * Parameter name for join entity property names used in join operations.
      */

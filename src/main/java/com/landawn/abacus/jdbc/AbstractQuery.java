@@ -329,7 +329,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets a Boolean parameter value, handling {@code null} values.
      * If the value is {@code null}, sets the parameter to SQL NULL.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Boolean value = getOptionalBoolean();
@@ -344,6 +344,31 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setBoolean(final int parameterIndex, final Boolean x) throws SQLException {
         if (x == null) {
             stmt.setNull(parameterIndex, java.sql.Types.BOOLEAN);
+        } else {
+            stmt.setBoolean(parameterIndex, x);
+        }
+
+        return (This) this;
+    }
+
+    /**
+     * Sets a Boolean parameter value with a default value for {@code null}.
+     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * query.setBoolean(1, nullableBoolean, false);   // use false if null
+     * }</pre>
+     *
+     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param x the Boolean value to set, or {@code null} to use the default value
+     * @param defaultValueForNull the boolean value to use if {@code x} is {@code null}
+     * @return this AbstractQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
+     */
+    public This setBoolean(final int parameterIndex, final Boolean x, final boolean defaultValueForNull) throws SQLException {
+        if (x == null) {
+            stmt.setBoolean(parameterIndex, defaultValueForNull);
         } else {
             stmt.setBoolean(parameterIndex, x);
         }
@@ -2630,7 +2655,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final int[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
+        return setParametersFrom(1, parameters);
     }
 
     /**
@@ -2648,7 +2673,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final long[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
+        return setParametersFrom(1, parameters);
     }
 
     /**
@@ -2666,7 +2691,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final String[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
+        return setParametersFrom(1, parameters);
     }
 
     /**
@@ -2686,7 +2711,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> This setParameters(final T[] parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
+        return setParametersFrom(1, parameters);
     }
 
     /**
@@ -2705,7 +2730,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final Collection<?> parameters) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters);
+        return setParametersFrom(1, parameters);
     }
 
     /**
@@ -2727,7 +2752,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     public <T> This setParameters(final Collection<? extends T> parameters, final Class<T> type) throws IllegalArgumentException, SQLException {
-        return settParameters(1, parameters, type);
+        return setParametersFrom(1, parameters, type);
     }
 
     /**
@@ -2840,7 +2865,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, "Active")
-     *      .settParameters(2, new int[] {10, 20, 30})
+     *      .setParametersFrom(2, new int[] {10, 20, 30})
      *      .list();   // WHERE status = ? AND id IN (?, ?, ?)
      * }</pre>
      *
@@ -2850,7 +2875,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if parameters is null
      * @throws SQLException if a database access error occurs
      */
-    public This settParameters(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
+    public This setParametersFrom(int startParameterIndex, final int[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
         for (final int param : parameters) {
@@ -2866,7 +2891,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setString(1, "Premium")
-     *      .settParameters(2, new long[] {1000L, 2000L, 3000L})
+     *      .setParametersFrom(2, new long[] {1000L, 2000L, 3000L})
      *      .list();
      * }</pre>
      *
@@ -2876,7 +2901,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if parameters is null
      * @throws SQLException if a database access error occurs
      */
-    public This settParameters(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
+    public This setParametersFrom(int startParameterIndex, final long[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
         for (final long param : parameters) {
@@ -2892,7 +2917,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 2023)
-     *      .settParameters(2, new String[] {"Q1", "Q2", "Q3", "Q4"})
+     *      .setParametersFrom(2, new String[] {"Q1", "Q2", "Q3", "Q4"})
      *      .list();
      * }</pre>
      *
@@ -2902,7 +2927,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if parameters is null
      * @throws SQLException if a database access error occurs
      */
-    public This settParameters(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
+    public This setParametersFrom(int startParameterIndex, final String[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
         for (final String param : parameters) {
@@ -2919,7 +2944,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * BigDecimal[] amounts = {new BigDecimal("100.50"), new BigDecimal("200.75")};
      * query.setString(1, "USD")
-     *      .settParameters(2, amounts)
+     *      .setParametersFrom(2, amounts)
      *      .list();
      * }</pre>
      *
@@ -2930,7 +2955,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if parameters is null
      * @throws SQLException if a database access error occurs
      */
-    public <T> This settParameters(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
+    public <T> This setParametersFrom(int startParameterIndex, final T[] parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
         final Class<?> componentType = parameters.getClass().getComponentType();
@@ -2957,7 +2982,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * List<String> categories = Arrays.asList("Electronics", "Books", "Clothing");
      * query.setDate(1, startDate)
-     *      .settParameters(2, categories)
+     *      .setParametersFrom(2, categories)
      *      .list();
      * }</pre>
      *
@@ -2967,7 +2992,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if parameters is null
      * @throws SQLException if a database access error occurs
      */
-    public This settParameters(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
+    public This setParametersFrom(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
         for (final Object param : parameters) {
@@ -2985,7 +3010,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Set<UUID> userIds = getUserIds();
      * query.setString(1, "Active")
-     *      .settParameters(2, userIds, UUID.class)
+     *      .setParametersFrom(2, userIds, UUID.class)
      *      .list();
      * }</pre>
      *
@@ -2997,7 +3022,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if parameters or type is null
      * @throws SQLException if a database access error occurs
      */
-    public <T> This settParameters(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
+    public <T> This setParametersFrom(int startParameterIndex, final Collection<? extends T> parameters, final Class<T> type)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
         checkArgNotNull(type, cs.type);
@@ -3142,7 +3167,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Set positions 2, 4, and 6 to NULL (VARCHAR)
      * query.setString(1, "Active")
-     *      .setNullForMultiPositions(Types.VARCHAR, 2, 4, 6)
+     *      .setNullForIndices(Types.VARCHAR, 2, 4, 6)
      *      .setInt(3, 100)
      *      .setDate(5, LocalDate.now());
      * }</pre>
@@ -3154,7 +3179,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see java.sql.Types
      */
     @Beta
-    public This setNullForMultiPositions(final int sqlType, final int... parameterIndices) throws SQLException {
+    public This setNullForIndices(final int sqlType, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3169,7 +3194,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setBooleanForMultiPositions(true, 1, 3, 5, 7);
+     * query.setBooleanForIndices(true, 1, 3, 5, 7);
      * }</pre>
      *
      * @param parameterValue the Boolean value to set
@@ -3178,7 +3203,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setBooleanForMultiPositions(final Boolean parameterValue, final int... parameterIndices) throws SQLException {
+    public This setBooleanForIndices(final Boolean parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3194,7 +3219,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Set default status code to multiple positions
-     * query.setIntForMultiPositions(0, 2, 5, 8);
+     * query.setIntForIndices(0, 2, 5, 8);
      * }</pre>
      *
      * @param parameterValue the Integer value to set
@@ -3203,7 +3228,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setIntForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+    public This setIntForIndices(final Integer parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3214,7 +3239,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     //    /**
-    //     * Note: The reason for giving name: {@code setIntegerForMultiPositions}, not {@code setIntForMultiPositions} is because of error: <i>The method setIntForMultiPositions(int, int[]) is ambiguous for the type</i>.
+    //     * Note: The reason for giving name: {@code setIntegerForIndices}, not {@code setIntForIndices} is because of error: <i>The method setIntForIndices(int, int[]) is ambiguous for the type</i>.
     //     *
     //     * @param parameterValue
     //     * @param parameterIndices
@@ -3222,7 +3247,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws SQLException
     //     */
     //    @Beta
-    //    public This setIntegerForMultiPositions(final Integer parameterValue, final int... parameterIndices) throws SQLException {
+    //    public This setIntegerForIndices(final Integer parameterValue, final int... parameterIndices) throws SQLException {
     //        checkParameterIndices(parameterIndices);
     //
     //        for (int parameterIndex : parameterIndices) {
@@ -3242,7 +3267,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws SQLException
     //     */
     //    @Beta
-    //    public This setLongForMultiPositions(final long parameterValue, final int... parameterIndices) throws SQLException {
+    //    public This setLongForIndices(final long parameterValue, final int... parameterIndices) throws SQLException {
     //        checkParameterIndices(parameterIndices);
     //
     //        for (int parameterIndex : parameterIndices) {
@@ -3257,7 +3282,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setLongForMultiPositions(System.currentTimeMillis(), 2, 4, 6);
+     * query.setLongForIndices(System.currentTimeMillis(), 2, 4, 6);
      * }</pre>
      *
      * @param parameterValue the Long value to set
@@ -3266,7 +3291,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setLongForMultiPositions(final Long parameterValue, final int... parameterIndices) throws SQLException {
+    public This setLongForIndices(final Long parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3281,7 +3306,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setDoubleForMultiPositions(0.0, 1, 3, 5, 7);
+     * query.setDoubleForIndices(0.0, 1, 3, 5, 7);
      * }</pre>
      *
      * @param parameterValue the Double value to set
@@ -3290,7 +3315,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDoubleForMultiPositions(final Double parameterValue, final int... parameterIndices) throws SQLException {
+    public This setDoubleForIndices(final Double parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3305,7 +3330,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setStringForMultiPositions("N/A", 2, 4, 6, 8);
+     * query.setStringForIndices("N/A", 2, 4, 6, 8);
      * }</pre>
      *
      * @param parameterValue the String value to set
@@ -3314,7 +3339,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setStringForMultiPositions(final String parameterValue, final int... parameterIndices) throws SQLException {
+    public This setStringForIndices(final String parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3330,7 +3355,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Date today = new java.sql.Date(System.currentTimeMillis());
-     * query.setDateForMultiPositions(today, 1, 3, 5);
+     * query.setDateForIndices(today, 1, 3, 5);
      * }</pre>
      *
      * @param parameterValue the Date value to set
@@ -3339,7 +3364,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDateForMultiPositions(final java.sql.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setDateForIndices(final java.sql.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3355,7 +3380,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date now = new java.util.Date();
-     * query.setDateForMultiPositions(now, 2, 4, 6);
+     * query.setDateForIndices(now, 2, 4, 6);
      * }</pre>
      *
      * @param parameterValue the Date value to set
@@ -3364,7 +3389,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setDateForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setDateForIndices(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3380,7 +3405,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.sql.Time noon = java.sql.Time.valueOf("12:00:00");
-     * query.setTimeForMultiPositions(noon, 1, 3, 5);
+     * query.setTimeForIndices(noon, 1, 3, 5);
      * }</pre>
      *
      * @param parameterValue the Time value to set
@@ -3389,7 +3414,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimeForMultiPositions(final java.sql.Time parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimeForIndices(final java.sql.Time parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3405,7 +3430,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date time = new java.util.Date();
-     * query.setTimeForMultiPositions(time, 2, 4, 6);
+     * query.setTimeForIndices(time, 2, 4, 6);
      * }</pre>
      *
      * @param parameterValue the Date value to set as Time
@@ -3414,7 +3439,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimeForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimeForIndices(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3430,7 +3455,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Timestamp ts = new Timestamp(System.currentTimeMillis());
-     * query.setTimestampForMultiPositions(ts, 1, 3, 5, 7);
+     * query.setTimestampForIndices(ts, 1, 3, 5, 7);
      * }</pre>
      *
      * @param parameterValue the Timestamp value to set
@@ -3439,7 +3464,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimestampForMultiPositions(final java.sql.Timestamp parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimestampForIndices(final java.sql.Timestamp parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3455,7 +3480,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date now = new java.util.Date();
-     * query.setTimestampForMultiPositions(now, 2, 4, 6, 8);
+     * query.setTimestampForIndices(now, 2, 4, 6, 8);
      * }</pre>
      *
      * @param parameterValue the Date value to set as Timestamp
@@ -3464,7 +3489,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setTimestampForMultiPositions(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
+    public This setTimestampForIndices(final java.util.Date parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {
@@ -3480,7 +3505,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UUID defaultId = UUID.randomUUID();
-     * query.setObjectForMultiPositions(defaultId, 1, 3, 5, 7);
+     * query.setObjectForIndices(defaultId, 1, 3, 5, 7);
      * }</pre>
      *
      * @param parameterValue the Object value to set
@@ -3489,7 +3514,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This setObjectForMultiPositions(final Object parameterValue, final int... parameterIndices) throws SQLException {
+    public This setObjectForIndices(final Object parameterValue, final int... parameterIndices) throws SQLException {
         checkParameterIndices(parameterIndices);
 
         for (final int parameterIndex : parameterIndices) {

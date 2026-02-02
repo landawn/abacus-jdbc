@@ -416,14 +416,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named SQL insert statement
+     * @param namedInsertSql the named SQL insert statement
      * @param entityToSave the entity to save
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void save(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException {
+    default void save(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -494,14 +494,14 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named SQL insert statement
+     * @param namedInsertSql the named SQL insert statement
      * @param entitiesToSave collection of entities to save
      * @throws UnsupportedOperationException always thrown as save operations are not supported
      * @deprecated This operation is not supported in read-only DAO
      */
     @Deprecated
     @Override
-    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -509,7 +509,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named SQL insert statement
+     * @param namedInsertSql the named SQL insert statement
      * @param entitiesToSave collection of entities to save
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -518,7 +518,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      */
     @Deprecated
     @Override
-    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize)
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }

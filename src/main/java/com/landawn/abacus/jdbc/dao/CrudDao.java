@@ -187,12 +187,12 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * Long userId = userDao.insert(sql, user);
      * }</pre>
      *
-     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param namedInsertSql the named parameter SQL insert statement
      * @param entityToInsert the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      */
-    ID insert(final String namedInsertSQL, final T entityToInsert) throws SQLException;
+    ID insert(final String namedInsertSql, final T entityToInsert) throws SQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size.
@@ -284,14 +284,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * List<Long> ids = userDao.batchInsert(sql, users);
      * }</pre>
      *
-     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return a list of generated IDs in the same order as the input entities
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws SQLException {
-        return batchInsert(namedInsertSQL, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws SQLException {
+        return batchInsert(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -306,7 +306,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * List<Long> ids = userDao.batchInsert(sql, largeUserList, 1000);
      * }</pre>
      *
-     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -314,7 +314,7 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws SQLException;
+    List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
     /**
      * Queries for a boolean value from a single property of the entity with the specified ID.

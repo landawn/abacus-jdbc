@@ -145,7 +145,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named parameter SQL insert statement (ignored)
+     * @param namedInsertSql the named parameter SQL insert statement (ignored)
      * @param entityToSave the entity whose properties will be bound to the named parameters (ignored)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
@@ -153,7 +153,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      */
     @Deprecated
     @Override
-    default ID insert(final String namedInsertSQL, final T entityToSave) throws UnsupportedOperationException {
+    default ID insert(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -226,7 +226,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named parameter SQL insert statement (ignored)
+     * @param namedInsertSql the named parameter SQL insert statement (ignored)
      * @param entities the collection of entities whose properties will be bound to the named parameters (ignored)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as insert operations are not supported
@@ -234,7 +234,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UnsupportedOperationException {
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -242,7 +242,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      * This operation is not supported in read-only mode.
      * Always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSQL the named parameter SQL insert statement (ignored)
+     * @param namedInsertSql the named parameter SQL insert statement (ignored)
      * @param entities the collection of entities whose properties will be bound to the named parameters (ignored)
      * @param batchSize the number of entities to process in each batch (ignored)
      * @return never returns normally
@@ -251,7 +251,7 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends ReadOn
      */
     @Deprecated
     @Override
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize)
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }

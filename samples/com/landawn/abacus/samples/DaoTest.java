@@ -188,7 +188,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_setStringForMultiPositions() throws Exception {
+    public void test_setStringForIndices() throws Exception {
 
     }
 
@@ -292,7 +292,7 @@ public class DaoTest {
     //
     //        PSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toPreparedQuery(userDao.dataSource()).update();
     //        NSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).update();
-    //        NSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForMultiPositions(0, 1).update();
+    //        NSC.deleteFrom(User.class).where(Filters.ge("id", users.get(0).getId())).toNamedQuery(userDao.dataSource()).setIntForIndices(0, 1).update();
     //
     //        NSC.deleteFrom(User.class)
     //                .where(Filters.ge("id", users.get(0).getId()))

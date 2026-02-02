@@ -167,13 +167,13 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * Long id = userDao.insert(sql, user);
      * }</pre>
      *
-     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param namedInsertSql the named parameter SQL insert statement
      * @param entityToInsert the entity whose properties will be bound to the named parameters
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    ID insert(final String namedInsertSQL, final T entityToInsert) throws UncheckedSQLException;
+    ID insert(final String namedInsertSql, final T entityToInsert) throws UncheckedSQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size.
@@ -264,22 +264,22 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * List<Long> ids = userDao.batchInsert(sql, users);
      * }</pre>
      *
-     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return a list of generated IDs in the same order as the input entities
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities) throws UncheckedSQLException {
-        return batchInsert(namedInsertSQL, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws UncheckedSQLException {
+        return batchInsert(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Performs batch insert using a custom named SQL statement with specified batch size.
      * Combines custom SQL flexibility with batch processing efficiency.
      *
-     * @param namedInsertSQL the named parameter SQL insert statement
+     * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
@@ -288,7 +288,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Beta
     @Override
-    List<ID> batchInsert(final String namedInsertSQL, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalBoolean} describing the value of a single property for the entity with the specified ID.

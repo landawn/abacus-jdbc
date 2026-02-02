@@ -720,11 +720,11 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * dao.save(sql, user);
      * }</pre>
      *
-     * @param namedInsertSQL the named INSERT SQL statement
+     * @param namedInsertSql the named INSERT SQL statement
      * @param entityToSave the entity providing the parameter values
      * @throws SQLException if a database access error occurs
      */
-    void save(final String namedInsertSQL, final T entityToSave) throws SQLException;
+    void save(final String namedInsertSql, final T entityToSave) throws SQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.
@@ -789,27 +789,27 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * Batch saves entities using a custom named INSERT SQL with default batch size.
      * The SQL should use named parameters matching entity properties.
      *
-     * @param namedInsertSQL the named INSERT SQL statement
+     * @param namedInsertSql the named INSERT SQL statement
      * @param entitiesToSave the entities providing parameter values
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws SQLException {
-        batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws SQLException {
+        batchSave(namedInsertSql, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Batch saves entities using a custom named INSERT SQL with specified batch size.
      * Provides maximum control over batch insert operations.
      *
-     * @param namedInsertSQL the named INSERT SQL statement
+     * @param namedInsertSql the named INSERT SQL statement
      * @param entitiesToSave the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
+    void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize) throws SQLException;
 
     /**
      * Checks if at least one record exists that matches the specified condition.

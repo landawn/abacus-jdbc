@@ -121,12 +121,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.save(sql, user);
      * }</pre>
      *
-     * @param namedInsertSQL the named insert SQL statement
+     * @param namedInsertSql the named insert SQL statement
      * @param entityToSave the entity to save
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    void save(final String namedInsertSQL, final T entityToSave) throws UncheckedSQLException;
+    void save(final String namedInsertSql, final T entityToSave) throws UncheckedSQLException;
 
     /**
      * Batch saves the specified entities to the database using the default batch size.
@@ -215,15 +215,15 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.batchSave(sql, users);
      * }</pre>
      *
-     * @param namedInsertSQL the named insert SQL statement
+     * @param namedInsertSql the named insert SQL statement
      * @param entitiesToSave the collection of entities to save
      * @throws UncheckedSQLException if a database access error occurs
      * @see CrudDao#batchInsert(Collection)
      */
     @Beta
     @Override
-    default void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
-        batchSave(namedInsertSQL, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws UncheckedSQLException {
+        batchSave(namedInsertSql, entitiesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
@@ -236,7 +236,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.batchSave(sql, users, 1000);
      * }</pre>
      *
-     * @param namedInsertSQL the named insert SQL statement
+     * @param namedInsertSql the named insert SQL statement
      * @param entitiesToSave the collection of entities to save
      * @param batchSize the size of each batch
      * @throws UncheckedSQLException if a database access error occurs
@@ -244,7 +244,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      */
     @Beta
     @Override
-    void batchSave(final String namedInsertSQL, final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize) throws UncheckedSQLException;
 
     /**
      * Checks if any records exist that match the specified condition.

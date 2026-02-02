@@ -1090,7 +1090,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testSettParametersIntArray() throws SQLException {
         int[] params = { 10, 20, 30 };
-        PreparedQuery result = query.settParameters(2, params);
+        PreparedQuery result = query.setParametersFrom(2, params);
         assertSame(query, result);
         verify(mockStmt).setInt(2, 10);
         verify(mockStmt).setInt(3, 20);
@@ -1100,7 +1100,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testSettParametersLongArray() throws SQLException {
         long[] params = { 100L, 200L };
-        PreparedQuery result = query.settParameters(3, params);
+        PreparedQuery result = query.setParametersFrom(3, params);
         assertSame(query, result);
         verify(mockStmt).setLong(3, 100L);
         verify(mockStmt).setLong(4, 200L);
@@ -1109,7 +1109,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testSettParametersStringArray() throws SQLException {
         String[] params = { "X", "Y" };
-        PreparedQuery result = query.settParameters(5, params);
+        PreparedQuery result = query.setParametersFrom(5, params);
         assertSame(query, result);
         verify(mockStmt).setString(5, "X");
         verify(mockStmt).setString(6, "Y");
@@ -1118,7 +1118,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testSettParametersGenericArray() throws SQLException {
         BigDecimal[] params = { new BigDecimal("100.50"), new BigDecimal("200.75") };
-        PreparedQuery result = query.settParameters(2, params);
+        PreparedQuery result = query.setParametersFrom(2, params);
         assertSame(query, result);
         verify(mockStmt, times(2)).setBigDecimal(anyInt(), any());
     }
@@ -1126,7 +1126,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testSettParametersCollection() throws SQLException {
         List<String> params = Arrays.asList("A", "B", "C");
-        PreparedQuery result = query.settParameters(2, params);
+        PreparedQuery result = query.setParametersFrom(2, params);
         assertSame(query, result);
         verify(mockStmt).setString(2, "A");
         verify(mockStmt).setString(3, "B");
@@ -1141,7 +1141,7 @@ public class PreparedQueryTest extends TestBase {
         params.add(uuid1);
         params.add(uuid2);
 
-        PreparedQuery result = query.settParameters(3, params, UUID.class);
+        PreparedQuery result = query.setParametersFrom(3, params, UUID.class);
         assertSame(query, result);
         verify(mockStmt, times(2)).setString(anyInt(), any());
     }
@@ -1174,8 +1174,8 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetNullForMultiPositions() throws SQLException {
-        PreparedQuery result = query.setNullForMultiPositions(Types.VARCHAR, 2, 4, 6);
+    public void testSetNullForIndices() throws SQLException {
+        PreparedQuery result = query.setNullForIndices(Types.VARCHAR, 2, 4, 6);
         assertSame(query, result);
         verify(mockStmt).setNull(2, Types.VARCHAR);
         verify(mockStmt).setNull(4, Types.VARCHAR);
@@ -1183,8 +1183,8 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetBooleanForMultiPositions() throws SQLException {
-        PreparedQuery result = query.setBooleanForMultiPositions(true, 1, 3, 5);
+    public void testSetBooleanForIndices() throws SQLException {
+        PreparedQuery result = query.setBooleanForIndices(true, 1, 3, 5);
         assertSame(query, result);
         verify(mockStmt).setBoolean(1, true);
         verify(mockStmt).setBoolean(3, true);
@@ -1192,16 +1192,16 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetIntForMultiPositions() throws SQLException {
-        PreparedQuery result = query.setIntForMultiPositions(999, 2, 4);
+    public void testSetIntForIndices() throws SQLException {
+        PreparedQuery result = query.setIntForIndices(999, 2, 4);
         assertSame(query, result);
         verify(mockStmt).setInt(2, 999);
         verify(mockStmt).setInt(4, 999);
     }
 
     @Test
-    public void testSetLongForMultiPositions() throws SQLException {
-        PreparedQuery result = query.setLongForMultiPositions(12345L, 1, 3, 5);
+    public void testSetLongForIndices() throws SQLException {
+        PreparedQuery result = query.setLongForIndices(12345L, 1, 3, 5);
         assertSame(query, result);
         verify(mockStmt).setLong(1, 12345L);
         verify(mockStmt).setLong(3, 12345L);
@@ -1209,8 +1209,8 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetDoubleForMultiPositions() throws SQLException {
-        PreparedQuery result = query.setDoubleForMultiPositions(3.14, 1, 2, 3);
+    public void testSetDoubleForIndices() throws SQLException {
+        PreparedQuery result = query.setDoubleForIndices(3.14, 1, 2, 3);
         assertSame(query, result);
         verify(mockStmt).setDouble(1, 3.14);
         verify(mockStmt).setDouble(2, 3.14);
@@ -1218,8 +1218,8 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetStringForMultiPositions() throws SQLException {
-        PreparedQuery result = query.setStringForMultiPositions("test", 2, 4, 6);
+    public void testSetStringForIndices() throws SQLException {
+        PreparedQuery result = query.setStringForIndices("test", 2, 4, 6);
         assertSame(query, result);
         verify(mockStmt).setString(2, "test");
         verify(mockStmt).setString(4, "test");
@@ -1227,26 +1227,26 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetDateForMultiPositions() throws SQLException {
+    public void testSetDateForIndices() throws SQLException {
         java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
-        PreparedQuery result = query.setDateForMultiPositions(date, 1, 3);
+        PreparedQuery result = query.setDateForIndices(date, 1, 3);
         assertSame(query, result);
         verify(mockStmt).setDate(1, date);
         verify(mockStmt).setDate(3, date);
     }
 
     @Test
-    public void testSetDateForMultiPositionsUtil() throws SQLException {
+    public void testSetDateForIndicesUtil() throws SQLException {
         java.util.Date date = new java.util.Date();
-        PreparedQuery result = query.setDateForMultiPositions(date, 2, 4);
+        PreparedQuery result = query.setDateForIndices(date, 2, 4);
         assertSame(query, result);
         verify(mockStmt, times(2)).setDate(anyInt(), any(java.sql.Date.class));
     }
 
     @Test
-    public void testSetTimeForMultiPositions() throws SQLException {
+    public void testSetTimeForIndices() throws SQLException {
         java.sql.Time time = new java.sql.Time(System.currentTimeMillis());
-        PreparedQuery result = query.setTimeForMultiPositions(time, 1, 2, 3);
+        PreparedQuery result = query.setTimeForIndices(time, 1, 2, 3);
         assertSame(query, result);
         verify(mockStmt).setTime(1, time);
         verify(mockStmt).setTime(2, time);
@@ -1254,17 +1254,17 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetTimeForMultiPositionsUtil() throws SQLException {
+    public void testSetTimeForIndicesUtil() throws SQLException {
         java.util.Date time = new java.util.Date();
-        PreparedQuery result = query.setTimeForMultiPositions(time, 1, 2);
+        PreparedQuery result = query.setTimeForIndices(time, 1, 2);
         assertSame(query, result);
         verify(mockStmt, times(2)).setTime(anyInt(), any(java.sql.Time.class));
     }
 
     @Test
-    public void testSetTimestampForMultiPositions() throws SQLException {
+    public void testSetTimestampForIndices() throws SQLException {
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        PreparedQuery result = query.setTimestampForMultiPositions(timestamp, 1, 3, 5, 7);
+        PreparedQuery result = query.setTimestampForIndices(timestamp, 1, 3, 5, 7);
         assertSame(query, result);
         verify(mockStmt).setTimestamp(1, timestamp);
         verify(mockStmt).setTimestamp(3, timestamp);
@@ -1273,18 +1273,18 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetTimestampForMultiPositionsUtil() throws SQLException {
+    public void testSetTimestampForIndicesUtil() throws SQLException {
         java.util.Date timestamp = new java.util.Date();
-        PreparedQuery result = query.setTimestampForMultiPositions(timestamp, 2, 4, 6);
+        PreparedQuery result = query.setTimestampForIndices(timestamp, 2, 4, 6);
         assertSame(query, result);
         verify(mockStmt, times(3)).setTimestamp(anyInt(), any(Timestamp.class));
     }
 
     @Test
-    public void testSetObjectForMultiPositions() throws SQLException {
+    public void testSetObjectForIndices() throws SQLException {
         UUID uuid = UUID.randomUUID();
         String uuidStr = uuid.toString();
-        PreparedQuery result = query.setObjectForMultiPositions(uuid, 1, 3, 5);
+        PreparedQuery result = query.setObjectForIndices(uuid, 1, 3, 5);
         assertSame(query, result);
         verify(mockStmt).setString(1, uuidStr);
         verify(mockStmt).setString(3, uuidStr);
@@ -1292,10 +1292,10 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testSetForMultiPositionsInvalidIndices() {
-        assertThrows(IllegalArgumentException.class, () -> query.setNullForMultiPositions(Types.VARCHAR));
-        assertThrows(IllegalArgumentException.class, () -> query.setIntForMultiPositions(123, 0, 1));
-        assertThrows(IllegalArgumentException.class, () -> query.setStringForMultiPositions("test", -1, 1));
+    public void testSetForIndicesInvalidIndices() {
+        assertThrows(IllegalArgumentException.class, () -> query.setNullForIndices(Types.VARCHAR));
+        assertThrows(IllegalArgumentException.class, () -> query.setIntForIndices(123, 0, 1));
+        assertThrows(IllegalArgumentException.class, () -> query.setStringForIndices("test", -1, 1));
     }
 
     @Test

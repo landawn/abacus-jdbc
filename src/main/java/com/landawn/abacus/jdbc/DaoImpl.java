@@ -1949,7 +1949,7 @@ final class DaoImpl {
                                         ? NLC.select(selectPropNames).preselect(criteria.preselect()).from(tableName, entityClass).append(cond)
                                         : NLC.select(selectPropNames).from(tableName, entityClass).append(cond));
 
-        final Function<Collection<String>, SQLBuilder> namedInsertSQLBuilderFunc = sbc.equals(PSC.class)
+        final Function<Collection<String>, SQLBuilder> namedInsertSqlBuilderFunc = sbc.equals(PSC.class)
                 ? (propNamesToInsert -> N.isEmpty(propNamesToInsert) ? NSC.insert(entityClass).into(tableName)
                         : NSC.insert(propNamesToInsert).into(tableName, entityClass))
                 : (sbc.equals(PAC.class)
@@ -2304,10 +2304,10 @@ final class DaoImpl {
                             final Object entity = args[0];
                             N.checkArgNotNull(entity, cs.entity);
 
-                            final ParsedSql namedInsertSQL = isNoId || isDefaultIdTester.test(idGetter.apply(entity)) ? namedInsertWithoutIdSQL
+                            final ParsedSql namedInsertSql = isNoId || isDefaultIdTester.test(idGetter.apply(entity)) ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
 
-                            proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
+                            proxy.prepareNamedQuery(namedInsertSql).settParameters(entity, objParamsSetter).update();
 
                             return null;
                         };
@@ -2319,20 +2319,20 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, cs.entity);
                             N.checkArgNotEmpty(propNamesToSave, cs.propNamesToSave);
 
-                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
+                            final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToSave).sql();
 
-                            proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
+                            proxy.prepareNamedQuery(namedInsertSql).settParameters(entity, objParamsSetter).update();
 
                             return null;
                         };
                     } else if (methodName.equals("save") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final String namedInsertSQL = (String) args[0];
+                            final String namedInsertSql = (String) args[0];
                             final Object entity = args[1];
-                            N.checkArgNotEmpty(namedInsertSQL, cs.namedInsertSQL);
+                            N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgNotNull(entity, cs.entity);
 
-                            proxy.prepareNamedQuery(namedInsertSQL).settParameters(entity, objParamsSetter).update();
+                            proxy.prepareNamedQuery(namedInsertSql).settParameters(entity, objParamsSetter).update();
 
                             return null;
                         };
@@ -2347,17 +2347,17 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final ParsedSql namedInsertSQL = isNoId || N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)))
+                            final ParsedSql namedInsertSql = isNoId || N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)))
                                     ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
 
                             if (entities.size() <= batchSize) {
-                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
+                                proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
                                         Stream.of(entities)
                                                 .split(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
@@ -2386,15 +2386,15 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToSave).sql();
+                            final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToSave).sql();
 
                             if (entities.size() <= batchSize) {
-                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
+                                proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
                                         Stream.of(entities)
                                                 .split(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
@@ -2411,10 +2411,10 @@ final class DaoImpl {
                     } else if (methodName.equals("batchSave") && paramLen == 3 && String.class.equals(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
-                            final String namedInsertSQL = (String) args[0];
+                            final String namedInsertSql = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
-                            N.checkArgNotEmpty(namedInsertSQL, cs.namedInsertSQL);
+                            N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
@@ -2422,12 +2422,12 @@ final class DaoImpl {
                             }
 
                             if (entities.size() <= batchSize) {
-                                proxy.prepareNamedQuery(namedInsertSQL).addBatchParameters(entities).batchUpdate();
+                                proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
                                         Stream.of(entities)
                                                 .split(batchSize) //
                                                 .forEach(bp -> nameQuery.addBatchParameters(bp).batchUpdate());
@@ -3781,21 +3781,21 @@ final class DaoImpl {
                             final Object entity = args[0];
                             N.checkArgNotNull(entity, cs.entity);
 
-                            ParsedSql namedInsertSQL = null;
+                            ParsedSql namedInsertSql = null;
 
                             if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                 if (callGenerateIdForInsert) {
                                     idSetter.accept(((CrudDao) proxy).generateId(), entity);
 
-                                    namedInsertSQL = namedInsertWithIdSQL;
+                                    namedInsertSql = namedInsertWithIdSQL;
                                 } else {
-                                    namedInsertSQL = namedInsertWithoutIdSQL;
+                                    namedInsertSql = namedInsertWithoutIdSQL;
                                 }
                             } else {
-                                namedInsertSQL = namedInsertWithIdSQL;
+                                namedInsertSql = namedInsertWithIdSQL;
                             }
 
-                            return proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                            return proxy.prepareNamedQuery(namedInsertSql, returnColumnNames)
                                     .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -3813,9 +3813,9 @@ final class DaoImpl {
                                 idSetter.accept(((CrudDao) proxy).generateId(), entity);
                             }
 
-                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
+                            final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).sql();
 
-                            return proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                            return proxy.prepareNamedQuery(namedInsertSql, returnColumnNames)
                                     .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -3824,16 +3824,16 @@ final class DaoImpl {
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
-                            final String namedInsertSQL = (String) args[0];
+                            final String namedInsertSql = (String) args[0];
                             final Object entity = args[1];
-                            N.checkArgNotEmpty(namedInsertSQL, cs.namedInsertSQL);
+                            N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgNotNull(entity, cs.entity);
 
                             if (callGenerateIdForInsertWithSql && isDefaultIdTester.test(idGetter.apply(entity))) {
                                 idSetter.accept(((CrudDao) proxy).generateId(), entity);
                             }
 
-                            return proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                            return proxy.prepareNamedQuery(namedInsertSql, returnColumnNames)
                                     .settParameters(entity, objParamsSetter)
                                     .insert(keyExtractor, isDefaultIdTester)
                                     .ifPresent(ret -> idSetter.accept(ret, entity))
@@ -3865,18 +3865,18 @@ final class DaoImpl {
                                 allDefaultIdValue = false;
                             }
 
-                            final ParsedSql namedInsertSQL = allDefaultIdValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
+                            final ParsedSql namedInsertSql = allDefaultIdValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                                ids = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames)
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames).closeAfterExecution(false)) {
                                         ids = Seq.of(entities)
                                                 .split(batchSize)
                                                 .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
@@ -3938,18 +3938,18 @@ final class DaoImpl {
                                 }
                             }
 
-                            final String namedInsertSQL = namedInsertSQLBuilderFunc.apply(propNamesToInsert).sql();
+                            final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).sql();
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                                ids = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames)
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames).closeAfterExecution(false)) {
                                         ids = Seq.of(entities)
                                                 .split(batchSize)
                                                 .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
@@ -3989,11 +3989,11 @@ final class DaoImpl {
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
-                            final String namedInsertSQL = (String) args[0];
+                            final String namedInsertSql = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
 
-                            N.checkArgNotEmpty(namedInsertSQL, cs.namedInsertSQL);
+                            N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
@@ -4013,14 +4013,14 @@ final class DaoImpl {
                             List<Object> ids = null;
 
                             if (entities.size() <= batchSize) {
-                                ids = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames)
+                                ids = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames)
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
                                 final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
-                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSQL, returnColumnNames).closeAfterExecution(false)) {
+                                    try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames).closeAfterExecution(false)) {
                                         ids = Seq.of(entities)
                                                 .split(batchSize)
                                                 .flatmap(bp -> nameQuery.addBatchParameters(bp).batchInsert(keyExtractor, isDefaultIdTester))
@@ -4238,7 +4238,10 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.query).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetValueType);
+                            return proxy.prepareNamedQuery(sp.query)
+                                    .setFetchSize(1)
+                                    .settParameters(id, idParamSetter)
+                                    .queryForSingleNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -4280,7 +4283,10 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.query).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetValueType);
+                            return proxy.prepareNamedQuery(sp.query)
+                                    .setFetchSize(2)
+                                    .settParameters(id, idParamSetter)
+                                    .queryForUniqueNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -4652,13 +4658,13 @@ final class DaoImpl {
                         //        final OnDeleteAction onDeleteAction = (OnDeleteAction) args[1];
                         //
                         //        if (onDeleteAction == null || onDeleteAction == OnDeleteAction.NO_ACTION) {
-                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
                         //        }
                         //
                         //        final Map<String, JoinInfo> entityJoinInfo = JoinInfo.getEntityJoinInfo(entityClass);
                         //
                         //        if (N.isEmpty(entityJoinInfo)) {
-                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
                         //        } else {
                         //            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //            long result = 0;
@@ -4673,7 +4679,7 @@ final class DaoImpl {
                         //                    result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
                         //                }
                         //
-                        //                result += proxy.prepareNamedQuery(namedDeleteByIdSQL).settParameters(entity, idParamSetterByEntity).update();
+                        //                result += proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
                         //
                         //                tran.commit();
                         //            } finally {
