@@ -114,7 +114,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <p>Attempting to update specific properties of an entity is not allowed. This DAO is designed
      * for immutable data scenarios where records can only be inserted or deleted, never modified.</p>
      * 
-     * <p>Example of what would fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * user.setId(123L);
@@ -141,7 +141,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <p>Attempting to update a single property value by ID is not allowed. This restriction ensures
      * data immutability in systems where audit trails or historical accuracy is critical.</p>
      * 
-     * <p>Example of what would fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // This will throw UnsupportedOperationException
      * dao.update("status", "INACTIVE", 123L);
@@ -166,7 +166,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * <p>Attempting to update multiple properties by ID using a map is not allowed. This DAO type
      * is specifically designed for append-only or immutable data scenarios.</p>
      * 
-     * <p>Example of what would fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
      * updates.put("email", "newemail@example.com");
@@ -267,7 +267,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * Use insert operations for new records only. If a record already exists, it must be deleted first
      * before inserting a new version.</p>
      * 
-     * <p>Example of what would fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("John", "john@example.com");
      * user.setId(123L);

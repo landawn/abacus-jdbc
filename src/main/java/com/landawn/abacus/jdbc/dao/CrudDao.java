@@ -80,7 +80,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
  * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
- * @param <TD> The self-type of the DAO for fluent interface support
+ * @param <TD> the self-type of the DAO for fluent interface support
  * 
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)

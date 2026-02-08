@@ -5892,6 +5892,7 @@ public final class Jdbc {
          *
          * @param qualifier the unique identifier for the handler.
          * @return the handler instance, or {@code null} if not found.
+         * @throws IllegalArgumentException if {@code qualifier} is empty.
          */
         public static Handler<?> get(final String qualifier) { //NOSONAR
             N.checkArgNotEmpty(qualifier, cs.qualifier);
@@ -5918,6 +5919,7 @@ public final class Jdbc {
          *
          * @param handlerClass the class of the handler to retrieve.
          * @return the handler instance, or {@code null} if not found.
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
          */
         public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);
@@ -5951,6 +5953,7 @@ public final class Jdbc {
          *
          * @param handlerClass the class of the handler to retrieve or create.
          * @return the existing or newly created handler instance.
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
          */
         public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);

@@ -223,7 +223,7 @@ public @interface Query {
      *   <li>Centralized SQL management and version control</li>
      * </ul>
      *
-     * <p>Usage example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // In DAO interface
      * @SqlMapper("user-queries.xml")
@@ -280,7 +280,7 @@ public @interface Query {
      *   <li>{@link OP#largeUpdate} - For updates affecting potentially > Integer.MAX_VALUE rows</li>
      * </ul>
      *
-     * <p>Usage examples:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Existence check
      * @Query(value = "SELECT 1 FROM users WHERE email = :email", op = OP.exists)
@@ -328,7 +328,7 @@ public @interface Query {
      * When {@code true}, the framework treats the SQL as a callable statement
      * and handles input/output parameters accordingly.
      *
-     * <p>Usage example:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stored procedure call with output parameter
      * @Query(value = "{call calculate_bonus(?, ?, ?)}", isProcedure = true)
@@ -713,7 +713,7 @@ public @interface Query {
      *   <li>{@code 60+} - For batch operations, data migrations, or reporting queries</li>
      * </ul>
      *
-     * <p>Usage examples:</p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Quick lookup that should complete fast
      * @Query(value = "SELECT * FROM users WHERE id = :id", queryTimeout = 2)

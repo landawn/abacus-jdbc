@@ -210,7 +210,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicatedResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -243,7 +243,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicatedResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -279,7 +279,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicatedResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

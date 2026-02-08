@@ -4351,7 +4351,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>If the query produces no rows, an empty {@code OptionalBoolean} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      *
-     * <p><b>Usage example:</b></p>
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalBoolean isActive = query
      *     .setString(1, userId)

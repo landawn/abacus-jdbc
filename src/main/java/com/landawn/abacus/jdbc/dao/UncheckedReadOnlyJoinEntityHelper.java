@@ -73,7 +73,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete join entities of a specific class related to the given entity.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
@@ -96,7 +96,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete join entities of a specific class related to the given collection of entities.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
@@ -119,7 +119,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete join entities identified by property name related to the given entity.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
@@ -142,7 +142,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete join entities identified by property name related to the given collection of entities.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
@@ -165,7 +165,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete multiple types of join entities identified by property names related to the given entity.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
@@ -188,7 +188,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete multiple types of join entities with optional parallel execution.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
@@ -213,7 +213,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete multiple types of join entities using a custom executor.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -238,7 +238,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete multiple types of join entities for a collection of entities.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
@@ -261,7 +261,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete multiple types of join entities for a collection of entities with optional parallel execution.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
@@ -286,7 +286,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete multiple types of join entities for a collection of entities using a custom executor.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -312,7 +312,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete all join entities related to the given entity.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
@@ -334,7 +334,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete all join entities related to the given entity with optional parallel execution.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * // This will throw UnsupportedOperationException
@@ -357,7 +357,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete all join entities related to the given entity using a custom executor.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.selectById(123L);
      * ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -381,7 +381,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete all join entities related to the given collection of entities.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
@@ -403,7 +403,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete all join entities related to the given collection of entities with optional parallel execution.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * // This will throw UnsupportedOperationException
@@ -426,7 +426,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      * Attempts to delete all join entities related to the given collection of entities using a custom executor.
      * This operation is not supported in a read-only interface.
      *
-     * <p>Example that will fail:
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
      * ExecutorService executor = Executors.newFixedThreadPool(4);

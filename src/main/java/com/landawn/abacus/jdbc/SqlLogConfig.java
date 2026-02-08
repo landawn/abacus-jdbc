@@ -60,13 +60,13 @@ final class SqlLogConfig {
      * // Enable SQL logging with default max length
      * SqlLogConfig config = new SqlLogConfig(true, 1000);
      *
-     * // Enable SQL logging with unlimited length
-     * SqlLogConfig config2 = new SqlLogConfig(true, -1);
+     * // Passing 0 or a negative value falls back to the default max length
+     * SqlLogConfig config2 = new SqlLogConfig(true, 0);
      * }</pre>
      *
      * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        uses {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}. Use {@code -1} for unlimited length.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
     SqlLogConfig(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
@@ -87,8 +87,8 @@ final class SqlLogConfig {
      * // Log only queries taking more than 500ms
      * SqlLogConfig config = new SqlLogConfig(500L, 1000);
      *
-     * // Log queries exceeding 1 second with unlimited SQL length
-     * SqlLogConfig config2 = new SqlLogConfig(1000L, -1);
+     * // Log queries exceeding 1 second with the default SQL length
+     * SqlLogConfig config2 = new SqlLogConfig(1000L, 0);
      *
      * // Log all queries (set threshold to 0)
      * SqlLogConfig config3 = new SqlLogConfig(0L, 1000);
@@ -98,7 +98,7 @@ final class SqlLogConfig {
      *                                      Only SQL statements taking longer than this threshold will be logged.
      *                                      Set to {@code 0} to log all queries based on execution time.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        uses {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}. Use {@code -1} for unlimited length.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
     SqlLogConfig(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
         this.minExecutionTimeForSqlPerfLog = minExecutionTimeForSqlPerfLog;
@@ -127,7 +127,7 @@ final class SqlLogConfig {
      *
      * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        uses {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}. Use {@code -1} for unlimited length.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
     void set(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
@@ -160,7 +160,7 @@ final class SqlLogConfig {
      *                                      Only SQL statements taking longer than this threshold will be logged.
      *                                      Set to {@code 0} to log all queries based on execution time.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        uses {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH}. Use {@code -1} for unlimited length.
+     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
     void set(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
         this.minExecutionTimeForSqlPerfLog = minExecutionTimeForSqlPerfLog;
