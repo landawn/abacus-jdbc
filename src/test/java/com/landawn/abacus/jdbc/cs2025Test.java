@@ -246,7 +246,7 @@ public class cs2025Test extends TestBase {
 
     @Test
     public void testParamsSetterConstant() {
-        assertEquals("paramsSetter", cs.paramsSetter);
+        assertEquals("parametersSetter", cs.parametersSetter);
     }
 
     @Test
@@ -444,10 +444,6 @@ public class cs2025Test extends TestBase {
         assertEquals("propsToUpdate", cs.propsToUpdate);
     }
 
-    @Test
-    public void testNamedInsertSQLConstant() {
-        assertEquals("namedInsertSQL", cs.namedInsertSQL);
-    }
 
     @Test
     public void testJoinEntityPropNameConstant() {
@@ -499,7 +495,7 @@ public class cs2025Test extends TestBase {
         assertNotNull(cs.parameterNames);
         assertNotNull(cs.parameters);
         assertNotNull(cs.parametersSetter);
-        assertNotNull(cs.paramsSetter);
+        assertNotNull(cs.parametersSetter);
         assertNotNull(cs.propNamesToRefresh);
         assertNotNull(cs.qualifier);
         assertNotNull(cs.register);
@@ -539,7 +535,6 @@ public class cs2025Test extends TestBase {
         assertNotNull(cs.propNamesToSave);
         assertNotNull(cs.propNamesToUpdate);
         assertNotNull(cs.propsToUpdate);
-        assertNotNull(cs.namedInsertSQL);
         assertNotNull(cs.joinEntityPropName);
     }
 }

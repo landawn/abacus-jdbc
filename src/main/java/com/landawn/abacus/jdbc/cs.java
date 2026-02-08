@@ -215,10 +215,6 @@ public final class cs { // NOSONAR
      */
     public static final String parametersSetter = "parametersSetter";
     /**
-     * Parameter name for functions that set parameters on PreparedStatement objects (short form).
-     */
-    public static final String paramsSetter = "paramsSetter";
-    /**
      * Parameter name for collections of property names that should be refreshed after database operations.
      */
     public static final String propNamesToRefresh = "propNamesToRefresh";

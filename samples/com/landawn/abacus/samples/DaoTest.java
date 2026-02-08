@@ -232,7 +232,7 @@ public class DaoTest {
         assertEquals(users.size(), userDao.list(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct()).size());
 
         assertEquals(users.size(),
-                userDao.prepareNamedQueryForBigResult(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
+                userDao.prepareNamedQueryForLargeResult(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
                         .list()
                         .size());
 
@@ -272,7 +272,7 @@ public class DaoTest {
     //
     //        userDao.batchInsertWithId(users);
     //
-    //        List<User> dbUsers = userDao.prepareQueryForBigResult(Filters.ge("id", users.get(0).getId()))
+    //        List<User> dbUsers = userDao.prepareQueryForLargeResult(Filters.ge("id", users.get(0).getId()))
     //                .stream(User.class)
     //                .onEach(it -> it.setCreateTime(null))
     //                .sortedBy(it -> it.getId())
@@ -281,7 +281,7 @@ public class DaoTest {
     //        assertEquals(users.get(0), dbUsers.get(0));
     //        assertTrue(N.equals(users, dbUsers));
     //
-    //        dbUsers = userDao.prepareNamedQueryForBigResult(Filters.ge("id", users.get(0).getId()))
+    //        dbUsers = userDao.prepareNamedQueryForLargeResult(Filters.ge("id", users.get(0).getId()))
     //                .stream(User.class)
     //                .onEach(it -> it.setCreateTime(null))
     //                .sortedBy(it -> it.getId())
@@ -329,9 +329,9 @@ public class DaoTest {
                 .mapToObj(i -> User.builder()
                         .id(i)
                         .firstName("Forrest" + i)
-                        .lastName(Strings.uuid32().substring(0, 32))
+                        .lastName(Strings.uuidWithoutHyphens().substring(0, 32))
                         .nickName("Forrest")
-                        .email(Strings.uuid32().substring(0, 32))
+                        .email(Strings.uuidWithoutHyphens().substring(0, 32))
                         .build())
                 .toList();
 

@@ -1367,7 +1367,7 @@ public class JdbcTest extends TestBase {
         };
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         // Should not throw exceptions
@@ -1452,7 +1452,7 @@ public class JdbcTest extends TestBase {
         Jdbc.Handler<Object> handler = Jdbc.HandlerFactory.create((target, args, methodSig) -> calls.add("before"));
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         handler.beforeInvoke(new Object(), new Object[0], methodSignature);
@@ -1470,7 +1470,7 @@ public class JdbcTest extends TestBase {
                         target, args, methodSig) -> calls.add("after"));
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         handler.afterInvoke("result", new Object(), new Object[0], methodSignature);
@@ -1487,7 +1487,7 @@ public class JdbcTest extends TestBase {
                 (result, target, args, methodSig) -> calls.add("after"));
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         handler.beforeInvoke(new Object(), new Object[0], methodSignature);
@@ -1525,7 +1525,7 @@ public class JdbcTest extends TestBase {
         Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         String cacheKey = "testKey";
@@ -1544,7 +1544,7 @@ public class JdbcTest extends TestBase {
         Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         String cacheKey = "testKey";
@@ -1559,7 +1559,7 @@ public class JdbcTest extends TestBase {
         Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         // Put some entries
@@ -1583,7 +1583,7 @@ public class JdbcTest extends TestBase {
         Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         String cacheKey = "testKey";
@@ -1602,7 +1602,7 @@ public class JdbcTest extends TestBase {
         Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         String cacheKey = "testKey";
@@ -1618,7 +1618,7 @@ public class JdbcTest extends TestBase {
         Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
 
         Method method = Object.class.getMethods()[0];
-        ImmutableList<Class<?>> paramTypes = ImmutableList.of();
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
         // Put some entries

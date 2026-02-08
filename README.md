@@ -1,7 +1,7 @@
 # abacus-jdbc
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.landawn/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn/abacus-jdbc/)
-[![Javadocs](https://img.shields.io/badge/javadoc-4.2.1-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/4.2.1/index.html)
+[![Javadocs](https://img.shields.io/badge/javadoc-4.3.0-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn/abacus-jdbc/4.3.0/index.html)
 
 Experience the simplicity of working with SQL/DB as naturally as working with Collections.
 
@@ -150,7 +150,7 @@ Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A
 <dependency>
 	<groupId>com.landawn</groupId>
 	<artifactId>abacus-jdbc</artifactId>
-	<version>4.2.1</version> 
+	<version>4.3.0</version> 
 <dependency>
 ```
 
@@ -158,7 +158,7 @@ Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A
 
 ```gradle
 // JDK 17 or above:
-compile 'com.landawn:abacus-jdbc:4.2.1'
+compile 'com.landawn:abacus-jdbc:4.3.0'
 ```
 
 ## User Guide:

@@ -361,12 +361,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param query the SQL query string
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
-     * @see JdbcUtil#prepareNamedQueryForBigResult(DataSource, String)
+     * @see JdbcUtil#prepareNamedQueryForLargeResult(DataSource, String)
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForBigResult(final String query) throws SQLException {
-        return JdbcUtil.prepareQueryForBigResult(dataSource(), query);
+    default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException {
+        return JdbcUtil.prepareQueryForLargeResult(dataSource(), query);
     }
 
     /**
@@ -376,12 +376,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
-     * @see JdbcUtil#prepareNamedQueryForBigResult(DataSource, String)
+     * @see JdbcUtil#prepareNamedQueryForLargeResult(DataSource, String)
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForBigResult(final Condition cond) throws SQLException {
-        return prepareQueryForBigResult(null, cond);
+    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws SQLException {
+        return prepareQueryForLargeResult(null, cond);
     }
 
     /**
@@ -395,7 +395,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
         return prepareQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
     }
 
@@ -594,8 +594,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForBigResult(final String namedQuery) throws SQLException {
-        return JdbcUtil.prepareNamedQueryForBigResult(dataSource(), namedQuery);
+    default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException {
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
     }
 
     /**
@@ -607,8 +607,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForBigResult(final ParsedSql namedSql) throws SQLException {
-        return JdbcUtil.prepareNamedQueryForBigResult(dataSource(), namedSql);
+    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql) throws SQLException {
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedSql);
     }
 
     /**
@@ -621,8 +621,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForBigResult(final Condition cond) throws SQLException {
-        return prepareNamedQueryForBigResult(null, cond);
+    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws SQLException {
+        return prepareNamedQueryForLargeResult(null, cond);
     }
 
     /**
@@ -636,7 +636,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForBigResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
         return prepareNamedQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
     }
 

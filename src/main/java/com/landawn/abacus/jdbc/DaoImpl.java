@@ -502,9 +502,9 @@ final class DaoImpl {
         return op == OP.DEFAULT && method.getName().startsWith("queryForUnique");
     }
 
-    private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.of(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
+    private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.wrap((N.asSet(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
             u.OptionalChar.class, u.OptionalByte.class, u.OptionalShort.class, u.OptionalInt.class, u.OptionalLong.class, u.OptionalDouble.class,
-            java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class);
+            java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class)));
 
     private static boolean isSingleReturnType(final Class<?> returnType) {
         return singleReturnTypeSet.contains(returnType) || ClassUtil.isPrimitiveType(ClassUtil.unwrap(returnType));
@@ -3742,7 +3742,7 @@ final class DaoImpl {
 
                             final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(propNamesToUpdate).append(cond).build();
 
-                            final Jdbc.BiParametersSetter<AbstractQuery, Object> paramsSetter = (pq, p) -> {
+                            final Jdbc.BiParametersSetter<AbstractQuery, Object> parametersSetter = (pq, p) -> {
                                 final PreparedStatement stmt = pq.stmt;
                                 PropInfo propInfo = null;
                                 int columnIndex = 1;
@@ -3759,7 +3759,7 @@ final class DaoImpl {
                                 }
                             };
 
-                            return proxy.prepareQuery(sp.query).settParameters(entity, paramsSetter).update();
+                            return proxy.prepareQuery(sp.query).settParameters(entity, parametersSetter).update();
                         };
                     } else if (methodName.equals("delete") && paramLen == 1 && Condition.class.isAssignableFrom(paramTypes[0])) {
                         call = (proxy, args) -> {
@@ -4238,10 +4238,7 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 1 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.query)
-                                    .setFetchSize(1)
-                                    .settParameters(id, idParamSetter)
-                                    .queryForSingleNonNull(targetValueType);
+                            return proxy.prepareNamedQuery(sp.query).setFetchSize(1).settParameters(id, idParamSetter).queryForSingleNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForSingleNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -4283,10 +4280,7 @@ final class DaoImpl {
 
                             final Condition limitedCond = handleLimit(idCond, addLimitForSingleQuery ? 2 : -1, dbVersion);
                             final SP sp = singleQueryByIdSQLBuilderFunc.apply(selectPropName, limitedCond);
-                            return proxy.prepareNamedQuery(sp.query)
-                                    .setFetchSize(2)
-                                    .settParameters(id, idParamSetter)
-                                    .queryForUniqueNonNull(targetValueType);
+                            return proxy.prepareNamedQuery(sp.query).setFetchSize(2).settParameters(id, idParamSetter).queryForUniqueNonNull(targetValueType);
                         };
                     } else if (methodName.equals("queryForUniqueNonNull") && paramLen == 3 && paramTypes[0].equals(String.class)
                             && !paramTypes[1].equals(Condition.class) && paramTypes[2].equals(Jdbc.RowMapper.class)) {
@@ -5967,8 +5961,8 @@ final class DaoImpl {
                     };
                 }
 
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, ImmutableList.of(method.getParameterTypes()),
-                        method.getReturnType());
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method,
+                        ImmutableList.wrap(N.asList(method.getParameterTypes())), method.getReturnType());
 
                 final CacheResult cacheResultAnno = StreamEx.of(method.getAnnotations())
                         .select(CacheResult.class)

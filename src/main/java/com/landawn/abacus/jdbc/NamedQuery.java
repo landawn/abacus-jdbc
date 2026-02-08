@@ -4073,19 +4073,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param <T> parameters object type
      * @param parameters the parameters object to pass to the setter
-     * @param paramsSetter a function that sets parameters on the query
+     * @param parametersSetter a function that sets parameters on the query
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if paramsSetter is null
+     * @throws IllegalArgumentException if parametersSetter is null
      * @throws SQLException if a database access error occurs 
      */
-    public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> paramsSetter)
+    public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, cs.paramsSetter);
+        checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         boolean noException = false;
 
         try {
-            paramsSetter.accept(namedSql, this, parameters);
+            parametersSetter.accept(namedSql, this, parameters);
 
             noException = true;
         } finally {

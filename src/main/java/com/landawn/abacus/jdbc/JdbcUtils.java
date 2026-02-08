@@ -2144,7 +2144,7 @@ public final class JdbcUtils {
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 
-            setFetchForBigResult(conn, stmt);
+            setFetchForLargeResult(conn, stmt);
 
             return exportCSV(stmt, selectColumnNames, output);
         }
@@ -2379,7 +2379,7 @@ public final class JdbcUtils {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
              ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
-            setFetchForBigResult(conn, stmt);
+            setFetchForLargeResult(conn, stmt);
 
             return exportCSV(rs, output);
         }
@@ -3251,7 +3251,7 @@ public final class JdbcUtils {
 
         try {
             selectStmt = JdbcUtil.prepareStatement(sourceConn, selectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-            setFetchForBigResult(sourceConn, selectStmt, fetchSize);
+            setFetchForLargeResult(sourceConn, selectStmt, fetchSize);
 
             insertStmt = JdbcUtil.prepareStatement(targetConn, insertSql);
 
@@ -3685,7 +3685,7 @@ public final class JdbcUtils {
     //            throws SQLException, E, E2 {
     //        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql)) {
     //
-    //            setFetchForBigResult(conn, stmt);
+    //            setFetchForLargeResult(conn, stmt);
     //
     //            parse(stmt, processThreadNum, queueSize, rowParser, onComplete);
     //        }
@@ -3899,11 +3899,11 @@ public final class JdbcUtils {
     //        Iterators.forEach(iter, processThreadNum, queueSize, elementParser);
     //    }
 
-    private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt) throws SQLException {
-        setFetchForBigResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt) throws SQLException {
+        setFetchForLargeResult(conn, stmt, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
     }
 
-    private static void setFetchForBigResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
+    private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
         if (JdbcUtil.getDBProductInfo(conn).version().isMySQL()) {

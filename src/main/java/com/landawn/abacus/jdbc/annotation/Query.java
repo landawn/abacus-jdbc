@@ -568,8 +568,8 @@ public @interface Query {
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding currently active records
-     * @Query(value = "SELECT * FROM promotions WHERE {whereCause}", fragmentContainsNamedParameters = true)
-     * List<Promotion> findActivePromotions(@SqlFragment("{whereCause}") String whereCause);
+     * @Query(value = "SELECT * FROM promotions WHERE {whereClause}", fragmentContainsNamedParameters = true)
+     * List<Promotion> findActivePromotions(@SqlFragment("{whereClause}") String whereClause);
      * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
      *

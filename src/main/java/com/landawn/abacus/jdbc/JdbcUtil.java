@@ -3188,7 +3188,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Efficiently stream over a large table without loading everything into memory.
-     * long count = JdbcUtil.prepareQueryForBigResult(dataSource, "SELECT * FROM event_logs")
+     * long count = JdbcUtil.prepareQueryForLargeResult(dataSource, "SELECT * FROM event_logs")
      *     .stream(LogEntry.class)
      *     .filter(entry -> entry.getLevel().equals("ERROR"))
      *     .count();
@@ -3199,10 +3199,10 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare.
      * @return A {@link PreparedQuery} instance optimized for large result sets.
      * @throws SQLException If a database access error occurs.
-     * @see #prepareQueryForBigResult(Connection, String)
+     * @see #prepareQueryForLargeResult(Connection, String)
      */
     @Beta
-    public static PreparedQuery prepareQueryForBigResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
+    public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
         return prepareQuery(ds, sql).configStmt(stmtSetterForBigQueryResult);
     }
 
@@ -3217,7 +3217,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Stream results without high memory usage
-     *     JdbcUtil.prepareQueryForBigResult(conn, "SELECT * FROM audit_trail")
+     *     JdbcUtil.prepareQueryForLargeResult(conn, "SELECT * FROM audit_trail")
      *         .stream(Audit.class)
      *         .forEach(audit -> {
      *             // process audit record
@@ -3231,10 +3231,10 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare.
      * @return A {@link PreparedQuery} instance optimized for large result sets.
      * @throws SQLException If a database access error occurs.
-     * @see #prepareQueryForBigResult(javax.sql.DataSource, String)
+     * @see #prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
-    public static PreparedQuery prepareQueryForBigResult(final Connection conn, final String sql) throws SQLException {
+    public static PreparedQuery prepareQueryForLargeResult(final Connection conn, final String sql) throws SQLException {
         return prepareQuery(conn, sql).configStmt(stmtSetterForBigQueryResult);
     }
 
@@ -4086,7 +4086,7 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
         return prepareNamedQuery(ds, namedSql).configStmt(stmtSetterForBigQueryResult);
     }
 
@@ -4107,7 +4107,7 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForBigResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
         return prepareNamedQuery(ds, namedSql).configStmt(stmtSetterForBigQueryResult);
     }
 
@@ -4123,7 +4123,7 @@ public final class JdbcUtil {
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     @Beta
-    public static NamedQuery prepareNamedQueryForBigResult(final Connection conn, final String namedSql) throws SQLException {
+    public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws SQLException {
         return prepareNamedQuery(conn, namedSql).configStmt(stmtSetterForBigQueryResult);
     }
 

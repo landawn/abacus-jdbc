@@ -2190,7 +2190,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     //    public This setParameter(final Jdbc.ParametersSetter<? super Stmt> paramSetter) throws SQLException {
-    //        checkArgNotNull(paramSetter, "paramsSetter");
+    //        checkArgNotNull(paramSetter, "parametersSetter");
     //
     //        boolean noException = false;
     //
@@ -2208,7 +2208,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
     //
     //    public <T> This setParameter(final T parameter, final Jdbc.BiParametersSetter<? super Stmt, ? super T> paramSetter) throws SQLException {
-    //        checkArgNotNull(paramSetter, "paramsSetter");
+    //        checkArgNotNull(paramSetter, "parametersSetter");
     //
     //        boolean noException = false;
     //
@@ -2621,14 +2621,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         return (This) this;
     }
 
-    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramsSetter)
+    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter)
     //            throws SQLException {
-    //        checkArgNotNull(paramsSetter, "paramsSetter");
+    //        checkArgNotNull(parametersSetter, "parametersSetter");
     //
     //        boolean noException = false;
     //
     //        try {
-    //            paramsSetter.accept((This) this, stmt, parameters);
+    //            parametersSetter.accept((This) this, stmt, parameters);
     //
     //            noException = true;
     //        } finally {
@@ -2772,18 +2772,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).list();
      * }</pre>
      *
-     * @param paramsSetter the function to set parameters on the PreparedStatement
+     * @param parametersSetter the function to set parameters on the PreparedStatement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if paramsSetter is null
+     * @throws IllegalArgumentException if parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
-    public This setParameters(final Jdbc.ParametersSetter<? super Stmt> paramsSetter) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, cs.paramsSetter);
+    public This setParameters(final Jdbc.ParametersSetter<? super Stmt> parametersSetter) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         boolean noException = false;
 
         try {
-            paramsSetter.accept(stmt);
+            parametersSetter.accept(stmt);
 
             noException = true;
         } finally {
@@ -2797,17 +2797,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     //    /**
     //     *
-    //     * @param paramsSetter
+    //     * @param parametersSetter
     //     * @return
     //     * @throws SQLException
     //     */
-    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramsSetter) throws SQLException {
-    //        checkArgNotNull(paramsSetter, "paramsSetter");
+    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> parametersSetter) throws SQLException {
+    //        checkArgNotNull(parametersSetter, "parametersSetter");
     //
     //        boolean noException = false;
     //
     //        try {
-    //            paramsSetter.accept((This) this, stmt);
+    //            parametersSetter.accept((This) this, stmt);
     //
     //            noException = true;
     //        } finally {
@@ -2835,19 +2835,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of the additional parameter object
      * @param parameters the additional data to use when setting parameters
-     * @param paramsSetter the function to set parameters on the PreparedStatement
+     * @param parametersSetter the function to set parameters on the PreparedStatement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if paramsSetter is null
+     * @throws IllegalArgumentException if parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
-    public <T> This setParameters(final T parameters, final Jdbc.BiParametersSetter<? super Stmt, ? super T> paramsSetter)
+    public <T> This setParameters(final T parameters, final Jdbc.BiParametersSetter<? super Stmt, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, cs.paramsSetter);
+        checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         boolean noException = false;
 
         try {
-            paramsSetter.accept(stmt, parameters);
+            parametersSetter.accept(stmt, parameters);
 
             noException = true;
         } finally {
@@ -3038,17 +3038,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     //    /**
     //     *
-    //     * @param paramsSetter
+    //     * @param parametersSetter
     //     * @return
     //     * @throws SQLException
     //     */
-    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> paramsSetter) throws SQLException {
-    //        checkArgNotNull(paramsSetter, "paramsSetter");
+    //    public This setParameters(final BiParametersSetter<? super This, ? super Stmt> parametersSetter) throws SQLException {
+    //        checkArgNotNull(parametersSetter, "parametersSetter");
     //
     //        boolean noException = false;
     //
     //        try {
-    //            paramsSetter.accept((This) this, stmt);
+    //            parametersSetter.accept((This) this, stmt);
     //
     //            noException = true;
     //        } finally {
@@ -3060,14 +3060,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //        return (This) this;
     //    }
 
-    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> paramsSetter)
+    //    public <T> This setParameters(final T parameters, final Throwables.TriConsumer<? super This, ? super Stmt, ? super T, ? extends SQLException> parametersSetter)
     //            throws SQLException {
-    //        checkArgNotNull(paramsSetter, "paramsSetter");
+    //        checkArgNotNull(parametersSetter, "parametersSetter");
     //
     //        boolean noException = false;
     //
     //        try {
-    //            paramsSetter.accept((This) this, stmt, parameters);
+    //            parametersSetter.accept((This) this, stmt, parameters);
     //
     //            noException = true;
     //        } finally {
@@ -3092,19 +3092,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }).list();
      * }</pre>
      *
-     * @param paramsSetter the function to set parameters on this query
+     * @param parametersSetter the function to set parameters on this query
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if paramsSetter is null
+     * @throws IllegalArgumentException if parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This settParameters(final Jdbc.ParametersSetter<? super This> paramsSetter) throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, cs.paramsSetter);
+    public This settParameters(final Jdbc.ParametersSetter<? super This> parametersSetter) throws IllegalArgumentException, SQLException {
+        checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         boolean noException = false;
 
         try {
-            paramsSetter.accept((This) this);
+            parametersSetter.accept((This) this);
 
             noException = true;
         } finally {
@@ -3134,20 +3134,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <T> the type of the additional parameter object
      * @param parameters the additional data to use when setting parameters
-     * @param paramsSetter the function to set parameters on this query
+     * @param parametersSetter the function to set parameters on this query
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if paramsSetter is null
+     * @throws IllegalArgumentException if parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public <T> This settParameters(final T parameters, final Jdbc.BiParametersSetter<? super This, ? super T> paramsSetter)
+    public <T> This settParameters(final T parameters, final Jdbc.BiParametersSetter<? super This, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
-        checkArgNotNull(paramsSetter, cs.paramsSetter);
+        checkArgNotNull(parametersSetter, cs.parametersSetter);
 
         boolean noException = false;
 
         try {
-            paramsSetter.accept((This) this, parameters);
+            parametersSetter.accept((This) this, parameters);
 
             noException = true;
         } finally {
