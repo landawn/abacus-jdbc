@@ -720,6 +720,8 @@ public final class JdbcUtil {
                 dbVersion = DBVersion.H2;
             } else if (Strings.containsIgnoreCase(dbProductName, "HSQL")) {
                 dbVersion = DBVersion.HSQLDB;
+            } else if (Strings.containsIgnoreCase(dbProductName, "MariaDB") || Strings.containsIgnoreCase(dbProductVersion, "MariaDB")) {
+                dbVersion = DBVersion.MariaDB;
             } else if (Strings.containsIgnoreCase(dbProductName, "MySQL")) {
                 if (dbProductVersion.startsWith("5.5")) {
                     dbVersion = DBVersion.MySQL_5_5;
@@ -744,8 +746,6 @@ public final class JdbcUtil {
                 } else {
                     dbVersion = DBVersion.MySQL_OTHERS;
                 }
-            } else if (Strings.containsIgnoreCase(dbProductName, "MariaDB")) {
-                dbVersion = DBVersion.MariaDB;
             } else if (Strings.containsIgnoreCase(dbProductName, "PostgreSQL")) {
                 if (dbProductVersion.startsWith("9.2")) {
                     dbVersion = DBVersion.PostgreSQL_9_2;
@@ -755,6 +755,8 @@ public final class JdbcUtil {
                     dbVersion = DBVersion.PostgreSQL_9_4;
                 } else if (dbProductVersion.startsWith("9.5")) {
                     dbVersion = DBVersion.PostgreSQL_9_5;
+                } else if (dbProductVersion.startsWith("9.6")) {
+                    dbVersion = DBVersion.PostgreSQL_9_6;
                 } else if (dbProductVersion.startsWith("10")) {
                     dbVersion = DBVersion.PostgreSQL_10;
                 } else if (dbProductVersion.startsWith("11")) {

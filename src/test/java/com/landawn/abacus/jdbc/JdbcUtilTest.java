@@ -130,6 +130,32 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testGetDBProductInfo_PostgreSQL96_Connection() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.6.24");
+
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+
+        assertNotNull(info);
+        assertEquals("PostgreSQL", info.productName());
+        assertEquals("9.6.24", info.productVersion());
+        assertEquals(DBVersion.PostgreSQL_9_6, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MariaDBReportedAsMySQL_Connection() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("5.5.5-10.11.11-MariaDB");
+
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+
+        assertNotNull(info);
+        assertEquals("MySQL", info.productName());
+        assertEquals("5.5.5-10.11.11-MariaDB", info.productVersion());
+        assertEquals(DBVersion.MariaDB, info.version());
+    }
+
+    @Test
     public void testCreateHikariDataSource() {
         String url = "jdbc:h2:mem:test";
         String user = "sa";
