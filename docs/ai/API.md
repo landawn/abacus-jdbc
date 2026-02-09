@@ -1,7 +1,7 @@
 # abacus-jdbc API Index (v4.3.1)
 - Build: unknown
 - Java: 17
-- Generated: 2026-02-08
+- Generated: 2026-02-09
 
 ## Packages
 - com.landawn.abacus.jdbc
@@ -1520,7 +1520,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - (none)
 - **Returns:** A {@code Nullable<java.sql.Date>} containing the Date value if at least one row is returned; otherwise {@code Nullable.empty()}
 - **Throws:**
-  - `java.lang.IllegalStateException`
+  - `java.lang.IllegalStateException` — if this query is closed
   - `java.sql.SQLException` — if a database access error occurs
 ##### queryForTime(...) -> Nullable<java.sql.Time>
 - **Signature:** `public Nullable<java.sql.Time> queryForTime() throws IllegalStateException, SQLException`
@@ -1803,7 +1803,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `targetType` (`Class<? extends T>`) — the class to map the result row to
 - **Returns:** An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #queryForUniqueResult(Class), #queryForUniqueNonNull(Class)
@@ -1815,7 +1815,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.RowMapper<? extends T>`) — the {@code RowMapper} used to map the result set to the result object
 - **Returns:** An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
@@ -1826,7 +1826,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to the result object
 - **Returns:** An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 ##### findOnlyOneOrNull(...) -> Map<String, Object>
@@ -1852,7 +1852,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `targetType` (`Class<? extends T>`) — the class to map the result row to
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
@@ -1864,7 +1864,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.RowMapper<? extends T>`) — the {@code RowMapper} used to map the result set to the result object
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
@@ -1876,7 +1876,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to the result object
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 ##### findFirst(...) -> Optional<Map<String, Object>>
@@ -1896,7 +1896,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `targetType` (`Class<? extends T>`) — the class to map the result row to
 - **Returns:** An {@code Optional} containing the first result, or empty if no result is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #queryForUniqueResult(Class), #queryForUniqueNonNull(Class)
 - **Signature:** `public <T> Optional<T> findFirst(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
@@ -1905,7 +1905,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.RowMapper<? extends T>`) — the {@code RowMapper} used to map the result set to an object
 - **Returns:** An {@code Optional} containing the first result, or empty if no result is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@Deprecated public <T> Optional<T> findFirst(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query with the specified {@code RowFilter} and {@code RowMapper} , and returns the first matching result as an {@code Optional} .
@@ -1914,7 +1914,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.RowMapper<? extends T>`) — the {@code RowMapper} used to map the result set to an object
 - **Returns:** An {@code Optional} containing the first matching result, or empty if no match is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the first matching row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> Optional<T> findFirst(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query and returns the first result as an {@code Optional} containing an object extracted by the specified {@code BiRowMapper} .
@@ -1922,7 +1922,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to an object
 - **Returns:** An {@code Optional} containing the first result, or empty if no result is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@Deprecated public <T> Optional<T> findFirst(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query with the specified {@code BiRowFilter} and {@code BiRowMapper} , and returns the first matching result as an {@code Optional} .
@@ -1931,7 +1931,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to an object
 - **Returns:** An {@code Optional} containing the first matching result, or empty if no match is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the first matching row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 ##### findFirstOrNull(...) -> Map<String, Object>
 - **Signature:** `public Map<String, Object> findFirstOrNull() throws SQLException`
@@ -1953,7 +1953,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `targetType` (`Class<? extends T>`) — the class to map the result row to
 - **Returns:** The first result mapped to the specified type, or {@code null} if no result is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> T findFirstOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query and returns the first result extracted by the specified {@code RowMapper} .
@@ -1963,7 +1963,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.RowMapper<? extends T>`) — the {@code RowMapper} used to map the result set to an object
 - **Returns:** The first result mapped by the rowMapper, or {@code null} if no result is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@Deprecated public <T> T findFirstOrNull(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query with filtering and returns the first matching result extracted by the specified {@code RowMapper} .
@@ -1972,7 +1972,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.RowMapper<? extends T>`) — the {@code RowMapper} used to map the result set to an object
 - **Returns:** The first matching result, or {@code null} if no match is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the first matching row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `public <T> T findFirstOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query and returns the first result extracted by the specified {@code BiRowMapper} .
@@ -1982,7 +1982,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to an object
 - **Returns:** The first result mapped by the rowMapper, or {@code null} if no result is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `@Deprecated public <T> T findFirstOrNull(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query with filtering and returns the first matching result extracted by the specified {@code BiRowMapper} .
@@ -1991,7 +1991,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to an object
 - **Returns:** The first matching result, or {@code null} if no match is found
 - **Throws:**
-  - `java.lang.NullPointerException`
+  - `java.lang.NullPointerException` — if the mapped object for the first matching row is {@code null}
   - `java.sql.SQLException` — if a database access error occurs
 ##### list(...) -> List<Map<String, Object>>
 - **Signature:** `public List<Map<String, Object>> list() throws SQLException`
@@ -3897,7 +3897,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Signature:** `public String lock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException`
 - **Summary:** Attempts to acquire a distributed lock on the specified target resource with full control over lock duration, acquisition timeout, and retry behavior.
 - **Contract:**
-  - If the initial attempt fails (meaning another process holds the lock), it will repeatedly retry after {@code retryPeriod} milliseconds until the total {@code timeout} is reached.
+  - If the initial attempt fails (meaning another process holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until the total {@code timeout} is reached.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); String resourceIdentifier = "inventory_update_process"; long lockDuration = 5 * 60 * 1000; // Lock for 5 minutes long acquisitionTimeout = 10 * 1000; // Wait up to 10 seconds long retryInterval = 500; // Retry every 500 milliseconds String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval); if (lockCode != null) { try { System.out.println("Lock acquired for: " + resourceIdentifier); // Perform the inventory update // ...
 - **Parameters:**
   - `target` (`String`) — the unique identifier of the resource to lock. Must not be {@code null} or empty.
@@ -6068,7 +6068,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `keyColumnName` (`String`) — The column name to use in the WHERE clause
 - **Returns:** An UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
 - **Signature:** `public static String generateUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
-- **Summary:** Generates an UPDATE SQL statement for the specified table using an existing connection, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
+- **Summary:** Generates an UPDATE SQL statement for the specified table through a data source, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
   - `dataSource` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the UPDATE statement
@@ -6126,7 +6126,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `keyColumnName` (`String`) — The column name to use in the WHERE clause
 - **Returns:** An UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
 - **Signature:** `public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
-- **Summary:** Generates a named UPDATE SQL statement for the specified table using an existing connection, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
+- **Summary:** Generates a named UPDATE SQL statement for the specified table through a data source, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
   - `dataSource` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the named UPDATE statement
@@ -6450,24 +6450,24 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
   - `conn` (`Connection`) — The {@link Connection} to close. Can be {@code null} .
 - **See also:** #close(ResultSet, Statement, Connection)
 ##### skip(...) -> int
-- **Signature:** `public static int skip(final ResultSet rs, final int n) throws SQLException`
+- **Signature:** `public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException`
 - **Summary:** Skips a specified number of rows in a {@link ResultSet} .
 - **Contract:**
   - <p> <b> Usage Examples: </b> </p> <pre> {@code ResultSet rs = statement.executeQuery("SELECT * FROM users"); // Skip the first 10 users int skippedRows = JdbcUtil.skip(rs, 10); if (skippedRows == 10) { // Now processing from the 11th user if (rs.next()) { // ...
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to skip rows in.
-  - `n` (`int`) — The number of rows to skip.
-- **Returns:** The number of rows actually skipped, which may be less than {@code n} if the end of the {@code ResultSet} is reached.
+  - `rowsToSkip` (`int`) — The number of rows to skip.
+- **Returns:** The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the {@code ResultSet} is reached.
 - **Throws:**
   - `java.sql.SQLException` — If a database access error occurs or the result set type is {@code TYPE_FORWARD_ONLY} .
 - **See also:** #skip(ResultSet, long)
-- **Signature:** `public static int skip(final ResultSet rs, long n) throws SQLException`
+- **Signature:** `public static int skip(final ResultSet rs, long rowsToSkip) throws SQLException`
 - **Summary:** Skips a specified number of rows in a {@link ResultSet} , supporting a {@code long} count.
 - **Contract:**
   - It attempts to use {@link ResultSet#absolute(int)} for scrollable result sets and falls back to manual iteration for forward-only result sets or when {@code absolute()} is not supported by the driver.
 - **Parameters:**
   - `rs` (`ResultSet`) — The {@link ResultSet} to skip rows in.
-  - `n` (`long`) — The number of rows to skip.
+  - `rowsToSkip` (`long`) — The number of rows to skip.
 - **Returns:** The number of rows actually skipped.
 - **Throws:**
   - `java.sql.SQLException` — If a database access error occurs.
@@ -7612,29 +7612,29 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Returns:** A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null}
-- **Signature:** `@Beta public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T> ContinuableFuture<Void> asyncRun(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with the given parameter.
 - **Parameters:**
-  - `t` (`T`) — The parameter to be passed to the SQL action
+  - `parameter` (`T`) — The parameter to be passed to the SQL action
   - `sqlAction` (`Throwables.Consumer<? super T, Exception>`) — The SQL action to be executed with the parameter
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T, U> ContinuableFuture<Void> asyncRun(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with two parameters.
 - **Parameters:**
-  - `t` (`T`) — The first parameter to be passed to the SQL action
-  - `u` (`U`) — The second parameter to be passed to the SQL action
+  - `parameter1` (`T`) — The first parameter to be passed to the SQL action
+  - `parameter2` (`U`) — The second parameter to be passed to the SQL action
   - `sqlAction` (`Throwables.BiConsumer<? super T, ? super U, Exception>`) — The SQL action to be executed with the parameters
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the SQL action is {@code null}
-- **Signature:** `@Beta public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <A, B, C> ContinuableFuture<Void> asyncRun(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously runs the specified SQL action with three parameters.
 - **Parameters:**
-  - `a` (`A`) — The first parameter to be passed to the SQL action
-  - `b` (`B`) — The second parameter to be passed to the SQL action
-  - `c` (`C`) — The third parameter to be passed to the SQL action
+  - `parameter1` (`A`) — The first parameter to be passed to the SQL action
+  - `parameter2` (`B`) — The second parameter to be passed to the SQL action
+  - `parameter3` (`C`) — The third parameter to be passed to the SQL action
   - `sqlAction` (`Throwables.TriConsumer<? super A, ? super B, ? super C, Exception>`) — The SQL action to be executed with the parameters
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
@@ -7664,29 +7664,29 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Returns:** A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any of the SQL actions are {@code null}
-- **Signature:** `@Beta public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T, R> ContinuableFuture<R> asyncCall(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with one parameter and returns a result.
 - **Parameters:**
-  - `t` (`T`) — The parameter to pass to the SQL action
+  - `parameter` (`T`) — The parameter to pass to the SQL action
   - `sqlAction` (`Throwables.Function<? super T, ? extends R, Exception>`) — The SQL action that takes a parameter and produces a result
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the sqlAction is {@code null}
-- **Signature:** `@Beta public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <T, U, R> ContinuableFuture<R> asyncCall(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with two parameters and returns a result.
 - **Parameters:**
-  - `t` (`T`) — The first parameter to pass to the SQL action
-  - `u` (`U`) — The second parameter to pass to the SQL action
+  - `parameter1` (`T`) — The first parameter to pass to the SQL action
+  - `parameter2` (`U`) — The second parameter to pass to the SQL action
   - `sqlAction` (`Throwables.BiFunction<? super T, ? super U, ? extends R, Exception>`) — The SQL action that takes two parameters and produces a result
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the sqlAction is {@code null}
-- **Signature:** `@Beta public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
+- **Signature:** `@Beta public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException`
 - **Summary:** Asynchronously calls the specified SQL action with three parameters and returns a result.
 - **Parameters:**
-  - `a` (`A`) — The first parameter to pass to the SQL action
-  - `b` (`B`) — The second parameter to pass to the SQL action
-  - `c` (`C`) — The third parameter to pass to the SQL action
+  - `parameter1` (`A`) — The first parameter to pass to the SQL action
+  - `parameter2` (`B`) — The second parameter to pass to the SQL action
+  - `parameter3` (`C`) — The third parameter to pass to the SQL action
   - `sqlAction` (`Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception>`) — The SQL action that takes three parameters and produces a result
 - **Returns:** A ContinuableFuture representing the result of the asynchronous computation
 - **Throws:**
@@ -8579,7 +8579,7 @@ A comprehensive, enterprise-grade utility class providing advanced database impo
   - `line2Parameters` (`Throwables.Function<? super String, Object[], E>`) — a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
 - **Returns:** the number of rows successfully imported
 - **Throws:**
-  - `java.lang.IllegalArgumentException`
+  - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs
   - `E` — if the function throws an exception
@@ -9162,7 +9162,7 @@ Manages join relationships between entities in JDBC operations.
 - **Signature:** `public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc)`
 - **Summary:** Retrieves the SQL and parameter setter for delete operations.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class, "employees", "projects"); Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSql = joinInfo.getDeleteSqlAndParamSetter(PSC.class); String deleteSql = deleteSql._1; // Main delete SQL String middleTableDeleteSql = deleteSql._2; // Join table delete SQL (if many-to-many) Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteSql._3; } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class, "employees", "projects"); Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteTuple = joinInfo.getDeleteSqlAndParamSetter(PSC.class); String deleteSql = deleteTuple._1; // Main delete SQL String middleTableDeleteSql = deleteTuple._2; // Join table delete SQL (if many-to-many) Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteTuple._3; } </pre>
 - **Parameters:**
   - `sbc` (`Class<? extends SQLBuilder>`) — the SQL builder class type (PSC, PAC, or PLC)
 - **Returns:** a tuple containing the delete SQL, optional middle table delete SQL (null if not many-to-many), and parameter setter
@@ -10793,7 +10793,6 @@ Specifies cascading delete behavior for entity relationships.
 - **Contract:**
   - Specifies the action to take when a referenced entity is deleted.
   - <p> <strong> Note: </strong> This functionality should be implemented at the database level using foreign key constraints rather than in the application layer.
-  - </p> <p> Available actions correspond to standard SQL ON DELETE behaviors: </p> <ul> <li> {@link OnDeleteAction#NO_ACTION} - Default, no automatic action </li> <li> {@link OnDeleteAction#CASCADE} - Delete dependent records </li> <li> {@link OnDeleteAction#SET_NULL} - Set foreign key to NULL </li> <li> SET_DEFAULT - Set foreign key to default value (not currently supported) </li> <li> RESTRICT - Prevent deletion if dependencies exist (use NO_ACTION instead) </li> </ul>
 - **Parameters:**
   - (none)
 - **Returns:** the delete action, defaults to {@link OnDeleteAction#NO_ACTION}
@@ -10943,23 +10942,23 @@ Defines a generic SQL query operation for a DAO method.
 #### Public Instance Methods
 ##### value(...) -> String\[\]
 - **Signature:** `String[] value() default {}`
-- **Summary:** Specifies the SQL statement to execute.
+- **Summary:** Specifies inline SQL statement lines to execute.
 - **Contract:**
   - <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax when {@link #fragmentContainsNamedParameters()} is {@code true} </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.
   - </li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query("SELECT * FROM users WHERE age > :minAge") List<User> findByAge(@Bind("minAge") int minAge); // Multiple parameters @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge") List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max); // Nested property access @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status") List<Order> findOrders(@Bind("user") User user, @Bind("status") String status); // IN clause with collection @Query("SELECT * FROM users WHERE id IN (:ids)") List<User> findByIds(@Bind("ids") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query("SELECT u.*, COUNT(o.id) as order_count " + "FROM users u LEFT JOIN orders o ON u.id = o.user_id " + "WHERE u.created_date > :startDate " + "GROUP BY u.id HAVING COUNT(o.id) > :minOrders") List<UserStats> findUserStats(@Bind("startDate") Date startDate, @Bind("minOrders") int minOrders); // Common Table Expression (CTE) @Query("WITH recent_orders AS ( " + " SELECT user_id, COUNT(*) as order_count " + " FROM orders WHERE order_date > :since " + " GROUP BY user_id " + ") " + "SELECT u.*, ro.order_count " + "FROM users u JOIN recent_orders ro ON u.id = ro.user_id") List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since); // Window function @Query("SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " + "FROM employees WHERE department = :dept") List<Employee> rankEmployeesByDepartment(@Bind("dept") String department); } </pre> <p> Note: Either {@code value} or {@link #id()} should be specified, but not both.
   - If neither is specified, the framework may attempt to derive the SQL based on the method name and entity mapping.
 - **Parameters:**
   - (none)
-- **Returns:** the SQL statement to execute, or empty string if using {@link #id()}
+- **Returns:** inline SQL statement lines; empty by default when using {@link #id()}
 ##### id(...) -> String\[\]
 - **Signature:** `String[] id() default {}`
-- **Summary:** Specifies the ID of a SQL statement defined in an external SQL mapper.
+- **Summary:** Specifies SQL statement identifier lines defined in an external SQL mapper.
 - **Contract:**
-  - It must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER} .
+  - Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER} .
   - // </sql> } </pre> <p> Note: Either {@link #value()} or {@code id} should be specified, but not both.
 - **Parameters:**
   - (none)
-- **Returns:** the SQL statement ID from the SQL mapper, or empty string if using {@link #value()}
+- **Returns:** SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
 - **See also:** RegExUtil#JAVA_IDENTIFIER_MATCHER
 ##### op(...) -> OP
 - **Signature:** `OP op() default OP.DEFAULT`
@@ -11202,10 +11201,10 @@ Marks a {@code static final String} field (typically inside a DAO interface's ne
 - **Summary:** Supplies an optional identifier that overrides the annotated field name when the SQL is registered.
 - **Contract:**
   - Supplies an optional identifier that overrides the annotated field name when the SQL is registered.
-  - When left empty the declaration name (for example {@code sql_listUserWithBiggerId} ) becomes the key, but setting a custom id makes it possible to share the same SQL across differently named constants or shorten the token referenced from {@link Query} .
+  - When left empty, the declaration name (for example {@code sql_listUserWithBiggerId} ) becomes the key.
 - **Parameters:**
   - (none)
-- **Returns:** the identifier used to reference the SQL when invoking {@link Query#id()} , Actual field name is used when it's empty.
+- **Returns:** the identifier used by {@link Query#id()} ; empty means the annotated field name is used
 
 ### Annotation Transactional (com.landawn.abacus.jdbc.annotation.Transactional)
 Declares transaction boundaries for DAO methods.
@@ -12038,6 +12037,8 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
 ##### queryForString(...) -> Nullable<String>
 - **Signature:** `default Nullable<String> queryForString(final String singleSelectPropName, final long id) throws SQLException`
 - **Summary:** Queries for a String value from a single property of the entity with the specified ID.
+- **Contract:**
+  - Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} .
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
@@ -12047,6 +12048,8 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
 ##### queryForDate(...) -> Nullable<java.sql.Date>
 - **Signature:** `default Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final long id) throws SQLException`
 - **Summary:** Queries for a Date value from a single property of the entity with the specified ID.
+- **Contract:**
+  - Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} .
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
@@ -12067,6 +12070,8 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
 ##### queryForTimestamp(...) -> Nullable<java.sql.Timestamp>
 - **Signature:** `default Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final long id) throws SQLException`
 - **Summary:** Queries for a Timestamp value from a single property of the entity with the specified ID.
+- **Contract:**
+  - Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} .
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
@@ -12562,7 +12567,7 @@ A specialized interface for CRUD operations with join entity support that uses {
 - **Summary:** Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders and addresses User user = userDao.gett(123L, {@code null}, Arrays.asList(Order.class, Address.class)); if (user != null) { processUserWithRelations(user); } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders and addresses User user = userDao.gett(123L, null, Arrays.asList(Order.class, Address.class)); if (user != null) { processUserWithRelations(user); } } </pre>
 - **Parameters:**
   - `id` (`long`) — the primitive long ID of the entity to retrieve
   - `selectPropNames` (`Collection<String>`) — the properties to select from the main entity, excluding join entity properties. If {@code null} , all properties of the main entity are selected
@@ -13566,7 +13571,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Summary:** Returns a paginated Stream of query results as Dataset pages.
 - **Contract:**
   - The condition must include orderBy for consistent pagination.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Stream<Dataset> pages = dao.paginate( Filters.criteria().where(Filters.gt("id", 0)).orderBy("id"), 100, (query, lastPageResult) -> { if (lastPageResult != {@code null} && lastPageResult.size() > 0) { long lastId = lastPageResult.getLong(lastPageResult.size() - 1, "id"); query.setLong(1, lastId); } } ); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Stream<Dataset> pages = dao.paginate( Filters.criteria().where(Filters.gt("id", 0)).orderBy("id"), 100, (query, lastPageResult) -> { if (lastPageResult != null && lastPageResult.size() > 0) { long lastId = lastPageResult.getLong(lastPageResult.size() - 1, "id"); query.setLong(1, lastId); } } ); } </pre>
 - **Parameters:**
   - `cond` (`Condition`) — the condition with required orderBy clause
   - `pageSize` (`int`) — the number of records per page
@@ -15646,6 +15651,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Signature:** `@Override Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable<byte\[\]>} describing the value of a single property for the entity with the specified ID.
 - **Contract:**
+  - The returned {@code Nullable} can contain {@code null} if the database value is {@code null} .
   - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<byte\[\]> avatar = userDao.queryForBytes("profileImage", userId); if (avatar.isPresent()) { displayImage(avatar.get()); } } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -18085,7 +18091,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 
 ### Interface UncheckedNoUpdateCrudDao (com.landawn.abacus.jdbc.dao.UncheckedNoUpdateCrudDao)
-A specialized CRUD DAO interface that disables update operations while allowing read, insert, and delete operations.
+A specialized CRUD DAO interface that disables update and delete operations while allowing read and insert operations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -18158,8 +18164,6 @@ A specialized CRUD DAO interface that disables update operations while allowing 
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
-- **Contract:**
-  - This DAO type ensures that once data is inserted, it cannot be modified, only deleted if necessary.
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — Collection of entities to update (operation will fail)
   - `propNamesToUpdate` (`Collection<String>`) — Properties to update in each entity (operation will fail)
@@ -18170,8 +18174,6 @@ A specialized CRUD DAO interface that disables update operations while allowing 
 ##### upsert(...) -> T
 - **Signature:** `@Deprecated @Override default T upsert(final T entity) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
-- **Contract:**
-  - If a record already exists, it must be deleted first before inserting a new version.
 - **Parameters:**
   - `entity` (`T`) — The entity to insert or update (operation will fail)
 - **Returns:** Never returns normally
@@ -18230,50 +18232,50 @@ A specialized CRUD DAO interface that disables update operations while allowing 
 - **Signature:** `@Deprecated @Override default int delete(final T entity) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entity` (`T`) — The entity to delete (operation will fail)
-- **Returns:** Never returns normally
+  - `entity` (`T`) — the entity to delete (operation will fail)
+- **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — Always thrown to maintain API consistency
+  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
 ##### deleteById(...) -> int
 - **Signature:** `@Deprecated @Override default int deleteById(final ID id) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `id` (`ID`) — The ID of the entity to delete (operation will fail)
-- **Returns:** Never returns normally
+  - `id` (`ID`) — the ID of the entity to delete (operation will fail)
+- **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — Always thrown to maintain API consistency
+  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
 ##### batchDelete(...) -> int
 - **Signature:** `@Deprecated @Override default int batchDelete(final Collection<? extends T> entities) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to delete (operation will fail)
-- **Returns:** Never returns normally
+  - `entities` (`Collection<? extends T>`) — collection of entities to delete (operation will fail)
+- **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — Always thrown to maintain API consistency
+  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
 - **Signature:** `@Deprecated @Override default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to delete (operation will fail)
-  - `batchSize` (`int`) — The batch size for the operation (operation will fail)
-- **Returns:** Never returns normally
+  - `entities` (`Collection<? extends T>`) — collection of entities to delete (operation will fail)
+  - `batchSize` (`int`) — the batch size for the operation (operation will fail)
+- **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — Always thrown to maintain API consistency
+  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
 ##### batchDeleteByIds(...) -> int
 - **Signature:** `@Deprecated @Override default int batchDeleteByIds(final Collection<? extends ID> ids) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `ids` (`Collection<? extends ID>`) — Collection of IDs to delete (operation will fail)
-- **Returns:** Never returns normally
+  - `ids` (`Collection<? extends ID>`) — collection of IDs to delete (operation will fail)
+- **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — Always thrown to maintain API consistency
+  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
 - **Signature:** `@Deprecated @Override default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `ids` (`Collection<? extends ID>`) — Collection of IDs to delete (operation will fail)
-  - `batchSize` (`int`) — The batch size for the operation (operation will fail)
-- **Returns:** Never returns normally
+  - `ids` (`Collection<? extends ID>`) — collection of IDs to delete (operation will fail)
+  - `batchSize` (`int`) — the batch size for the operation (operation will fail)
+- **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — Always thrown to maintain API consistency
+  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
 
 ### Interface UncheckedNoUpdateCrudDaoL (com.landawn.abacus.jdbc.dao.UncheckedNoUpdateCrudDaoL)
 A no-update CRUD DAO interface that uses {@code Long} as the ID type with unchecked exception handling.

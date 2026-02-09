@@ -2,7 +2,7 @@
   "library": {
     "name": "abacus-jdbc",
     "version": "4.3.1",
-    "generated_at": "2026-02-08",
+    "generated_at": "2026-02-09",
     "java_target": "17",
     "source": {
       "git_sha": "unknown"
@@ -5871,7 +5871,8 @@
               "params": [],
               "throws": [
                 {
-                  "type": "java.lang.IllegalStateException"
+                  "type": "java.lang.IllegalStateException",
+                  "condition": "if this query is closed"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -6978,7 +6979,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "com.landawn.abacus.exception.DuplicatedResultException",
@@ -7025,7 +7027,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "com.landawn.abacus.exception.DuplicatedResultException",
@@ -7069,7 +7072,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "com.landawn.abacus.exception.DuplicatedResultException",
@@ -7142,7 +7146,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "com.landawn.abacus.exception.DuplicatedResultException",
@@ -7188,7 +7193,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "com.landawn.abacus.exception.DuplicatedResultException",
@@ -7233,7 +7239,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "com.landawn.abacus.exception.DuplicatedResultException",
@@ -7304,7 +7311,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7345,7 +7353,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7389,7 +7398,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the first matching row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7432,7 +7442,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7476,7 +7487,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the first matching row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7543,7 +7555,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7584,7 +7597,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7630,7 +7644,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the first matching row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7673,7 +7688,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -7719,7 +7735,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.NullPointerException"
+                  "type": "java.lang.NullPointerException",
+                  "condition": "if the mapped object for the first matching row is {@code null}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -15010,7 +15027,7 @@
               ],
               "javadoc_summary": "Attempts to acquire a distributed lock on the specified target resource with full control over lock duration, acquisition timeout, and retry behavior.",
               "contract": [
-                "If the initial attempt fails (meaning another process holds the lock), it will repeatedly retry after {@code retryPeriod} milliseconds until the total {@code timeout} is reached.",
+                "If the initial attempt fails (meaning another process holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until the total {@code timeout} is reached.",
                 "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, \"my_locks_table\"); String resourceIdentifier = \"inventory_update_process\"; long lockDuration = 5 * 60 * 1000; // Lock for 5 minutes long acquisitionTimeout = 10 * 1000; // Wait up to 10 seconds long retryInterval = 500; // Retry every 500 milliseconds String lockCode = dbLock.lock(resourceIdentifier, lockDuration, acquisitionTimeout, retryInterval); if (lockCode != null) { try { System.out.println(\"Lock acquired for: \" + resourceIdentifier); // Perform the inventory update // ..."
               ],
               "examples": [],
@@ -24558,7 +24575,7 @@
                   "condition": "if a database access error occurs or the table cannot be queried"
                 }
               ],
-              "javadoc_summary": "Generates an UPDATE SQL statement for the specified table using an existing connection, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.",
+              "javadoc_summary": "Generates an UPDATE SQL statement for the specified table through a data source, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.",
               "contract": [],
               "examples": [],
               "see_also": [
@@ -24814,7 +24831,7 @@
                   "condition": "if a database access error occurs or the table cannot be queried"
                 }
               ],
-              "javadoc_summary": "Generates a named UPDATE SQL statement for the specified table using an existing connection, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.",
+              "javadoc_summary": "Generates a named UPDATE SQL statement for the specified table through a data source, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.",
               "contract": [],
               "examples": [],
               "see_also": []
@@ -26122,7 +26139,7 @@
                 "public",
                 "static"
               ],
-              "signature": "public static int skip(final ResultSet rs, final int n) throws SQLException",
+              "signature": "public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException",
               "return_type": "int",
               "type_params": [],
               "params": [
@@ -26133,7 +26150,7 @@
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "n",
+                  "name": "rowsToSkip",
                   "type": "int",
                   "javadoc": "The number of rows to skip.",
                   "nullability": "unspecified"
@@ -26161,7 +26178,7 @@
                 "public",
                 "static"
               ],
-              "signature": "public static int skip(final ResultSet rs, long n) throws SQLException",
+              "signature": "public static int skip(final ResultSet rs, long rowsToSkip) throws SQLException",
               "return_type": "int",
               "type_params": [],
               "params": [
@@ -26172,7 +26189,7 @@
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "n",
+                  "name": "rowsToSkip",
                   "type": "long",
                   "javadoc": "The number of rows to skip.",
                   "nullability": "unspecified"
@@ -30719,7 +30736,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException",
+              "signature": "@Beta public static <T> ContinuableFuture<Void> asyncRun(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException",
               "return_type": "ContinuableFuture<Void>",
               "type_params": [
                 {
@@ -30731,7 +30748,7 @@
               ],
               "params": [
                 {
-                  "name": "t",
+                  "name": "parameter",
                   "type": "T",
                   "javadoc": "The parameter to be passed to the SQL action",
                   "nullability": "unspecified"
@@ -30761,7 +30778,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException",
+              "signature": "@Beta public static <T, U> ContinuableFuture<Void> asyncRun(final T parameter1, final U parameter2, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException",
               "return_type": "ContinuableFuture<Void>",
               "type_params": [
                 {
@@ -30779,13 +30796,13 @@
               ],
               "params": [
                 {
-                  "name": "t",
+                  "name": "parameter1",
                   "type": "T",
                   "javadoc": "The first parameter to be passed to the SQL action",
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "u",
+                  "name": "parameter2",
                   "type": "U",
                   "javadoc": "The second parameter to be passed to the SQL action",
                   "nullability": "unspecified"
@@ -30815,7 +30832,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException",
+              "signature": "@Beta public static <A, B, C> ContinuableFuture<Void> asyncRun(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException",
               "return_type": "ContinuableFuture<Void>",
               "type_params": [
                 {
@@ -30839,19 +30856,19 @@
               ],
               "params": [
                 {
-                  "name": "a",
+                  "name": "parameter1",
                   "type": "A",
                   "javadoc": "The first parameter to be passed to the SQL action",
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "b",
+                  "name": "parameter2",
                   "type": "B",
                   "javadoc": "The second parameter to be passed to the SQL action",
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "c",
+                  "name": "parameter3",
                   "type": "C",
                   "javadoc": "The third parameter to be passed to the SQL action",
                   "nullability": "unspecified"
@@ -31025,7 +31042,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
+              "signature": "@Beta public static <T, R> ContinuableFuture<R> asyncCall(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
               "return_type": "ContinuableFuture<R>",
               "type_params": [
                 {
@@ -31043,7 +31060,7 @@
               ],
               "params": [
                 {
-                  "name": "t",
+                  "name": "parameter",
                   "type": "T",
                   "javadoc": "The parameter to pass to the SQL action",
                   "nullability": "unspecified"
@@ -31073,7 +31090,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
+              "signature": "@Beta public static <T, U, R> ContinuableFuture<R> asyncCall(final T parameter1, final U parameter2, final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
               "return_type": "ContinuableFuture<R>",
               "type_params": [
                 {
@@ -31097,13 +31114,13 @@
               ],
               "params": [
                 {
-                  "name": "t",
+                  "name": "parameter1",
                   "type": "T",
                   "javadoc": "The first parameter to pass to the SQL action",
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "u",
+                  "name": "parameter2",
                   "type": "U",
                   "javadoc": "The second parameter to pass to the SQL action",
                   "nullability": "unspecified"
@@ -31133,7 +31150,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
+              "signature": "@Beta public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A parameter1, final B parameter2, final C parameter3, final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException",
               "return_type": "ContinuableFuture<R>",
               "type_params": [
                 {
@@ -31163,19 +31180,19 @@
               ],
               "params": [
                 {
-                  "name": "a",
+                  "name": "parameter1",
                   "type": "A",
                   "javadoc": "The first parameter to pass to the SQL action",
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "b",
+                  "name": "parameter2",
                   "type": "B",
                   "javadoc": "The second parameter to pass to the SQL action",
                   "nullability": "unspecified"
                 },
                 {
-                  "name": "c",
+                  "name": "parameter3",
                   "type": "C",
                   "javadoc": "The third parameter to pass to the SQL action",
                   "nullability": "unspecified"
@@ -35288,7 +35305,8 @@
               ],
               "throws": [
                 {
-                  "type": "java.lang.IllegalArgumentException"
+                  "type": "java.lang.IllegalArgumentException",
+                  "condition": "if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}"
                 },
                 {
                   "type": "java.sql.SQLException",
@@ -37674,7 +37692,7 @@
               "throws": [],
               "javadoc_summary": "Retrieves the SQL and parameter setter for delete operations.",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class, \"employees\", \"projects\"); Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSql = joinInfo.getDeleteSqlAndParamSetter(PSC.class); String deleteSql = deleteSql._1; // Main delete SQL String middleTableDeleteSql = deleteSql._2; // Join table delete SQL (if many-to-many) Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteSql._3; } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class, \"employees\", \"projects\"); Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteTuple = joinInfo.getDeleteSqlAndParamSetter(PSC.class); String deleteSql = deleteTuple._1; // Main delete SQL String middleTableDeleteSql = deleteTuple._2; // Join table delete SQL (if many-to-many) Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteTuple._3; } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -43759,8 +43777,7 @@
               "javadoc_summary": "Specifies the action to take when a referenced entity is deleted.",
               "contract": [
                 "Specifies the action to take when a referenced entity is deleted.",
-                "<p> <strong> Note: </strong> This functionality should be implemented at the database level using foreign key constraints rather than in the application layer.",
-                "</p> <p> Available actions correspond to standard SQL ON DELETE behaviors: </p> <ul> <li> {@link OnDeleteAction#NO_ACTION} - Default, no automatic action </li> <li> {@link OnDeleteAction#CASCADE} - Delete dependent records </li> <li> {@link OnDeleteAction#SET_NULL} - Set foreign key to NULL </li> <li> SET_DEFAULT - Set foreign key to default value (not currently supported) </li> <li> RESTRICT - Prevent deletion if dependencies exist (use NO_ACTION instead) </li> </ul>"
+                "<p> <strong> Note: </strong> This functionality should be implemented at the database level using foreign key constraints rather than in the application layer."
               ],
               "examples": [],
               "see_also": []
@@ -44023,7 +44040,7 @@
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Specifies the SQL statement to execute.",
+              "javadoc_summary": "Specifies inline SQL statement lines to execute.",
               "contract": [
                 "<p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax when {@link #fragmentContainsNamedParameters()} is {@code true} </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.",
                 "</li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query(\"SELECT * FROM users WHERE age > :minAge\") List<User> findByAge(@Bind(\"minAge\") int minAge); // Multiple parameters @Query(\"SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge\") List<User> findByAgeRange(@Bind(\"minAge\") int min, @Bind(\"maxAge\") int max); // Nested property access @Query(\"SELECT * FROM orders WHERE user_id = :user.id AND status = :status\") List<Order> findOrders(@Bind(\"user\") User user, @Bind(\"status\") String status); // IN clause with collection @Query(\"SELECT * FROM users WHERE id IN (:ids)\") List<User> findByIds(@Bind(\"ids\") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query(\"SELECT u.*, COUNT(o.id) as order_count \" + \"FROM users u LEFT JOIN orders o ON u.id = o.user_id \" + \"WHERE u.created_date > :startDate \" + \"GROUP BY u.id HAVING COUNT(o.id) > :minOrders\") List<UserStats> findUserStats(@Bind(\"startDate\") Date startDate, @Bind(\"minOrders\") int minOrders); // Common Table Expression (CTE) @Query(\"WITH recent_orders AS ( \" + \" SELECT user_id, COUNT(*) as order_count \" + \" FROM orders WHERE order_date > :since \" + \" GROUP BY user_id \" + \") \" + \"SELECT u.*, ro.order_count \" + \"FROM users u JOIN recent_orders ro ON u.id = ro.user_id\") List<UserOrderSummary> findActiveUserSummary(@Bind(\"since\") Date since); // Window function @Query(\"SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank \" + \"FROM employees WHERE department = :dept\") List<Employee> rankEmployeesByDepartment(@Bind(\"dept\") String department); } </pre> <p> Note: Either {@code value} or {@link #id()} should be specified, but not both.",
@@ -44043,9 +44060,9 @@
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Specifies the ID of a SQL statement defined in an external SQL mapper.",
+              "javadoc_summary": "Specifies SQL statement identifier lines defined in an external SQL mapper.",
               "contract": [
-                "It must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER} .",
+                "Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER} .",
                 "// </sql> } </pre> <p> Note: Either {@link #value()} or {@code id} should be specified, but not both."
               ],
               "examples": [],
@@ -44493,7 +44510,7 @@
               "javadoc_summary": "Supplies an optional identifier that overrides the annotated field name when the SQL is registered.",
               "contract": [
                 "Supplies an optional identifier that overrides the annotated field name when the SQL is registered.",
-                "When left empty the declaration name (for example {@code sql_listUserWithBiggerId} ) becomes the key, but setting a custom id makes it possible to share the same SQL across differently named constants or shorten the token referenced from {@link Query} ."
+                "When left empty, the declaration name (for example {@code sql_listUserWithBiggerId} ) becomes the key."
               ],
               "examples": [],
               "see_also": []
@@ -47447,7 +47464,9 @@
                 }
               ],
               "javadoc_summary": "Queries for a String value from a single property of the entity with the specified ID.",
-              "contract": [],
+              "contract": [
+                "Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} ."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -47482,7 +47501,9 @@
                 }
               ],
               "javadoc_summary": "Queries for a Date value from a single property of the entity with the specified ID.",
-              "contract": [],
+              "contract": [
+                "Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} ."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -47554,7 +47575,9 @@
                 }
               ],
               "javadoc_summary": "Queries for a Timestamp value from a single property of the entity with the specified ID.",
-              "contract": [],
+              "contract": [
+                "Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} ."
+              ],
               "examples": [],
               "see_also": []
             },
@@ -49486,7 +49509,7 @@
               "javadoc_summary": "Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.",
               "contract": [
                 "Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders and addresses User user = userDao.gett(123L, {@code null}, Arrays.asList(Order.class, Address.class)); if (user != null) { processUserWithRelations(user); } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders and addresses User user = userDao.gett(123L, null, Arrays.asList(Order.class, Address.class)); if (user != null) { processUserWithRelations(user); } } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -53722,7 +53745,7 @@
               "javadoc_summary": "Returns a paginated Stream of query results as Dataset pages.",
               "contract": [
                 "The condition must include orderBy for consistent pagination.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Stream<Dataset> pages = dao.paginate( Filters.criteria().where(Filters.gt(\"id\", 0)).orderBy(\"id\"), 100, (query, lastPageResult) -> { if (lastPageResult != {@code null} && lastPageResult.size() > 0) { long lastId = lastPageResult.getLong(lastPageResult.size() - 1, \"id\"); query.setLong(1, lastId); } } ); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Stream<Dataset> pages = dao.paginate( Filters.criteria().where(Filters.gt(\"id\", 0)).orderBy(\"id\"), 100, (query, lastPageResult) -> { if (lastPageResult != null && lastPageResult.size() > 0) { long lastId = lastPageResult.getLong(lastPageResult.size() - 1, \"id\"); query.setLong(1, lastId); } } ); } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -54789,7 +54812,7 @@
               "throws": [],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Internal use only - not intended for public use",
+                "message": "Internal use only.",
                 "for_removal": false
               },
               "javadoc_summary": "Retrieves the class type of the target DAO interface.",
@@ -54810,7 +54833,7 @@
               "throws": [],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Internal use only - not intended for public use",
+                "message": "Internal use only.",
                 "for_removal": false
               },
               "javadoc_summary": "Retrieves the class type of the target entity.",
@@ -54831,7 +54854,7 @@
               "throws": [],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Internal use only - not intended for public use",
+                "message": "Internal use only.",
                 "for_removal": false
               },
               "javadoc_summary": "Retrieves the name of the target table.",
@@ -54852,7 +54875,7 @@
               "throws": [],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Internal use only - not intended for public use",
+                "message": "Internal use only.",
                 "for_removal": false
               },
               "javadoc_summary": "Retrieves the executor for executing tasks in parallel.",
@@ -62461,6 +62484,7 @@
               ],
               "javadoc_summary": "Returns a {@code Nullable<byte[]>} describing the value of a single property for the entity with the specified ID.",
               "contract": [
+                "The returned {@code Nullable} can contain {@code null} if the database value is {@code null} .",
                 "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<byte[]> avatar = userDao.queryForBytes(\"profileImage\", userId); if (avatar.isPresent()) { displayImage(avatar.get()); } } </pre>"
               ],
               "examples": [],
@@ -72347,7 +72371,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "A specialized CRUD DAO interface that disables update operations while allowing read, insert, and delete operations.",
+          "javadoc_summary": "A specialized CRUD DAO interface that disables update and delete operations while allowing read and insert operations.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [
@@ -72696,9 +72720,7 @@
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
-              "contract": [
-                "This DAO type ensures that once data is inserted, it cannot be modified, only deleted if necessary."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -72732,9 +72754,7 @@
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
-              "contract": [
-                "If a record already exists, it must be deleted first before inserting a new version."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -72992,19 +73012,19 @@
                 {
                   "name": "entity",
                   "type": "T",
-                  "javadoc": "The entity to delete (operation will fail)",
+                  "javadoc": "the entity to delete (operation will fail)",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.UnsupportedOperationException",
-                  "condition": "Always thrown to maintain API consistency"
+                  "condition": "always thrown as delete operations are not supported"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Use {@link #deleteById(Object)} or other delete methods instead",
+                "message": "This operation is not supported and will always throw an exception",
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
@@ -73026,19 +73046,19 @@
                 {
                   "name": "id",
                   "type": "ID",
-                  "javadoc": "The ID of the entity to delete (operation will fail)",
+                  "javadoc": "the ID of the entity to delete (operation will fail)",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.UnsupportedOperationException",
-                  "condition": "Always thrown to maintain API consistency"
+                  "condition": "always thrown as delete operations are not supported"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Use other delete methods that are not deprecated",
+                "message": "This operation is not supported and will always throw an exception",
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
@@ -73060,19 +73080,19 @@
                 {
                   "name": "entities",
                   "type": "Collection<? extends T>",
-                  "javadoc": "Collection of entities to delete (operation will fail)",
+                  "javadoc": "collection of entities to delete (operation will fail)",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.UnsupportedOperationException",
-                  "condition": "Always thrown to maintain API consistency"
+                  "condition": "always thrown as delete operations are not supported"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Use {@link #batchDeleteByIds(Collection)} or condition-based delete methods",
+                "message": "This operation is not supported and will always throw an exception",
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
@@ -73094,25 +73114,25 @@
                 {
                   "name": "entities",
                   "type": "Collection<? extends T>",
-                  "javadoc": "Collection of entities to delete (operation will fail)",
+                  "javadoc": "collection of entities to delete (operation will fail)",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "batchSize",
                   "type": "int",
-                  "javadoc": "The batch size for the operation (operation will fail)",
+                  "javadoc": "the batch size for the operation (operation will fail)",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.UnsupportedOperationException",
-                  "condition": "Always thrown to maintain API consistency"
+                  "condition": "always thrown as delete operations are not supported"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Use {@link #batchDeleteByIds(Collection, int)} or condition-based delete methods",
+                "message": "This operation is not supported and will always throw an exception",
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
@@ -73134,19 +73154,19 @@
                 {
                   "name": "ids",
                   "type": "Collection<? extends ID>",
-                  "javadoc": "Collection of IDs to delete (operation will fail)",
+                  "javadoc": "collection of IDs to delete (operation will fail)",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.UnsupportedOperationException",
-                  "condition": "Always thrown to maintain API consistency"
+                  "condition": "always thrown as delete operations are not supported"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Use condition-based delete methods instead",
+                "message": "This operation is not supported and will always throw an exception",
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
@@ -73168,25 +73188,25 @@
                 {
                   "name": "ids",
                   "type": "Collection<? extends ID>",
-                  "javadoc": "Collection of IDs to delete (operation will fail)",
+                  "javadoc": "collection of IDs to delete (operation will fail)",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "batchSize",
                   "type": "int",
-                  "javadoc": "The batch size for the operation (operation will fail)",
+                  "javadoc": "the batch size for the operation (operation will fail)",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.UnsupportedOperationException",
-                  "condition": "Always thrown to maintain API consistency"
+                  "condition": "always thrown as delete operations are not supported"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "Use condition-based delete methods instead",
+                "message": "This operation is not supported and will always throw an exception",
                 "for_removal": false
               },
               "javadoc_summary": "This operation is not supported in a no-update DAO.",
