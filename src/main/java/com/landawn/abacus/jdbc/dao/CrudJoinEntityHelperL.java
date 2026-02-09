@@ -150,7 +150,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses loaded
-     * Optional<User> user = userDao.get(123L, {@code null}, Arrays.asList(Order.class, Address.class));
+     * Optional<User> user = userDao.get(123L, null, Arrays.asList(Order.class, Address.class));
      * }</pre>
      *
      * @param id the primitive long ID of the entity to retrieve
@@ -292,7 +292,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses
-     * User user = userDao.gett(123L, {@code null}, Arrays.asList(Order.class, Address.class));
+     * User user = userDao.gett(123L, null, Arrays.asList(Order.class, Address.class));
      * if (user != null) {
      *     processUserWithRelations(user);
      * }

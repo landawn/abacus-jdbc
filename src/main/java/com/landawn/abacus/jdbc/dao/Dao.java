@@ -1947,7 +1947,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *     Filters.criteria().where(Filters.gt("id", 0)).orderBy("id"),
      *     100,
      *     (query, lastPageResult) -> {
-     *         if (lastPageResult != {@code null} && lastPageResult.size() > 0) {
+     *         if (lastPageResult != null && lastPageResult.size() > 0) {
      *             long lastId = lastPageResult.getLong(lastPageResult.size() - 1, "id");
      *             query.setLong(1, lastId);
      *         }
@@ -2422,7 +2422,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <pre>{@code
      * dao.asyncRun(d -> {
      *     d.delete(Filters.lt("createdDate", oneYearAgo));
-     *     d.update("archived", {@code true}, Filters.lt("lastAccess", sixMonthsAgo));
+     *     d.update("archived", true, Filters.lt("lastAccess", sixMonthsAgo));
      * });
      * }</pre>
      *

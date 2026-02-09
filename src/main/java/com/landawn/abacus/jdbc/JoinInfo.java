@@ -783,11 +783,11 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     deleteSql = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
+     *     deleteTuple = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
      *
-     * String deleteSql = deleteSql._1;  // Main delete SQL
-     * String middleTableDeleteSql = deleteSql._2;  // Join table delete SQL (if many-to-many)
-     * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteSql._3;
+     * String deleteSql = deleteTuple._1;  // Main delete SQL
+     * String middleTableDeleteSql = deleteTuple._2;  // Join table delete SQL (if many-to-many)
+     * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteTuple._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)

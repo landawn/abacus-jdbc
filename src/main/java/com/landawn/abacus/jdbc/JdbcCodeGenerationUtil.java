@@ -1368,7 +1368,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Generates an UPDATE SQL statement for the specified table using an existing connection,
+     * Generates an UPDATE SQL statement for the specified table through a data source,
      * excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
      * <p>
      * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns
@@ -1596,7 +1596,7 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Generates a named UPDATE SQL statement for the specified table using an existing connection,
+     * Generates a named UPDATE SQL statement for the specified table through a data source,
      * excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
      * <p>
      * This method creates an UPDATE statement that includes columns in the SET clause (excluding specified columns

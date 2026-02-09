@@ -79,10 +79,11 @@ import com.landawn.abacus.util.stream.Stream;
 @SuppressWarnings({ "RedundantThrows", "resource" })
 public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     /**
-     * Retrieves the class type of the target DAO interface. This method is Internal use only.
+     * Retrieves the class type of the target DAO interface.
+     * Internal use only.
      *
      * @return the class type of the target DAO interface
-     * @deprecated Internal use only - not intended for public use
+     * @deprecated Internal use only.
      */
     @Deprecated
     @NonDBOperation
@@ -90,10 +91,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Class<TD> targetDaoInterface();
 
     /**
-     * Retrieves the class type of the target entity. This method is Internal use only.
+     * Retrieves the class type of the target entity.
+     * Internal use only.
      *
      * @return the class type of the target entity
-     * @deprecated Internal use only - not intended for public use
+     * @deprecated Internal use only.
      */
     @Deprecated
     @NonDBOperation
@@ -101,10 +103,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     Class<T> targetEntityClass();
 
     /**
-     * Retrieves the name of the target table. This method is Internal use only.
+     * Retrieves the name of the target table.
+     * Internal use only.
      *
      * @return the name of the target table
-     * @deprecated Internal use only - not intended for public use
+     * @deprecated Internal use only.
      */
     @Deprecated
     @NonDBOperation
@@ -112,10 +115,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
     String targetTableName();
 
     /**
-     * Retrieves the executor for executing tasks in parallel. This method is Internal use only.
+     * Retrieves the executor for executing tasks in parallel.
+     * Internal use only.
      *
      * @return the executor for executing parallel tasks
-     * @deprecated Internal use only - not intended for public use
+     * @deprecated Internal use only.
      */
     @Deprecated
     @NonDBOperation
@@ -183,7 +187,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find first user with all join entities loaded
-     * Optional<User> user = userDao.findFirst(null, {@code true}, Filters.eq("status", "active"));
+     * Optional<User> user = userDao.findFirst(null, true, Filters.eq("status", "active"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -271,7 +275,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find the only active user and load all their join entities
-     * Optional<User> user = userDao.findOnlyOne(Arrays.asList("id", "name", "email"), {@code true}, Filters.eq("status", "active"));
+     * Optional<User> user = userDao.findOnlyOne(Arrays.asList("id", "name", "email"), true, Filters.eq("status", "active"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -371,7 +375,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get all premium users with all their related data loaded
-     * List<User> users = userDao.list(Arrays.asList("id", "name", "email"), {@code true}, Filters.eq("membershipType", "premium"));
+     * List<User> users = userDao.list(Arrays.asList("id", "name", "email"), true, Filters.eq("membershipType", "premium"));
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected from the main entity, excluding join entity properties.
@@ -468,7 +472,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all entities with complete data
-     * userDao.stream(null, {@code true}, Filters.alwaysTrue())
+     * userDao.stream(null, true, Filters.alwaysTrue())
      *     .limit(100)
      *     .forEach(user -> exportUserData(user));
      * }</pre>

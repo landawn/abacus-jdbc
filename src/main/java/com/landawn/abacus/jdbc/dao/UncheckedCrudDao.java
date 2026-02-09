@@ -532,6 +532,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Returns a {@code Nullable<byte[]>} describing the value of a single property for the entity with the specified ID.
+     * The returned {@code Nullable} can contain {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

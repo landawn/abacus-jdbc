@@ -394,9 +394,9 @@ public final class DBLock {
      *
      * <p>This is the most flexible {@code lock} method. It tries to acquire the lock by inserting
      * a new record into the lock table. If the initial attempt fails (meaning another process
-     * holds the lock), it will repeatedly retry after {@code retryPeriod} milliseconds until
-     * the total {@code timeout} is reached. Before each acquisition attempt, it cleans up
-     * any expired locks for the target to ensure fairness and prevent stale locks from blocking.</p>
+     * holds the lock), it will repeatedly retry after {@code retryInterval} milliseconds until
+     * the total {@code timeout} is reached. Before entering the acquisition loop, it removes
+     * any expired locks for the target to reduce stale lock contention.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

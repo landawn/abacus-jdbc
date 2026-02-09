@@ -26,7 +26,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * This interface provides convenience methods that accept primitive {@code long} values
  * in addition to the {@code Long} object methods inherited from {@link UncheckedNoUpdateCrudDao}.
  *
- * <p>This interface combines the restrictions of no-update DAO (no update operations allowed)
+ * <p>This interface combines the restrictions of no-update DAO (no update or delete operations allowed)
  * with the convenience of primitive long ID methods. It's useful for append-only data stores
  * where records can be added and read, but never modified.</p>
  *
@@ -36,7 +36,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, SQLBuilder.PSC, EventLogDao> {
- *     // Can insert and query, but not update
+ *     // Can insert and query, but not update/delete
  * }
  *
  * EventLogDao dao = JdbcUtil.createDao(EventLogDao.class, dataSource);

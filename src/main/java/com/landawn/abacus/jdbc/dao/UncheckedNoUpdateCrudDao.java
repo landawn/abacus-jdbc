@@ -25,9 +25,8 @@ import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
- * A specialized CRUD DAO interface that disables update operations while allowing read, insert, and delete operations.
- * This interface is designed for use cases where data modification is restricted to insertions and deletions only,
- * ensuring data integrity by preventing accidental updates.
+ * A specialized CRUD DAO interface that disables update and delete operations while allowing read and insert operations.
+ * This interface is designed for use cases where stored records must remain immutable after insertion.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. All methods throw {@link UncheckedSQLException} instead of checked
@@ -35,17 +34,17 @@ import com.landawn.abacus.query.condition.Condition;
  * particularly convenient for use in lambda expressions, stream operations, and other functional programming
  * patterns where checked exceptions would be cumbersome.</p>
  *
- * <p>This interface extends multiple DAO interfaces to provide comprehensive read, insert, and delete functionality while
- * blocking update operations. It's particularly useful in audit systems, append-only data stores, or scenarios
- * where historical data must remain immutable.</p>
+ * <p>This interface extends multiple DAO interfaces to provide comprehensive read/insert functionality while
+ * blocking update and delete operations. It's particularly useful in audit systems, append-only data stores,
+ * or scenarios where historical data must remain immutable.</p>
  *
- * <p>All update-related methods (including {@code update}, {@code batchUpdate}, and {@code upsert}) will throw
- * {@link UnsupportedOperationException}.</p>
+ * <p>All update-related methods (including {@code update}, {@code batchUpdate}, and {@code upsert}) and all
+ * delete-related methods will throw {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface AuditLogDao extends UncheckedNoUpdateCrudDao<AuditLog, Long, SQLBuilder.PSC, AuditLogDao> {
- *     // Only read, insert, and delete operations available
+ *     // Only read and insert operations available
  * }
  *
  * AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, dataSource);
@@ -74,9 +73,9 @@ import com.landawn.abacus.query.condition.Condition;
  * // auditDao.update(log);   // Throws exception
  * // auditDao.upsert(log);   // Throws exception
  *
- * // Delete operations work normally:
- * auditDao.deleteById(id);
- * auditDao.delete(Filters.lt("timestamp", cutoffDate));
+ * // Delete operations also throw UnsupportedOperationException:
+ * // auditDao.deleteById(id);   // Throws exception
+ * // auditDao.delete(Filters.lt("timestamp", cutoffDate));   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
@@ -95,7 +94,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in a no-update DAO.
      * 
      * <p>Attempting to update an entity is not allowed in this DAO implementation as it's designed
-     * to prevent any modifications to existing records. Use insert for new records or delete for removal.</p>
+     * to prevent any modifications to existing records. Use insert operations for new records.</p>
      * 
      * @param entityToUpdate The entity to update (operation will fail)
      * @return Never returns normally
@@ -112,7 +111,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in a no-update DAO.
      * 
      * <p>Attempting to update specific properties of an entity is not allowed. This DAO is designed
-     * for immutable data scenarios where records can only be inserted or deleted, never modified.</p>
+     * for immutable data scenarios where records can only be inserted and queried, never modified or deleted.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -190,8 +189,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
     /**
      * This operation is not supported in a no-update DAO.
      * 
-     * <p>Batch update operations are not allowed. For bulk operations, consider using batch insert
-     * for new records or batch delete for removing existing records.</p>
+     * <p>Batch update operations are not allowed. For bulk operations, use batch insert
+     * for new records.</p>
      * 
      * @param entities Collection of entities to update (operation will fail)
      * @return Never returns normally
@@ -244,7 +243,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in a no-update DAO.
      * 
      * <p>Batch update with specific properties and custom batch size is not allowed. This DAO type
-     * ensures that once data is inserted, it cannot be modified, only deleted if necessary.</p>
+     * ensures that once data is inserted, it cannot be modified or deleted through this DAO.</p>
      * 
      * @param entities Collection of entities to update (operation will fail)
      * @param propNamesToUpdate Properties to update in each entity (operation will fail)
@@ -264,8 +263,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
      * This operation is not supported in a no-update DAO.
      * 
      * <p>The upsert (insert-or-update) operation is not allowed because it includes update functionality.
-     * Use insert operations for new records only. If a record already exists, it must be deleted first
-     * before inserting a new version.</p>
+     * Use insert operations for new records only.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -397,20 +395,18 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
 
     /**
      * This operation is not supported in a no-update DAO.
-     * 
-     * <p>While this DAO supports delete operations, this particular method signature is deprecated
-     * to maintain API consistency. Use {@link #deleteById(Object)} or other delete methods instead.</p>
-     * 
-     * <p>Example of preferred approach:
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Instead of: dao.delete(entity);
-     * // Use: dao.deleteById(entity.getId());
+     * // This will throw UnsupportedOperationException
+     * dao.delete(entity);
      * }</pre>
-     * 
-     * @param entity The entity to delete (operation will fail)
-     * @return Never returns normally
-     * @throws UnsupportedOperationException Always thrown to maintain API consistency
-     * @deprecated Use {@link #deleteById(Object)} or other delete methods instead
+     *
+     * @param entity the entity to delete (operation will fail)
+     * @return never returns normally
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -420,23 +416,18 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
 
     /**
      * This operation is not supported in a no-update DAO.
-     * 
-     * <p>While delete operations are generally supported, this specific method is deprecated.
-     * Use alternative delete methods that don't require passing the entire entity.</p>
-     * 
-     * <p>Example of preferred approach:
-     * <pre>{@code
-     * // Preferred way to delete by ID
-     * int deletedCount = dao.deleteById(123L);
+     * Always throws {@code UnsupportedOperationException}.
      *
-     * // Or delete by condition
-     * int deletedCount = dao.delete(Filters.eq("status", "INACTIVE"));
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // This will throw UnsupportedOperationException
+     * dao.deleteById(123L);
      * }</pre>
-     * 
-     * @param id The ID of the entity to delete (operation will fail)
-     * @return Never returns normally
-     * @throws UnsupportedOperationException Always thrown to maintain API consistency
-     * @deprecated Use other delete methods that are not deprecated
+     *
+     * @param id the ID of the entity to delete (operation will fail)
+     * @return never returns normally
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -446,14 +437,12 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
 
     /**
      * This operation is not supported in a no-update DAO.
-     * 
-     * <p>Batch delete by entity collection is deprecated in this interface. Use batch delete
-     * methods that operate on IDs or conditions instead.</p>
-     * 
-     * @param entities Collection of entities to delete (operation will fail)
-     * @return Never returns normally
-     * @throws UnsupportedOperationException Always thrown to maintain API consistency
-     * @deprecated Use {@link #batchDeleteByIds(Collection)} or condition-based delete methods
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * @param entities collection of entities to delete (operation will fail)
+     * @return never returns normally
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -463,15 +452,13 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
 
     /**
      * This operation is not supported in a no-update DAO.
-     * 
-     * <p>Batch delete with custom batch size is deprecated. Use alternative batch delete methods
-     * that operate on IDs or conditions.</p>
-     * 
-     * @param entities Collection of entities to delete (operation will fail)
-     * @param batchSize The batch size for the operation (operation will fail)
-     * @return Never returns normally
-     * @throws UnsupportedOperationException Always thrown to maintain API consistency
-     * @deprecated Use {@link #batchDeleteByIds(Collection, int)} or condition-based delete methods
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * @param entities collection of entities to delete (operation will fail)
+     * @param batchSize the batch size for the operation (operation will fail)
+     * @return never returns normally
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -481,20 +468,18 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
 
     /**
      * This operation is not supported in a no-update DAO.
-     * 
-     * <p>Batch delete by ID collection is deprecated in this interface. Use condition-based
-     * delete methods for bulk deletions.</p>
-     * 
-     * <p>Example of alternative approach:
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Instead of: dao.batchDeleteByIds(Arrays.asList(1L, 2L, 3L));
-     * // Use: dao.delete(Filters.in("id", Arrays.asList(1L, 2L, 3L)));
+     * // This will throw UnsupportedOperationException
+     * dao.batchDeleteByIds(Arrays.asList(1L, 2L, 3L));
      * }</pre>
-     * 
-     * @param ids Collection of IDs to delete (operation will fail)
-     * @return Never returns normally
-     * @throws UnsupportedOperationException Always thrown to maintain API consistency
-     * @deprecated Use condition-based delete methods instead
+     *
+     * @param ids collection of IDs to delete (operation will fail)
+     * @return never returns normally
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override
@@ -504,15 +489,13 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD exten
 
     /**
      * This operation is not supported in a no-update DAO.
-     * 
-     * <p>Batch delete by IDs with custom batch size is deprecated. Use condition-based delete
-     * methods which provide more flexibility and better performance.</p>
-     * 
-     * @param ids Collection of IDs to delete (operation will fail)
-     * @param batchSize The batch size for the operation (operation will fail)
-     * @return Never returns normally
-     * @throws UnsupportedOperationException Always thrown to maintain API consistency
-     * @deprecated Use condition-based delete methods instead
+     * Always throws {@code UnsupportedOperationException}.
+     *
+     * @param ids collection of IDs to delete (operation will fail)
+     * @param batchSize the batch size for the operation (operation will fail)
+     * @return never returns normally
+     * @throws UnsupportedOperationException always thrown as delete operations are not supported
+     * @deprecated This operation is not supported and will always throw an exception
      */
     @Deprecated
     @Override

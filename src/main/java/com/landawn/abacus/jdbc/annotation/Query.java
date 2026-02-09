@@ -142,8 +142,9 @@ import com.landawn.abacus.util.RegExUtil;
 public @interface Query {
 
     /**
-     * Specifies the SQL statement to execute.
-     * This can be any valid SQL statement including SELECT, INSERT, UPDATE, DELETE, or even stored procedure calls.
+     * Specifies inline SQL statement lines to execute.
+     * This can contain any valid SQL including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
+     * Multiple array entries are concatenated in declaration order to form the final SQL text.
      *
      * <p>The SQL can include:</p>
      * <ul>
@@ -201,14 +202,14 @@ public @interface Query {
      * <p>Note: Either {@code value} or {@link #id()} should be specified, but not both.
      * If neither is specified, the framework may attempt to derive the SQL based on the method name and entity mapping.</p>
      *
-     * @return the SQL statement to execute, or empty string if using {@link #id()}
+     * @return inline SQL statement lines; empty by default when using {@link #id()}
      */
     String[] value() default {}; // default ""; // inline SQL statements;
 
     /**
-     * Specifies the ID of a SQL statement defined in an external SQL mapper.
+     * Specifies SQL statement identifier lines defined in an external SQL mapper.
      * This allows SQL to be defined separately from Java code, enabling better organization and reusability.
-     * It must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
+     * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
      * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlMapper} annotation,
      * which points to XML files or other configuration sources containing SQL definitions.</p>
@@ -249,7 +250,7 @@ public @interface Query {
      *
      * <p>Note: Either {@link #value()} or {@code id} should be specified, but not both.</p>
      *
-     * @return the SQL statement ID from the SQL mapper, or empty string if using {@link #value()}
+     * @return SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
      * @see RegExUtil#JAVA_IDENTIFIER_MATCHER
      */
     String[] id() default {}; // default ""; // id defined SqlMapper
@@ -569,7 +570,7 @@ public @interface Query {
      * <pre>{@code
      * // Finding currently active records
      * @Query(value = "SELECT * FROM promotions WHERE {whereClause}", fragmentContainsNamedParameters = true)
-     * List<Promotion> findActivePromotions(@SqlFragment("{whereClause}") String whereClause);
+     * List<Promotion> findActivePromotions(@SqlFragment("whereClause") String whereClause);
      * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
      * }</pre>
      *

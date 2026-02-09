@@ -62,7 +62,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * log.setTimestamp(new Date());
  * Long id = auditLogDao.insert(log);   // Works - returns generated ID
  *
- * AuditLog retrieved = auditLogDao.gett(id);   // Works (returns {@code null} if not found)
+ * AuditLog retrieved = auditLogDao.gett(id);   // Works (returns null if not found)
  * Optional<AuditLog> optional = auditLogDao.get(id);   // Works (returns Optional)
  * boolean exists = auditLogDao.exists(id);   // Works
  *

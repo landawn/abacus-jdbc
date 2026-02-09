@@ -75,7 +75,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Order.class);
      * }</pre>
@@ -98,7 +98,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Order.class);
      * }</pre>
@@ -121,7 +121,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, "orders");
      * }</pre>
@@ -144,7 +144,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, "orders");
      * }</pre>
@@ -167,7 +167,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"));
      * }</pre>
@@ -190,7 +190,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), true);
      * }</pre>
@@ -215,7 +215,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), executor);
@@ -240,7 +240,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"));
      * }</pre>
@@ -263,7 +263,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), true);
      * }</pre>
@@ -288,7 +288,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), executor);
@@ -314,7 +314,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(user);
      * }</pre>
@@ -336,7 +336,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(user, true);
      * }</pre>
@@ -359,7 +359,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.selectById(123L);
+     * User user = ...;
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(user, executor);
@@ -383,7 +383,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(users);
      * }</pre>
@@ -405,7 +405,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(users, true);
      * }</pre>
@@ -428,7 +428,7 @@ public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = userDao.selectByIds(Arrays.asList(123L, 456L));
+     * List<User> users = ...;
      * ExecutorService executor = Executors.newFixedThreadPool(4);
      * // This will throw UnsupportedOperationException
      * userDao.deleteAllJoinEntities(users, executor);

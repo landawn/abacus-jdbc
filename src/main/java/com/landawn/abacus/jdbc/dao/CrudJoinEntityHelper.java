@@ -466,7 +466,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * <pre>{@code
      * // Get users with orders and profiles loaded
      * List<User> users = userDao.batchGet(userIds,
-     *                                     {@code null},  // Select all user properties
+     *                                     null,  // Select all user properties
      *                                     Arrays.asList(Order.class, UserProfile.class));
      * }</pre>
      *
@@ -558,7 +558,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends C
      * <pre>{@code
      * // Load users with multiple relationships in batches
      * List<User> users = userDao.batchGet(userIds,
-     *                                     {@code null},  // all properties
+     *                                     null,  // all properties
      *                                     50,    // batch size
      *                                     Arrays.asList(Order.class, UserProfile.class, Role.class));
      * }</pre>

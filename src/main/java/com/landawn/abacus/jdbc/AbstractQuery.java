@@ -4683,6 +4683,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return A {@code Nullable<java.sql.Date>} containing the Date value if at least one
      *         row is returned; otherwise {@code Nullable.empty()}
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
     public Nullable<java.sql.Date> queryForDate() throws IllegalStateException, SQLException {
@@ -5603,6 +5604,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map the result row to
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
      * @throws IllegalArgumentException If {@code targetType} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueResult(Class)
@@ -5631,7 +5634,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5661,7 +5666,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5714,6 +5721,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return The mapped object if exactly one record is found, otherwise {@code null}
      * @throws IllegalArgumentException If {@code targetType} is {@code null} or if the target type is invalid
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5756,8 +5764,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5801,8 +5810,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null} or if the {@code rowMapper} returns {@code null} for the found record
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicatedResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5874,6 +5884,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType the class to map the result row to
      * @return An {@code Optional} containing the first result, or empty if no result is found
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueResult(Class)
      * @see #queryForUniqueNonNull(Class)
@@ -5899,6 +5912,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findFirst(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
@@ -5924,8 +5939,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code RowFilter} used to filter the rows in the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first matching result, or empty if no match is found
+     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @deprecated Use {@code stream(RowFilter, RowMapper).first()} instead
      */
     @Deprecated
@@ -5955,6 +5972,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findFirst(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
@@ -5981,7 +6000,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code BiRowFilter} used to filter the rows in the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first matching result, or empty if no match is found
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
+     * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
      * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).first()} instead
      */
@@ -6032,6 +6053,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return The first result mapped to the specified type, or {@code null} if no result is found
      * @throws IllegalArgumentException If targetType is null
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public <T> T findFirstOrNull(final Class<? extends T> targetType) throws NullPointerException, SQLException {
@@ -6064,9 +6086,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return The first result mapped by the rowMapper, or {@code null} if no result is found
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException If {@code rowMapper} returns {@code null} for the found record
      */
     public <T> T findFirstOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
         checkArgNotNull(rowMapper, cs.rowMapper);
@@ -6101,7 +6124,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code RowFilter} used to filter rows
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return The first matching result, or {@code null} if no match is found
+     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
      * @deprecated Use {@code stream(RowFilter, RowMapper).first()} instead
      */
@@ -6142,7 +6167,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return The first result mapped by the rowMapper, or {@code null} if no result is found
+     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public <T> T findFirstOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException {
@@ -6178,7 +6205,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code BiRowFilter} used to filter rows
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return The first matching result, or {@code null} if no match is found
+     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
+     * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
      * @deprecated Use {@code stream(BiRowFilter, BiRowMapper).first()} instead
      */

@@ -1258,6 +1258,7 @@ public final class JdbcUtils {
      * @param insertSql the SQL insert statement with placeholders
      * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
@@ -1340,6 +1341,7 @@ public final class JdbcUtils {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
      * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception

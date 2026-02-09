@@ -86,8 +86,6 @@ public @interface OnDelete {
      *   <li>{@link OnDeleteAction#NO_ACTION} - Default, no automatic action</li>
      *   <li>{@link OnDeleteAction#CASCADE} - Delete dependent records</li>
      *   <li>{@link OnDeleteAction#SET_NULL} - Set foreign key to NULL</li>
-     *   <li>SET_DEFAULT - Set foreign key to default value (not currently supported)</li>
-     *   <li>RESTRICT - Prevent deletion if dependencies exist (use NO_ACTION instead)</li>
      * </ul>
      *
      * @return the delete action, defaults to {@link OnDeleteAction#NO_ACTION}

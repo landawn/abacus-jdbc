@@ -230,6 +230,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -249,6 +250,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a Date value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -288,6 +290,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
+     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -484,6 +487,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param id the primitive long ID of the entity to retrieve
      * @return an Optional containing the entity if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id) throws SQLException {
@@ -505,6 +509,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @return an Optional containing the entity if found, otherwise empty
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
@@ -526,6 +531,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param id the primitive long ID of the entity to retrieve
      * @return the entity if found, otherwise null
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default T gett(final long id) throws SQLException {
@@ -550,6 +556,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @return the entity if found, otherwise null
+     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {
@@ -598,7 +605,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Updates a single property of an entity identified by ID.
      * This is a convenience method that accepts a primitive long ID.
-     * This is a convenience method for updating one field.
+     * This convenience method updates one field.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

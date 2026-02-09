@@ -80,9 +80,9 @@ public @interface SqlScript {
 
     /**
      * Supplies an optional identifier that overrides the annotated field name when the SQL is
-     * registered. When left empty the declaration name (for example {@code sql_listUserWithBiggerId}) becomes
-     * the key, but setting a custom id makes it possible to share the same SQL across differently
-     * named constants or shorten the token referenced from {@link Query}.
+     * registered. When left empty, the declaration name (for example {@code sql_listUserWithBiggerId})
+     * becomes the key. Setting a custom id makes it possible to share the same SQL across
+     * differently named constants or to shorten the token referenced from {@link Query}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -91,7 +91,7 @@ public @interface SqlScript {
      *         PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
      * }</pre>
      *
-     * @return the identifier used to reference the SQL when invoking {@link Query#id()}, Actual field name is used when it's empty.
+     * @return the identifier used by {@link Query#id()}; empty means the annotated field name is used
      */
     String id() default ""; // default will be field name.
 }
