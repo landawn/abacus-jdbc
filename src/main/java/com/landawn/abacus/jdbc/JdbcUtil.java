@@ -1855,14 +1855,14 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs The {@link ResultSet} to skip rows in.
-     * @param n The number of rows to skip.
-     * @return The number of rows actually skipped, which may be less than {@code n} if the end of the
+     * @param rowsToSkip The number of rows to skip.
+     * @return The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the
      *         {@code ResultSet} is reached.
      * @throws SQLException If a database access error occurs or the result set type is {@code TYPE_FORWARD_ONLY}.
      * @see #skip(ResultSet, long)
      */
-    public static int skip(final ResultSet rs, final int n) throws SQLException {
-        return skip(rs, (long) n);
+    public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException {
+        return skip(rs, (long) rowsToSkip);
     }
 
     private static final Set<Class<?>> resultSetClassNotSupportAbsolute = ConcurrentHashMap.newKeySet();
@@ -1888,29 +1888,29 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs The {@link ResultSet} to skip rows in.
-     * @param n The number of rows to skip.
+     * @param rowsToSkip The number of rows to skip.
      * @return The number of rows actually skipped.
      * @throws SQLException If a database access error occurs.
      * @see ResultSet#absolute(int)
      */
-    public static int skip(final ResultSet rs, long n) throws SQLException {
-        if (n <= 0) {
+    public static int skip(final ResultSet rs, long rowsToSkip) throws SQLException {
+        if (rowsToSkip <= 0) {
             return 0;
-        } else if (n == 1) {
+        } else if (rowsToSkip == 1) {
             return rs.next() ? 1 : 0;
         } else {
             final int currentRow = rs.getRow();
 
-            if ((n > Integer.MAX_VALUE) || (n > Integer.MAX_VALUE - currentRow)
+            if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow)
                     || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
-                while (n-- > 0L && rs.next()) {
+                while (rowsToSkip-- > 0L && rs.next()) {
                     // continue.
                 }
             } else {
                 try {
-                    rs.absolute((int) n + currentRow);
+                    rs.absolute((int) rowsToSkip + currentRow);
                 } catch (final SQLException e) {
-                    while (n-- > 0L && rs.next()) {
+                    while (rowsToSkip-- > 0L && rs.next()) {
                         // continue.
                     }
 
@@ -5943,13 +5943,13 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(final long n) throws IllegalArgumentException {
-                N.checkArgNotNegative(n, cs.n);
+            public void advance(final long count) throws IllegalArgumentException {
+                N.checkArgNotNegative(count, cs.n);
 
-                final long m = hasNext ? n - 1 : n;
+                final long rowsToSkip = hasNext ? count - 1 : count;
 
                 try {
-                    JdbcUtil.skip(resultSet, m);
+                    JdbcUtil.skip(resultSet, rowsToSkip);
                 } catch (final SQLException e) {
                     throw new UncheckedSQLException(e);
                 }
@@ -6152,13 +6152,13 @@ public final class JdbcUtil {
             }
 
             @Override
-            public void advance(final long n) {
-                N.checkArgNotNegative(n, cs.n);
+            public void advance(final long count) {
+                N.checkArgNotNegative(count, cs.n);
 
-                final long m = hasNext ? n - 1 : n;
+                final long rowsToSkip = hasNext ? count - 1 : count;
 
                 try {
-                    JdbcUtil.skip(resultSet, m);
+                    JdbcUtil.skip(resultSet, rowsToSkip);
                 } catch (final SQLException e) {
                     throw new UncheckedSQLException(e);
                 }
@@ -7597,16 +7597,17 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> The type of the parameter
-     * @param t The parameter to be passed to the SQL action
+     * @param parameter The parameter to be passed to the SQL action
      * @param sqlAction The SQL action to be executed with the parameter
      * @return A ContinuableFuture representing the result of the asynchronous computation
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <T> ContinuableFuture<Void> asyncRun(final T t, final Throwables.Consumer<? super T, Exception> sqlAction) throws IllegalArgumentException {
+    public static <T> ContinuableFuture<Void> asyncRun(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction)
+            throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        return asyncExecutor.execute(() -> sqlAction.accept(t));
+        return asyncExecutor.execute(() -> sqlAction.accept(parameter));
     }
 
     /**
@@ -7625,18 +7626,18 @@ public final class JdbcUtil {
      *
      * @param <T> The type of the first parameter
      * @param <U> The type of the second parameter
-     * @param t The first parameter to be passed to the SQL action
-     * @param u The second parameter to be passed to the SQL action
+     * @param parameter1 The first parameter to be passed to the SQL action
+     * @param parameter2 The second parameter to be passed to the SQL action
      * @param sqlAction The SQL action to be executed with the parameters
      * @return A ContinuableFuture representing the result of the asynchronous computation
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <T, U> ContinuableFuture<Void> asyncRun(final T t, final U u, final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction)
-            throws IllegalArgumentException {
+    public static <T, U> ContinuableFuture<Void> asyncRun(final T parameter1, final U parameter2,
+            final Throwables.BiConsumer<? super T, ? super U, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        return asyncExecutor.execute(() -> sqlAction.accept(t, u));
+        return asyncExecutor.execute(() -> sqlAction.accept(parameter1, parameter2));
     }
 
     /**
@@ -7659,19 +7660,19 @@ public final class JdbcUtil {
      * @param <A> The type of the first parameter
      * @param <B> The type of the second parameter
      * @param <C> The type of the third parameter
-     * @param a The first parameter to be passed to the SQL action
-     * @param b The second parameter to be passed to the SQL action
-     * @param c The third parameter to be passed to the SQL action
+     * @param parameter1 The first parameter to be passed to the SQL action
+     * @param parameter2 The second parameter to be passed to the SQL action
+     * @param parameter3 The third parameter to be passed to the SQL action
      * @param sqlAction The SQL action to be executed with the parameters
      * @return A ContinuableFuture representing the result of the asynchronous computation
      * @throws IllegalArgumentException if the SQL action is {@code null}
      */
     @Beta
-    public static <A, B, C> ContinuableFuture<Void> asyncRun(final A a, final B b, final C c,
+    public static <A, B, C> ContinuableFuture<Void> asyncRun(final A parameter1, final B parameter2, final C parameter3,
             final Throwables.TriConsumer<? super A, ? super B, ? super C, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        return asyncExecutor.execute(() -> sqlAction.accept(a, b, c));
+        return asyncExecutor.execute(() -> sqlAction.accept(parameter1, parameter2, parameter3));
     }
 
     /**
@@ -7786,17 +7787,17 @@ public final class JdbcUtil {
      *
      * @param <T> The type of the parameter
      * @param <R> The type of the result
-     * @param t The parameter to pass to the SQL action
+     * @param parameter The parameter to pass to the SQL action
      * @param sqlAction The SQL action that takes a parameter and produces a result
      * @return A ContinuableFuture representing the result of the asynchronous computation
      * @throws IllegalArgumentException if the sqlAction is {@code null}
      */
     @Beta
-    public static <T, R> ContinuableFuture<R> asyncCall(final T t, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
+    public static <T, R> ContinuableFuture<R> asyncCall(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
             throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        return asyncExecutor.execute(() -> sqlAction.apply(t));
+        return asyncExecutor.execute(() -> sqlAction.apply(parameter));
     }
 
     /**
@@ -7818,18 +7819,18 @@ public final class JdbcUtil {
      * @param <T> The type of the first parameter
      * @param <U> The type of the second parameter
      * @param <R> The type of the result
-     * @param t The first parameter to pass to the SQL action
-     * @param u The second parameter to pass to the SQL action
+     * @param parameter1 The first parameter to pass to the SQL action
+     * @param parameter2 The second parameter to pass to the SQL action
      * @param sqlAction The SQL action that takes two parameters and produces a result
      * @return A ContinuableFuture representing the result of the asynchronous computation
      * @throws IllegalArgumentException if the sqlAction is {@code null}
      */
     @Beta
-    public static <T, U, R> ContinuableFuture<R> asyncCall(final T t, final U u,
+    public static <T, U, R> ContinuableFuture<R> asyncCall(final T parameter1, final U parameter2,
             final Throwables.BiFunction<? super T, ? super U, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        return asyncExecutor.execute(() -> sqlAction.apply(t, u));
+        return asyncExecutor.execute(() -> sqlAction.apply(parameter1, parameter2));
     }
 
     /**
@@ -7852,19 +7853,19 @@ public final class JdbcUtil {
      * @param <B> The type of the second parameter
      * @param <C> The type of the third parameter
      * @param <R> The type of the result
-     * @param a The first parameter to pass to the SQL action
-     * @param b The second parameter to pass to the SQL action
-     * @param c The third parameter to pass to the SQL action
+     * @param parameter1 The first parameter to pass to the SQL action
+     * @param parameter2 The second parameter to pass to the SQL action
+     * @param parameter3 The third parameter to pass to the SQL action
      * @param sqlAction The SQL action that takes three parameters and produces a result
      * @return A ContinuableFuture representing the result of the asynchronous computation
      * @throws IllegalArgumentException if the sqlAction is {@code null}
      */
     @Beta
-    public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A a, final B b, final C c,
+    public static <A, B, C, R> ContinuableFuture<R> asyncCall(final A parameter1, final B parameter2, final C parameter3,
             final Throwables.TriFunction<? super A, ? super B, ? super C, ? extends R, Exception> sqlAction) throws IllegalArgumentException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        return asyncExecutor.execute(() -> sqlAction.apply(a, b, c));
+        return asyncExecutor.execute(() -> sqlAction.apply(parameter1, parameter2, parameter3));
     }
 
     static final RowMapper<Object> NO_GENERATED_KEY_EXTRACTOR = rs -> null;
