@@ -762,7 +762,7 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testStreamAllResultSets() throws SQLException {
+    public void teststreamAllResultSets() throws SQLException {
         when(mockStatement.getResultSet()).thenReturn(mockResultSet);
         when(mockStatement.getMoreResults()).thenReturn(false);
         when(mockStatement.getUpdateCount()).thenReturn(-1);

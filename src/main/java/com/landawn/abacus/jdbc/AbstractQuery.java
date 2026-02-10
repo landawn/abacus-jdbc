@@ -5192,7 +5192,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple2<List<User>, List<Order>> results = callableQuery.query2Resultsets(
+     * Tuple2<List<User>, List<Order>> results = callableQuery.query2ResultSets(
      *     Jdbc.BiResultExtractor.toList(User.class),
      *     Jdbc.BiResultExtractor.toList(Order.class)
      * );
@@ -5210,7 +5210,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public <R1, R2> Tuple2<R1, R2> query2Resultsets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
+    public <R1, R2> Tuple2<R1, R2> query2ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor1, cs.resultExtractor1);
         checkArgNotNull(resultExtractor2, cs.resultExtractor2);
@@ -5254,7 +5254,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Tuple3<List<User>, List<Order>, Summary> results = callableQuery.query3Resultsets(
+     * Tuple3<List<User>, List<Order>, Summary> results = callableQuery.query3ResultSets(
      *     Jdbc.BiResultExtractor.toList(User.class),
      *     Jdbc.BiResultExtractor.toList(Order.class),
      *     rs -> new Summary(rs.getInt(1), rs.getDouble(2))
@@ -5273,7 +5273,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public <R1, R2, R3> Tuple3<R1, R2, R3> query3Resultsets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
+    public <R1, R2, R3> Tuple3<R1, R2, R3> query3ResultSets(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor1, cs.resultExtractor1);
@@ -5325,18 +5325,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Call a stored procedure that returns multiple result sets
-     * List<Dataset> allResults = callableQuery.queryAllResultsets();
+     * List<Dataset> allResults = callableQuery.queryAllResultSets();
      * Dataset firstResultSet = allResults.get(0);
      * Dataset secondResultSet = allResults.get(1);
      * }</pre>
      *
      * @return A list of {@code Dataset} objects, one for each ResultSet returned by the query
      * @throws SQLException if a database access error occurs
-     * @see #queryAllResultsets(ResultExtractor)
-     * @see #streamAllResultsets()
+     * @see #queryAllResultSets(ResultExtractor)
+     * @see #streamAllResultSets()
      */
-    public List<Dataset> queryAllResultsets() throws SQLException {
-        return queryAllResultsets(ResultExtractor.TO_DATA_SET);
+    public List<Dataset> queryAllResultSets() throws SQLException {
+        return queryAllResultSets(ResultExtractor.TO_DATA_SET);
     }
 
     /**
@@ -5348,7 +5348,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract row counts from all result sets
-     * List<Integer> rowCounts = callableQuery.queryAllResultsets(rs -> {
+     * List<Integer> rowCounts = callableQuery.queryAllResultSets(rs -> {
      *     int count = 0;
      *     while (rs.next()) count++;
      *     return count;
@@ -5361,9 +5361,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if resultExtractor is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
-     * @see #streamAllResultsets(ResultExtractor)
+     * @see #streamAllResultSets(ResultExtractor)
      */
-    public <R> List<R> queryAllResultsets(final Jdbc.ResultExtractor<? extends R> resultExtractor)
+    public <R> List<R> queryAllResultSets(final Jdbc.ResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor, cs.resultExtractor);
         assertNotClosed();
@@ -5396,13 +5396,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Retrieves all {@code ResultSets} and processes them with the specified {@code BiResultExtractor}.
      * 
-     * <p>Similar to {@link #queryAllResultsets(ResultExtractor)}, but the extractor also receives
+     * <p>Similar to {@link #queryAllResultSets(ResultExtractor)}, but the extractor also receives
      * the column labels for each result set.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract column metadata from all result sets
-     * List<Map<String, Class<?>>> metadata = callableQuery.queryAllResultsets((rs, labels) -> {
+     * List<Map<String, Class<?>>> metadata = callableQuery.queryAllResultSets((rs, labels) -> {
      *     Map<String, Class<?>> types = new HashMap<>();
      *     for (String label : labels) {
      *         types.put(label, rs.getMetaData().getColumnClassName(
@@ -5418,9 +5418,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if resultExtractor is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
-     * @see #streamAllResultsets(BiResultExtractor)
+     * @see #streamAllResultSets(BiResultExtractor)
      */
-    public <R> List<R> queryAllResultsets(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
+    public <R> List<R> queryAllResultSets(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(resultExtractor, cs.resultExtractor);
         assertNotClosed();
@@ -6653,12 +6653,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * CallableQuery query = JdbcUtil.prepareCall(connection, "{call getOrdersAndCustomers(?)}");
      * query.setInt(1, regionId);
      * 
-     * List<List<Object>> allResults = query.listAllResultsets(Object.class);
+     * List<List<Object>> allResults = query.listAllResultSets(Object.class);
      * List<Order> orders = (List<Order>) allResults.get(0);
      * List<Customer> customers = (List<Customer>) allResults.get(1);
      * 
      * // With specific types for each result set
-     * List<List<Order>> orderResults = query.listAllResultsets(Order.class);
+     * List<List<Order>> orderResults = query.listAllResultSets(Order.class);
      * // Note: This assumes all result sets can be mapped to Order type
      * }</pre>
      *
@@ -6668,9 +6668,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If targetType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
-     * @see #listAllResultsets(Jdbc.RowMapper)
+     * @see #listAllResultSets(Jdbc.RowMapper)
      */
-    public <T> List<List<T>> listAllResultsets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
+    public <T> List<List<T>> listAllResultSets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetType, cs.targetType);
         assertNotClosed();
 
@@ -6691,7 +6691,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Custom mapping for each result set
      * List<List<CustomDTO>> allResults = callableQuery
-     *     .listAllResultsets(rs -> {
+     *     .listAllResultSets(rs -> {
      *         CustomDTO dto = new CustomDTO();
      *         dto.setId(rs.getLong("id"));
      *         dto.setData(rs.getString("data"));
@@ -6707,7 +6707,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      * @see Jdbc.RowMapper
      */
-    public <T> List<List<T>> listAllResultsets(final Jdbc.RowMapper<? extends T> rowMapper)
+    public <T> List<List<T>> listAllResultSets(final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
@@ -6729,7 +6729,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Process multiple result sets with filtering
      * List<List<ActiveRecord>> activeRecords = callableQuery
-     *     .listAllResultsets(
+     *     .listAllResultSets(
      *         rs -> rs.getBoolean("is_active"),
      *         rs -> new ActiveRecord(rs.getLong("id"), rs.getString("name"))
      *     );
@@ -6743,7 +6743,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
-    public <T> List<List<T>> listAllResultsets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
+    public <T> List<List<T>> listAllResultSets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
@@ -6766,7 +6766,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Map multiple result sets with column awareness
      * List<List<FlexibleDTO>> allResults = callableQuery
-     *     .listAllResultsets((rs, labels) -> {
+     *     .listAllResultSets((rs, labels) -> {
      *         FlexibleDTO dto = new FlexibleDTO();
      *         dto.setAvailableColumns(labels);
      *         for (String label : labels) {
@@ -6784,7 +6784,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      * @see Jdbc.BiRowMapper
      */
-    public <T> List<List<T>> listAllResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper)
+    public <T> List<List<T>> listAllResultSets(final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
@@ -6806,7 +6806,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * // Process multiple result sets with column-aware filtering and mapping
      * List<List<ProcessedRecord>> results = callableQuery
-     *     .listAllResultsets(
+     *     .listAllResultSets(
      *         (rs, labels) -> labels.contains("process_flag") && rs.getBoolean("process_flag"),
      *         (rs, labels) -> {
      *             ProcessedRecord record = new ProcessedRecord();
@@ -6827,7 +6827,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
-    public <T> List<List<T>> listAllResultsets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
+    public <T> List<List<T>> listAllResultSets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
@@ -7348,7 +7348,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws IllegalStateException If this is closed.
     //     */
     //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultsets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException {
+    //    public <T> Stream<Stream<T>> streamAllResultSets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException {
     //        checkArgNotNull(targetType, s.targetType);
     //        assertNotClosed();
     //
@@ -7375,7 +7375,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws IllegalStateException If this is closed.
     //     */
     //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
     //        checkArgNotNull(rowMapper, s.rowMapper);
     //        assertNotClosed();
     //
@@ -7402,7 +7402,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws IllegalStateException If this is closed.
     //     */
     //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
+    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
     //            throws IllegalArgumentException, IllegalStateException {
     //        checkArgNotNull(rowFilter, s.rowFilter);
     //        checkArgNotNull(rowMapper, s.rowMapper);
@@ -7430,7 +7430,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws IllegalStateException If this is closed.
     //     */
     //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
+    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
     //        checkArgNotNull(rowMapper, s.rowMapper);
     //        assertNotClosed();
     //
@@ -7457,7 +7457,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @throws IllegalStateException If this is closed.
     //     */
     //    @SuppressWarnings("resource")
-    //    public <T> Stream<Stream<T>> streamAllResultsets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
+    //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
     //            throws IllegalArgumentException, IllegalStateException {
     //        checkArgNotNull(rowFilter, s.rowFilter);
     //        checkArgNotNull(rowMapper, s.rowMapper);
@@ -7477,7 +7477,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Execute a stored procedure that returns multiple result sets
-     * try (Stream<Dataset> resultSets = callableQuery.streamAllResultsets()) {
+     * try (Stream<Dataset> resultSets = callableQuery.streamAllResultSets()) {
      *     resultSets.forEach(dataset -> {
      *         System.out.println("Result set with " + dataset.size() + " rows");
      *         dataset.forEach(row -> processRow(row));
@@ -7488,12 +7488,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A stream of Dataset objects, one for each ResultSet returned by the query
      * @throws IllegalStateException if this query is closed
      * @throws UncheckedSQLException If a database access error occurs
-     * @see #queryAllResultsets()
+     * @see #queryAllResultSets()
      * @see Dataset
      */
     @Beta
-    public Stream<Dataset> streamAllResultsets() {
-        return streamAllResultsets(ResultExtractor.TO_DATA_SET);
+    public Stream<Dataset> streamAllResultSets() {
+        return streamAllResultSets(ResultExtractor.TO_DATA_SET);
     }
 
     /**
@@ -7508,7 +7508,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract summary information from each result set
-     * Stream<Summary> summaries = callableQuery.streamAllResultsets(
+     * Stream<Summary> summaries = callableQuery.streamAllResultSets(
      *     ResultExtractor.toList(rs -> new Summary(
      *         rs.getString("name"),
      *         rs.getInt("count"),
@@ -7524,12 +7524,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided resultExtractor is null
      * @throws IllegalStateException if this query is closed
      * @throws UncheckedSQLException If a database access error occurs
-     * @see #queryAllResultsets(ResultExtractor)
+     * @see #queryAllResultSets(ResultExtractor)
      * @see ResultExtractor
      */
     @Beta
     @SuppressWarnings("resource")
-    public <R> Stream<R> streamAllResultsets(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException, IllegalStateException {
+    public <R> Stream<R> streamAllResultSets(final Jdbc.ResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(resultExtractor, cs.resultExtractor);
         assertNotClosed();
 
@@ -7554,7 +7554,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract data with column-aware processing
-     * Stream<Report> reports = callableQuery.streamAllResultsets(
+     * Stream<Report> reports = callableQuery.streamAllResultSets(
      *     (rs, columnLabels) -> {
      *         List<Report> list = new ArrayList<>();
      *         while (rs.next()) {
@@ -7577,12 +7577,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If the provided resultExtractor is null
      * @throws IllegalStateException if this query is closed
      * @throws UncheckedSQLException If a database access error occurs
-     * @see #queryAllResultsets(BiResultExtractor)
+     * @see #queryAllResultSets(BiResultExtractor)
      * @see BiResultExtractor
      */
     @Beta
     @SuppressWarnings("resource")
-    public <R> Stream<R> streamAllResultsets(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException, IllegalStateException {
+    public <R> Stream<R> streamAllResultSets(final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException, IllegalStateException {
         checkArgNotNull(resultExtractor, cs.resultExtractor);
         assertNotClosed();
 

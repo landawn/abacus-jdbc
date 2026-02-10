@@ -1788,24 +1788,24 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testQuery2Resultsets() throws SQLException {
+    public void testQuery2ResultSets() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(true, true, false);
         when(mockStmt.getResultSet()).thenReturn(mockResultSet, mockResultSet);
         when(mockStmt.getUpdateCount()).thenReturn(0, 0, -1);
 
-        Tuple2<String, Integer> result = query.query2Resultsets((rs, labels) -> "result1", (rs, labels) -> 42);
+        Tuple2<String, Integer> result = query.query2ResultSets((rs, labels) -> "result1", (rs, labels) -> 42);
 
         assertEquals("result1", result._1);
         assertEquals(42, result._2);
     }
 
     @Test
-    public void testQuery3Resultsets() throws SQLException {
+    public void testQuery3ResultSets() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(true, true, true, false);
         when(mockStmt.getResultSet()).thenReturn(mockResultSet, mockResultSet, mockResultSet);
         when(mockStmt.getUpdateCount()).thenReturn(0, 0, 0, -1);
 
-        Tuple3<String, Integer, Boolean> result = query.query3Resultsets((rs, labels) -> "result1", (rs, labels) -> 42, (rs, labels) -> true);
+        Tuple3<String, Integer, Boolean> result = query.query3ResultSets((rs, labels) -> "result1", (rs, labels) -> 42, (rs, labels) -> true);
 
         assertEquals("result1", result._1);
         assertEquals(42, result._2);
@@ -1813,22 +1813,22 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testQueryAllResultsets() throws SQLException {
+    public void testQueryAllResultSets() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(true, false);
         when(mockStmt.getUpdateCount()).thenReturn(0, -1);
 
-        List<Dataset> results = query.queryAllResultsets();
+        List<Dataset> results = query.queryAllResultSets();
 
         assertNotNull(results);
         assertFalse(results.isEmpty());
     }
 
     @Test
-    public void testQueryAllResultsetsWithExtractor() throws SQLException {
+    public void testQueryAllResultSetsWithExtractor() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(true, false);
         when(mockStmt.getUpdateCount()).thenReturn(0, -1);
 
-        List<Integer> results = query.queryAllResultsets(rs -> {
+        List<Integer> results = query.queryAllResultSets(rs -> {
             int count = 0;
             while (rs.next())
                 count++;
@@ -1839,11 +1839,11 @@ public class PreparedQueryTest extends TestBase {
     }
 
     @Test
-    public void testQueryAllResultsetsWithBiExtractor() throws SQLException {
+    public void testQueryAllResultSetsWithBiExtractor() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
 
-        List<Map<String, Integer>> results = query.queryAllResultsets((rs, labels) -> {
+        List<Map<String, Integer>> results = query.queryAllResultSets((rs, labels) -> {
             Map<String, Integer> map = new HashMap<>();
             map.put("columnCount", labels.size());
             return map;
@@ -2226,51 +2226,51 @@ public class PreparedQueryTest extends TestBase {
     //    }
 
     @Test
-    public void testListAllResultsetsRowMapper() throws SQLException {
+    public void testListAllResultSetsRowMapper() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getString(1)).thenReturn("result");
 
-        List<List<String>> results = query.listAllResultsets(rs -> rs.getString(1));
+        List<List<String>> results = query.listAllResultSets(rs -> rs.getString(1));
 
         assertEquals(1, results.size());
         assertEquals(Arrays.asList("result"), results.get(0));
     }
 
     @Test
-    public void testListAllResultsetsWithFilter() throws SQLException {
+    public void testListAllResultSetsWithFilter() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getInt(1)).thenReturn(5, 10);
 
-        List<List<Integer>> results = query.listAllResultsets(rs -> rs.getInt(1) > 8, rs -> rs.getInt(1));
+        List<List<Integer>> results = query.listAllResultSets(rs -> rs.getInt(1) > 8, rs -> rs.getInt(1));
 
         assertEquals(1, results.size());
         assertEquals(Arrays.asList(10), results.get(0));
     }
 
     @Test
-    public void testListAllResultsetsBiRowMapper() throws SQLException {
+    public void testListAllResultSetsBiRowMapper() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, false);
 
-        List<List<Integer>> results = query.listAllResultsets((rs, labels) -> labels.size());
+        List<List<Integer>> results = query.listAllResultSets((rs, labels) -> labels.size());
 
         assertEquals(1, results.size());
         assertEquals(Arrays.asList(1), results.get(0));
     }
 
     @Test
-    public void testListAllResultsetsWithBiFilter() throws SQLException {
+    public void testListAllResultSetsWithBiFilter() throws SQLException {
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getString(1)).thenReturn("skip", "take");
 
-        List<List<String>> results = query.listAllResultsets((rs, labels) -> rs.getString(1).equals("take"), (rs, labels) -> rs.getString(1).toUpperCase());
+        List<List<String>> results = query.listAllResultSets((rs, labels) -> rs.getString(1).equals("take"), (rs, labels) -> rs.getString(1).toUpperCase());
 
         assertEquals(1, results.size());
         assertEquals(Arrays.asList("TAKE"), results.get(0));
@@ -2392,24 +2392,24 @@ public class PreparedQueryTest extends TestBase {
     }
 
     //    @Test
-    //    public void testStreamAllResultsets() throws SQLException {
+    //    public void teststreamAllResultSets() throws SQLException {
     //        when(mockStmt.getMoreResults()).thenReturn(true, false);
     //        when(mockStmt.getUpdateCount()).thenReturn(-1);
     //        when(mockResultSet.next()).thenReturn(true, false);
     //
-    //        try (Stream<Dataset> stream = query.streamAllResultsets()) {
+    //        try (Stream<Dataset> stream = query.streamAllResultSets()) {
     //            long count = stream.count();
     //            assertEquals(1, count);
     //        }
     //    }
     //
     //    @Test
-    //    public void testStreamAllResultsetsWithExtractor() throws SQLException {
+    //    public void teststreamAllResultSetsWithExtractor() throws SQLException {
     //        when(mockStmt.getMoreResults()).thenReturn(false);
     //        when(mockStmt.getUpdateCount()).thenReturn(-1);
     //        when(mockResultSet.next()).thenReturn(true, false);
     //
-    //        try (Stream<Integer> stream = query.streamAllResultsets(rs -> {
+    //        try (Stream<Integer> stream = query.streamAllResultSets(rs -> {
     //            int count = 0;
     //            while (rs.next())
     //                count++;

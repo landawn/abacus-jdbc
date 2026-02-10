@@ -601,18 +601,18 @@ final class DaoImpl {
                         if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
                                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
-                                        .listAllResultsetsAndGetOutParameters((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
+                                        .listAllResultSetsAndGetOutParameters((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
                             } else {
                                 return (preparedQuery,
-                                        args) -> (R) ((CallableQuery) preparedQuery).listAllResultsetsAndGetOutParameters((Jdbc.RowMapper) args[paramLen - 1]);
+                                        args) -> (R) ((CallableQuery) preparedQuery).listAllResultSetsAndGetOutParameters((Jdbc.RowMapper) args[paramLen - 1]);
                             }
                         } else if (Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
                                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
-                                        .listAllResultsetsAndGetOutParameters((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]);
+                                        .listAllResultSetsAndGetOutParameters((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1]);
                             } else {
                                 return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
-                                        .listAllResultsetsAndGetOutParameters((Jdbc.BiRowMapper) args[paramLen - 1]);
+                                        .listAllResultSetsAndGetOutParameters((Jdbc.BiRowMapper) args[paramLen - 1]);
                             }
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
@@ -624,7 +624,7 @@ final class DaoImpl {
                                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsetsAndGetOutParameters(firstReturnEleEleType);
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSetsAndGetOutParameters(firstReturnEleEleType);
                     }
                 } else {
                     if (!List.class.isAssignableFrom(returnType)) {
@@ -636,16 +636,16 @@ final class DaoImpl {
                         if (lastParamType != null && Jdbc.RowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
                                 return (preparedQuery,
-                                        args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
+                                        args) -> (R) preparedQuery.listAllResultSets((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1]);
                             } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.RowMapper) args[paramLen - 1]);
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultSets((Jdbc.RowMapper) args[paramLen - 1]);
                             }
                         } else if (Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType)) {
                             if (hasRowFilter) {
-                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.BiRowFilter) args[paramLen - 2],
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultSets((Jdbc.BiRowFilter) args[paramLen - 2],
                                         (Jdbc.BiRowMapper) args[paramLen - 1]);
                             } else {
-                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultsets((Jdbc.BiRowMapper) args[paramLen - 1]);
+                                return (preparedQuery, args) -> (R) preparedQuery.listAllResultSets((Jdbc.BiRowMapper) args[paramLen - 1]);
                             }
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
@@ -657,7 +657,7 @@ final class DaoImpl {
                                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultsets(firstReturnEleType);
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAllResultSets(firstReturnEleType);
                     }
                 }
             } else if (op == OP.queryAll) {
@@ -670,10 +670,10 @@ final class DaoImpl {
                     if (hasRowMapperOrExtractor) {
                         if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
                             return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
-                                    .queryAllResultsetsAndGetOutParameters((Jdbc.ResultExtractor) args[paramLen - 1]);
+                                    .queryAllResultSetsAndGetOutParameters((Jdbc.ResultExtractor) args[paramLen - 1]);
                         } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
                             return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery)
-                                    .queryAllResultsetsAndGetOutParameters((Jdbc.BiResultExtractor) args[paramLen - 1]);
+                                    .queryAllResultSetsAndGetOutParameters((Jdbc.BiResultExtractor) args[paramLen - 1]);
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
                                     + " is not supported the specified op: " + op);
@@ -684,7 +684,7 @@ final class DaoImpl {
                                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultsetsAndGetOutParameters();
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultSetsAndGetOutParameters();
                     }
 
                 } else {
@@ -695,9 +695,9 @@ final class DaoImpl {
 
                     if (hasRowMapperOrExtractor) {
                         if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
-                            return (preparedQuery, args) -> (R) preparedQuery.queryAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
+                            return (preparedQuery, args) -> (R) preparedQuery.queryAllResultSets((Jdbc.ResultExtractor) args[paramLen - 1]);
                         } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
-                            return (preparedQuery, args) -> (R) preparedQuery.queryAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
+                            return (preparedQuery, args) -> (R) preparedQuery.queryAllResultSets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                         } else {
                             throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
                                     + " is not supported the specified op: " + op);
@@ -708,7 +708,7 @@ final class DaoImpl {
                                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                         }
 
-                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultsets();
+                        return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).queryAllResultSets();
                     }
                 }
             } else if (op == OP.streamAll) {
@@ -719,9 +719,9 @@ final class DaoImpl {
 
                 if (hasRowMapperOrExtractor) {
                     if (lastParamType != null && Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType)) {
-                        return (preparedQuery, args) -> (R) preparedQuery.streamAllResultsets((Jdbc.ResultExtractor) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.streamAllResultSets((Jdbc.ResultExtractor) args[paramLen - 1]);
                     } else if (Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)) {
-                        return (preparedQuery, args) -> (R) preparedQuery.streamAllResultsets((Jdbc.BiResultExtractor) args[paramLen - 1]);
+                        return (preparedQuery, args) -> (R) preparedQuery.streamAllResultSets((Jdbc.BiResultExtractor) args[paramLen - 1]);
                     } else {
                         throw new UnsupportedOperationException("The last parameter type: " + lastParamType + " of method: " + fullClassMethodName
                                 + " is not supported the specified op: " + op);
@@ -732,7 +732,7 @@ final class DaoImpl {
                                 "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
                     }
 
-                    return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultsets();
+                    return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).streamAllResultSets();
                 }
             }
 
