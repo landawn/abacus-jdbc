@@ -233,7 +233,7 @@ final class DaoImpl {
     private static final String PN_SYS_DATE = "sysDate";
 
     private static final JsonParser jsonParser = ParserFactory.createJsonParser();
-    private static final KryoParser kryoParser = ParserFactory.isAvroParserAvailable() ? ParserFactory.createKryoParser() : null;
+    private static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
 
     private static final JsonSerializationConfig jsc_no_bracket = JSC.create().setStringQuotation(JdbcUtil.CHAR_ZERO).bracketRootValue(false);
 
@@ -1480,21 +1480,21 @@ final class DaoImpl {
 
             if (queryInfo.isBatch) {
                 if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
-                    if (queryInfo.parsedSql.getNamedParameters().contains(PN_NOW)) {
+                    final boolean hasNow = queryInfo.parsedSql.getNamedParameters().contains(PN_NOW);
+                    final boolean hasSysTime = queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_TIME);
+                    final boolean hasSysDate = queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_DATE);
+
+                    if (hasNow || hasSysTime || hasSysDate) {
                         preparedQuery.configAddBatchAction((q, s) -> {
-                            ((NamedQuery) q).setTimestamp(PN_NOW, Dates.currentTimestamp());
-                            ((PreparedStatement) s).addBatch();
-                        });
-                    }
-                    if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_TIME)) {
-                        preparedQuery.configAddBatchAction((q, s) -> {
-                            ((NamedQuery) q).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
-                            ((PreparedStatement) s).addBatch();
-                        });
-                    }
-                    if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_DATE)) {
-                        preparedQuery.configAddBatchAction((q, s) -> {
-                            ((NamedQuery) q).setDate(PN_SYS_DATE, Dates.currentDate());
+                            if (hasNow) {
+                                ((NamedQuery) q).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                            }
+                            if (hasSysTime) {
+                                ((NamedQuery) q).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                            }
+                            if (hasSysDate) {
+                                ((NamedQuery) q).setDate(PN_SYS_DATE, Dates.currentDate());
+                            }
                             ((PreparedStatement) s).addBatch();
                         });
                     }
@@ -4668,7 +4668,7 @@ final class DaoImpl {
                         //
                         //                for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
                         //                    tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
-                        //                            : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                        //                            : propJoinInfo.getDeleteSqlPlan(sbc);
                         //
                         //                    result += proxy.prepareQuery(tp._1).setParameters(entity, tp._2).update();
                         //                }
@@ -4755,7 +4755,7 @@ final class DaoImpl {
                         //
                         //                            for (JoinInfo propJoinInfo : entityJoinInfo.values()) {
                         //                                tp = onDeleteAction == OnDeleteAction.SET_NULL ? propJoinInfo.getSetNullSqlAndParamSetter(sbc)
-                        //                                        : propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                        //                                        : propJoinInfo.getDeleteSqlPlan(sbc);
                         //
                         //                                tmpResult += N.sum(proxy.prepareQuery(tp._1).addBatchParameters2(bp, tp._2).batchUpdate());
                         //                            }
@@ -4796,7 +4796,7 @@ final class DaoImpl {
                                     entityClass);
 
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                    .getSelectSQLBuilderAndParamSetter(sbc);
+                                    .getSelectSqlPlan(sbc);
 
                             final Dao<?, SQLBuilder, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
                                     proxy);
@@ -4839,7 +4839,7 @@ final class DaoImpl {
                                 final Object first = N.firstOrNullIfEmpty(entities);
 
                                 final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getSelectSQLBuilderAndParamSetter(sbc);
+                                        .getSelectSqlPlan(sbc);
 
                                 final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(first, tp._2);
 
@@ -4858,7 +4858,7 @@ final class DaoImpl {
                                 }
                             } else {
                                 final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                        .getBatchSelectSQLBuilderAndParamSetter(sbc);
+                                        .getBatchSelectSqlPlan(sbc);
 
                                 Stream.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
                                     if (propJoinInfo.isManyToManyJoin()) {
@@ -4906,7 +4906,7 @@ final class DaoImpl {
                             N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
-                            final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlAndParamSetter(sbc);
+                            final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlPlan(sbc);
 
                             final Dao<?, SQLBuilder, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource,
                                     proxy);
@@ -4947,8 +4947,7 @@ final class DaoImpl {
                             } else if (entities.size() == 1) {
                                 final Object first = N.firstOrNullIfEmpty(entities);
 
-                                final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
-                                        .getDeleteSqlAndParamSetter(sbc);
+                                final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.getDeleteSqlPlan(sbc);
 
                                 if (Strings.isEmpty(tp._2)) {
                                     return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
@@ -4973,7 +4972,7 @@ final class DaoImpl {
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
-                                            .getBatchDeleteSQLBuilderAndParamSetter(sbc);
+                                            .getBatchDeleteSqlPlan(sbc);
 
                                     result = Seq.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).sumInt(bp -> {
                                         if (tp._2 == null) {
@@ -5402,7 +5401,7 @@ final class DaoImpl {
                     }
 
                     final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter = createParametersSetter(queryInfo, fullClassMethodName, method,
-                            paramTypes, paramLen, stmtParamLen, stmtParamIndexes, bindListParamFlags, stmtParamLen);
+                            paramTypes, paramLen, fragmentParamLen, stmtParamIndexes, bindListParamFlags, stmtParamLen);
 
                     if (isQuery) {
                         final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunc = createQueryFunctionByMethod(entityClass, method,
@@ -5846,7 +5845,7 @@ final class DaoImpl {
                     call = (proxy, args) -> {
                         final javax.sql.DataSource dataSource = proxy.dataSource();
 
-                        return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                        return JdbcUtil.callOutsideTransaction(dataSource, () -> {
                             if (hasSqlLogAnno || hasPerfLogAnno) {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
@@ -5921,7 +5920,7 @@ final class DaoImpl {
                         }
 
                         if (hasSqlLogAnno || hasPerfLogAnno) {
-                            return JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+                            return JdbcUtil.callOutsideTransaction(dataSource, () -> {
                                 final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
@@ -5956,7 +5955,7 @@ final class DaoImpl {
                                 }
                             });
                         } else {
-                            return JdbcUtil.callNotInStartedTransaction(dataSource, () -> tmp.apply(proxy, args));
+                            return JdbcUtil.callOutsideTransaction(dataSource, () -> tmp.apply(proxy, args));
                         }
                     };
                 }
@@ -6018,9 +6017,13 @@ final class DaoImpl {
                     final Function<Object, Object> cloneFunc = Strings.isEmpty(transferAttr) || "none".equalsIgnoreCase(transferAttr) ? Fn.identity() : r -> {
                         final Class<?> cls = r.getClass();
 
-                        if ((r == null) || !isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls)) {
+                        if (!isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls)) {
                             return r;
                         } else if ("kryo".equalsIgnoreCase(transferAttr)) {
+                            if (kryoParser == null) {
+                                throw new UnsupportedOperationException(
+                                        "Kryo is not available for cache transfer. Please add Kryo to the classpath or use 'json' transfer instead.");
+                            }
                             return kryoParser.clone(r);
                         } else {
                             return jsonParser.deserialize(jsonParser.serialize(r), r.getClass());

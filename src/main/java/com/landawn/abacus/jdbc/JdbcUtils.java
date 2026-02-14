@@ -967,9 +967,9 @@ public final class JdbcUtils {
             public void accept(final PreparedQuery t, final Object[] u) throws SQLException {
                 if (columnTypes == null) {
                     final List<String> columnNameList = dataset.columnNames();
-                    final Set<String> columnNameSet = N.newHashSet(columnCount);
-
                     columnCount = columnNameList.size();
+
+                    final Set<String> columnNameSet = N.newHashSet(columnCount);
                     columnTypes = new Type[columnCount];
 
                     String columnName = null;
@@ -2378,12 +2378,16 @@ public final class JdbcUtils {
     public static long exportCSV(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySql);
 
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-             ResultSet rs = JdbcUtil.executeQuery(stmt)) {
+        final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
+        try {
             setFetchForLargeResult(conn, stmt);
 
-            return exportCSV(rs, output);
+            try (ResultSet rs = JdbcUtil.executeQuery(stmt)) {
+                return exportCSV(rs, output);
+            }
+        } finally {
+            JdbcUtil.closeQuietly(stmt);
         }
     }
 

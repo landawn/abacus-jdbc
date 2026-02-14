@@ -16,10 +16,15 @@
 package com.landawn.abacus.jdbc.dao;
 
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -623,19 +628,7 @@ final class DaoUtil {
                 .get(daoInterface);
 
         if (tp == null) {
-            java.lang.reflect.Type[] typeArguments = null;
-
-            if (N.notEmpty(daoInterface.getGenericInterfaces())
-                    && daoInterface.getGenericInterfaces()[0] instanceof final ParameterizedType parameterizedType) {
-                typeArguments = parameterizedType.getActualTypeArguments();
-            }
-
-            final Class<? extends SQLBuilder> sbc = N.isEmpty(typeArguments) ? PSC.class
-                    : (typeArguments.length >= 2 && typeArguments[1] instanceof Class && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])
-                            ? (Class) typeArguments[1]
-                            : (typeArguments.length >= 3 && typeArguments[2] instanceof Class && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2])
-                                    ? (Class) typeArguments[2]
-                                    : PSC.class));
+            final Class<? extends SQLBuilder> sbc = getDaoSQLBuilderClass(daoInterface);
 
             @SuppressWarnings("deprecation")
             final Class<?> targetEntityClass = dao.targetEntityClass();
@@ -746,6 +739,102 @@ final class DaoUtil {
         return tp;
     }
 
+    private static Class<? extends SQLBuilder> getDaoSQLBuilderClass(final Class<?> daoInterface) {
+        final Deque<Type> typesToScan = new ArrayDeque<>();
+        final HashSet<Type> visited = new HashSet<>();
+        typesToScan.add(daoInterface);
+
+        while (!typesToScan.isEmpty()) {
+            final Type type = typesToScan.pollFirst();
+
+            if (type == null || !visited.add(type)) {
+                continue;
+            }
+
+            final Class<? extends SQLBuilder> sbc = findSQLBuilderClassFromDaoType(type);
+
+            if (sbc != null) {
+                return sbc;
+            }
+
+            if (type instanceof final Class<?> cls) {
+                final Type genericSuperClass = cls.getGenericSuperclass();
+
+                if (genericSuperClass != null && genericSuperClass != Object.class) {
+                    typesToScan.add(genericSuperClass);
+                }
+
+                for (final Type genericInterface : cls.getGenericInterfaces()) {
+                    typesToScan.add(genericInterface);
+                }
+            } else if (type instanceof final ParameterizedType parameterizedType) {
+                typesToScan.add(parameterizedType.getRawType());
+            }
+        }
+
+        return PSC.class;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends SQLBuilder> findSQLBuilderClassFromDaoType(final Type type) {
+        if (!(type instanceof final ParameterizedType parameterizedType)) {
+            return null;
+        }
+
+        if (!(parameterizedType.getRawType() instanceof final Class<?> rawType)) {
+            return null;
+        }
+
+        if (!(Dao.class.isAssignableFrom(rawType) || CrudDao.class.isAssignableFrom(rawType) || UncheckedDao.class.isAssignableFrom(rawType))) {
+            return null;
+        }
+
+        for (final Type typeArgument : parameterizedType.getActualTypeArguments()) {
+            final Class<? extends SQLBuilder> sbc = toSQLBuilderClass(typeArgument);
+
+            if (sbc != null) {
+                return sbc;
+            }
+        }
+
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends SQLBuilder> toSQLBuilderClass(final Type type) {
+        if (type instanceof final Class<?> cls) {
+            return SQLBuilder.class.isAssignableFrom(cls) && cls != SQLBuilder.class ? (Class<? extends SQLBuilder>) cls : null;
+        }
+
+        if (type instanceof final ParameterizedType parameterizedType) {
+            return toSQLBuilderClass(parameterizedType.getRawType());
+        }
+
+        if (type instanceof final WildcardType wildcardType) {
+            for (final Type upperBound : wildcardType.getUpperBounds()) {
+                final Class<? extends SQLBuilder> sbc = toSQLBuilderClass(upperBound);
+
+                if (sbc != null) {
+                    return sbc;
+                }
+            }
+
+            return null;
+        }
+
+        if (type instanceof final TypeVariable<?> typeVariable) {
+            for (final Type bound : typeVariable.getBounds()) {
+                final Class<? extends SQLBuilder> sbc = toSQLBuilderClass(bound);
+
+                if (sbc != null) {
+                    return sbc;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Checks if the given SQL statement is a SELECT query.
      * <p>
@@ -779,10 +868,7 @@ final class DaoUtil {
      * @throws UnsupportedOperationException if the operation is not supported
      */
     static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
-        if (sql == null || sql.isEmpty()) {
-            return false;
-        }
-        return sql.startsWith("select ") || sql.startsWith("SELECT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "select ");
+        return "SELECT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
     /**
@@ -818,10 +904,172 @@ final class DaoUtil {
      * @throws UnsupportedOperationException if the operation is not supported
      */
     static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {
-        if (sql == null || sql.isEmpty()) {
-            return false;
+        return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
+    }
+
+    private static String getLeadingQueryKeyword(final String sql) {
+        if (Strings.isEmpty(sql)) {
+            return "";
         }
-        return sql.startsWith("insert ") || sql.startsWith("INSERT ") || Strings.startsWithIgnoreCase(Strings.trim(sql), "insert ");
+
+        int index = skipLeadingWhitespaceAndComments(sql, 0);
+
+        if (index >= sql.length()) {
+            return "";
+        }
+
+        String keyword = readKeyword(sql, index);
+
+        if (Strings.isEmpty(keyword)) {
+            return "";
+        }
+
+        if (!"WITH".equalsIgnoreCase(keyword)) {
+            return keyword;
+        }
+
+        index += keyword.length();
+        index = skipLeadingWhitespaceAndComments(sql, index);
+
+        keyword = readKeyword(sql, index);
+
+        if ("RECURSIVE".equalsIgnoreCase(keyword)) {
+            index += keyword.length();
+        }
+
+        return findKeywordAfterWithClause(sql, index);
+    }
+
+    private static String findKeywordAfterWithClause(final String sql, int fromIndex) {
+        int depth = 0;
+
+        while (fromIndex < sql.length()) {
+            fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
+
+            if (fromIndex >= sql.length()) {
+                break;
+            }
+
+            final char ch = sql.charAt(fromIndex);
+
+            if (ch == '\'' || ch == '"') {
+                fromIndex = skipQuotedLiteral(sql, fromIndex, ch);
+                continue;
+            }
+
+            if (ch == '(') {
+                depth++;
+                fromIndex++;
+                continue;
+            }
+
+            if (ch == ')') {
+                if (depth > 0) {
+                    depth--;
+                }
+
+                fromIndex++;
+                continue;
+            }
+
+            if (Character.isLetter(ch)) {
+                final String token = readKeyword(sql, fromIndex);
+
+                if (depth == 0 && isQueryKeyword(token)) {
+                    return token;
+                }
+
+                fromIndex += token.length();
+                continue;
+            }
+
+            fromIndex++;
+        }
+
+        return "";
+    }
+
+    private static boolean isQueryKeyword(final String token) {
+        return "SELECT".equalsIgnoreCase(token) || "INSERT".equalsIgnoreCase(token) || "UPDATE".equalsIgnoreCase(token) || "DELETE".equalsIgnoreCase(token)
+                || "MERGE".equalsIgnoreCase(token);
+    }
+
+    private static int skipLeadingWhitespaceAndComments(final String sql, int fromIndex) {
+        while (fromIndex < sql.length()) {
+            while (fromIndex < sql.length() && Character.isWhitespace(sql.charAt(fromIndex))) {
+                fromIndex++;
+            }
+
+            if (fromIndex >= sql.length()) {
+                break;
+            }
+
+            if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex) == '-' && sql.charAt(fromIndex + 1) == '-') {
+                fromIndex += 2;
+
+                while (fromIndex < sql.length() && sql.charAt(fromIndex) != '\n' && sql.charAt(fromIndex) != '\r') {
+                    fromIndex++;
+                }
+
+                continue;
+            }
+
+            if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex) == '/' && sql.charAt(fromIndex + 1) == '*') {
+                fromIndex += 2;
+
+                while ((fromIndex + 1 < sql.length()) && !(sql.charAt(fromIndex) == '*' && sql.charAt(fromIndex + 1) == '/')) {
+                    fromIndex++;
+                }
+
+                fromIndex = Math.min(fromIndex + 2, sql.length());
+                continue;
+            }
+
+            if (sql.charAt(fromIndex) == '#') {
+                fromIndex++;
+
+                while (fromIndex < sql.length() && sql.charAt(fromIndex) != '\n' && sql.charAt(fromIndex) != '\r') {
+                    fromIndex++;
+                }
+
+                continue;
+            }
+
+            break;
+        }
+
+        return fromIndex;
+    }
+
+    private static int skipQuotedLiteral(final String sql, int fromIndex, final char quoteChar) {
+        fromIndex++;
+
+        while (fromIndex < sql.length()) {
+            if (sql.charAt(fromIndex) == quoteChar) {
+                if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex + 1) == quoteChar) {
+                    fromIndex += 2;
+                } else {
+                    fromIndex++;
+                    break;
+                }
+            } else {
+                fromIndex++;
+            }
+        }
+
+        return fromIndex;
+    }
+
+    private static String readKeyword(final String sql, int fromIndex) {
+        fromIndex = skipLeadingWhitespaceAndComments(sql, fromIndex);
+
+        final int startIndex = fromIndex;
+
+        while (fromIndex < sql.length() && Character.isLetter(sql.charAt(fromIndex))) {
+            fromIndex++;
+        }
+
+        return fromIndex > startIndex ? sql.substring(startIndex, fromIndex) : "";
     }
 
     /**

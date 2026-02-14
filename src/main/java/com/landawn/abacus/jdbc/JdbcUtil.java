@@ -538,7 +538,7 @@ public final class JdbcUtil {
 
     static final JsonParser jsonParser = ParserFactory.createJsonParser();
 
-    static final KryoParser kryoParser = ParserFactory.isAvroParserAvailable() ? ParserFactory.createKryoParser() : null;
+    static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
 
     static final char CHAR_ZERO = 0;
 
@@ -713,64 +713,66 @@ public final class JdbcUtil {
 
             final String dbProductName = metaData.getDatabaseProductName();
             final String dbProductVersion = metaData.getDatabaseProductVersion();
+            final String productNameForMatch = dbProductName == null ? "" : dbProductName.trim();
+            final String productVersionForMatch = dbProductVersion == null ? "" : dbProductVersion.trim();
 
             DBVersion dbVersion = DBVersion.OTHERS;
 
-            if (Strings.containsIgnoreCase(dbProductName, "H2")) {
+            if (Strings.containsIgnoreCase(productNameForMatch, "H2")) {
                 dbVersion = DBVersion.H2;
-            } else if (Strings.containsIgnoreCase(dbProductName, "HSQL")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "HSQL")) {
                 dbVersion = DBVersion.HSQLDB;
-            } else if (Strings.containsIgnoreCase(dbProductName, "MariaDB") || Strings.containsIgnoreCase(dbProductVersion, "MariaDB")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "MariaDB") || Strings.containsIgnoreCase(productVersionForMatch, "MariaDB")) {
                 dbVersion = DBVersion.MariaDB;
-            } else if (Strings.containsIgnoreCase(dbProductName, "MySQL")) {
-                if (dbProductVersion.startsWith("5.5")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "MySQL")) {
+                if (productVersionForMatch.startsWith("5.5")) {
                     dbVersion = DBVersion.MySQL_5_5;
-                } else if (dbProductVersion.startsWith("5.6")) {
+                } else if (productVersionForMatch.startsWith("5.6")) {
                     dbVersion = DBVersion.MySQL_5_6;
-                } else if (dbProductVersion.startsWith("5.7")) {
+                } else if (productVersionForMatch.startsWith("5.7")) {
                     dbVersion = DBVersion.MySQL_5_7;
-                } else if (dbProductVersion.startsWith("5.8")) {
+                } else if (productVersionForMatch.startsWith("5.8")) {
                     dbVersion = DBVersion.MySQL_5_8;
-                } else if (dbProductVersion.startsWith("5.9")) {
+                } else if (productVersionForMatch.startsWith("5.9")) {
                     dbVersion = DBVersion.MySQL_5_9;
-                } else if (dbProductVersion.startsWith("6")) {
+                } else if (productVersionForMatch.startsWith("6")) {
                     dbVersion = DBVersion.MySQL_6;
-                } else if (dbProductVersion.startsWith("7")) {
+                } else if (productVersionForMatch.startsWith("7")) {
                     dbVersion = DBVersion.MySQL_7;
-                } else if (dbProductVersion.startsWith("8")) {
+                } else if (productVersionForMatch.startsWith("8")) {
                     dbVersion = DBVersion.MySQL_8;
-                } else if (dbProductVersion.startsWith("9")) {
+                } else if (productVersionForMatch.startsWith("9")) {
                     dbVersion = DBVersion.MySQL_9;
-                } else if (dbProductVersion.startsWith("10")) {
+                } else if (productVersionForMatch.startsWith("10")) {
                     dbVersion = DBVersion.MySQL_10;
                 } else {
                     dbVersion = DBVersion.MySQL_OTHERS;
                 }
-            } else if (Strings.containsIgnoreCase(dbProductName, "PostgreSQL")) {
-                if (dbProductVersion.startsWith("9.2")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "PostgreSQL")) {
+                if (productVersionForMatch.startsWith("9.2")) {
                     dbVersion = DBVersion.PostgreSQL_9_2;
-                } else if (dbProductVersion.startsWith("9.3")) {
+                } else if (productVersionForMatch.startsWith("9.3")) {
                     dbVersion = DBVersion.PostgreSQL_9_3;
-                } else if (dbProductVersion.startsWith("9.4")) {
+                } else if (productVersionForMatch.startsWith("9.4")) {
                     dbVersion = DBVersion.PostgreSQL_9_4;
-                } else if (dbProductVersion.startsWith("9.5")) {
+                } else if (productVersionForMatch.startsWith("9.5")) {
                     dbVersion = DBVersion.PostgreSQL_9_5;
-                } else if (dbProductVersion.startsWith("9.6")) {
+                } else if (productVersionForMatch.startsWith("9.6")) {
                     dbVersion = DBVersion.PostgreSQL_9_6;
-                } else if (dbProductVersion.startsWith("10")) {
+                } else if (productVersionForMatch.startsWith("10")) {
                     dbVersion = DBVersion.PostgreSQL_10;
-                } else if (dbProductVersion.startsWith("11")) {
+                } else if (productVersionForMatch.startsWith("11")) {
                     dbVersion = DBVersion.PostgreSQL_11;
-                } else if (dbProductVersion.startsWith("12")) {
+                } else if (productVersionForMatch.startsWith("12")) {
                     dbVersion = DBVersion.PostgreSQL_12;
                 } else {
                     dbVersion = DBVersion.PostgreSQL_OTHERS;
                 }
-            } else if (Strings.containsIgnoreCase(dbProductName, "Oracle")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "Oracle")) {
                 dbVersion = DBVersion.Oracle;
-            } else if (Strings.containsIgnoreCase(dbProductName, "DB2")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "DB2")) {
                 dbVersion = DBVersion.DB2;
-            } else if (Strings.containsIgnoreCase(dbProductName, "SQL SERVER")) {
+            } else if (Strings.containsIgnoreCase(productNameForMatch, "SQL SERVER")) {
                 dbVersion = DBVersion.SQL_Server;
             }
 
@@ -2384,9 +2386,14 @@ public final class JdbcUtil {
 
                     while (rs.next()) {
                         blob = rs.getBlob(columnIndex);
-                        result.add(blob.getBytes(1, (int) blob.length()));
-                        blob.free();
-                        blob = null;
+
+                        if (blob != null) {
+                            result.add(blob.getBytes(1, (int) blob.length()));
+                            blob.free();
+                            blob = null;
+                        } else {
+                            result.add(null);
+                        }
                     }
                 } finally {
                     if (blob != null) {
@@ -2401,9 +2408,14 @@ public final class JdbcUtil {
 
                     while (rs.next()) {
                         clob = rs.getClob(columnIndex);
-                        result.add(clob.getSubString(1, (int) clob.length()));
-                        clob.free();
-                        clob = null;
+
+                        if (clob != null) {
+                            result.add(clob.getSubString(1, (int) clob.length()));
+                            clob.free();
+                            clob = null;
+                        } else {
+                            result.add(null);
+                        }
                     }
                 } finally {
                     if (clob != null) {
@@ -4950,8 +4962,8 @@ public final class JdbcUtil {
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(conn);
-        N.checkArgNotNull(sql);
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(listOfParameters)) {
@@ -5108,8 +5120,8 @@ public final class JdbcUtil {
      */
     public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(conn);
-        N.checkArgNotNull(sql);
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(listOfParameters)) {
@@ -6897,8 +6909,6 @@ public final class JdbcUtil {
 
         sqlTypeGetterMap.put(Types.REAL, sqlTypeGetterMap.get(Types.DOUBLE));
 
-        sqlTypeGetterMap.put(Types.NUMERIC, sqlTypeGetterMap.get(Types.BIGINT));
-
         sqlTypeGetterMap.put(Types.DECIMAL, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
@@ -6910,6 +6920,9 @@ public final class JdbcUtil {
                 return stmt.getBigDecimal(outParameterName);
             }
         });
+
+        sqlTypeGetterMap.put(Types.NUMERIC, sqlTypeGetterMap.get(Types.DECIMAL));
+
         sqlTypeGetterMap.put(Types.CHAR, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
@@ -9384,7 +9397,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Inside a transaction, but need to log something immediately
-     * JdbcUtil.callNotInStartedTransaction(dataSource, () -> {
+     * JdbcUtil.callOutsideTransaction(dataSource, () -> {
      *     // This runs with a separate connection
      *     auditDao.logImmediately("Operation started");
      *     return "Logged";
@@ -9400,7 +9413,7 @@ public final class JdbcUtil {
      * @throws E if the callable throws an exception
      */
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
             throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
@@ -9414,7 +9427,7 @@ public final class JdbcUtil {
                 if (tran == null) {
                     return cmd.call();
                 } else {
-                    return tran.callNotInMe(cmd);
+                    return tran.callOutsideTransaction(cmd);
                 }
             } finally {
                 doNotUseSpringTransactional(false);
@@ -9425,7 +9438,7 @@ public final class JdbcUtil {
             if (tran == null) {
                 return cmd.call();
             } else {
-                return tran.callNotInMe(cmd);
+                return tran.callOutsideTransaction(cmd);
             }
         }
     }
@@ -9437,7 +9450,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String result = JdbcUtil.callNotInStartedTransaction(dataSource, ds -> {
+     * String result = JdbcUtil.callOutsideTransaction(dataSource, ds -> {
      *     // Use the DataSource to perform operations outside transaction
      *     try (Connection conn = ds.getConnection()) {
      *         // Perform non-transactional operations
@@ -9455,7 +9468,7 @@ public final class JdbcUtil {
      * @throws E if the function throws an exception
      */
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource,
+    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource,
             final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
@@ -9469,7 +9482,7 @@ public final class JdbcUtil {
                 if (tran == null) {
                     return cmd.apply(dataSource);
                 } else {
-                    return tran.callNotInMe(() -> cmd.apply(dataSource));
+                    return tran.callOutsideTransaction(() -> cmd.apply(dataSource));
                 }
             } finally {
                 doNotUseSpringTransactional(false);
@@ -9480,7 +9493,7 @@ public final class JdbcUtil {
             if (tran == null) {
                 return cmd.apply(dataSource);
             } else {
-                return tran.callNotInMe(() -> cmd.apply(dataSource));
+                return tran.callOutsideTransaction(() -> cmd.apply(dataSource));
             }
         }
     }
@@ -9493,7 +9506,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Inside a transaction, but need to perform non-transactional operation
-     * JdbcUtil.runNotInStartedTransaction(dataSource, () -> {
+     * JdbcUtil.runOutsideTransaction(dataSource, () -> {
      *     // This runs with a separate connection
      *     cacheDao.refreshCache();
      * });
@@ -9506,7 +9519,7 @@ public final class JdbcUtil {
      * @throws E if the runnable throws an exception
      */
     @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+    public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
             throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
@@ -9520,7 +9533,7 @@ public final class JdbcUtil {
                 if (tran == null) {
                     cmd.run();
                 } else {
-                    tran.runNotInMe(cmd);
+                    tran.runOutsideTransaction(cmd);
                 }
             } finally {
                 doNotUseSpringTransactional(false);
@@ -9531,7 +9544,7 @@ public final class JdbcUtil {
             if (tran == null) {
                 cmd.run();
             } else {
-                tran.runNotInMe(cmd);
+                tran.runOutsideTransaction(cmd);
             }
         }
     }
@@ -9543,7 +9556,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.runNotInStartedTransaction(dataSource, ds -> {
+     * JdbcUtil.runOutsideTransaction(dataSource, ds -> {
      *     // Use the DataSource for non-transactional operations
      *     try (Connection conn = ds.getConnection()) {
      *         // Perform operations that should not be part of current transaction
@@ -9558,7 +9571,7 @@ public final class JdbcUtil {
      * @throws E if the consumer throws an exception
      */
     @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
+    public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource,
             final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
@@ -9572,7 +9585,7 @@ public final class JdbcUtil {
                 if (tran == null) {
                     cmd.accept(dataSource);
                 } else {
-                    tran.runNotInMe(() -> cmd.accept(dataSource));
+                    tran.runOutsideTransaction(() -> cmd.accept(dataSource));
                 }
             } finally {
                 doNotUseSpringTransactional(false);
@@ -9583,9 +9596,81 @@ public final class JdbcUtil {
             if (tran == null) {
                 cmd.accept(dataSource);
             } else {
-                tran.runNotInMe(() -> cmd.accept(dataSource));
+                tran.runOutsideTransaction(() -> cmd.accept(dataSource));
             }
         }
+    }
+
+    /**
+     * Executes the given callable outside any active transaction for the specified DataSource.
+     *
+     * @param <T> the type of the result returned by the callable
+     * @param <E> the type of exception that the callable may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the callable to execute outside any transaction
+     * @return the result of the callable execution
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the callable throws an exception
+     * @deprecated replaced by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}
+     */
+    @Deprecated
+    @Beta
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+            throws IllegalArgumentException, E {
+        return callOutsideTransaction(dataSource, cmd);
+    }
+
+    /**
+     * Executes the given function outside any active transaction for the specified DataSource.
+     *
+     * @param <T> the type of the result returned by the function
+     * @param <E> the type of exception that the function may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the function to execute outside any transaction
+     * @return the result of the function execution
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the function throws an exception
+     * @deprecated replaced by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}
+     */
+    @Deprecated
+    @Beta
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource,
+            final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E {
+        return callOutsideTransaction(dataSource, cmd);
+    }
+
+    /**
+     * Executes the given runnable outside any active transaction for the specified DataSource.
+     *
+     * @param <E> the type of exception that the runnable may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the runnable to execute outside any transaction
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the runnable throws an exception
+     * @deprecated replaced by {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}
+     */
+    @Deprecated
+    @Beta
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+            throws IllegalArgumentException, E {
+        runOutsideTransaction(dataSource, cmd);
+    }
+
+    /**
+     * Executes the given consumer outside any active transaction for the specified DataSource.
+     *
+     * @param <E> the type of exception that the consumer may throw
+     * @param dataSource the DataSource to use
+     * @param cmd the consumer to execute outside any transaction
+     * @throws IllegalArgumentException if dataSource or cmd is null
+     * @throws E if the consumer throws an exception
+     * @deprecated replaced by {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)}
+     */
+    @Deprecated
+    @Beta
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
+            final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E {
+        runOutsideTransaction(dataSource, cmd);
     }
 
     /**

@@ -695,18 +695,18 @@ public final class JoinInfo {
     }
 
     /**
-     * Retrieves the SQL builder and parameter setter for single entity select operations.
-     * This method is used for building SQL SELECT statements with join conditions for a single entity.
+     * Retrieves the SQL plan for single-entity select operations.
+     * This method returns SQL builders and parameter setters for loading one joined entity graph.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
+     *     plan = joinInfo.getSelectSqlPlan(PSC.class);
      *
      * // Build SQL with specific columns
-     * String sql = builder._1.apply(Arrays.asList("id", "name", "description"));
+     * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
@@ -717,7 +717,7 @@ public final class JoinInfo {
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
      */
-    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSQLBuilderAndParamSetter(
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlPlan(
             final Class<? extends SQLBuilder> sbc) {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSQLBuilderAndParamSetterPool.get(sbc);
 
@@ -729,19 +729,28 @@ public final class JoinInfo {
     }
 
     /**
-     * Retrieves the SQL builder and parameter setter for batch select operations.
-     * This method is used for building SQL SELECT statements with join conditions for multiple entities.
+     * @deprecated Use {@link #getSelectSqlPlan(Class)}.
+     */
+    @Deprecated
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSQLBuilderAndParamSetter(
+            final Class<? extends SQLBuilder> sbc) {
+        return getSelectSqlPlan(sbc);
+    }
+
+    /**
+     * Retrieves the SQL plan for batch select operations.
+     * This method returns SQL builders and parameter setters for loading joined entities in batches.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchBuilder = joinInfo.getBatchSelectSQLBuilderAndParamSetter(PSC.class);
+     *     batchPlan = joinInfo.getBatchSelectSqlPlan(PSC.class);
      *
      * // Build SQL for batch of entities
      * List<Employee> employees = getEmployees();
-     * String sql = batchBuilder._1.apply(Arrays.asList("id", "name"), employees.size());
+     * String sql = batchPlan._1.apply(Arrays.asList("id", "name"), employees.size());
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
@@ -752,7 +761,7 @@ public final class JoinInfo {
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
      */
-    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter( //NOSONAR
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSQLBuilderAndParamSetterPool
                 .get(sbc);
@@ -762,6 +771,15 @@ public final class JoinInfo {
         }
 
         return tp;
+    }
+
+    /**
+     * @deprecated Use {@link #getBatchSelectSqlPlan(Class)}.
+     */
+    @Deprecated
+    public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSQLBuilderAndParamSetter( //NOSONAR
+            final Class<? extends SQLBuilder> sbc) {
+        return getBatchSelectSqlPlan(sbc);
     }
 
     //    public Tuple2<String, BiParametersSetter<PreparedStatement, Object>> getSetNullSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
@@ -775,7 +793,7 @@ public final class JoinInfo {
     //    }
 
     /**
-     * Retrieves the SQL and parameter setter for delete operations.
+     * Retrieves the SQL plan for delete operations.
      * This method returns SQL statements for deleting joined entities and optionally the join table entries.
      *
      * <p><b>Usage Examples:</b></p>
@@ -783,11 +801,11 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     deleteTuple = joinInfo.getDeleteSqlAndParamSetter(PSC.class);
+     *     deletePlan = joinInfo.getDeleteSqlPlan(PSC.class);
      *
-     * String deleteSql = deleteTuple._1;  // Main delete SQL
-     * String middleTableDeleteSql = deleteTuple._2;  // Join table delete SQL (if many-to-many)
-     * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deleteTuple._3;
+     * String deleteSql = deletePlan._1;  // Main delete SQL
+     * String middleTableDeleteSql = deletePlan._2;  // Join table delete SQL (if many-to-many)
+     * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
@@ -798,7 +816,7 @@ public final class JoinInfo {
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
      */
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Class<? extends SQLBuilder> sbc) {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(sbc);
 
         if (tp == null) {
@@ -809,7 +827,15 @@ public final class JoinInfo {
     }
 
     /**
-     * Retrieves the SQL builder and parameter setter for batch delete operations.
+     * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
+     */
+    @Deprecated
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SQLBuilder> sbc) {
+        return getDeleteSqlPlan(sbc);
+    }
+
+    /**
+     * Retrieves the SQL plan for batch delete operations.
      * This method is used for building SQL DELETE statements for multiple joined entities.
      *
      * <p><b>Usage Examples:</b></p>
@@ -817,12 +843,12 @@ public final class JoinInfo {
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
      *                                               "employees", "projects");
      * Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
-     *     batchDelete = joinInfo.getBatchDeleteSQLBuilderAndParamSetter(PSC.class);
+     *     batchDeletePlan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
      *
      * List<Employee> employees = getEmployeesToDelete();
-     * String deleteSql = batchDelete._1.apply(employees.size());   // Main delete SQL
-     * String middleTableDeleteSql = batchDelete._2 != null ? batchDelete._2.apply(employees.size()) : null;
-     * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDelete._3;
+     * String deleteSql = batchDeletePlan._1.apply(employees.size());   // Main delete SQL
+     * String middleTableDeleteSql = batchDeletePlan._2 != null ? batchDeletePlan._2.apply(employees.size()) : null;
+     * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDeletePlan._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
@@ -833,7 +859,7 @@ public final class JoinInfo {
      * @see SQLBuilder.PAC
      * @see SQLBuilder.PLC
      */
-    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter( //NOSONAR
+    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR
             final Class<? extends SQLBuilder> sbc) {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSQLBuilderAndParamSetterForPool
                 .get(sbc);
@@ -843,6 +869,15 @@ public final class JoinInfo {
         }
 
         return tp;
+    }
+
+    /**
+     * @deprecated Use {@link #getBatchDeleteSqlPlan(Class)}.
+     */
+    @Deprecated
+    public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSQLBuilderAndParamSetter( //NOSONAR
+            final Class<? extends SQLBuilder> sbc) {
+        return getBatchDeleteSqlPlan(sbc);
     }
 
     /**
@@ -1056,7 +1091,7 @@ public final class JoinInfo {
      * // Use the join info to load related entities for a single employee
      * Employee employee = employeeDao.findById(123);
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
-     *     builder = joinInfo.getSelectSQLBuilderAndParamSetter(PSC.class);
+     *     builder = joinInfo.getSelectSqlPlan(PSC.class);
      * String sql = builder._1.apply(null);   // Use default columns
      * List<Project> projects = JdbcUtil.prepareQuery(dataSource, sql)
      *                                   .setParameters(builder._2, employee)

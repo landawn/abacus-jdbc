@@ -69,7 +69,7 @@ public @interface Cache {
      * When the cache reaches this capacity, the least recently used entries
      * will be evicted to make room for new entries.
      * 
-     * <p>The default value is {@link JdbcUtil#DEFAULT_BATCH_SIZE}, which is
+     * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY}, which is
      * typically suitable for most use cases. For DAOs handling large amounts
      * of frequently accessed data, consider increasing this value.</p>
      * 
@@ -83,7 +83,7 @@ public @interface Cache {
      *
      * @return the maximum number of cache entries
      */
-    int capacity() default JdbcUtil.DEFAULT_BATCH_SIZE;
+    int capacity() default JdbcUtil.DEFAULT_CACHE_CAPACITY;
 
     /**
      * Specifies the time delay (in milliseconds) after which cached entries will be evicted.

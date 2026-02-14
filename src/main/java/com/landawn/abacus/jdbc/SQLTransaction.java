@@ -88,12 +88,12 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private volatile boolean _isForUpdateOnly; //NOSONAR
 
-    private boolean _isMarkedByCommitPreviously = false; //NOSONAR
+    private boolean _isMarkedByCommitOrRollbckPreviously = false; //NOSONAR
 
     SQLTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
-        N.checkArgNotNull(conn);
-        N.checkArgNotNull(isolationLevel);
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotNull(isolationLevel, cs.isolationLevel);
 
         _id = getTransactionId(ds, creator);
         _timedId = _id + "_" + System.currentTimeMillis();
@@ -304,7 +304,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
-        _isMarkedByCommitPreviously = true;
+        _isMarkedByCommitOrRollbckPreviously = true;
 
         if (refCount > 0) {
             return;
@@ -392,7 +392,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
-        _isMarkedByCommitPreviously = true;
+        _isMarkedByCommitOrRollbckPreviously = true;
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
@@ -436,8 +436,12 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     @Override
     public void rollbackIfNotCommitted() throws UncheckedSQLException {
-        if (_isMarkedByCommitPreviously) { // Do nothing. It happened in finally block.
-            _isMarkedByCommitPreviously = false;
+        if (_isMarkedByCommitOrRollbckPreviously) { // Do nothing. It happened in finally block.
+            _isMarkedByCommitOrRollbckPreviously = false;
+            return;
+        }
+
+        if (_status == Status.COMMITTED || _status == Status.FAILED_COMMIT || _status == Status.ROLLED_BACK || _status == Status.FAILED_ROLLBACK) {
             return;
         }
 
@@ -446,22 +450,9 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
             return;
-        } else if (refCount < 0) {
-            if (refCount == -1
-                    && (_status == Status.COMMITTED || _status == Status.FAILED_COMMIT || _status == Status.ROLLED_BACK || _status == Status.FAILED_ROLLBACK)) {
-                // Do nothing. It happened in finally block.
-            } else {
-                if (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) {
-                    executeRollback();
-                } else {
-                    logger.warn("Transaction(id={}) is already: {}. Rollback operation ignored", _timedId, _status);
-                }
-            }
-
-            return;
         }
 
-        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK || _status == Status.FAILED_COMMIT || _status == Status.FAILED_ROLLBACK)) {
+        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK)) {
             throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be rolled back");
         }
 
@@ -552,7 +543,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
         }
 
-        _isMarkedByCommitPreviously = false;
+        _isMarkedByCommitOrRollbckPreviously = false;
 
         if (_conn != null) {
             try {
@@ -686,7 +677,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *     dao.update(entity);
      *
      *     // Execute non-transactional operation
-     *     tran.runNotInMe(() -> {
+     *     tran.runOutsideTransaction(() -> {
      *         // This code runs outside the transaction
      *         auditLogger.log("Entity updated");
      *     });
@@ -702,7 +693,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @throws E if the {@code Runnable} throws an exception
      * @throws IllegalStateException if another transaction is opened during execution
      */
-    public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd) throws E {
+    public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
         synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
@@ -710,7 +701,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 cmd.run();
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runNotInMe'."); //NOSONAR
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runOutsideTransaction'."); //NOSONAR
                 }
             }
         }
@@ -733,7 +724,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *     dao.save(entity);
      *
      *     // Query outside transaction to see committed state
-     *     String timestamp = tran.callNotInMe(() -> {
+     *     String timestamp = tran.callOutsideTransaction(() -> {
      *         // This query runs outside the transaction
      *         return JdbcUtil.prepareQuery(dataSource, "SELECT current_timestamp")
      *                        .findFirst(String.class)
@@ -753,7 +744,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @throws E if the {@code Callable} throws an exception
      * @throws IllegalStateException if another transaction is opened during execution
      */
-    public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<R, E> cmd) throws E {
+    public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<R, E> cmd) throws E {
         synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
@@ -761,10 +752,38 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 return cmd.call();
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callNotInMe'."); //NOSONAR
+                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callOutsideTransaction'."); //NOSONAR
                 }
             }
         }
+    }
+
+    /**
+     * Executes the specified {@code Runnable} outside of this transaction context.
+     *
+     * @param <E> the exception type that may be thrown during execution
+     * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
+     * @throws E if the {@code Runnable} throws an exception
+     * @deprecated replaced by {@link #runOutsideTransaction(Throwables.Runnable)}
+     */
+    @Deprecated
+    public <E extends Throwable> void runNotInMe(final Throwables.Runnable<E> cmd) throws E {
+        runOutsideTransaction(cmd);
+    }
+
+    /**
+     * Executes the specified {@code Callable} outside of this transaction context.
+     *
+     * @param <R> the result type returned by the operation
+     * @param <E> the exception type that may be thrown during execution
+     * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
+     * @return the result returned by the {@code Callable}
+     * @throws E if the {@code Callable} throws an exception
+     * @deprecated replaced by {@link #callOutsideTransaction(Throwables.Callable)}
+     */
+    @Deprecated
+    public <R, E extends Throwable> R callNotInMe(final Throwables.Callable<R, E> cmd) throws E {
+        return callOutsideTransaction(cmd);
     }
 
     /**

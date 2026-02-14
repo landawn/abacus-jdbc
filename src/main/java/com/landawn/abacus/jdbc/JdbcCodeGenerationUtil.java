@@ -430,33 +430,33 @@ public final class JdbcCodeGenerationUtil {
         final boolean isJavaPersistenceId = "javax.persistence.Id".equals(idAnnotationClassName)
                 || "jakarta.persistence.Id".equals(ClassUtil.getCanonicalClassName(idAnnotationClass));
 
+        final String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
+
+        if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
+            throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
+                    + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
+        }
+
+        final List<Tuple2<String, String>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
+                : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
+                        .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
+                        .map(Strings::strip)
+                        // .peek(Fn.println())
+                        .filter(Fn.notEmpty())
+                        .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
+                        .map(it -> Strings.substringBetween(it, " ", ";").trim())
+                        .map(it -> {
+                            final int idx = it.lastIndexOf(' ');
+                            return Tuple.of(it.substring(0, idx).trim(), it.substring(idx + 1).trim());
+                        })
+                        .toList();
+
+        final Collection<String> excludedFields = configToUse.getExcludedFields();
+        final List<String> columnNameList = new ArrayList<>();
+        final List<String> columnClassNameList = new ArrayList<>();
+        final List<String> fieldNameList = new ArrayList<>();
+
         try {
-            final String finalClassName = Strings.isEmpty(className) ? Strings.capitalize(Strings.toCamelCase(entityName)) : className;
-
-            if (N.commonSet(readOnlyFields, nonUpdatableFields).size() > 0) {
-                throw new RuntimeException("Fields: " + N.commonSet(readOnlyFields, nonUpdatableFields)
-                        + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
-            }
-
-            final List<Tuple2<String, String>> additionalFields = Strings.isEmpty(configToUse.getAdditionalFieldsOrLines()) ? new ArrayList<>()
-                    : Stream.split(configToUse.getAdditionalFieldsOrLines(), "\n")
-                            .map(it -> it.contains("//") ? Strings.substringBefore(it, "//") : it)
-                            .map(Strings::strip)
-                            // .peek(Fn.println())
-                            .filter(Fn.notEmpty())
-                            .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
-                            .map(it -> Strings.substringBetween(it, " ", ";").trim())
-                            .map(it -> {
-                                final int idx = it.lastIndexOf(' ');
-                                return Tuple.of(it.substring(0, idx).trim(), it.substring(idx + 1).trim());
-                            })
-                            .toList();
-
-            final Collection<String> excludedFields = configToUse.getExcludedFields();
-            final List<String> columnNameList = new ArrayList<>();
-            final List<String> columnClassNameList = new ArrayList<>();
-            final List<String> fieldNameList = new ArrayList<>();
-
             final ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
 
@@ -689,13 +689,13 @@ public final class JdbcCodeGenerationUtil {
                 //
                 sb.append(LINE_SEPARATOR)
                         .append("    public ")
-                        .append(className)
+                        .append(finalClassName)
                         .append(" copy() {")
                         .append(LINE_SEPARATOR)
                         .append("        final ")
-                        .append(className)
+                        .append(finalClassName)
                         .append(" copy = new ")
-                        .append(className)
+                        .append(finalClassName)
                         .append("();")
                         .append(LINE_SEPARATOR); //
 
