@@ -3922,7 +3922,7 @@ public final class JdbcUtils {
     /**
      * Creates a parameter setter for a {@link PreparedQuery} using the provided {@link ColumnGetter}.
      *
-     * <p>The returned {@link com.landawn.abacus.exception.Throwables.BiConsumer} is stateful and caches
+     * <p>The returned {@link Throwables.BiConsumer} is stateful and caches
      * the ResultSet column count on first invocation by calling {@link JdbcUtil#getColumnCount(ResultSet)}.
      * For each column index {@code 1..columnCount}, it calls
      * {@link PreparedQuery#setObject(int, Object)} with the value from

@@ -603,7 +603,7 @@ public final class DBLock {
         }
     }
 
-    private static final record LockInfo(String code, long liveTime) {
+    private record LockInfo(String code, long liveTime) {
 
     }
 }

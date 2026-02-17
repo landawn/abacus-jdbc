@@ -890,7 +890,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * <p>Any exception during creation/configuration is converted and rethrown as a
-     * {@link RuntimeException} by {@link com.landawn.abacus.exception.ExceptionUtil#toRuntimeException(Throwable, boolean)}.</p>
+     * {@link RuntimeException} by {@code ExceptionUtil.toRuntimeException(Throwable, boolean)}.</p>
      *
      * @param url the JDBC URL for the database connection
      * @param user the username for database authentication
@@ -933,7 +933,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * <p>Any exception during creation/configuration is converted and rethrown as a
-     * {@link RuntimeException} by {@link com.landawn.abacus.exception.ExceptionUtil#toRuntimeException(Throwable, boolean)}.</p>
+     * {@link RuntimeException} by {@code ExceptionUtil.toRuntimeException(Throwable, boolean)}.</p>
      *
      * @param url the JDBC URL for the database connection
      * @param user the username for database authentication
@@ -1710,6 +1710,7 @@ public final class JdbcUtil {
      *     // ...
      * } finally {
      *     JdbcUtil.closeQuietly(conn);
+     * }
      * }</pre>
      *
      * @param conn The {@link Connection} to close. Can be {@code null}.

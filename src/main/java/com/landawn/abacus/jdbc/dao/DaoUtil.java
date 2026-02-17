@@ -22,12 +22,7 @@ import java.lang.reflect.WildcardType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
@@ -50,15 +45,7 @@ import com.landawn.abacus.query.SQLBuilder.PLC;
 import com.landawn.abacus.query.SQLBuilder.PSB;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.util.ClassUtil;
-import com.landawn.abacus.util.ContinuableFuture;
-import com.landawn.abacus.util.ExceptionUtil;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Result;
-import com.landawn.abacus.util.Seid;
-import com.landawn.abacus.util.Strings;
-import com.landawn.abacus.util.Throwables;
-import com.landawn.abacus.util.Tuple;
+import com.landawn.abacus.util.*;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.function.Function;
 
@@ -764,9 +751,7 @@ final class DaoUtil {
                     typesToScan.add(genericSuperClass);
                 }
 
-                for (final Type genericInterface : cls.getGenericInterfaces()) {
-                    typesToScan.add(genericInterface);
-                }
+                typesToScan.addAll(Array.asList(cls.getGenericInterfaces()));
             } else if (type instanceof final ParameterizedType parameterizedType) {
                 typesToScan.add(parameterizedType.getRawType());
             }
@@ -1026,11 +1011,9 @@ final class DaoUtil {
             }
 
             if (sql.charAt(fromIndex) == '#') {
-                fromIndex++;
-
-                while (fromIndex < sql.length() && sql.charAt(fromIndex) != '\n' && sql.charAt(fromIndex) != '\r') {
+                do {
                     fromIndex++;
-                }
+                } while (fromIndex < sql.length() && sql.charAt(fromIndex) != '\n' && sql.charAt(fromIndex) != '\r');
 
                 continue;
             }

@@ -2502,7 +2502,6 @@ public final class Jdbc {
              * @param <R> final result type
              * @param finisher a function that transforms the row's values into the final result object
              * @return a new stateful {@code RowMapper<R>}
-             * @throws SQLException if the finisher throws it while building the final result.
              */
             @SequentialOnly
             @Stateful
@@ -2554,7 +2553,6 @@ public final class Jdbc {
              * @param <R> final result type
              * @param finisher a function that transforms column labels and row values into the final result object
              * @return a new stateful {@code RowMapper<R>}
-             * @throws SQLException if the finisher throws it while building the final result.
              */
             @SequentialOnly
             @Stateful
