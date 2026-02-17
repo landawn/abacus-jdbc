@@ -112,7 +112,7 @@ final class SqlLogConfig {
      *
      * <p>This method switches the configuration to general SQL logging mode,
      * where all statements are logged. The performance-based logging threshold is
-     * not modified by this method.</p>
+     * reset to {@code Long.MAX_VALUE} (effectively disabled).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -132,15 +132,12 @@ final class SqlLogConfig {
     void set(final boolean isEnabled, final int maxSqlLogLength) {
         this.isEnabled = isEnabled;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
+        this.minExecutionTimeForSqlPerfLog = Long.MAX_VALUE;
     }
 
     /**
      * Updates the configuration for performance-based SQL logging.
      * Only SQL statements with execution time exceeding the threshold will be logged.
-     *
-     * <p>This method switches the configuration to performance-based logging mode,
-     * where only slow queries are logged. The general SQL logging flag is not
-     * modified by this method.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

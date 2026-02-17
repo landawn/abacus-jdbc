@@ -111,8 +111,7 @@ public @interface Handler {
      * <ol>
      *   <li>{@code beforeInvoke()} - Before the actual method invocation</li>
      *   <li>Actual DAO method execution</li>
-     *   <li>{@code afterInvoke()} - After successful completion (with result)</li>
-     *   <li>{@code onError()} - If an exception occurs (instead of afterInvoke)</li>
+     *   <li>{@code afterInvoke()} - After the method completes (whether successfully or with an exception)</li>
      * </ol>
      * 
      * <p>Example handler implementation:</p>

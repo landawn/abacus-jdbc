@@ -464,7 +464,7 @@ public final class JdbcCodeGenerationUtil {
                 final String columnName = rsmd.getColumnName(i);
 
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(),
-                        customizedFieldMap.get(Strings.toCamelCase(columnName)));
+                        customizedFieldMap.get(Strings.toCamelCase(columnName).toLowerCase()));
 
                 final String fieldName = customizedField == null || Strings.isEmpty(customizedField._2) ? fieldNameConverter.apply(entityName, columnName)
                         : customizedField._2;
@@ -1455,11 +1455,24 @@ public final class JdbcCodeGenerationUtil {
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
+            String whereSection = "";
+
+            if (N.notEmpty(keyColumnNames) || Strings.isNotEmpty(whereClause)) {
+                whereSection = " WHERE ";
+
+                if (N.notEmpty(keyColumnNames)) {
+                    whereSection += Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = ?").join(" AND ");
+
+                    if (Strings.isNotEmpty(whereClause)) {
+                        whereSection += " AND " + whereClause;
+                    }
+                } else {
+                    whereSection += whereClause;
+                }
+            }
+
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ")
-                    + (N.isEmpty(keyColumnNames) && Strings.isEmpty(whereClause) ? ""
-                            : " WHERE " + Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = ?").join(" AND "))
-                    + (N.isEmpty(keyColumnNames) ? "" : (Strings.isEmpty(whereClause) ? "" : " AND " + whereClause));
+                    + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ") + whereSection;
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1678,13 +1691,27 @@ public final class JdbcCodeGenerationUtil {
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
+            String whereSection = "";
+
+            if (N.notEmpty(keyColumnNames) || Strings.isNotEmpty(whereClause)) {
+                whereSection = " WHERE ";
+
+                if (N.notEmpty(keyColumnNames)) {
+                    whereSection += Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = :" + Strings.toCamelCase(c)).join(" AND ");
+
+                    if (Strings.isNotEmpty(whereClause)) {
+                        whereSection += " AND " + whereClause;
+                    }
+                } else {
+                    whereSection += whereClause;
+                }
+            }
+
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList)
                             .map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = :" + Strings.toCamelCase(columnLabel))
                             .join(", ")
-                    + (N.isEmpty(keyColumnNames) && Strings.isEmpty(whereClause) ? ""
-                            : " WHERE " + Stream.of(keyColumnNames).map(c -> checkColumnName(c, dbProductInfo) + " = :" + Strings.toCamelCase(c)).join(" AND "))
-                    + (N.isEmpty(keyColumnNames) ? "" : (Strings.isEmpty(whereClause) ? "" : " AND " + whereClause));
+                    + whereSection;
 
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1692,19 +1719,24 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Converts an INSERT SQL statement to an UPDATE SQL statement.
-     * 
+     * Converts an INSERT SQL statement to an UPDATE SQL statement without a WHERE clause.
+     *
+     * <p>This method delegates to {@link #convertInsertSqlToUpdateSql(DataSource, String, String)}
+     * with a {@code null} where clause.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * DataSource ds = ...;
      * String insertSql = "INSERT INTO users(name, email) VALUES ('John', 'john@example.com')";
      * String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, insertSql);
      * // Returns: "UPDATE users SET name = 'John', email = 'john@example.com'"
      * }</pre>
      *
-     * @param dataSource The data source to connect to the database
-     * @param insertSql The INSERT SQL statement to convert
-     * @return An UPDATE SQL statement derived from the INSERT statement
-     * @throws IllegalArgumentException if the INSERT SQL cannot be parsed or converted
+     * @param dataSource the data source used to resolve database-specific behavior
+     * @param insertSql the INSERT SQL statement to convert
+     * @return an UPDATE SQL statement derived from the INSERT statement
+     * @throws IllegalArgumentException if the data source is null or the INSERT SQL
+     *         cannot be parsed or converted
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql) {
@@ -1712,9 +1744,20 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Converts an INSERT SQL statement to an UPDATE SQL statement with a specified WHERE clause.
-     * The method parses the INSERT statement and reconstructs it as an UPDATE statement.
-     * 
+     * Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.
+     *
+     * <p>Expected SQL pattern: {@code INSERT INTO <table>(<col1>, <col2>, ...) VALUES (<v1>, <v2>, ...)}.
+     * The method parses table name, column list, and value list, then rebuilds SQL as:
+     * {@code UPDATE <table> SET col1 = v1, col2 = v2, ... [WHERE ...]}.</p>
+     *
+     * <ul>
+     *   <li>Column and value counts must match or conversion fails.</li>
+     *   <li>String values are rendered as quoted SQL literals (single-quoted).</li>
+     *   <li>All other value types are rendered using {@link com.landawn.abacus.util.N#stringOf(Object)}.</li>
+     *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>
+     *   <li>All parsing and SQL assembly failures are converted to {@link IllegalArgumentException}.</li>
+     * </ul>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String insertSql = "INSERT INTO products(name, price, stock) VALUES ('Widget', 19.99, 100)";
@@ -1722,11 +1765,11 @@ public final class JdbcCodeGenerationUtil {
      * // Returns: "UPDATE products SET name = 'Widget', price = 19.99, stock = 100 WHERE id = 123"
      * }</pre>
      *
-     * @param dataSource The data source to connect to the database
-     * @param insertSql The INSERT SQL statement to convert
-     * @param whereClause The WHERE clause to append to the UPDATE statement (without the WHERE keyword)
-     * @return An UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
-     * @throws IllegalArgumentException if the INSERT SQL cannot be parsed or converted
+     * @param dataSource the data source to connect to the database
+     * @param insertSql the INSERT SQL statement to convert
+     * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). May be null/empty.
+     * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
+     * @throws IllegalArgumentException if the INSERT SQL is null/empty, invalid, or cannot be converted
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql, final String whereClause) {

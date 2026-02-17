@@ -402,7 +402,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
     default List<T> list(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws UncheckedSQLException {
         final List<T> result = DaoUtil.getDao(this).list(selectPropNames, cond);
 
-        if (N.notEmpty(result)) {
+        if (includeAllJoinEntities && N.notEmpty(result)) {
             if (result.size() <= JdbcUtil.DEFAULT_BATCH_SIZE) {
                 loadAllJoinEntities(result);
             } else {

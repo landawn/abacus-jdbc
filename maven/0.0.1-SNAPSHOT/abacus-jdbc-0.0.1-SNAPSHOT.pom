@@ -77,13 +77,13 @@
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>7.3.0</version>
+			<version>7.3.1</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>4.3.0</version>
+			<version>4.3.1</version>
 		</dependency>
 	</dependencies>
 

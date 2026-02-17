@@ -1196,6 +1196,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
         final T dbEntity = findOnlyOne(cond).orElseNull();

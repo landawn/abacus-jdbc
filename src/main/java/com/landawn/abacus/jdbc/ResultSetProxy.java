@@ -447,6 +447,7 @@ final class ResultSetProxy implements ResultSet {
             Object ret = delegate.getObject(columnIndex);
 
             if (ret == null) {
+                // Don't cache getter when value is null -- defer type detection to first non-null value
                 return ret;
             }
 
@@ -527,6 +528,7 @@ final class ResultSetProxy implements ResultSet {
             Object ret = delegate.getObject(columnIndex);
 
             if (ret == null) {
+                // Don't cache getter when value is null -- defer type detection to first non-null value
                 return ret;
             }
 

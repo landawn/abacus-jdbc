@@ -2227,6 +2227,7 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testListAllResultSetsRowMapper() throws SQLException {
+        when(mockStmt.execute()).thenReturn(true);
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -2240,7 +2241,8 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testListAllResultSetsWithFilter() throws SQLException {
-        when(mockStmt.getMoreResults()).thenReturn(false);
+        when(mockStmt.execute()).thenReturn(true);
+        when(mockStmt.getMoreResults()).thenReturn(true);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getInt(1)).thenReturn(5, 10);
@@ -2253,6 +2255,7 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testListAllResultSetsBiRowMapper() throws SQLException {
+        when(mockStmt.execute()).thenReturn(true);
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -2265,6 +2268,7 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testListAllResultSetsWithBiFilter() throws SQLException {
+        when(mockStmt.execute()).thenReturn(true);
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
         when(mockResultSet.next()).thenReturn(true, true, false);

@@ -145,7 +145,7 @@ public final class DBLock {
 
     private final ScheduledFuture<?> scheduledFuture;
 
-    private final Map<String, String> targetCodePool = new ConcurrentHashMap<>();
+    private final Map<String, LockInfo> targetCodePool = new ConcurrentHashMap<>();
 
     private final String removeExpiredLockSQL;
 
@@ -194,7 +194,7 @@ public final class DBLock {
         // ..
         unlockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND code = ?"; //NOSONAR
         // ..
-        refreshSQL = "UPDATE " + tableName + " SET update_time = ? WHERE target = ? AND code = ?";
+        refreshSQL = "UPDATE " + tableName + " SET update_time = ?, expiry_time = ? WHERE target = ? AND code = ?";
 
         final String schema = "CREATE TABLE " + tableName
                 + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
@@ -220,21 +220,30 @@ public final class DBLock {
 
         final Runnable refreshTask = () -> {
             if (!targetCodePool.isEmpty()) {
-                final Map<String, String> m = Objectory.createMap();
+                final Map<String, LockInfo> m = Objectory.createMap();
 
                 try {
                     m.putAll(targetCodePool);
 
                     final Connection refreshConn = JdbcUtil.getConnection(ds);
                     try {
-                        for (final Map.Entry<String, String> entry : m.entrySet()) {
-                            final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, DateUtil.currentTimestamp(), entry.getKey(), entry.getValue());
+                        for (final Map.Entry<String, LockInfo> entry : m.entrySet()) {
+                            final LockInfo info = entry.getValue();
+                            if (info == null) {
+                                continue;
+                            }
 
-                            // Remove from pool if lock no longer exists in DB
+                            final Timestamp now = DateUtil.currentTimestamp();
+                            final Timestamp expiry = DateUtil.createTimestamp(now.getTime() + info.liveTime);
+
+                            final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code);
+
                             if (updated == 0) {
-                                targetCodePool.remove(entry.getKey(), entry.getValue());
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("Removed stale lock from pool: " + entry.getKey());
+                                // Remove from pool only if the cached lock instance is still present
+                                if (targetCodePool.remove(entry.getKey(), info)) {
+                                    if (logger.isWarnEnabled()) {
+                                        logger.warn("Removed stale lock from pool: " + entry.getKey());
+                                    }
                                 }
                             }
                         }
@@ -450,14 +459,16 @@ public final class DBLock {
         Timestamp now = DateUtil.currentTimestamp();
         final long endTime = now.getTime() + timeout;
         int attempts = 0;
-        final int maxAttempts = (int) (timeout / Math.max(retryInterval, 1)) + 1000; // Safeguard against infinite loop
+        final long maxAttemptsLong = timeout / Math.max(retryInterval, 1);
+        final long maxAttemptsWithBuffer = maxAttemptsLong >= (Integer.MAX_VALUE - 1000L) ? Integer.MAX_VALUE : maxAttemptsLong + 1000L; // Safeguard against infinite loop
+        final int maxAttempts = (int) maxAttemptsWithBuffer;
         Exception lastException = null;
 
         do {
             try {
                 if (JdbcUtil.executeUpdate(ds, lockSQL, IOUtil.getHostName(), target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now,
                         now) > 0) {
-                    targetCodePool.put(target, code);
+                    targetCodePool.put(target, new LockInfo(code, liveTime));
 
                     return code;
                 }
@@ -526,14 +537,21 @@ public final class DBLock {
     public boolean unlock(final String target, final String code) throws IllegalStateException {
         assertNotClosed();
 
-        // Use atomic remove with value check to avoid race condition
-        targetCodePool.remove(target, code);
+        final LockInfo lockInfo = targetCodePool.get(target);
+        final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code);
+        final boolean unLocked;
 
         try {
-            return JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
+            unLocked = JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
+
+        if (shouldRemoveFromLocal && unLocked) {
+            targetCodePool.remove(target, lockInfo);
+        }
+
+        return unLocked;
     }
 
     /**
@@ -583,5 +601,9 @@ public final class DBLock {
         if (isClosed) {
             throw new IllegalStateException("This DBLock has been closed");
         }
+    }
+
+    private static final record LockInfo(String code, long liveTime) {
+
     }
 }

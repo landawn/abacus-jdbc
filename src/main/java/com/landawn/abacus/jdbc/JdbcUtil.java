@@ -597,7 +597,7 @@ public final class JdbcUtil {
     static final Predicate<Method> IS_UPDATE_METHOD = method -> N.anyMatch(UPDATE_METHOD_NAME_SET,
             it -> Strings.isNotEmpty(it) && (Strings.startsWith(method.getName(), it) || Pattern.matches(it, method.getName())));
 
-    static Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR; //NOSONAR
+    static volatile Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR; //NOSONAR
 
     static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
 
@@ -606,15 +606,15 @@ public final class JdbcUtil {
 
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
 
-    static boolean isSqlLogAllowed = true;
+    static volatile boolean isSqlLogAllowed = true;
 
-    static boolean isSqlPerfLogAllowed = true;
+    static volatile boolean isSqlPerfLogAllowed = true;
 
-    static boolean isDaoMethodPerfLogAllowed = true;
+    static volatile boolean isDaoMethodPerfLogAllowed = true;
 
-    static boolean isInSpring = true;
+    static volatile boolean isInSpring = true;
 
-    static TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
+    static volatile TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
     @SuppressWarnings("rawtypes")
     private static final Map<Tuple2<Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
@@ -875,32 +875,28 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a C3P0 {@code ComboPooledDataSource} with the specified database connection details.
-     * C3P0 is a mature and highly configurable JDBC connection pooling library.
-     * This method is marked as {@code @Beta}, indicating it is subject to change.
+     * Creates a C3P0 {@code ComboPooledDataSource} with the specified database URL and credentials.
+     * This overload applies only basic C3P0 configuration (URL, user, password) and leaves
+     * all other pooling settings at C3P0 defaults.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Create a C3P0 DataSource for a PostgreSQL database
+     * // PostgreSQL with default pooling parameters
      * DataSource dataSource = JdbcUtil.createC3p0DataSource(
      *     "jdbc:postgresql://localhost:5432/mydatabase",
      *     "db_user",
      *     "db_password"
      * );
-     *
-     * // Use the DataSource to get a connection
-     * try (Connection connection = dataSource.getConnection()) {
-     *     // ...
-     * } catch (SQLException e) {
-     *     // Handle exception
-     * }
      * }</pre>
      *
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for database authentication.
-     * @param password The password for database authentication.
-     * @return A {@code javax.sql.DataSource} instance configured with C3P0.
-     * @throws RuntimeException If the C3P0 library is not available in the classpath or if configuration fails.
+     * <p>Any exception during creation/configuration is converted and rethrown as a
+     * {@link RuntimeException} by {@link com.landawn.abacus.exception.ExceptionUtil#toRuntimeException(Throwable, boolean)}.</p>
+     *
+     * @param url the JDBC URL for the database connection
+     * @param user the username for database authentication
+     * @param password the password for database authentication
+     * @return a {@code javax.sql.DataSource} instance configured with C3P0 defaults
+     * @throws RuntimeException if the C3P0 classpath/runtime is invalid or configuration fails
      * @see #createC3p0DataSource(String, String, String, int, int)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
      */
@@ -919,36 +915,33 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a C3P0 {@code ComboPooledDataSource} with specified connection details and pool size configuration.
-     * This method allows for tuning the connection pool's size to match application requirements.
-     * This method is marked as {@code @Beta}, indicating it is subject to change.
+     * Creates a C3P0 {@code ComboPooledDataSource} with explicit minimum and maximum pool size.
+     *
+     * <p>This overload sets URL, user, password, minimum pool size, and maximum pool size before
+     * returning the configured {@link com.mchange.v2.c3p0.ComboPooledDataSource}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Create a C3P0 DataSource with custom pool size for an Oracle database
+     * // Oracle with explicit pool sizing
      * DataSource dataSource = JdbcUtil.createC3p0DataSource(
      *     "jdbc:oracle:thin:@localhost:1521:xe",
      *     "db_user",
      *     "db_password",
-     *     3,  // Minimum number of connections in the pool
-     *     15  // Maximum number of connections in the pool
+     *     3,  // minimum pool size
+     *     15  // maximum pool size
      * );
-     *
-     * // The DataSource can now be used to obtain pooled connections
-     * try (Connection connection = dataSource.getConnection()) {
-     *     // ...
-     * } catch (SQLException e) {
-     *     // Handle exception
-     * }
      * }</pre>
      *
-     * @param url The JDBC URL for the database connection.
-     * @param user The username for database authentication.
-     * @param password The password for database authentication.
-     * @param minPoolSize The minimum number of connections the pool will maintain.
-     * @param maxPoolSize The maximum number of connections the pool will allow.
-     * @return A {@code javax.sql.DataSource} instance configured with C3P0 and custom pool settings.
-     * @throws RuntimeException If the C3P0 library is not available in the classpath or if configuration fails.
+     * <p>Any exception during creation/configuration is converted and rethrown as a
+     * {@link RuntimeException} by {@link com.landawn.abacus.exception.ExceptionUtil#toRuntimeException(Throwable, boolean)}.</p>
+     *
+     * @param url the JDBC URL for the database connection
+     * @param user the username for database authentication
+     * @param password the password for database authentication
+     * @param minPoolSize the minimum number of connections the pool will maintain
+     * @param maxPoolSize the maximum number of connections the pool will allow
+     * @return a {@code javax.sql.DataSource} instance configured with C3P0 and custom pool settings
+     * @throws RuntimeException if the C3P0 classpath/runtime is invalid or configuration fails
      * @see #createC3p0DataSource(String, String, String)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
      */
@@ -1698,25 +1691,25 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally closes a {@link Connection}, ignoring any {@code SQLException}.
+     * Unconditionally closes a {@link Connection}, suppressing any close failures.
      *
-     * @deprecated This method is deprecated as it encourages manual connection management, which can be
-     * error-prone. It's almost always better to use a {@link javax.sql.DataSource} and let it
-     * manage the connection lifecycle, or use {@link #releaseConnection(Connection, javax.sql.DataSource)}
-     * to safely return a connection to a pool.
+     * @deprecated This method is deprecated as it encourages manual connection management.
+     *             Prefer {@link #releaseConnection(Connection, javax.sql.DataSource)} and a pooled DataSource.
+     *
+     * <p>This method is null-safe and always returns immediately when {@code conn} is {@code null}.
+     * All closing exceptions are ignored; it delegates to
+     * {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Avoid this pattern; use a DataSource instead.
+     * // Deprecated fallback when you cannot rely on a DataSource.
      * Connection conn = null;
      * try {
      *     conn = JdbcUtil.createConnection(url, user, pass);
-     *     // ...
      * } catch (SQLException e) {
      *     // ...
      * } finally {
-     *     JdbcUtil.closeQuietly(conn);   // Deprecated practice
-     * }
+     *     JdbcUtil.closeQuietly(conn);
      * }</pre>
      *
      * @param conn The {@link Connection} to close. Can be {@code null}.
@@ -1912,7 +1905,13 @@ public final class JdbcUtil {
                 try {
                     rs.absolute((int) rowsToSkip + currentRow);
                 } catch (final SQLException e) {
-                    while (rowsToSkip-- > 0L && rs.next()) {
+                    logger.warn("Failed to call ResultSet.absolute(), falling back to manual iteration", e);
+
+                    // Re-read actual position since cursor state is undefined after failed absolute()
+                    final int newCurrentRow = rs.getRow();
+                    long remaining = rowsToSkip - (newCurrentRow - currentRow);
+
+                    while (remaining-- > 0L && rs.next()) {
                         // continue.
                     }
 
@@ -2253,13 +2252,21 @@ public final class JdbcUtil {
 
         if (ret instanceof final Blob blob) {
             try {
-                ret = blob.getBytes(1, (int) blob.length());
+                final long len = blob.length();
+                if (len > Integer.MAX_VALUE) {
+                    throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                }
+                ret = blob.getBytes(1, (int) len);
             } finally {
                 blob.free();
             }
         } else if (ret instanceof final Clob clob) {
             try {
-                ret = clob.getSubString(1, (int) clob.length());
+                final long len = clob.length();
+                if (len > Integer.MAX_VALUE) {
+                    throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                }
+                ret = clob.getSubString(1, (int) len);
             } finally {
                 clob.free();
             }
@@ -2321,13 +2328,21 @@ public final class JdbcUtil {
 
         if (ret instanceof final Blob blob) {
             try {
-                ret = blob.getBytes(1, (int) blob.length());
+                final long len = blob.length();
+                if (len > Integer.MAX_VALUE) {
+                    throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                }
+                ret = blob.getBytes(1, (int) len);
             } finally {
                 blob.free();
             }
         } else if (ret instanceof final Clob clob) {
             try {
-                ret = clob.getSubString(1, (int) clob.length());
+                final long len = clob.length();
+                if (len > Integer.MAX_VALUE) {
+                    throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                }
+                ret = clob.getSubString(1, (int) len);
             } finally {
                 clob.free();
             }
@@ -2380,7 +2395,11 @@ public final class JdbcUtil {
                 }
             } else if (val instanceof Blob blob) {
                 try {
-                    result.add(blob.getBytes(1, (int) blob.length()));
+                    long len = blob.length();
+                    if (len > Integer.MAX_VALUE) {
+                        throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                    }
+                    result.add(blob.getBytes(1, (int) len));
                     blob.free();
                     blob = null;
 
@@ -2388,7 +2407,11 @@ public final class JdbcUtil {
                         blob = rs.getBlob(columnIndex);
 
                         if (blob != null) {
-                            result.add(blob.getBytes(1, (int) blob.length()));
+                            len = blob.length();
+                            if (len > Integer.MAX_VALUE) {
+                                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                            }
+                            result.add(blob.getBytes(1, (int) len));
                             blob.free();
                             blob = null;
                         } else {
@@ -2402,7 +2425,11 @@ public final class JdbcUtil {
                 }
             } else if (val instanceof Clob clob) {
                 try {
-                    result.add(clob.getSubString(1, (int) clob.length()));
+                    long len = clob.length();
+                    if (len > Integer.MAX_VALUE) {
+                        throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                    }
+                    result.add(clob.getSubString(1, (int) len));
                     clob.free();
                     clob = null;
 
@@ -2410,7 +2437,11 @@ public final class JdbcUtil {
                         clob = rs.getClob(columnIndex);
 
                         if (clob != null) {
-                            result.add(clob.getSubString(1, (int) clob.length()));
+                            len = clob.length();
+                            if (len > Integer.MAX_VALUE) {
+                                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                            }
+                            result.add(clob.getSubString(1, (int) len));
                             clob.free();
                             clob = null;
                         } else {
@@ -8126,13 +8157,21 @@ public final class JdbcUtil {
                 }
             } else if (value instanceof final Blob blob) {
                 try {
-                    value = blob.getBytes(1, (int) blob.length());
+                    final long len = blob.length();
+                    if (len > Integer.MAX_VALUE) {
+                        throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                    }
+                    value = blob.getBytes(1, (int) len);
                 } finally {
                     blob.free();
                 }
             } else if (value instanceof final Clob clob) {
                 try {
-                    value = clob.getSubString(1, (int) clob.length());
+                    final long len = clob.length();
+                    if (len > Integer.MAX_VALUE) {
+                        throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                    }
+                    value = clob.getSubString(1, (int) len);
                 } finally {
                     clob.free();
                 }
@@ -8202,20 +8241,27 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the property names suitable for INSERT operations for the given entity,
-     * excluding the specified property names.
+     * Returns the property names suitable for INSERT operations for the given entity, excluding
+     * the provided property names.
+     *
+     * <p>This method delegates to
+     * {@link com.landawn.abacus.query.QueryUtil#getInsertPropNames(Object, Set)} and removes names
+     * explicitly listed in {@code excludedPropNames} when present.</p>
+     *
+     * <p>Pass {@code null} to include all supported properties (subject to the entity-level rules).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
      * Set<String> excludedProps = N.asSet("createdTime", "modifiedTime");
      * Collection<String> propNames = JdbcUtil.getInsertPropNames(user, excludedProps);
-     * // Returns property names for INSERT, excluding specified properties
+     * // Returns property names for INSERT, excluding createdTime and modifiedTime
      * }</pre>
      *
      * @param entity the entity object to analyze
-     * @param excludedPropNames property names to exclude from the result
+     * @param excludedPropNames property names to exclude from the result, or {@code null} for none
      * @return a collection of property names suitable for INSERT operations
+     * @throws IllegalArgumentException if the entity is not supported by QueryUtil introspection
      */
     @SuppressWarnings("deprecation")
     public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
@@ -8378,7 +8424,11 @@ public final class JdbcUtil {
         }
 
         try {
-            return new String(blob.getBytes(1, (int) blob.length()), Charsets.UTF_8);
+            final long len = blob.length();
+            if (len > Integer.MAX_VALUE) {
+                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+            }
+            return new String(blob.getBytes(1, (int) len), Charsets.UTF_8);
         } finally {
             blob.free();
         }
@@ -8406,7 +8456,11 @@ public final class JdbcUtil {
         }
 
         try {
-            return new String(blob.getBytes(1, (int) blob.length()), charset);
+            final long len = blob.length();
+            if (len > Integer.MAX_VALUE) {
+                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+            }
+            return new String(blob.getBytes(1, (int) len), charset);
         } finally {
             blob.free();
         }
@@ -8463,7 +8517,11 @@ public final class JdbcUtil {
         }
 
         try {
-            return clob.getSubString(1, (int) clob.length());
+            final long len = clob.length();
+            if (len > Integer.MAX_VALUE) {
+                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+            }
+            return clob.getSubString(1, (int) len);
         } finally {
             clob.free();
         }
@@ -8942,12 +9000,13 @@ public final class JdbcUtil {
      */
     public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E {
         if (isSqlLogEnabled()) {
+            final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
             disableSqlLog();
 
             try {
                 sqlAction.run();
             } finally {
-                enableSqlLog();
+                enableSqlLog(savedMaxSqlLogLength);
             }
         } else {
             sqlAction.run();
@@ -8978,12 +9037,13 @@ public final class JdbcUtil {
      */
     public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<R, E> sqlAction) throws E {
         if (isSqlLogEnabled()) {
+            final int savedMaxSqlLogLength = isSQLLogEnabled_TL.get().maxSqlLogLength;
             disableSqlLog();
 
             try {
                 return sqlAction.call();
             } finally {
-                enableSqlLog();
+                enableSqlLog(savedMaxSqlLogLength);
             }
         } else {
             return sqlAction.call();
@@ -10438,15 +10498,17 @@ public final class JdbcUtil {
     static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
         String paramKey = null;
 
+        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
+
         if (kryoParser != null) {
             try {
-                paramKey = kryoParser.serialize(args);
+                paramKey = kryoParser.serialize(cacheKeyArgs);
             } catch (final Exception e) {
                 // ignore;
                 daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
             }
         } else {
-            final List<Object> newArgs = Stream.of(args).map(it -> {
+            final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
                 if (it == null) {
                     return null;
                 }

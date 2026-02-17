@@ -21,6 +21,7 @@ import java.util.Collection;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -311,7 +312,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
             throws DuplicatedResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
-        if (result != null) {
+        if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }

@@ -3690,11 +3690,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                     addBatch();
                 }
             } else {
-                stmt.setObject(1, first);
+                setObject(1, first);
                 addBatch();
 
                 while (iter.hasNext()) {
-                    stmt.setObject(1, iter.next());
+                    setObject(1, iter.next());
 
                     addBatch();
                 }
@@ -6674,12 +6674,29 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(targetType, cs.targetType);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(stmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            return JdbcUtil.<List<T>> streamAllResultSets(stmt, Jdbc.BiResultExtractor.toList(targetType)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(stmt);
+
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
+
+            final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(targetType);
+            final List<List<T>> result = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            }
+
+            return result;
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -6712,12 +6729,29 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(stmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            return JdbcUtil.<List<T>> streamAllResultSets(stmt, Jdbc.ResultExtractor.toList(rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(stmt);
+
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
+
+            final Jdbc.ResultExtractor<List<T>> extractor = Jdbc.ResultExtractor.toList(rowMapper);
+            final List<List<T>> result = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            }
+
+            return result;
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -6749,12 +6783,29 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(stmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            return JdbcUtil.<List<T>> streamAllResultSets(stmt, Jdbc.ResultExtractor.toList(rowFilter, rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(stmt);
+
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
+
+            final Jdbc.ResultExtractor<List<T>> extractor = Jdbc.ResultExtractor.toList(rowFilter, rowMapper);
+            final List<List<T>> result = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            }
+
+            return result;
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -6789,12 +6840,29 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(stmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            return JdbcUtil.<List<T>> streamAllResultSets(stmt, Jdbc.BiResultExtractor.toList(rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(stmt);
+
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
+
+            final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(rowMapper);
+            final List<List<T>> result = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            }
+
+            return result;
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -6833,14 +6901,30 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
+        ObjIteratorEx<ResultSet> iter = null;
+
         try {
-            JdbcUtil.execute(stmt);
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
-            return JdbcUtil.<List<T>> streamAllResultSets(stmt, Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)).toList();
+            iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
+
+            final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(rowFilter, rowMapper);
+            final List<List<T>> result = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                result.add(JdbcUtil.extractAndCloseResultSet(iter.next(), extractor));
+            }
+
+            return result;
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
-
     }
 
     /**
@@ -7066,29 +7150,28 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Streams the rows in the first ResultSet as a lazy-evaluated stream of maps.
-     * Each map contains column names as keys and column values as values.
-     * 
-     * <p><b>Important:</b> This method uses lazy execution and lazy fetching. The query is not executed
-     * until a terminal operation is called on the stream. The Connection and Statement remain open
-     * until the stream is closed or a terminal operation completes.</p>
-     * 
+     * Returns the rows of the first {@code ResultSet} as a lazily-evaluated stream of maps.
+     * Each {@code Map} uses column names as keys and column values as values.
+     *
+     * <p><b>Important:</b> Execution is deferred until a terminal operation is invoked.
+     * The {@code Connection} and {@code Statement} stay open while the stream is in use.
+     * Use try-with-resources or close the stream manually when finished.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Process large result set without loading all into memory
-     * try (Stream<Map<String, Object>> stream = preparedQuery.stream()) {
-     *     stream.filter(row -> (Integer) row.get("age") > 21)
-     *           .map(row -> row.get("email"))
-     *           .forEach(email -> sendNewsletter(email));
+     * // Process rows without loading everything into memory
+     * try (Stream<Map<String, Object>> rows = preparedQuery.stream()) {
+     *     rows.filter(row -> (Integer) row.get("age") > 21)
+     *         .map(row -> row.get("email"))
+     *         .forEach(this::sendNewsletter);
      * }
-     * 
-     * // Aggregate operations
-     * long count = preparedQuery.stream()
+     *
+     * long activeCount = preparedQuery.stream()
      *     .filter(row -> "active".equals(row.get("status")))
      *     .count();
      * }</pre>
      *
-     * @return A lazy-evaluated Stream of {@code Map<String, Object>} representing the rows
+     * @return a lazy {@code Stream} of {@code Map<String, Object>} rows from the first result set
      * @throws IllegalStateException if this query is closed
      * @see #list()
      * @see #stream(Class)
@@ -7469,25 +7552,27 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Streams all ResultSets as Datasets from a stored procedure or multi-result query.
-     * 
-     * <p>This method is typically used when executing stored procedures that return multiple result sets.
-     * Each ResultSet is converted to a Dataset for easy manipulation and processing.</p>
-     * 
+     * Returns all result sets produced by this query as a lazy stream of {@link Dataset} objects.
+     * Each element in the stream corresponds to one {@code ResultSet}.
+     *
+     * <p><b>Important:</b> This is intended for statements or stored procedures that return
+     * multiple result sets. Each result set is fully consumed before moving to the next and
+     * resources are released when the stream is closed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Execute a stored procedure that returns multiple result sets
+     * // Print row counts from each returned result set
      * try (Stream<Dataset> resultSets = callableQuery.streamAllResultSets()) {
      *     resultSets.forEach(dataset -> {
-     *         System.out.println("Result set with " + dataset.size() + " rows");
-     *         dataset.forEach(row -> processRow(row));
+     *         System.out.println("Result set rows: " + dataset.size());
+     *         dataset.forEach(this::processRow);
      *     });
      * }
      * }</pre>
      *
-     * @return A stream of Dataset objects, one for each ResultSet returned by the query
+     * @return a lazy {@code Stream} of {@link Dataset} objects, one per result set
      * @throws IllegalStateException if this query is closed
-     * @throws UncheckedSQLException If a database access error occurs
+     * @throws UncheckedSQLException if a database access error occurs
      * @see #queryAllResultSets()
      * @see Dataset
      */

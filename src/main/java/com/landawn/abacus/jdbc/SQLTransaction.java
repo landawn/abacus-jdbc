@@ -76,7 +76,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private final int _originalIsolationLevel; //NOSONAR
 
-    private Transaction.Status _status = Status.ACTIVE; //NOSONAR
+    private volatile Transaction.Status _status = Status.ACTIVE; //NOSONAR
 
     private final AtomicInteger _refCount = new AtomicInteger(); //NOSONAR
 
@@ -88,7 +88,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private volatile boolean _isForUpdateOnly; //NOSONAR
 
-    private boolean _isMarkedByCommitOrRollbckPreviously = false; //NOSONAR
+    private volatile boolean _isMarkedByCommitOrRollbckPreviously = false; //NOSONAR
 
     SQLTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {

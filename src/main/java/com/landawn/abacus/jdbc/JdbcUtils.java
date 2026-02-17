@@ -3920,26 +3920,20 @@ public final class JdbcUtils {
     }
 
     /**
-     * Creates a parameter setter for a PreparedQuery using the provided ColumnGetter.
-     * This utility method simplifies the creation of statement setters for copy operations.
+     * Creates a parameter setter for a {@link PreparedQuery} using the provided {@link ColumnGetter}.
      *
-     * <p>The returned BiConsumer automatically determines the column count from the ResultSet
-     * and uses the provided ColumnGetter to extract values for each column. This is particularly
-     * useful when you need custom value extraction logic across all columns.</p>
+     * <p>The returned {@link com.landawn.abacus.exception.Throwables.BiConsumer} is stateful and caches
+     * the ResultSet column count on first invocation by calling {@link JdbcUtil#getColumnCount(ResultSet)}.
+     * For each column index {@code 1..columnCount}, it calls
+     * {@link PreparedQuery#setObject(int, Object)} with the value from
+     * {@code columnGetterForAll.apply(resultSet, index)}.</p>
      *
-     * <p><strong>Important:</strong> The returned BiConsumer is stateful and maintains the column
-     * count after first use. It should not be reused across different ResultSets with different
-     * column counts or used in parallel operations.</p>
+     * <p>Because the column count is cached, the setter must only be reused for ResultSet instances
+     * with the same number of columns, and should not be shared across threads.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Create a setter that converts all nulls to empty strings
-     * ColumnGetter<Object> getter = (rs, columnIndex) -> {
-     *     Object value = rs.getObject(columnIndex);
-     *     return (value == null && rs.getMetaData().getColumnType(columnIndex) == Types.VARCHAR) 
-     *            ? "" : value;
-     * };
-     *
+     * ColumnGetter<Object> getter = (rs, columnIndex) -> rs.getObject(columnIndex);
      * Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter =
      *     JdbcUtils.createParamSetter(getter);
      *
@@ -3947,8 +3941,9 @@ public final class JdbcUtils {
      * long copied = JdbcUtils.copy(sourceConn, selectSql, targetConn, insertSql, setter);
      * }</pre>
      *
-     * @param columnGetterForAll the ColumnGetter to use for extracting values from all columns
-     * @return a stateful BiConsumer that sets parameters on a PreparedQuery based on ResultSet values
+     * @param columnGetterForAll the ColumnGetter to apply to each column index in every row
+     * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
+     * @throws NullPointerException if {@code columnGetterForAll} is {@code null}
      * @see #copy(Connection, String, Connection, String, Throwables.BiConsumer)
      */
     @Beta

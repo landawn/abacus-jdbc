@@ -140,7 +140,10 @@ public enum OnDeleteAction {
      * }
      * }</pre>
      *
-     * @return the integer value representing this delete action (0 for NO_ACTION, 1 for SET_NULL, 2 for CASCADE).
+     * <p>This method is useful when writing/reading this enum to and from numeric stores.</p>
+     *
+     * @return the integer value representing this delete action:
+     *         {@code NO_ACTION=0}, {@code SET_NULL=1}, or {@code CASCADE=2}
      * @deprecated This enum is deprecated. Use database-level foreign key constraints instead.
      */
     @Deprecated
@@ -149,45 +152,32 @@ public enum OnDeleteAction {
     }
 
     /**
-     * Returns the {@code OnDeleteAction} enum constant that corresponds to the given string name.
+     * Returns the {@code OnDeleteAction} enum constant corresponding to a string token.
      *
-     * <p>This static factory method provides a convenient way to convert a string representation
-     * of a delete action (typically from configuration files, annotations, or external sources)
-     * into its type-safe {@code OnDeleteAction} enum representation. The lookup is case-insensitive,
-     * allowing for flexible input formats.</p>
-     *
-     * <p>Accepted string values (case-insensitive):</p>
+     * <p>The lookup is case-insensitive and only accepts the exact token set:</p>
      * <ul>
-     *   <li>"noAction" - maps to {@link #NO_ACTION}</li>
-     *   <li>"setNull" - maps to {@link #SET_NULL}</li>
-     *   <li>"cascade" - maps to {@link #CASCADE}</li>
+     *   <li>{@code "noAction"}</li>
+     *   <li>{@code "setNull"}</li>
+     *   <li>{@code "cascade"}</li>
      * </ul>
+     * <p>Input is not trimmed or normalized beyond case handling.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Example: Parsing action from configuration
+     * // Example: parsing from configuration
      * String configValue = "cascade";
      * OnDeleteAction action = OnDeleteAction.get(configValue);
-     * System.out.println("Parsed action: " + action);   // Prints: Parsed action: CASCADE
+     * System.out.println("Parsed action: " + action);   // Parsed action: CASCADE
      *
-     * // Example: Case-insensitive parsing
+     * // Case-insensitive variant
      * OnDeleteAction action1 = OnDeleteAction.get("CASCADE");
      * OnDeleteAction action2 = OnDeleteAction.get("cascade");
-     * OnDeleteAction action3 = OnDeleteAction.get("Cascade");
-     * // All three are equivalent: action1 == action2 == action3
-     *
-     * // Example: Handling invalid input with try-catch
-     * try {
-     *     OnDeleteAction action = OnDeleteAction.get("invalid");
-     * } catch (IllegalArgumentException e) {
-     *     System.err.println("Invalid action name: " + e.getMessage());
-     * }
+     * System.out.println(action1 == action2);   // true
      * }</pre>
      *
-     * @param name the string representation of the delete action (case-insensitive).
-     *        Expected values are "noAction", "setNull", or "cascade". Cannot be null.
-     * @return the corresponding {@code OnDeleteAction} enum constant.
-     * @throws IllegalArgumentException if {@code name} does not match any known delete action value.
+     * @param name the string token to parse (case-insensitive). May be {@code null}, which results in {@link IllegalArgumentException}.
+     * @return the matching {@code OnDeleteAction} constant
+     * @throws IllegalArgumentException if the token is unrecognized
      * @deprecated This enum is deprecated. Use database-level foreign key constraints instead.
      */
     @Deprecated

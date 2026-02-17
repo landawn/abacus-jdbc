@@ -2234,10 +2234,21 @@ public final class Jdbc {
             /**
              * Configures the mapper to retrieve an {@code Object} value from the specified column index.
              *
-             * @param columnIndex the 1-based index of the column
-             * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnIndex} is not positive
-             * @deprecated The default behavior already uses {@code ColumnGetter.GET_OBJECT} if no specific getter is set.
+             * <p>
+             * This is equivalent to {@code get(columnIndex, ColumnGetter.GET_OBJECT)}.
+             * </p>
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapperBuilder builder = RowMapper.builder()
+             *     .getObject(1)
+             *     .getObject(2);
+             * }</pre>
+             *
+             * @param columnIndex the 1-based index of the column.
+             * @return this builder instance for method chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
+             * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
             public RowMapperBuilder getObject(final int columnIndex) {
@@ -2290,11 +2301,22 @@ public final class Jdbc {
             }
 
             /**
-             * Builds and returns a stateful {@code RowMapper} that maps each row to an {@code Object[]}.
+             * Builds a stateful {@code RowMapper} that maps each row to an {@code Object[]}.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * The mapper caches the column count and resolved getters on first access, then creates a
+             * fresh array for each row.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<Object[]> mapper = RowMapper.builder()
+             *     .getString(1)
+             *     .getInt(2)
+             *     .toArray();
+             * }</pre>
              *
              * @return a new stateful {@code RowMapper<Object[]>}
              */
@@ -2324,11 +2346,20 @@ public final class Jdbc {
             }
 
             /**
-             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code List<Object>}.
+             * Builds a stateful {@code RowMapper} that maps each row to a {@code List<Object>}.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * This is equivalent to {@link #toCollection(IntFunction)} with a list supplier.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<List<Object>> mapper = RowMapper.builder()
+             *     .getString(1)
+             *     .toList();
+             * }</pre>
              *
              * @return a new stateful {@code RowMapper<List<Object>>}
              */
@@ -2339,11 +2370,20 @@ public final class Jdbc {
             }
 
             /**
-             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code Collection}.
+             * Builds a stateful {@code RowMapper} that maps each row to a {@code Collection}.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * The provided supplier receives the column count and should return a collection to hold the row values.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<Set<Object>> mapper = RowMapper.builder()
+             *     .getObject(1)
+             *     .toCollection(size -> new HashSet<>(size));
+             * }</pre>
              *
              * @param <C> specific collection type (e.g., {@code List}, {@code Set})
              * @param supplier a function that provides a new collection instance, given the column count
@@ -2375,12 +2415,22 @@ public final class Jdbc {
             }
 
             /**
-             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code Map<String, Object>},
-             * where keys are the column labels.
+             * Builds a stateful {@code RowMapper} that maps each row to a {@code Map<String, Object>},
+             * keyed by column labels.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * The returned mapper caches column labels and getters at first row access and then maps each row
+             * into a new map using those labels as keys.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<Map<String, Object>> mapper = RowMapper.builder()
+             *     .getString(1)
+             *     .toMap();
+             * }</pre>
              *
              * @return a new stateful {@code RowMapper<Map<String, Object>>}
              */
@@ -2391,12 +2441,14 @@ public final class Jdbc {
             }
 
             /**
-             * Builds and returns a stateful {@code RowMapper} that maps each row to a {@code Map<String, Object>},
-             * using the provided supplier to create the map instance.
+             * Builds a stateful {@code RowMapper} that maps each row to a {@code Map<String, Object>}
+             * using a caller-provided map supplier.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.
+             * The supplier receives the row column count and should return a mutable map instance for each row.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
              *
              * @param mapSupplier a function that provides a new map instance, given the column count
              * @return a new stateful {@code RowMapper<Map<String, Object>>}
@@ -2429,24 +2481,28 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful {@code RowMapper} that processes row values into a final object using a custom finisher function.
-             * The row values are passed to the finisher as a {@code DisposableObjArray} to minimize object creation.
+             * Builds a stateful {@code RowMapper} that transforms each row using a custom finisher function.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * The current row values are collected into a reusable {@link DisposableObjArray} and passed to
+             * the finisher. The returned object is produced by the finisher, while the row container is reused
+             * for each subsequent row.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * RowMapper<User> userMapper = RowMapper.builder()
-             * .getString(1)
-             * .getInt(2)
-             * .to(arr -> new User((String) arr.get(0), (int) arr.get(1)));
+             *     .getInt(1)
+             *     .getString(2)
+             *     .to(arr -> new User((Integer) arr.get(0), (String) arr.get(1)));
              * }</pre>
              *
              * @param <R> final result type
              * @param finisher a function that transforms the row's values into the final result object
              * @return a new stateful {@code RowMapper<R>}
+             * @throws SQLException if the finisher throws it while building the final result.
              */
             @SequentialOnly
             @Stateful
@@ -2476,16 +2532,29 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful {@code RowMapper} that uses a custom finisher function which receives both
-             * the column labels and the row values (as a {@code DisposableObjArray}).
+             * Builds a stateful {@code RowMapper} that transforms each row using a custom finisher function.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * The finisher receives both the list of column labels and a reusable
+             * {@link DisposableObjArray} containing the current row values.
              * </p>
+             *
+             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<User> userMapper = RowMapper.builder()
+             *     .getInt(1)
+             *     .getString(2)
+             *     .to((labels, row) -> {
+             *         return new User((Integer) row.get(0), (String) row.get(1));
+             *     });
+             * }</pre>
              *
              * @param <R> final result type
              * @param finisher a function that transforms column labels and row values into the final result object
              * @return a new stateful {@code RowMapper<R>}
+             * @throws SQLException if the finisher throws it while building the final result.
              */
             @SequentialOnly
             @Stateful
@@ -3665,7 +3734,7 @@ public final class Jdbc {
                 @Override
                 public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                     if (disposable == null) {
-                        columnCount = JdbcUtil.getColumnCount(rs);
+                        columnCount = columnLabels.size();
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
                     }
@@ -3923,10 +3992,15 @@ public final class Jdbc {
             }
 
             /**
-             * Configures the mapper to retrieve an {@code Object} value from the specified column.
+             * Configures the mapper to retrieve an {@code Object} value from the specified column name.
+             *
+             * <p>
+             * This is a deprecated alias for {@code get(columnName, ColumnGetter.GET_OBJECT)}.
+             * </p>
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnName} is null.
              * @deprecated The default behavior already uses {@code ColumnGetter.GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
@@ -5060,8 +5134,13 @@ public final class Jdbc {
             /**
              * Configures the extractor to get an {@code Object} value from the specified column.
              *
+             * <p>
+             * This is a deprecated alias for {@code get(columnIndex, ColumnGetter.GET_OBJECT)}.
+             * </p>
+             *
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              * @deprecated The default behavior is {@link #getObject(int)} if no specific {@code ColumnGetter} is set for the column.
              */
             @Deprecated
@@ -5097,13 +5176,18 @@ public final class Jdbc {
             }
 
             /**
-             * Builds a stateful {@code RowExtractor} based on the configured column getters.
+             * Builds a stateful {@code RowExtractor} that fills a supplied output array with the mapped row values.
              *
-             * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It initializes its internal array of
-             * column getters on the first execution. It should not be cached or reused across different queries
-             * or in parallel streams. A new instance should be built for each distinct query execution.</p>
+             * <p>
+             * The extractor initializes its internal column getter cache on first use. If the output array
+             * is shorter than the number of result set columns, an {@link IllegalArgumentException} is thrown.
+             * </p>
+             *
+             * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It should be built for each
+             * execution context and must not be cached or shared across incompatible queries.</p>
              *
              * @return a new stateful {@code RowExtractor}.
+             * @throws IllegalArgumentException if the supplied output array length is smaller than the result set column count.
              */
             @SequentialOnly
             @Stateful
@@ -5549,7 +5633,10 @@ public final class Jdbc {
 
             /**
              * Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type} from the first column.
-             * This method uses a cache for commonly used types.
+             *
+             * <p>
+             * This method reuses a cached mapper per type.
+             * </p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -5561,6 +5648,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param type the {@code Type} of the value in the first column.
              * @return a {@code RowMapper} for the specified type.
+             * @throws NullPointerException if {@code type} is {@code null}.
              */
             @SuppressWarnings("cast")
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
@@ -5623,9 +5711,16 @@ public final class Jdbc {
              * Creates a {@code BiParametersSetter} for setting a value of the specified Abacus-common {@code Type}
              * as the first parameter of a {@code PreparedStatement}.
              *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * Type<LocalDate> type = Type.of(LocalDate.class);
+             * BiParametersSetter<AbstractQuery, LocalDate> setter = ColumnOne.set(type);
+             * }</pre>
+             *
              * @param <T> parameter type
              * @param type the {@code Type} of the parameter.
              * @return a {@code BiParametersSetter} for the specified type.
+             * @throws NullPointerException if {@code type} is {@code null}.
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
@@ -5967,7 +6062,7 @@ public final class Jdbc {
                     if (result != null) {
                         register(result);
                     }
-                } catch (final Throwable e) {
+                } catch (final Exception e) {
                     // ignore
                 }
             }
@@ -6239,16 +6334,16 @@ public final class Jdbc {
          * Creates a {@code DaoCacheByMap} with a new {@code HashMap}.
          */
         public DaoCacheByMap() {
-            this(new HashMap<>());
+            this(new ConcurrentHashMap<>());
         }
 
         /**
-         * Creates a {@code DaoCacheByMap} with a {@code HashMap} of a specified initial capacity.
+         * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity.
          *
-         * @param capacity the initial capacity for the backing {@code HashMap}.
+         * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}.
          */
         public DaoCacheByMap(final int capacity) {
-            this(new HashMap<>(capacity));
+            this(new ConcurrentHashMap<>(capacity));
         }
 
         /**

@@ -1720,6 +1720,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      */
     @Override
     default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
         final T dbEntity = findOnlyOne(cond).orElseNull();
@@ -1728,9 +1729,19 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
             save(entity);
             return entity;
         } else {
-            Beans.copyInto(entity, dbEntity);
+            final Class<?> cls = entity.getClass();
+            @SuppressWarnings("deprecation")
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+
+            if (N.isEmpty(idPropNameList)) {
+                Beans.copyInto(entity, dbEntity);
+            } else {
+                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            }
+
             update(dbEntity, cond);
             return dbEntity;
+
         }
     }
 

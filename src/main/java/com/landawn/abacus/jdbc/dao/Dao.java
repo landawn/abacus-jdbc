@@ -2335,7 +2335,16 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
             save(entity);
             return entity;
         } else {
-            Beans.copyInto(entity, dbEntity);
+            final Class<?> cls = entity.getClass();
+            @SuppressWarnings("deprecation")
+            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+
+            if (N.isEmpty(idPropNameList)) {
+                Beans.copyInto(entity, dbEntity);
+            } else {
+                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            }
+
             update(dbEntity, cond);
             return dbEntity;
         }

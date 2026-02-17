@@ -556,16 +556,16 @@ public final class JoinInfo {
             });
 
             final Jdbc.BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = srcPropInfos.length == 1 ? (stmt, entity) -> {
-                srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
+                referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
                 srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
             } : (srcPropInfos.length == 2 ? (stmt, entity) -> {
-                srcPropInfos[0].dbType.set(stmt, 1, srcPropInfos[0].dbType.defaultValue());
-                srcPropInfos[1].dbType.set(stmt, 2, srcPropInfos[1].dbType.defaultValue());
+                referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
+                referencedPropInfos[1].dbType.set(stmt, 2, referencedPropInfos[1].dbType.defaultValue());
                 srcPropInfos[0].dbType.set(stmt, 3, getJoinPropValue(srcPropInfos[0], entity));
                 srcPropInfos[1].dbType.set(stmt, 4, getJoinPropValue(srcPropInfos[1], entity));
             } : (stmt, entity) -> {
                 for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                    srcPropInfos[i].dbType.set(stmt, i + 1, srcPropInfos[i].dbType.defaultValue());
+                    referencedPropInfos[i].dbType.set(stmt, i + 1, referencedPropInfos[i].dbType.defaultValue());
                 }
 
                 for (int i = 0, len = srcPropInfos.length; i < len; i++) {

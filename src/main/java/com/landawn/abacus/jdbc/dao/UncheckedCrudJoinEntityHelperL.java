@@ -21,6 +21,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicatedResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -358,7 +359,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
             throws DuplicatedResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
-        if (result != null) {
+        if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result, joinEntityClass);
             }

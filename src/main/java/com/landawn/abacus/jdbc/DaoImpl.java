@@ -503,8 +503,8 @@ final class DaoImpl {
     }
 
     private static final ImmutableSet<Class<?>> singleReturnTypeSet = ImmutableSet.wrap((N.asSet(u.Nullable.class, u.Optional.class, u.OptionalBoolean.class,
-            u.OptionalChar.class, u.OptionalByte.class, u.OptionalShort.class, u.OptionalInt.class, u.OptionalLong.class, u.OptionalDouble.class,
-            java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class)));
+            u.OptionalChar.class, u.OptionalByte.class, u.OptionalShort.class, u.OptionalInt.class, u.OptionalLong.class, u.OptionalFloat.class,
+            u.OptionalDouble.class, java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalLong.class, java.util.OptionalDouble.class)));
 
     private static boolean isSingleReturnType(final Class<?> returnType) {
         return singleReturnTypeSet.contains(returnType) || ClassUtil.isPrimitiveType(ClassUtil.unwrap(returnType));
@@ -1338,6 +1338,10 @@ final class DaoImpl {
                                 } else if (paramOne instanceof long[]) {
                                     for (final long e : (long[]) paramOne) {
                                         preparedQuery.setLong(idx++, e);
+                                    }
+                                } else if (paramOne instanceof double[]) {
+                                    for (final double e : (double[]) paramOne) {
+                                        preparedQuery.setDouble(idx++, e);
                                     }
                                 } else if (paramOne instanceof String[]) {
                                     for (final String e : (String[]) paramOne) {
@@ -2455,7 +2459,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, addLimitForSingleQuery ? 1 : -1, dbVersion);
+                            final Condition limitedCond = handleLimit(cond, -1, dbVersion);
                             final SP sp = singleQuerySQLBuilderFunc.apply(SQLBuilder.COUNT_ALL, limitedCond);
                             return proxy.prepareQuery(sp.query).setFetchSize(1).settParameters(sp.parameters, collParamsSetter).queryForInt().orElseZero();
                         };
@@ -5020,6 +5024,11 @@ final class DaoImpl {
                                         + fullClassMethodName);
                     }
 
+                    if (sqlAnno == null) {
+                        throw new UnsupportedOperationException(
+                                "No SQL annotation found on method: " + fullClassMethodName + ". Custom DAO methods must be annotated with @Query");
+                    }
+
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
                     final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
@@ -6058,12 +6067,14 @@ final class DaoImpl {
                             try {
                                 result = temp.apply(proxy, args);
                             } finally {
-                                if (isRefreshLocalThreadCacheRequired) {
-                                    localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
-                                }
+                                if (Strings.isNotEmpty(cacheKey)) {
+                                    if (isRefreshLocalThreadCacheRequired) {
+                                        localThreadCache.update(cacheKey, result, proxy, args, methodSignature);
+                                    }
 
-                                if (isAnnotatedRefreshResult) {
-                                    daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
+                                    if (isAnnotatedRefreshResult) {
+                                        daoCacheToUseInMethod.update(cacheKey, result, proxy, args, methodSignature);
+                                    }
                                 }
                             }
                         } else {
@@ -6112,24 +6123,62 @@ final class DaoImpl {
 
                     call = (proxy, args) -> {
                         final boolean isInDaoMethod = isInDaoMethod_TL.get();
+                        final int handlerSize = N.size(handlerList);
 
                         if (isInDaoMethod) {
-                            for (final Tuple2<Jdbc.Handler, Boolean> tp : handlerList) {
-                                if (!tp._2) {
+                            final int[] executedHandlerIndexes = new int[handlerSize];
+                            int executedHandlerSize = 0;
+                            Object result = null;
+                            Throwable failure = null;
+                            Throwable afterInvokeFailure = null;
+
+                            for (int i = 0; i < handlerSize; i++) {
+                                final Tuple2<Jdbc.Handler, Boolean> tp = handlerList.get(i);
+
+                                if (tp._2) {
+                                    continue;
+                                }
+
+                                try {
                                     tp._1.beforeInvoke(proxy, args, methodSignature);
+                                    executedHandlerIndexes[executedHandlerSize] = i;
+                                    executedHandlerSize++;
+                                } catch (final Throwable t) {
+                                    failure = t;
+                                    break;
                                 }
                             }
 
-                            final Object result = temp.apply(proxy, args);
-
-                            Tuple2<Jdbc.Handler, Boolean> tp = null;
-
-                            for (int i = N.size(handlerList) - 1; i >= 0; i--) {
-                                tp = handlerList.get(i);
-
-                                if (!tp._2) {
-                                    tp._1.afterInvoke(result, proxy, args, methodSignature);
+                            if (failure == null) {
+                                try {
+                                    result = temp.apply(proxy, args);
+                                } catch (final Throwable t) {
+                                    failure = t;
                                 }
+                            }
+
+                            for (int i = executedHandlerSize - 1; i >= 0; i--) {
+                                final Tuple2<Jdbc.Handler, Boolean> tp = handlerList.get(executedHandlerIndexes[i]);
+
+                                try {
+                                    tp._1.afterInvoke(result, proxy, args, methodSignature);
+                                } catch (final Throwable t) {
+                                    if (afterInvokeFailure == null) {
+                                        afterInvokeFailure = t;
+                                    } else {
+                                        afterInvokeFailure.addSuppressed(t);
+                                    }
+                                }
+                            }
+
+                            if (failure != null) {
+                                if (afterInvokeFailure != null) {
+                                    failure.addSuppressed(afterInvokeFailure);
+                                }
+
+                                throw failure;
+                            } else if (afterInvokeFailure != null) {
+                                throw afterInvokeFailure;
                             }
 
                             return result;
@@ -6137,14 +6186,51 @@ final class DaoImpl {
                             isInDaoMethod_TL.set(true);
 
                             try {
-                                for (final Tuple2<Jdbc.Handler, Boolean> tp : handlerList) {
-                                    tp._1.beforeInvoke(proxy, args, methodSignature);
+                                int executedHandlerSize = 0;
+                                Object result = null;
+                                Throwable failure = null;
+                                Throwable afterInvokeFailure = null;
+
+                                for (int i = 0; i < handlerSize; i++) {
+                                    final Tuple2<Jdbc.Handler, Boolean> tp = handlerList.get(i);
+
+                                    try {
+                                        tp._1.beforeInvoke(proxy, args, methodSignature);
+                                        executedHandlerSize++;
+                                    } catch (final Throwable t) {
+                                        failure = t;
+                                        break;
+                                    }
                                 }
 
-                                final Object result = temp.apply(proxy, args);
+                                if (failure == null) {
+                                    try {
+                                        result = temp.apply(proxy, args);
+                                    } catch (final Throwable t) {
+                                        failure = t;
+                                    }
+                                }
 
-                                for (int i = N.size(handlerList) - 1; i >= 0; i--) {
-                                    handlerList.get(i)._1.afterInvoke(result, proxy, args, methodSignature);
+                                for (int i = executedHandlerSize - 1; i >= 0; i--) {
+                                    try {
+                                        handlerList.get(i)._1.afterInvoke(result, proxy, args, methodSignature);
+                                    } catch (final Throwable t) {
+                                        if (afterInvokeFailure == null) {
+                                            afterInvokeFailure = t;
+                                        } else {
+                                            afterInvokeFailure.addSuppressed(t);
+                                        }
+                                    }
+                                }
+
+                                if (failure != null) {
+                                    if (afterInvokeFailure != null) {
+                                        failure.addSuppressed(afterInvokeFailure);
+                                    }
+
+                                    throw failure;
+                                } else if (afterInvokeFailure != null) {
+                                    throw afterInvokeFailure;
                                 }
 
                                 return result;
@@ -6171,13 +6257,13 @@ final class DaoImpl {
                                 + fullClassMethodName);
             }
 
-            if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
-                throw new UnsupportedOperationException("Class: " + daoInterface
-                        + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
-                        + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
-            }
-
             methodInvokerMap.put(method, call);
+        }
+
+        if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
+            throw new UnsupportedOperationException("Class: " + daoInterface
+                    + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
+                    + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
         }
 
         final Throwables.TriFunction<Dao, Method, Object[], ?, Throwable> proxyInvoker = (proxy, method, args) -> methodInvokerMap.get(method)
@@ -6245,7 +6331,7 @@ final class DaoImpl {
                 final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
                 final boolean isProcedure, final boolean fragmentContainsNamedParameters) {
             this.sql = N.checkArgNotBlank(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
-            this.parsedSql = parsedSql == null ? ParsedSql.parse(sql) : parsedSql;
+            this.parsedSql = parsedSql == null ? ParsedSql.parse(this.sql) : parsedSql;
             this.queryTimeout = queryTimeout;
             this.fetchSize = fetchSize;
             this.isBatch = isBatch;
