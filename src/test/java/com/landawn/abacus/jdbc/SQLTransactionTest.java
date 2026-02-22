@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
@@ -68,6 +69,18 @@ public class SQLTransactionTest extends TestBase {
     }
 
     @Test
+    public void testCommitWhenOriginalAutoCommitFalse() throws SQLException {
+        when(connection.getAutoCommit()).thenReturn(false);
+        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        transaction.commit();
+
+        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        verify(connection).commit();
+        verify(connection, times(2)).setAutoCommit(false);
+    }
+
+    @Test
     public void testCommitFailure() throws SQLException {
         SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
@@ -87,6 +100,18 @@ public class SQLTransactionTest extends TestBase {
         assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
         assertFalse(transaction.isActive());
         verify(connection).rollback();
+    }
+
+    @Test
+    public void testRollbackWhenOriginalAutoCommitFalse() throws SQLException {
+        when(connection.getAutoCommit()).thenReturn(false);
+        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        transaction.rollback();
+
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
+        verify(connection, times(2)).setAutoCommit(false);
     }
 
     @Test
@@ -171,6 +196,37 @@ public class SQLTransactionTest extends TestBase {
         assertNotNull(id);
         assertTrue(id.contains(String.valueOf(System.identityHashCode(dataSource))));
         assertTrue(id.contains(String.valueOf(Thread.currentThread().getId())));
+    }
+
+    @Test
+    public void testBeginTransactionReusesWhenThreadNameChanges() throws SQLException {
+        final String originalThreadName = Thread.currentThread().getName();
+        SQLTransaction transaction1 = null;
+        SQLTransaction transaction2 = null;
+
+        try {
+            transaction1 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+            Thread.currentThread().setName(originalThreadName + "_renamed");
+            transaction2 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+            assertSame(transaction1, transaction2);
+
+            transaction1.commit();
+            transaction2.commit();
+
+            verify(dataSource, times(1)).getConnection();
+            verify(connection, times(1)).commit();
+        } finally {
+            Thread.currentThread().setName(originalThreadName);
+
+            if (transaction2 != null) {
+                transaction2.rollbackIfNotCommitted();
+            }
+
+            if (transaction1 != null && transaction1 != transaction2) {
+                transaction1.rollbackIfNotCommitted();
+            }
+        }
     }
 
     @Test

@@ -328,9 +328,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         _status = Status.FAILED_COMMIT;
 
         try {
-            if (_originalAutoCommit) {
-                _conn.commit();
-            }
+            _conn.commit();
 
             _status = Status.COMMITTED;
         } catch (final SQLException e) {
@@ -481,9 +479,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         _status = Status.FAILED_ROLLBACK;
 
         try {
-            if (_originalAutoCommit) {
-                _conn.rollback();
-            }
+            _conn.rollback();
 
             _status = Status.ROLLED_BACK;
         } catch (final SQLException e) {
@@ -634,7 +630,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @return a unique transaction identifier string, never {@code null}
      */
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
-        return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", Thread.currentThread().getName(), "_", creator.ordinal());
+        return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", creator.ordinal());
     }
 
     /**
