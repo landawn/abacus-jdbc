@@ -32,7 +32,7 @@ import com.landawn.abacus.annotation.Beta;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Basic usage with IN clause
  *     @Query("SELECT * FROM users WHERE id IN ({ids})")
  *     List<User> findByIds(@BindList("ids") List<Long> userIds);

@@ -199,7 +199,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * AbstractQuery query = JdbcUtil.prepareQuery(connection, sql)
+     * PreparedQuery query = JdbcUtil.prepareQuery(connection, sql)
      *     .closeAfterExecution(false);
      * try {
      *     List<Map<String, Object>> result1 = query.setInt(1, 10).list();
@@ -5269,7 +5269,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Tuple3<List<User>, List<Order>, Summary> results = callableQuery.query3ResultSets(
      *     Jdbc.BiResultExtractor.toList(User.class),
      *     Jdbc.BiResultExtractor.toList(Order.class),
-     *     (rs, columnLabels) -> new Summary(rs.getInt(1), rs.getDouble(2))
+     *     (rs, columnLabels) -> {
+     *         rs.next();
+     *         return new Summary(rs.getInt(1), rs.getDouble(2));
+     *     }
      * );
      * }</pre>
      *
@@ -5417,8 +5420,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * List<Map<String, Class<?>>> metadata = callableQuery.queryAllResultSets((rs, labels) -> {
      *     Map<String, Class<?>> types = new HashMap<>();
      *     for (String label : labels) {
-     *         types.put(label, rs.getMetaData().getColumnClassName(
-     *             rs.findColumn(label)).getClass());
+     *         types.put(label, Class.forName(rs.getMetaData().getColumnClassName(
+     *             rs.findColumn(label))));
      *     }
      *     return types;
      * });
@@ -5995,11 +5998,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Find first row where any column contains "admin"
+     * // Find first row where the "role" column contains "admin"
      * Optional<User> firstAdmin = preparedQuery
      *     .findFirst(
-     *         (rs, labels) -> labels.stream()
-     *             .anyMatch(label -> rs.getString(label).contains("admin")),
+     *         (rs, labels) -> rs.getString("role").contains("admin"),
      *         (rs, labels) -> new User(rs)
      *     );
      * }</pre>
@@ -6658,16 +6660,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Call a stored procedure that returns multiple result sets
-     * CallableQuery query = JdbcUtil.prepareCall(connection, "{call getOrdersAndCustomers(?)}");
+     * CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call getOrdersAndCustomers(?)}");
      * query.setInt(1, regionId);
-     * 
-     * List<List<Object>> allResults = query.listAllResultSets(Object.class);
-     * List<Order> orders = (List<Order>) allResults.get(0);
-     * List<Customer> customers = (List<Customer>) allResults.get(1);
-     * 
-     * // With specific types for each result set
+     *
+     * // Use specific type when all result sets share the same type
      * List<List<Order>> orderResults = query.listAllResultSets(Order.class);
-     * // Note: This assumes all result sets can be mapped to Order type
+     *
+     * // Use Map for heterogeneous result sets
+     * List<List<Map<String, Object>>> allResults = query.listAllResultSets(Map.class);
+     * List<Map<String, Object>> orderMaps = allResults.get(0);
+     * List<Map<String, Object>> customerMaps = allResults.get(1);
      * }</pre>
      *
      * @param <T> the type of entities extracted from each result set

@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     
  *     @Query("SELECT u.id, u.name, u.email, " +
  *             "d.id AS \"d.id\", d.model AS \"d.model\", d.os AS \"d.os\", " +

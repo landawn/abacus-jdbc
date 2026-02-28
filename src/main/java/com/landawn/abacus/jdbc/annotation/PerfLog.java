@@ -37,7 +37,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <pre>{@code
  * // Class-level: Monitor all methods matching the filter
  * @PerfLog(minExecutionTimeForSql = 500, filter = {"find.*", "search.*"})
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     List<User> findByName(String name);
  *     User searchByEmail(String email);
  * }

@@ -33,7 +33,7 @@ import java.util.Map;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Map users by their ID
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     @MappedByKey("id")

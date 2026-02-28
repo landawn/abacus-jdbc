@@ -44,7 +44,7 @@ import com.landawn.abacus.util.RegExUtil;
  *
  * <p>Basic usage examples:</p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // SELECT operation
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
@@ -228,7 +228,7 @@ public @interface Query {
      * <pre>{@code
      * // In DAO interface
      * @SqlMapper("user-queries.xml")
-     * public interface UserDao extends CrudDao<User, Long> {
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
      *     @Query(id = "findUsersByComplexCriteria")
      *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);
      *
@@ -1034,7 +1034,7 @@ public @interface Query {
     //     *
     //     * <p>Basic examples:</p>
     //     * <pre>{@code
-    //     * public interface UserDao extends CrudDao<User, Long> {
+    //     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
     //     *     // Default: throws checked SQLException
     //     *     @Query("SELECT * FROM users WHERE id = :id")
     //     *     User findById(@Bind("id") long id) throws SQLException;

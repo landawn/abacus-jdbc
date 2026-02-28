@@ -45,19 +45,19 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * // Custom handler implementation
  * public class LoggingHandler extends Jdbc.Handler<UserDao> {
  *     @Override
- *     public void beforeInvoke(UserDao dao, Method method, Object[] args) {
- *         logger.info("Calling method: " + method.getName());
+ *     public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+ *         logger.info("Calling method: " + methodSignature._1.getName());
  *     }
- *     
+ *
  *     @Override
- *     public void afterInvoke(Object result, UserDao dao, Method method, Object[] args) {
- *         logger.info("Method completed: " + method.getName());
+ *     public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+ *         logger.info("Method completed: " + methodSignature._1.getName());
  *     }
  * }
  * 
  * // Apply handler to entire DAO
  * @Handler(type = LoggingHandler.class)
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // All methods will be intercepted by LoggingHandler
  * }
  * 
@@ -118,17 +118,17 @@ public @interface Handler {
      * <pre>{@code
      * public class SecurityHandler extends Jdbc.Handler<BaseDao> {
      *     @Override
-     *     public void beforeInvoke(BaseDao dao, Method method, Object[] args) {
+     *     public void beforeInvoke(BaseDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Check user permissions
-     *         if (!hasPermission(method)) {
+     *         if (!hasPermission(methodSignature._1)) {
      *             throw new SecurityException("Access denied");
      *         }
      *     }
-     *     
+     *
      *     @Override
-     *     public Object afterInvoke(Object result, BaseDao dao, Method method, Object[] args) {
-     *         // Can modify or filter results
-     *         return filterSensitiveData(result);
+     *     public void afterInvoke(Object result, BaseDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         // Can filter or log results
+     *         filterSensitiveData(result);
      *     }
      * }
      * }</pre>
@@ -151,7 +151,7 @@ public @interface Handler {
      * <pre>{@code
      * @Handler(type = ReadOnlyHandler.class, filter = {"find.*", "get.*", "query.*"})
      * @Handler(type = AuditHandler.class, filter = {"save.*", "update.*", "delete.*"})
-     * public interface UserDao extends CrudDao<User, Long> {
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
      *     // Read methods will use ReadOnlyHandler
      *     // Write methods will use AuditHandler
      * }
@@ -171,7 +171,7 @@ public @interface Handler {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
-     * public interface UserDao extends CrudDao<User, Long> {
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
      *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id);
      *

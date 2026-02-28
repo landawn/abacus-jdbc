@@ -36,7 +36,7 @@ import java.lang.annotation.Target;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Simple parameter binding
  *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);

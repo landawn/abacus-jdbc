@@ -43,7 +43,7 @@ import java.lang.annotation.Target;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     
  *     // Dynamic table name
  *     @Query("SELECT * FROM {tableName} WHERE id = :id")

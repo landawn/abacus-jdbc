@@ -43,7 +43,7 @@ import com.landawn.abacus.annotation.Beta;
  * // Apply to all data-modifying methods in the DAO
  * @CacheResult
  * @RefreshCache
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     @Query("SELECT * FROM users WHERE id = :id")
  *     User findById(long id);   // Results are cached
  *     

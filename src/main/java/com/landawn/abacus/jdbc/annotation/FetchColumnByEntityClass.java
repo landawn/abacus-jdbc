@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Only fetch columns that match User class properties
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(true)  // This is default, can be omitted

@@ -41,7 +41,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     addLimitForSingleQuery = true,
  *     callGenerateIdForInsertIfIdNotSet = true
  * )
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Single query methods will automatically add LIMIT 1
  *     @Query("SELECT * FROM users WHERE email = :email")
  *     User findByEmail(@Bind("email") String email);   // LIMIT 1 added automatically
@@ -108,7 +108,7 @@ public @interface DaoConfig {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(callGenerateIdForInsertIfIdNotSet = true)
-     * public interface UserDao extends CrudDao<User, Long> {
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
      *     @Override
      *     default Long generateId() {
      *         // Custom ID generation logic

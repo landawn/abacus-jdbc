@@ -52,7 +52,7 @@ import com.landawn.abacus.annotation.JoinedBy;
  * }
  * 
  * // DAO interface
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Query returns multiple rows per user (one per device)
  *     @Query("SELECT u.id, u.first_name as firstName, u.last_name as lastName, " +
  *             "d.id as 'devices.id', d.model as 'devices.model' " +

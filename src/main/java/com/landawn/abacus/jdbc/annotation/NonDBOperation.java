@@ -46,7 +46,7 @@ import java.lang.annotation.Target;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // This method will be processed as a database operation
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);

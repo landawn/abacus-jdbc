@@ -57,7 +57,7 @@ import com.landawn.abacus.jdbc.OnDeleteAction;
  * 
  * <p>If you need application-level cascade behavior, implement it explicitly in your DAO methods:</p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     default void deleteUserWithRelatedData(Long userId) {
  *         // Explicitly delete related data
  *         deleteUserOrders(userId);

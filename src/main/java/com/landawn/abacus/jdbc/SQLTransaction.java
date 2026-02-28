@@ -832,8 +832,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource);
-     * SQLTransaction tran2 = JdbcUtil.beginTransaction(dataSource);
+     * SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource1);
+     * SQLTransaction tran2 = JdbcUtil.beginTransaction(dataSource2);
      *
      * Set<SQLTransaction> transactions = new HashSet<>();
      * transactions.add(tran1);

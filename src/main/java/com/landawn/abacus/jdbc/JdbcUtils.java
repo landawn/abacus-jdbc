@@ -117,11 +117,11 @@ import com.landawn.abacus.util.WD;
  *     "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
  *
  * // Copy with custom fetch and batch sizes
- * long copiedRows = JdbcUtils.copy(sourceDataSource,
+ * copiedRows = JdbcUtils.copy(sourceDataSource,
  *     "SELECT customer_id, first_name, last_name, email FROM legacy_customers",
  *     50000,  // fetch size
  *     targetDataSource,
- *     "INSERT INTO customers (id, name, email) VALUES (?, ?, ?)",
+ *     "INSERT INTO customers (id, name, email, status) VALUES (?, ?, ?, ?)",
  *     10000); // batch size
  * }</pre>
  *

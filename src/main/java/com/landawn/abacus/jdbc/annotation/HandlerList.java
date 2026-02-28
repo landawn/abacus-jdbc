@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
  * @Handler(type = LoggingHandler.class)
  * @Handler(type = SecurityHandler.class)
  * @Handler(type = CacheHandler.class, filter = {"find.*", "get.*"})
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // All three handlers will be applied according to their configurations
  * }
  * }</pre>
@@ -91,7 +91,7 @@ public @interface HandlerList {
      * @Handler(type = LoggingHandler.class)
      * @Handler(type = SecurityHandler.class)
      * @Handler(type = CacheHandler.class)
-     * public interface UserDao extends CrudDao<User, Long> {
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
      *     // The compiler wraps these in a HandlerList annotation
      * }
      * }</pre>

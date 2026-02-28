@@ -39,7 +39,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long> {
+ * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
  *     // Cache individual user lookups for 30 minutes
  *     @CacheResult(liveTime = 1800000, maxIdleTime = 600000)
  *     @Query("SELECT * FROM users WHERE id = :id")
@@ -227,7 +227,7 @@ public @interface CacheResult {
      * <pre>{@code
      * @CacheResult(liveTime = 600000, 
      *              filter = {"find.*", "get.*", "load.*", "fetch.*"})
-     * public interface UserDao extends CrudDao<User, Long> {
+     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
      *     // These methods will be cached
      *     User findById(Long id);
      *     List<User> findByStatus(String status);
