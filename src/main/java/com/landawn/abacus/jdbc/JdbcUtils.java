@@ -338,7 +338,7 @@ public final class JdbcUtils {
     static final int DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER = 1024;
 
     private JdbcUtils() {
-        // singleton.
+        // utility class.
     }
 
     /**
@@ -360,18 +360,18 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param sourceDataSource the DataSource to obtain database connections
+     * @param targetDataSource the DataSource to obtain database connections
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      */
-    public static int importData(final Dataset dataset, final javax.sql.DataSource sourceDataSource, final String insertSql) throws SQLException {
-        final Connection conn = sourceDataSource.getConnection();
+    public static int importData(final Dataset dataset, final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+        final Connection conn = targetDataSource.getConnection();
 
         try {
             return importData(dataset, conn, insertSql);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(conn, targetDataSource);
         }
     }
 
@@ -1150,7 +1150,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
-     * @param sourceDataSource the DataSource to obtain database connections
+     * @param targetDataSource the DataSource to obtain database connections
      * @param insertSql the SQL insert statement with placeholders
      * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
@@ -1158,14 +1158,14 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
      */
-    public static <E extends Exception> long importData(final File file, final javax.sql.DataSource sourceDataSource, final String insertSql,
+    public static <E extends Exception> long importData(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = targetDataSource.getConnection();
 
         try {
             return importData(file, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(conn, targetDataSource);
         }
     }
 
@@ -1254,7 +1254,7 @@ public final class JdbcUtils {
      *
      * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
-     * @param sourceDataSource the DataSource to obtain database connections
+     * @param targetDataSource the DataSource to obtain database connections
      * @param insertSql the SQL insert statement with placeholders
      * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
@@ -1263,14 +1263,14 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
      */
-    public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSql,
+    public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.Function<? super String, Object[], E> line2Parameters) throws SQLException, IOException, E {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = targetDataSource.getConnection();
 
         try {
             return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, line2Parameters);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(conn, targetDataSource);
         }
     }
 
@@ -1418,20 +1418,20 @@ public final class JdbcUtils {
      *
      * @param <T> iterator element type
      * @param iter the Iterator containing the data to be imported
-     * @param sourceDataSource the DataSource to obtain database connections from
+     * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with parameter placeholders (?)
      * @param stmtSetter a BiConsumer to map iterator elements to PreparedStatement parameters
      * @return the total number of rows successfully inserted
      * @throws SQLException if a database access error occurs
      */
-    public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource sourceDataSource, final String insertSql,
+    public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = targetDataSource.getConnection();
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importData(iter, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(conn, targetDataSource);
         }
     }
 
@@ -1604,21 +1604,21 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param file the CSV file containing the data to be imported
-     * @param sourceDataSource the DataSource to obtain database connections from
+     * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement (column order must match CSV column order)
      * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
-    public static long importCSV(final File file, final javax.sql.DataSource sourceDataSource, final String insertSql,
+    public static long importCSV(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = targetDataSource.getConnection();
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importCSV(file, stmt, stmtSetter);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(conn, targetDataSource);
         }
     }
 
@@ -1828,21 +1828,21 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param reader the Reader to read the CSV data from
-     * @param sourceDataSource the DataSource to obtain database connections from
+     * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement (column order must match CSV column order)
      * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
      */
-    public static long importCSV(final Reader reader, final javax.sql.DataSource sourceDataSource, final String insertSql,
+    public static long importCSV(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = targetDataSource.getConnection();
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importCSV(reader, stmt, stmtSetter);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(conn, targetDataSource);
         }
     }
 
@@ -1999,6 +1999,11 @@ public final class JdbcUtils {
 
         try {
             String line = br.readLine();
+
+            if (line == null) {
+                return 0;
+            }
+
             final String[] titles = headerParser.apply(line);
 
             int columnCount = titles.length;
@@ -3313,7 +3318,7 @@ public final class JdbcUtils {
                 batchSize, batchIntervalInMillis);
 
         final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> stmtSetterForInsert = N.defaultIfNull(stmtSetter,
-                supplierOfStmtSetterByRS);
+                supplierOfStmtSetterByRS.get());
         final PreparedQuery preparedQueryForInsert = new PreparedQuery(insertStmt);
 
         ResultSet rs = null;

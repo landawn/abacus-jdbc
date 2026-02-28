@@ -51,7 +51,7 @@ import java.util.function.Supplier;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.LazyEvaluation;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
 import com.landawn.abacus.jdbc.Jdbc.BiRowConsumer;
@@ -265,7 +265,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets a SQL NULL value for the specified parameter.
+     * Sets a SQL {@code NULL} value for the specified parameter.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -273,7 +273,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setNull(2, Types.INTEGER);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set to {@code null}, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -286,7 +286,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets a SQL NULL value for the specified parameter with a type name.
+     * Sets a SQL {@code NULL} value for the specified parameter with a type name.
      * This method is used for user-defined types and REF types.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -294,7 +294,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNull(1, Types.STRUCT, "MY_TYPE");
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set to {@code null}, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
      * @param typeName the fully-qualified name of an SQL user-defined type
      * @return this AbstractQuery instance for method chaining
@@ -315,7 +315,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setBoolean(2, false);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the boolean value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -328,16 +328,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Boolean parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Boolean value = getOptionalBoolean();
-     * query.setBoolean(1, value);   // handles {@code null} automatically
+     * query.setBoolean(1, value);   // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Boolean value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Boolean value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -353,14 +353,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Boolean parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setBoolean(1, nullableBoolean, false);   // use false if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Boolean value to set, or {@code null} to use the default value
      * @param defaultValueForNull the boolean value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -384,7 +384,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setByte(1, (byte)127);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the byte value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -397,16 +397,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Byte parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Byte value = getOptionalByte();
-     * query.setByte(1, value);   // handles {@code null} automatically
+     * query.setByte(1, value);   // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Byte value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Byte value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -422,14 +422,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Byte parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setByte(1, nullableByte, (byte)0);   // use 0 if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Byte value to set, or {@code null} to use the default value
      * @param defaultValueForNull the byte value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -453,7 +453,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setShort(1, (short)1000);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the short value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -466,16 +466,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Short parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Short value = getOptionalShort();
-     * query.setShort(1, value);   // handles {@code null} automatically
+     * query.setShort(1, value);   // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Short value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Short value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -491,14 +491,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Short parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setShort(1, nullableShort, (short)0);   // use 0 if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Short value to set, or {@code null} to use the default value
      * @param defaultValueForNull the short value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -523,7 +523,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setInt(2, userId);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the int value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -536,16 +536,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets an Integer parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Integer age = user.getAge();   // might be null
-     * query.setInt(1, age);          // handles {@code null} automatically
+     * query.setInt(1, age);          // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Integer value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Integer value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -561,14 +561,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets an Integer parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, nullableCount, 0);   // use 0 if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Integer value to set, or {@code null} to use the default value
      * @param defaultValueForNull the int value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -622,7 +622,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setInt(1, 'A');   // stores 65
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the char value to set as an integer
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -647,8 +647,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setInt(1, grade);         // stores as integer or NULL
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Character value to set as an integer, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Character value to set as an integer, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @deprecated Generally, {@code char} should be saved as {@code String} in the database
@@ -675,7 +675,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setLong(2, recordId);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the long value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -688,16 +688,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Long parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Long timestamp = getOptionalTimestamp();
-     * query.setLong(1, timestamp);   // handles {@code null} automatically
+     * query.setLong(1, timestamp);   // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Long value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Long value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -713,14 +713,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Long parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setLong(1, nullableId, -1L);   // use -1 if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Long value to set, or {@code null} to use the default value
      * @param defaultValueForNull the long value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -775,8 +775,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setLong(1, bigValue);   // converts to long
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the BigInteger value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @throws ArithmeticException If the BigInteger value is too large for a long
@@ -809,7 +809,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setFloat(2, temperature);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the float value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -822,16 +822,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Float parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Float percentage = calculatePercentage();   // might return null
-     * query.setFloat(1, percentage);              // handles {@code null} automatically
+     * query.setFloat(1, percentage);              // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Float value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Float value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -847,14 +847,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Float parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setFloat(1, nullableRating, 0.0f);   // use 0.0 if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Float value to set, or {@code null} to use the default value
      * @param defaultValueForNull the float value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -907,7 +907,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setDouble(2, price);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the double value to set
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -920,16 +920,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Double parameter value, handling {@code null} values.
-     * If the value is {@code null}, sets the parameter to SQL NULL.
+     * If the value is {@code null}, sets the parameter to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Double amount = calculateAmount();   // might return null
-     * query.setDouble(1, amount);          // handles {@code null} automatically
+     * query.setDouble(1, amount);          // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Double value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Double value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -945,14 +945,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a Double parameter value with a default value for {@code null}.
-     * If the value is {@code null}, uses the specified default value instead of SQL NULL.
+     * If the value is {@code null}, uses the specified default value instead of SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setDouble(1, nullablePrice, 0.0);   // use 0.0 if null
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the Double value to set, or {@code null} to use the default value
      * @param defaultValueForNull the double value to use if {@code x} is {@code null}
      * @return this AbstractQuery instance for method chaining
@@ -1005,8 +1005,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBigDecimal(1, price);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the BigDecimal value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the BigDecimal value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1025,8 +1025,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBigDecimal(1, bigInt);   // converts to BigDecimal
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the BigInteger value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1050,8 +1050,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBigIntegerAsString(1, largeNumber);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the BigInteger value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @see #setString(int, BigInteger)
@@ -1070,8 +1070,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setString(2, email);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the String value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1090,8 +1090,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setString(1, sb);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the CharSequence value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1109,7 +1109,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setString(1, 'A');   // stores as "A"
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the char value to set as a String
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1126,11 +1126,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Character initial = user.getMiddleInitial();   // might be null
-     * query.setString(1, initial);                   // handles {@code null} automatically
+     * query.setString(1, initial);                   // handles null automatically
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Character value to set as a String, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Character value to set as a String, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1150,8 +1150,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setString(1, largeNumber);   // stores as string
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the BigInteger value to set as a String, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the BigInteger value to set as a String, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @see #setBigIntegerAsString(int, BigInteger)
@@ -1175,8 +1175,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNString(1, "こんにちは");   // Japanese text
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the String value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1195,8 +1195,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNString(1, text);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the CharSequence value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1215,8 +1215,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDate(1, date);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Date value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1236,8 +1236,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDate(1, utilDate);   // converts to SQL Date
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Date value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1256,8 +1256,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDate(1, sqlDate, cal);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Date value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Date value to set, or {@code null} to set SQL {@code NULL}
      * @param cal the Calendar object to use for timezone conversion
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1277,8 +1277,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDate(1, today);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the LocalDate value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the LocalDate value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1297,8 +1297,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTime(1, time);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Time value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Time value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1318,8 +1318,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTime(1, utilDate);   // extracts time portion
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Date value to set as Time, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Date value to set as Time, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1338,8 +1338,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTime(1, sqlTime, cal);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Time value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Time value to set, or {@code null} to set SQL {@code NULL}
      * @param cal the Calendar object to use for timezone conversion
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1359,8 +1359,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTime(1, now);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the LocalTime value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the LocalTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1379,8 +1379,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, ts);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Timestamp value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Timestamp value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1399,8 +1399,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, date);   // converts to Timestamp
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Date value to set as Timestamp, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Date value to set as Timestamp, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1419,8 +1419,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, timestamp, cal);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Timestamp value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Timestamp value to set, or {@code null} to set SQL {@code NULL}
      * @param cal the Calendar object to use for timezone conversion
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1440,8 +1440,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, now);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the LocalDateTime value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the LocalDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1461,8 +1461,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, zonedNow);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the ZonedDateTime value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1481,8 +1481,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, offsetNow);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the OffsetDateTime value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1501,8 +1501,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestamp(1, now);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Instant value to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1521,8 +1521,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBytes(1, imageData);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the byte array to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the byte array to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1542,8 +1542,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setAsciiStream(1, asciiStream);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param inputStream the input stream containing ASCII data, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param inputStream the input stream containing ASCII data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1562,7 +1562,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setAsciiStream(1, asciiStream, 1024);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param inputStream the input stream containing ASCII data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1583,7 +1583,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setAsciiStream(1, asciiStream, file.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param inputStream the input stream containing ASCII data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1605,8 +1605,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBinaryStream(1, binaryStream);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param inputStream the input stream containing binary data, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param inputStream the input stream containing binary data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1625,7 +1625,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBinaryStream(1, binaryStream, 2048);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param inputStream the input stream containing binary data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1646,7 +1646,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBinaryStream(1, binaryStream, file.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param inputStream the input stream containing binary data
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1668,8 +1668,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setCharacterStream(1, reader);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param reader the reader containing character data, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param reader the reader containing character data, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1688,7 +1688,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setCharacterStream(1, reader, 11);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1709,7 +1709,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setCharacterStream(1, reader, file.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1731,7 +1731,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNCharacterStream(1, reader);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing national character data
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1752,7 +1752,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNCharacterStream(1, reader, text.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing national character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1774,8 +1774,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBlob(1, blob);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Blob object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Blob object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1795,7 +1795,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBlob(1, imageStream);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param inputStream the input stream containing the data for the Blob
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1815,7 +1815,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBlob(1, videoStream, file.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param inputStream the input stream containing the data for the Blob
      * @param length the number of bytes in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1837,8 +1837,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setClob(1, clob);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Clob object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Clob object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1857,7 +1857,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setClob(1, textReader);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing the data for the Clob
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1876,7 +1876,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setClob(1, textReader, largeText.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing the data for the Clob
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1899,8 +1899,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNClob(1, nclob);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the NClob object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the NClob object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1919,7 +1919,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNClob(1, unicodeReader);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing the national character data
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1939,7 +1939,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setNClob(1, unicodeReader, largeUnicodeText.length());
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param reader the reader containing the national character data
      * @param length the number of characters in the stream
      * @return this AbstractQuery instance for method chaining
@@ -1960,8 +1960,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setURL(1, website);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the URL object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the URL object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1980,8 +1980,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setArray(1, array);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Array object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Array object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -2001,8 +2001,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setSQLXML(1, xml);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the SQLXML object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the SQLXML object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -2022,8 +2022,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setRef(1, ref);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the Ref object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the Ref object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -2043,8 +2043,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setRowId(1, rowId);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the RowId object, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the RowId object, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -2065,8 +2065,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .setObject(3, BigDecimal.valueOf(123.45));
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
-     * @param x the object to set, or {@code null} to set SQL NULL
+     * @param parameterIndex the 1-based index of the parameter to set
+     * @param x the object to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -2088,7 +2088,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObject(1, "123", Types.INTEGER);   // converts string to integer
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the object to set
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @return this AbstractQuery instance for method chaining
@@ -2109,7 +2109,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObject(1, 123.456, Types.DECIMAL, 2);   // 2 decimal places
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the object to set
      * @param sqlType the SQL type to use (from {@link java.sql.Types})
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
@@ -2132,7 +2132,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObject(1, jsonString, jsonType);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the object to set
      * @param sqlType the SQL type to use
      * @return this AbstractQuery instance for method chaining
@@ -2152,7 +2152,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObject(1, 123.456, JDBCType.DECIMAL, 2);
      * }</pre>
      *
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the object to set
      * @param sqlType the SQL type to use
      * @param scaleOrLength For numeric types, the number of decimal places; for strings, the length
@@ -2176,7 +2176,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param <T> the type of the object being set as a parameter
-     * @param parameterIndex the index of the parameter to set, starting from 1
+     * @param parameterIndex the 1-based index of the parameter to set
      * @param x the object to set
      * @param type the Type handler for custom serialization
      * @return this AbstractQuery instance for method chaining
@@ -3160,7 +3160,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Sets the same SQL NULL value to multiple parameter positions.
+     * Sets the same SQL {@code NULL} value to multiple parameter positions.
      * Useful when multiple parameters should be NULL with the same SQL type.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -3666,6 +3666,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             if (!iter.hasNext()) {
+                noException = true;
                 return (This) this;
             }
 
@@ -3738,6 +3739,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             if (!iter.hasNext()) {
+                noException = true;
                 return (This) this;
             }
 
@@ -4901,7 +4903,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the unique result value from the result set as the specified type.
-     * Throws DuplicatedResultException if more than one row is found.
+     * Throws DuplicateResultException if more than one row is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4916,11 +4918,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A {@code Nullable} containing the unique value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicatedResultException If more than one row is found
+     * @throws DuplicateResultException If more than one row is found
      * @throws SQLException if a database access error occurs
      */
     public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
+            throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4929,7 +4931,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the unique result value from the result set using a custom Type handler.
-     * Throws DuplicatedResultException if more than one row is found.
+     * Throws DuplicateResultException if more than one row is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4944,11 +4946,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A {@code Nullable} containing the unique value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicatedResultException If more than one row is found
+     * @throws DuplicateResultException If more than one row is found
      * @throws SQLException if a database access error occurs
      */
     public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException {
+            throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4956,7 +4958,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Nullable<V> result = rs.next() ? Nullable.of(targetValueType.get(rs, 1)) : Nullable.empty();
 
             if (result.isPresent() && rs.next()) {
-                throw new DuplicatedResultException(
+                throw new DuplicateResultException(
                         "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetValueType)));
             }
 
@@ -4969,7 +4971,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the unique non-null result value as the specified type.
      * <br />
-     * If more than one row is found, a DuplicatedResultException is thrown.
+     * If more than one row is found, a DuplicateResultException is thrown.
      * If the value encountered in the first row/column is null, a NullPointerException is thrown.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4985,12 +4987,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicatedResultException If more than one row is found
+     * @throws DuplicateResultException If more than one row is found
      * @throws SQLException if a database access error occurs
      * @throws NullPointerException if a null value is encountered in the result set
      */
     public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException {
+            throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -5000,7 +5002,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes the query and returns the unique non-null result value using a custom Type handler.
      * <br />
-     * If more than one row is found, a DuplicatedResultException is thrown.
+     * If more than one row is found, a DuplicateResultException is thrown.
      * If the value encountered in the first row/column is null, a NullPointerException is thrown.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -5016,12 +5018,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
      * @throws IllegalArgumentException If targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicatedResultException If more than one row is found
+     * @throws DuplicateResultException If more than one row is found
      * @throws SQLException if a database access error occurs
      * @throws NullPointerException if a null value is encountered in the result set
      */
     public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType)
-            throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException {
+            throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -5029,7 +5031,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             final Optional<V> result = rs.next() ? Optional.of(targetValueType.get(rs, 1)) : Optional.empty();
 
             if (result.isPresent() && rs.next()) {
-                throw new DuplicatedResultException(
+                throw new DuplicateResultException(
                         "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetValueType)));
             }
 
@@ -5074,7 +5076,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Dataset
      */
     public Dataset query() throws SQLException {
-        return query(Jdbc.ResultExtractor.TO_DATA_SET);
+        return query(Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -5257,7 +5259,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Tuple3<List<User>, List<Order>, Summary> results = callableQuery.query3ResultSets(
      *     Jdbc.BiResultExtractor.toList(User.class),
      *     Jdbc.BiResultExtractor.toList(Order.class),
-     *     rs -> new Summary(rs.getInt(1), rs.getDouble(2))
+     *     (rs, columnLabels) -> new Summary(rs.getInt(1), rs.getDouble(2))
      * );
      * }</pre>
      *
@@ -5336,7 +5338,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #streamAllResultSets()
      */
     public List<Dataset> queryAllResultSets() throws SQLException {
-        return queryAllResultSets(ResultExtractor.TO_DATA_SET);
+        return queryAllResultSets(ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -5575,12 +5577,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueResult(Class)
      * @see #queryForUniqueNonNull(Class)
      */
-    public Optional<Map<String, Object>> findOnlyOne() throws DuplicatedResultException, SQLException {
+    public Optional<Map<String, Object>> findOnlyOne() throws DuplicateResultException, SQLException {
         return findOnlyOne(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -5606,12 +5608,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If {@code targetType} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueResult(Class)
      * @see #queryForUniqueNonNull(Class)
      */
-    public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException {
+    public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(targetType));
     }
 
@@ -5637,10 +5639,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
-    public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException {
+    public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -5669,10 +5671,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
-    public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException {
+    public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
         return Optional.ofNullable(findOnlyOneOrNull(rowMapper));
     }
 
@@ -5693,10 +5695,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return A {@code Map<String, Object>} containing the result if exactly one record is found, otherwise {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
-    public Map<String, Object> findOnlyOneOrNull() throws DuplicatedResultException, SQLException {
+    public Map<String, Object> findOnlyOneOrNull() throws DuplicateResultException, SQLException {
         return findOnlyOneOrNull(Jdbc.BiRowMapper.TO_MAP);
     }
 
@@ -5722,10 +5724,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If {@code targetType} is {@code null} or if the target type is invalid
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
-    public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException {
+    public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException {
         checkArgNotNull(targetType, cs.targetType);
         assertNotClosed();
 
@@ -5734,7 +5736,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = Objects.requireNonNull(getRow(rs, targetType));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("More than one record found");
+                    throw new DuplicateResultException("More than one record found");
                 }
 
                 return result;
@@ -5767,10 +5769,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
-    public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException {
+    public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
@@ -5779,7 +5781,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = Objects.requireNonNull(rowMapper.apply(rs));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("More than one record found");
+                    throw new DuplicateResultException("More than one record found");
                 }
 
                 return result;
@@ -5813,10 +5815,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicatedResultException If the query finds more than one record
+     * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
-    public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException {
+    public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
@@ -5825,7 +5827,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final T result = Objects.requireNonNull(rowMapper.apply(rs, JdbcUtil.getColumnLabelList(rs)));
 
                 if (rs.next()) {
-                    throw new DuplicatedResultException("More than one record found");
+                    throw new DuplicateResultException("More than one record found");
                 }
 
                 return result;
@@ -7578,7 +7580,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public Stream<Dataset> streamAllResultSets() {
-        return streamAllResultSets(ResultExtractor.TO_DATA_SET);
+        return streamAllResultSets(ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -7593,7 +7595,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract summary information from each result set
-     * Stream<Summary> summaries = callableQuery.streamAllResultSets(
+     * Stream<List<Summary>> summaries = callableQuery.streamAllResultSets(
      *     ResultExtractor.toList(rs -> new Summary(
      *         rs.getString("name"),
      *         rs.getInt("count"),
@@ -7639,7 +7641,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract data with column-aware processing
-     * Stream<Report> reports = callableQuery.streamAllResultSets(
+     * Stream<List<Report>> reports = callableQuery.streamAllResultSets(
      *     (rs, columnLabels) -> {
      *         List<Report> list = new ArrayList<>();
      *         while (rs.next()) {
@@ -8809,7 +8811,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 if (rs.next()) {
                     final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
                     final ID id = autoGeneratedKeyExtractor.apply(rs, columnLabels);
-                    return isDefaultIdTester.test(id) ? Optional.empty() : Optional.of(id);
+                    return id == null || isDefaultIdTester.test(id) ? Optional.empty() : Optional.of(id);
                 } else {
                     return Optional.empty();
                 }
@@ -8931,6 +8933,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 return new ArrayList<>();
             }
 
+            ids.removeIf(id -> isDefaultIdTester.test(id));
+
             return ids;
         } finally {
             closeAfterExecutionIfAllowed();
@@ -8970,6 +8974,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                 return new ArrayList<>();
             }
+
+            ids.removeIf(id -> isDefaultIdTester.test(id));
 
             return ids;
         } finally {
@@ -9598,7 +9604,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return JdbcUtil.asyncExecutor.execute(() -> sqlAction.apply(q));
+        return JdbcUtil.asyncExecutor.execute(() -> {
+            try {
+                return sqlAction.apply(q);
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        });
     }
 
     /**
@@ -9642,7 +9654,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return ContinuableFuture.call(() -> sqlAction.apply(q), executor);
+        return ContinuableFuture.call(() -> {
+            try {
+                return sqlAction.apply(q);
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        }, executor);
     }
 
     /**
@@ -9684,7 +9702,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return JdbcUtil.asyncExecutor.execute(() -> sqlAction.accept(q));
+        return JdbcUtil.asyncExecutor.execute(() -> {
+            try {
+                sqlAction.accept(q);
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        });
     }
 
     /**
@@ -9725,7 +9749,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         final This q = (This) this;
 
-        return ContinuableFuture.run(() -> sqlAction.accept(q), executor);
+        return ContinuableFuture.run(() -> {
+            try {
+                sqlAction.accept(q);
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
+        }, executor);
     }
 
     /**

@@ -282,6 +282,25 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a SQL query optimized for large result sets. Only SELECT and INSERT queries are supported.
+     *
+     * @param query the SQL query string to prepare (must be SELECT or INSERT)
+     * @return a PreparedQuery object configured for large result sets
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
+     */
+    @Beta
+    @NonDBOperation
+    @Override
+    default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException, UnsupportedOperationException {
+        if (!(DaoUtil.isSelectQuery(query) || DaoUtil.isInsertQuery(query))) {
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+        }
+
+        return JdbcUtil.prepareQueryForLargeResult(dataSource(), query);
+    }
+
+    /**
      * Prepares a named parameter SQL query for execution. Only SELECT and INSERT queries are supported.
      * Named queries use parameter placeholders like :paramName instead of ? placeholders,
      * making complex queries more readable and maintainable.
@@ -433,6 +452,44 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
     }
 
     /**
+     * Prepares a named parameter SQL query optimized for large result sets. Only SELECT and INSERT queries are supported.
+     *
+     * @param namedQuery the SQL query string with named parameters (must be SELECT or INSERT)
+     * @return a NamedQuery object configured for large result sets
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT or INSERT statement
+     */
+    @Beta
+    @NonDBOperation
+    @Override
+    default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException, UnsupportedOperationException {
+        if (!(DaoUtil.isSelectQuery(namedQuery) || DaoUtil.isInsertQuery(namedQuery))) {
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+        }
+
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
+    }
+
+    /**
+     * Prepares a parsed named query optimized for large result sets. Only SELECT and INSERT queries are supported.
+     *
+     * @param namedQuery the pre-parsed SQL query object (must represent SELECT or INSERT)
+     * @return a NamedQuery object configured for large result sets
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the query is not a SELECT or INSERT statement
+     */
+    @Beta
+    @NonDBOperation
+    @Override
+    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
+        if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
+            throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
+        }
+
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
+    }
+
+    /**
      * Prepares a named query using a pre-parsed SQL object. Only SELECT and INSERT queries are supported.
      * This method is useful when you have already parsed a named query and want to avoid
      * the overhead of parsing it again.
@@ -442,7 +499,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ParsedSql parsedSql = NamedQuery.parse("SELECT * FROM users WHERE id = :id");
+     * ParsedSql parsedSql = ParsedSql.parse("SELECT * FROM users WHERE id = :id");
      * try (NamedQuery query = dao.prepareNamedQuery(parsedSql)) {
      *     query.setLong("id", userId);
      *     User user = query.findFirst(User.class).orElse(null);
@@ -472,7 +529,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ParsedSql parsedSql = NamedQuery.parse(
+     * ParsedSql parsedSql = ParsedSql.parse(
      *     "INSERT INTO users (name, email) VALUES (:name, :email)");
      * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, true)) {
      *     query.setString("name", "Carol White");
@@ -505,7 +562,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ParsedSql parsedSql = NamedQuery.parse(
+     * ParsedSql parsedSql = ParsedSql.parse(
      *     "INSERT INTO products (name, price) VALUES (:name, :price)");
      * try (NamedQuery query = dao.prepareNamedQuery(parsedSql, new int[] {1})) {
      *     query.setString("name", "Widget");
@@ -539,7 +596,7 @@ public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * ParsedSql parsedSql = NamedQuery.parse(
+     * ParsedSql parsedSql = ParsedSql.parse(
      *     "INSERT INTO customers (name, email) VALUES (:name, :email)");
      * try (NamedQuery query = dao.prepareNamedQuery(
      *         parsedSql, new String[] {"customer_id", "registration_date"})) {

@@ -6159,7 +6159,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException",
+              "signature": "public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -6187,7 +6187,7 @@
                   "condition": "if this query is closed"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If more than one row is found"
                 },
                 {
@@ -6197,7 +6197,7 @@
               ],
               "javadoc_summary": "Executes the query and returns the unique result value from the result set as the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one row is found.",
+                "Throws DuplicateResultException if more than one row is found.",
                 "// Throws exception if multiple users have the same email } </pre>"
               ],
               "examples": [],
@@ -6209,7 +6209,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException",
+              "signature": "public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -6237,7 +6237,7 @@
                   "condition": "if this query is closed"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If more than one row is found"
                 },
                 {
@@ -6247,7 +6247,7 @@
               ],
               "javadoc_summary": "Executes the query and returns the unique result value from the result set using a custom Type handler.",
               "contract": [
-                "Throws DuplicatedResultException if more than one row is found."
+                "Throws DuplicateResultException if more than one row is found."
               ],
               "examples": [],
               "see_also": []
@@ -6258,7 +6258,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException",
+              "signature": "public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -6286,7 +6286,7 @@
                   "condition": "if this query is closed"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If more than one row is found"
                 },
                 {
@@ -6300,7 +6300,7 @@
               ],
               "javadoc_summary": "Executes the query and returns the unique non-null result value as the specified type.",
               "contract": [
-                "<br/> If more than one row is found, a DuplicatedResultException is thrown.",
+                "<br/> If more than one row is found, a DuplicateResultException is thrown.",
                 "If the value encountered in the first row/column is null, a NullPointerException is thrown.",
                 "// Throws exception if multiple sessions exist for the token } </pre>"
               ],
@@ -6313,7 +6313,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException",
+              "signature": "public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -6341,7 +6341,7 @@
                   "condition": "if this query is closed"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If more than one row is found"
                 },
                 {
@@ -6355,7 +6355,7 @@
               ],
               "javadoc_summary": "Executes the query and returns the unique non-null result value using a custom Type handler.",
               "contract": [
-                "<br/> If more than one row is found, a DuplicatedResultException is thrown.",
+                "<br/> If more than one row is found, a DuplicateResultException is thrown.",
                 "If the value encountered in the first row/column is null, a NullPointerException is thrown."
               ],
               "examples": [],
@@ -6928,13 +6928,13 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public Optional<Map<String, Object>> findOnlyOne() throws DuplicatedResultException, SQLException",
+              "signature": "public Optional<Map<String, Object>> findOnlyOne() throws DuplicateResultException, SQLException",
               "return_type": "Optional<Map<String, Object>>",
               "type_params": [],
               "params": [],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -6959,7 +6959,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException",
+              "signature": "public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [
                 {
@@ -6983,7 +6983,7 @@
                   "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -7007,7 +7007,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException",
+              "signature": "public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [
                 {
@@ -7031,7 +7031,7 @@
                   "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -7052,7 +7052,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException",
+              "signature": "public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [
                 {
@@ -7076,7 +7076,7 @@
                   "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -7097,13 +7097,13 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public Map<String, Object> findOnlyOneOrNull() throws DuplicatedResultException, SQLException",
+              "signature": "public Map<String, Object> findOnlyOneOrNull() throws DuplicateResultException, SQLException",
               "return_type": "Map<String, Object>",
               "type_params": [],
               "params": [],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -7126,7 +7126,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException",
+              "signature": "public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [
                 {
@@ -7150,7 +7150,7 @@
                   "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -7173,7 +7173,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException",
+              "signature": "public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [
                 {
@@ -7197,7 +7197,7 @@
                   "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -7219,7 +7219,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException",
+              "signature": "public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [
                 {
@@ -7243,7 +7243,7 @@
                   "condition": "if the mapped object for the found row is {@code null}"
                 },
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "If the query finds more than one record"
                 },
                 {
@@ -45646,7 +45646,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException",
+              "signature": "<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -45678,7 +45678,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45688,8 +45688,8 @@
               ],
               "javadoc_summary": "Queries for a unique single result of the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult(\"email\", userId, String.class); // Throws DuplicatedResultException if multiple records found } </pre>"
+                "Throws DuplicateResultException if more than one record is found.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult(\"email\", userId, String.class); // Throws DuplicateResultException if multiple records found } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -45703,7 +45703,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException",
+              "signature": "<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -45735,7 +45735,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45745,9 +45745,9 @@
               ],
               "javadoc_summary": "Queries for a unique non-null result of the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found.",
+                "Throws DuplicateResultException if more than one record is found.",
                 "Returns empty Optional if no record found or value is {@code null} .",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Optional<String> email = userDao.queryForUniqueNonNull(\"email\", userId, String.class); email.ifPresent(e -> sendEmail(e)); // Throws DuplicatedResultException if multiple records found } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Optional<String> email = userDao.queryForUniqueNonNull(\"email\", userId, String.class); email.ifPresent(e -> sendEmail(e)); // Throws DuplicateResultException if multiple records found } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -45761,7 +45761,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -45793,7 +45793,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45803,7 +45803,7 @@
               ],
               "javadoc_summary": "Queries for a unique non-null result using a custom row mapper.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found."
+                "Throws DuplicateResultException if more than one record is found."
               ],
               "examples": [],
               "see_also": [
@@ -45818,7 +45818,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default Optional<T> get(final ID id) throws DuplicatedResultException, SQLException",
+              "signature": "default Optional<T> get(final ID id) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -45831,7 +45831,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45853,7 +45853,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException",
+              "signature": "default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -45872,7 +45872,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45891,7 +45891,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "T gett(final ID id) throws DuplicatedResultException, SQLException",
+              "signature": "T gett(final ID id) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -45904,7 +45904,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45926,7 +45926,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException",
+              "signature": "T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -45945,7 +45945,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -45969,7 +45969,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, SQLException",
+              "signature": "default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -45982,7 +45982,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -46004,7 +46004,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, SQLException",
+              "signature": "default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -46023,7 +46023,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -46043,7 +46043,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException",
+              "signature": "default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -46062,7 +46062,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -46081,7 +46081,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicatedResultException, SQLException",
+              "signature": "List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -46106,7 +46106,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -47771,7 +47771,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException",
+              "signature": "default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -47803,7 +47803,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -47813,8 +47813,8 @@
               ],
               "javadoc_summary": "Queries for a unique single result of the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult(\"email\", 123L, String.class); // Throws DuplicatedResultException if multiple records found } </pre>"
+                "Throws DuplicateResultException if more than one record is found.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult(\"email\", 123L, String.class); // Throws DuplicateResultException if multiple records found } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -47826,7 +47826,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException",
+              "signature": "default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -47858,7 +47858,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -47868,7 +47868,7 @@
               ],
               "javadoc_summary": "Queries for a unique non-null result of the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found.",
+                "Throws DuplicateResultException if more than one record is found.",
                 "Returns empty Optional if no record found or value is {@code null} ."
               ],
               "examples": [],
@@ -47881,7 +47881,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -47913,7 +47913,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -47923,7 +47923,7 @@
               ],
               "javadoc_summary": "Queries for a unique non-null result using a custom row mapper.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found."
+                "Throws DuplicateResultException if more than one record is found."
               ],
               "examples": [],
               "see_also": []
@@ -48284,7 +48284,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -48303,7 +48303,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48323,7 +48323,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -48342,7 +48342,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48364,7 +48364,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -48389,7 +48389,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48409,7 +48409,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -48434,7 +48434,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48454,7 +48454,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -48479,7 +48479,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48499,7 +48499,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -48518,7 +48518,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48541,7 +48541,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -48560,7 +48560,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48583,7 +48583,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -48608,7 +48608,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48631,7 +48631,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -48656,7 +48656,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48679,7 +48679,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -48704,7 +48704,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -48727,7 +48727,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -48746,7 +48746,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -48766,7 +48766,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -48785,7 +48785,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -48805,7 +48805,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -48830,7 +48830,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -48850,7 +48850,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -48875,7 +48875,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -48895,7 +48895,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -48920,7 +48920,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -48940,7 +48940,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -48971,7 +48971,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -48991,7 +48991,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -49022,7 +49022,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -49042,7 +49042,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicateResultException, SQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -49073,7 +49073,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input {@code ids}"
                 },
                 {
@@ -49128,7 +49128,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -49147,7 +49147,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49167,7 +49167,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -49186,7 +49186,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49206,7 +49206,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -49231,7 +49231,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49251,7 +49251,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -49276,7 +49276,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49296,7 +49296,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -49321,7 +49321,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49341,7 +49341,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -49360,7 +49360,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49383,7 +49383,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -49402,7 +49402,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49425,7 +49425,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -49450,7 +49450,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49473,7 +49473,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -49498,7 +49498,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -49521,7 +49521,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -49546,7 +49546,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -51316,7 +51316,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException",
+              "signature": "Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -51329,7 +51329,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record matches"
                 },
                 {
@@ -51341,7 +51341,7 @@
               "contract": [
                 "Finds exactly one record matching the condition, throwing exception if multiple found.",
                 "Use this when you expect exactly zero or one result.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Optional<User> user = dao.findOnlyOne(Filters.eq(\"email\", \"john@example.com\")); // Throws DuplicatedResultException if multiple users have this email } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Optional<User> user = dao.findOnlyOne(Filters.eq(\"email\", \"john@example.com\")); // Throws DuplicateResultException if multiple users have this email } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -51352,7 +51352,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException",
+              "signature": "<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -51378,7 +51378,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record matches"
                 },
                 {
@@ -51403,7 +51403,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException",
+              "signature": "<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -51429,7 +51429,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record matches"
                 },
                 {
@@ -51454,7 +51454,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException",
+              "signature": "Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -51473,7 +51473,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record matches"
                 },
                 {
@@ -51494,7 +51494,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException",
+              "signature": "<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -51526,7 +51526,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record matches"
                 },
                 {
@@ -51549,7 +51549,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException",
+              "signature": "<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -51581,7 +51581,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record matches"
                 },
                 {
@@ -52213,7 +52213,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException",
+              "signature": "<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -52245,7 +52245,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one row matches"
                 },
                 {
@@ -52256,7 +52256,7 @@
               "javadoc_summary": "Queries for a unique single value, throwing if multiple rows found.",
               "contract": [
                 "Queries for a unique single value, throwing if multiple rows found.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueResult( \"email\", Filters.eq(\"username\", \"john_doe\"), String.class ); // Throws DuplicatedResultException if multiple users have this username } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueResult( \"email\", Filters.eq(\"username\", \"john_doe\"), String.class ); // Throws DuplicateResultException if multiple users have this username } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -52269,7 +52269,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException",
+              "signature": "<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -52301,7 +52301,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one row matches"
                 },
                 {
@@ -52324,7 +52324,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, SQLException",
+              "signature": "@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -52356,7 +52356,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one row matches"
                 },
                 {
@@ -55013,7 +55013,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, SQLException",
+              "signature": "default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -55038,7 +55038,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified condition"
                 },
                 {
@@ -55060,7 +55060,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, SQLException",
+              "signature": "default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -55085,7 +55085,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified condition"
                 },
                 {
@@ -55107,7 +55107,7 @@
                 "default",
                 "public"
               ],
-              "signature": "default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicatedResultException, SQLException",
+              "signature": "default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicateResultException, SQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -55132,7 +55132,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified condition"
                 },
                 {
@@ -62647,7 +62647,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -62679,7 +62679,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62689,7 +62689,7 @@
               ],
               "javadoc_summary": "Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.",
               "contract": [
-                "Throws {@code DuplicatedResultException} if more than one record is found.",
+                "Throws {@code DuplicateResultException} if more than one record is found.",
                 "<p> <b> Usage Examples: </b> </p> <pre> {@code // Assuming email should be unique per user Nullable<String> email = userDao.queryForUniqueResult(\"email\", userId, String.class); } </pre>"
               ],
               "examples": [],
@@ -62703,7 +62703,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -62735,7 +62735,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62745,7 +62745,7 @@
               ],
               "javadoc_summary": "Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.",
               "contract": [
-                "Throws {@code DuplicatedResultException} if more than one record is found."
+                "Throws {@code DuplicateResultException} if more than one record is found."
               ],
               "examples": [],
               "see_also": [
@@ -62758,7 +62758,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -62790,7 +62790,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62800,7 +62800,7 @@
               ],
               "javadoc_summary": "Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.",
               "contract": [
-                "Throws {@code DuplicatedResultException} if more than one record is found."
+                "Throws {@code DuplicateResultException} if more than one record is found."
               ],
               "examples": [],
               "see_also": [
@@ -62814,7 +62814,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default Optional<T> get(final ID id) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default Optional<T> get(final ID id) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -62827,7 +62827,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62847,7 +62847,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -62866,7 +62866,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62885,7 +62885,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override T gett(final ID id) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override T gett(final ID id) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -62898,7 +62898,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62920,7 +62920,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -62939,7 +62939,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -62962,7 +62962,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -62975,7 +62975,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -62995,7 +62995,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -63014,7 +63014,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -63034,7 +63034,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -63053,7 +63053,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -63072,7 +63072,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -63097,7 +63097,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -64805,7 +64805,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -64837,7 +64837,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -64847,7 +64847,7 @@
               ],
               "javadoc_summary": "Queries for a unique single result of the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found."
+                "Throws DuplicateResultException if more than one record is found."
               ],
               "examples": [],
               "see_also": []
@@ -64859,7 +64859,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -64891,7 +64891,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -64901,7 +64901,7 @@
               ],
               "javadoc_summary": "Queries for a unique non-null result of the specified type.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found.",
+                "Throws DuplicateResultException if more than one record is found.",
                 "Returns empty Optional if no record found or value is {@code null} ."
               ],
               "examples": [],
@@ -64914,7 +64914,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -64946,7 +64946,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record found by the specified {@code id}"
                 },
                 {
@@ -64956,7 +64956,7 @@
               ],
               "javadoc_summary": "Queries for a unique non-null result using a custom row mapper.",
               "contract": [
-                "Throws DuplicatedResultException if more than one record is found."
+                "Throws DuplicateResultException if more than one record is found."
               ],
               "examples": [],
               "see_also": []
@@ -65313,7 +65313,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -65332,7 +65332,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65354,7 +65354,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -65373,7 +65373,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65393,7 +65393,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -65418,7 +65418,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65438,7 +65438,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -65463,7 +65463,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65483,7 +65483,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -65508,7 +65508,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65528,7 +65528,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -65547,7 +65547,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65570,7 +65570,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -65589,7 +65589,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65612,7 +65612,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -65637,7 +65637,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65657,7 +65657,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -65682,7 +65682,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65702,7 +65702,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -65727,7 +65727,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -65747,7 +65747,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -65766,7 +65766,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -65786,7 +65786,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -65805,7 +65805,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -65825,7 +65825,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -65850,7 +65850,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -65870,7 +65870,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -65895,7 +65895,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -65915,7 +65915,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -65940,7 +65940,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -65960,7 +65960,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -65991,7 +65991,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -66011,7 +66011,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -66042,7 +66042,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -66062,7 +66062,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "List<T>",
               "type_params": [],
               "params": [
@@ -66093,7 +66093,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if the size of result is bigger than the size of input IDs"
                 },
                 {
@@ -66148,7 +66148,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -66167,7 +66167,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66189,7 +66189,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -66208,7 +66208,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66231,7 +66231,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -66256,7 +66256,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66276,7 +66276,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -66301,7 +66301,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66321,7 +66321,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -66346,7 +66346,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66366,7 +66366,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -66385,7 +66385,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66409,7 +66409,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -66428,7 +66428,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66451,7 +66451,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -66476,7 +66476,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66499,7 +66499,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -66524,7 +66524,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -66547,7 +66547,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "T",
               "type_params": [],
               "params": [
@@ -66572,7 +66572,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found by the specified {@code id}"
                 },
                 {
@@ -67283,7 +67283,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -67296,7 +67296,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -67317,7 +67317,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -67343,7 +67343,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -67362,7 +67362,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -67388,7 +67388,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -67407,7 +67407,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -67426,7 +67426,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -67445,7 +67445,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -67477,7 +67477,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -67496,7 +67496,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<R>",
               "type_params": [
                 {
@@ -67528,7 +67528,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -68194,7 +68194,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -68226,7 +68226,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -68237,7 +68237,7 @@
               "javadoc_summary": "Returns a {@code Nullable} describing the value in the first row/column if it exists.",
               "contract": [
                 "Returns a {@code Nullable} describing the value in the first row/column if it exists.",
-                "Throws {@code DuplicatedResultException} if more than one record is found."
+                "Throws {@code DuplicateResultException} if more than one record is found."
               ],
               "examples": [],
               "see_also": [
@@ -68250,7 +68250,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -68282,7 +68282,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -68292,7 +68292,7 @@
               ],
               "javadoc_summary": "Returns an {@code Optional} describing the unique non-null value in the first row/column.",
               "contract": [
-                "Throws {@code DuplicatedResultException} if more than one record is found."
+                "Throws {@code DuplicateResultException} if more than one record is found."
               ],
               "examples": [],
               "see_also": [
@@ -68305,7 +68305,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<V>",
               "type_params": [
                 {
@@ -68337,7 +68337,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found"
                 },
                 {
@@ -68347,7 +68347,7 @@
               ],
               "javadoc_summary": "Returns an {@code Optional} describing the unique non-null value mapped by the row mapper.",
               "contract": [
-                "Throws {@code DuplicatedResultException} if more than one record is found."
+                "Throws {@code DuplicateResultException} if more than one record is found."
               ],
               "examples": [],
               "see_also": [
@@ -69989,7 +69989,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -70014,7 +70014,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found for the specified condition"
                 },
                 {
@@ -70036,7 +70036,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -70061,7 +70061,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found for the specified condition"
                 },
                 {
@@ -70083,7 +70083,7 @@
                 "default",
                 "public"
               ],
-              "signature": "@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicatedResultException, UncheckedSQLException",
+              "signature": "@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Optional<T>",
               "type_params": [],
               "params": [
@@ -70108,7 +70108,7 @@
               ],
               "throws": [
                 {
-                  "type": "com.landawn.abacus.exception.DuplicatedResultException",
+                  "type": "com.landawn.abacus.exception.DuplicateResultException",
                   "condition": "if more than one record is found for the specified condition"
                 },
                 {

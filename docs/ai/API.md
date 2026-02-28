@@ -1602,10 +1602,10 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.NullPointerException` — if a null value is encountered in the result set
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException`
+- **Signature:** `public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException`
 - **Summary:** Executes the query and returns the unique result value from the result set as the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one row is found.
+  - Throws DuplicateResultException if more than one row is found.
   - // Throws exception if multiple users have the same email } </pre>
 - **Parameters:**
   - `targetValueType` (`Class<? extends V>`) — the class of the desired result type
@@ -1613,25 +1613,25 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — If targetValueType is null
   - `java.lang.IllegalStateException` — if this query is closed
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If more than one row is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — If more than one row is found
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException`
+- **Signature:** `public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException`
 - **Summary:** Executes the query and returns the unique result value from the result set using a custom Type handler.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one row is found.
+  - Throws DuplicateResultException if more than one row is found.
 - **Parameters:**
   - `targetValueType` (`Type<? extends V>`) — the Type handler for converting the result
 - **Returns:** A {@code Nullable} containing the unique value if present, otherwise empty
 - **Throws:**
   - `java.lang.IllegalArgumentException` — If targetValueType is null
   - `java.lang.IllegalStateException` — if this query is closed
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If more than one row is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — If more than one row is found
   - `java.sql.SQLException` — if a database access error occurs
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException`
+- **Signature:** `public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException`
 - **Summary:** Executes the query and returns the unique non-null result value as the specified type.
 - **Contract:**
-  - <br/> If more than one row is found, a DuplicatedResultException is thrown.
+  - <br/> If more than one row is found, a DuplicateResultException is thrown.
   - If the value encountered in the first row/column is null, a NullPointerException is thrown.
   - // Throws exception if multiple sessions exist for the token } </pre>
 - **Parameters:**
@@ -1640,13 +1640,13 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — If targetValueType is null
   - `java.lang.IllegalStateException` — if this query is closed
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If more than one row is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — If more than one row is found
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.NullPointerException` — if a null value is encountered in the result set
-- **Signature:** `public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicatedResultException, SQLException, NullPointerException`
+- **Signature:** `public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException`
 - **Summary:** Executes the query and returns the unique non-null result value using a custom Type handler.
 - **Contract:**
-  - <br/> If more than one row is found, a DuplicatedResultException is thrown.
+  - <br/> If more than one row is found, a DuplicateResultException is thrown.
   - If the value encountered in the first row/column is null, a NullPointerException is thrown.
 - **Parameters:**
   - `targetValueType` (`Type<? extends V>`) — the Type handler for converting the result
@@ -1654,7 +1654,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — If targetValueType is null
   - `java.lang.IllegalStateException` — if this query is closed
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If more than one row is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — If more than one row is found
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.NullPointerException` — if a null value is encountered in the result set
 ##### query(...) -> Dataset
@@ -1783,7 +1783,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `E` — If the consumer action throws an exception
 - **See also:** Jdbc.ResultExtractor#toDataset(Class)
 ##### findOnlyOne(...) -> Optional<Map<String, Object>>
-- **Signature:** `public Optional<Map<String, Object>> findOnlyOne() throws DuplicatedResultException, SQLException`
+- **Signature:** `public Optional<Map<String, Object>> findOnlyOne() throws DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
 - **Contract:**
   - Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
@@ -1792,10 +1792,10 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - (none)
 - **Returns:** An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #queryForUniqueResult(Class), #queryForUniqueNonNull(Class)
-- **Signature:** `public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException`
+- **Signature:** `public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns an {@code Optional} containing a single result of the specified type if exactly one record is found.
 - **Contract:**
   - Executes a query and returns an {@code Optional} containing a single result of the specified type if exactly one record is found.
@@ -1804,10 +1804,10 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
 - **Throws:**
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** #queryForUniqueResult(Class), #queryForUniqueNonNull(Class)
-- **Signature:** `public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
+- **Signature:** `public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code RowMapper} if exactly one record is found.
 - **Contract:**
   - Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code RowMapper} if exactly one record is found.
@@ -1816,9 +1816,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
 - **Throws:**
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
+- **Signature:** `public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
 - **Contract:**
   - Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
@@ -1827,10 +1827,10 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
 - **Throws:**
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 ##### findOnlyOneOrNull(...) -> Map<String, Object>
-- **Signature:** `public Map<String, Object> findOnlyOneOrNull() throws DuplicatedResultException, SQLException`
+- **Signature:** `public Map<String, Object> findOnlyOneOrNull() throws DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns a single result as a {@code Map<String, Object>} if exactly one record is found.
 - **Contract:**
   - Executes a query and returns a single result as a {@code Map<String, Object>} if exactly one record is found.
@@ -1840,9 +1840,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - (none)
 - **Returns:** A {@code Map<String, Object>} containing the result if exactly one record is found, otherwise {@code null}
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicatedResultException, SQLException`
+- **Signature:** `public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns a single result of the specified type if exactly one record is found.
 - **Contract:**
   - Executes a query and returns a single result of the specified type if exactly one record is found.
@@ -1853,9 +1853,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
 - **Throws:**
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
+- **Signature:** `public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns a single result extracted by the specified {@code RowMapper} if exactly one record is found.
 - **Contract:**
   - Executes a query and returns a single result extracted by the specified {@code RowMapper} if exactly one record is found.
@@ -1865,9 +1865,9 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
 - **Throws:**
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicatedResultException, SQLException`
+- **Signature:** `public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
 - **Contract:**
   - Executes a query and returns a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
@@ -1877,7 +1877,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
 - **Throws:**
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
-  - `com.landawn.abacus.exception.DuplicatedResultException` — If the query finds more than one record
+  - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
 ##### findFirst(...) -> Optional<Map<String, Object>>
 - **Signature:** `public Optional<Map<String, Object>> findFirst() throws SQLException`
@@ -11539,51 +11539,51 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Filters, AbstractQuery#queryForSingleNonNull(Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException`
+- **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single result of the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class); // Throws DuplicatedResultException if multiple records found } </pre>
+  - Throws DuplicateResultException if more than one record is found.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class); // Throws DuplicateResultException if multiple records found } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
   - `targetValueType` (`Class<? extends V>`) — the class of the value type to convert to
 - **Returns:** a Nullable containing the unique value if found, or Nullable.empty() if no record exists
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Filters, AbstractQuery#queryForUniqueResult(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException`
+- **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result of the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
   - Returns empty Optional if no record found or value is {@code null} .
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Optional<String> email = userDao.queryForUniqueNonNull("email", userId, String.class); email.ifPresent(e -> sendEmail(e)); // Throws DuplicatedResultException if multiple records found } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Optional<String> email = userDao.queryForUniqueNonNull("email", userId, String.class); email.ifPresent(e -> sendEmail(e)); // Throws DuplicateResultException if multiple records found } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
   - `targetValueType` (`Class<? extends V>`) — the class of the value type to convert to
 - **Returns:** an Optional containing the unique non-null value if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Filters, AbstractQuery#queryForUniqueNonNull(Class)
-- **Signature:** `@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result using a custom row mapper.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
   - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the custom mapper to transform the result
 - **Returns:** an Optional containing the mapped unique non-null value if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** Filters, AbstractQuery#queryForUniqueNonNull(Class)
 ##### get(...) -> Optional<T>
-- **Signature:** `default Optional<T> get(final ID id) throws DuplicatedResultException, SQLException`
+- **Signature:** `default Optional<T> get(final ID id) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID.
 - **Contract:**
   - Returns an Optional containing the entity if found, otherwise empty.
@@ -11591,19 +11591,19 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `id` (`ID`) — the entity ID to retrieve
 - **Returns:** an Optional containing the entity if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException`
+- **Signature:** `default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties populated.
 - **Parameters:**
   - `id` (`ID`) — the entity ID to retrieve
   - `selectPropNames` (`Collection<String>`) — the properties to select, excluding properties of joining entities. All properties will be selected if null
 - **Returns:** an Optional containing the entity if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### gett(...) -> T
-- **Signature:** `T gett(final ID id) throws DuplicatedResultException, SQLException`
+- **Signature:** `T gett(final ID id) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID, returning {@code null} if not found.
@@ -11612,9 +11612,9 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `id` (`ID`) — the entity ID to retrieve
 - **Returns:** the entity if found, otherwise null
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException`
+- **Signature:** `T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
@@ -11625,10 +11625,10 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `selectPropNames` (`Collection<String>`) — the properties to select, excluding properties of joining entities. All properties will be selected if null
 - **Returns:** the entity if found, otherwise null
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### batchGet(...) -> List<T>
-- **Signature:** `default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, SQLException`
+- **Signature:** `default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs using the default batch size.
 - **Contract:**
   - The returned list may be smaller than the input ID collection if some entities are not found.
@@ -11636,27 +11636,27 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
 - **Returns:** a list of found entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, SQLException`
+- **Signature:** `default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with a specified batch size.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
 - **Returns:** a list of found entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException`
+- **Signature:** `default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with only selected properties populated.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
   - `selectPropNames` (`Collection<String>`) — the properties to select, excluding properties of joining entities. All properties will be selected if null
 - **Returns:** a list of found entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicatedResultException, SQLException`
+- **Signature:** `List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with only selected properties populated and custom batch size.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -11664,7 +11664,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
 - **Returns:** a list of found entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
 ##### exists(...) -> boolean
 - **Signature:** `boolean exists(final ID id) throws SQLException`
@@ -12121,24 +12121,24 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException`
+- **Signature:** `default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single result of the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class); // Throws DuplicatedResultException if multiple records found } </pre>
+  - Throws DuplicateResultException if more than one record is found.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class); // Throws DuplicateResultException if multiple records found } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
   - `targetValueType` (`Class<? extends V>`) — the class of the value type to convert to
 - **Returns:** a Nullable containing the unique value if found, or Nullable.empty() if no record exists
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException`
+- **Signature:** `default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result of the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
   - Returns empty Optional if no record found or value is {@code null} .
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -12146,19 +12146,19 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
   - `targetValueType` (`Class<? extends V>`) — the class of the value type to convert to
 - **Returns:** an Optional containing the unique non-null value if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result using a custom row mapper.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
   - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the custom mapper to transform the result
 - **Returns:** an Optional containing the mapped unique non-null value if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### get(...) -> Optional<T>
 - **Signature:** `default Optional<T> get(final long id) throws SQLException`
@@ -12266,16 +12266,16 @@ Interface for CRUD operations with automatic join entity loading support.
 
 #### Public Instance Methods
 ##### get(...) -> Optional<T>
-- **Signature:** `@Beta default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified type of join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID to retrieve
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** an Optional containing the entity with join entities loaded, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and optionally loads all join entities.
 - **Contract:**
   - When includeAllJoinEntities is {@code true} , all fields annotated with @JoinedBy will be loaded.
@@ -12284,9 +12284,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** an Optional containing the entity with join entities loaded as specified, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties and loads the specified join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID to retrieve
@@ -12294,9 +12294,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Class<?>`) — the class of join entities to load
 - **Returns:** an Optional containing the entity with selected properties and join entities loaded, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties and loads multiple types of join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID to retrieve
@@ -12304,9 +12304,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties and optionally loads all join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID to retrieve
@@ -12314,10 +12314,10 @@ Interface for CRUD operations with automatic join entity loading support.
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** an Optional containing the entity with selected properties and join entities as specified, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### gett(...) -> T
-- **Signature:** `@Beta default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
@@ -12327,9 +12327,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Class<?>`) — the class of join entities to load
 - **Returns:** the entity with specified join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
@@ -12339,9 +12339,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** the entity with join entities loaded as specified, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties and loads the specified join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with only selected properties and loads the specified join entities, returning {@code null} if not found.
@@ -12352,9 +12352,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Class<?>`) — the class of join entities to load
 - **Returns:** the entity with selected properties and join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with only selected properties and loads multiple types of join entities, returning {@code null} if not found.
@@ -12365,9 +12365,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** the entity with selected properties and specified join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with only selected properties and optionally loads all join entities, returning {@code null} if not found.
@@ -12378,28 +12378,28 @@ Interface for CRUD operations with automatic join entity loading support.
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** the entity with selected properties and join entities as specified, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### batchGet(...) -> List<T>
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs and loads the specified type of join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load for each entity
 - **Returns:** a list of entities with the specified join entities loaded
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs and optionally loads all join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** a list of entities with join entities loaded as specified
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -12407,9 +12407,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Class<?>`) — the class of join entities to load for each entity
 - **Returns:** a list of entities with selected properties and join entities loaded
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -12417,9 +12417,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load for each entity
 - **Returns:** a list of entities with selected properties and specified join entities loaded
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -12427,9 +12427,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** a list of entities with selected properties and join entities as specified
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with selected properties and loads the specified join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -12438,9 +12438,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
 - **Returns:** a list of entities with selected properties and join entities loaded
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with selected properties and loads multiple types of join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -12449,9 +12449,9 @@ Interface for CRUD operations with automatic join entity loading support.
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
 - **Returns:** a list of entities with selected properties and specified join entities loaded
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves multiple entities by their IDs with selected properties and optionally loads all join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of IDs to retrieve
@@ -12460,7 +12460,7 @@ Interface for CRUD operations with automatic join entity loading support.
   - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
 - **Returns:** a list of entities with selected properties and join entities as specified
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input {@code ids}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input {@code ids}
   - `java.sql.SQLException` — if a database access error occurs
 
 ### Interface CrudJoinEntityHelperL (com.landawn.abacus.jdbc.dao.CrudJoinEntityHelperL)
@@ -12477,25 +12477,25 @@ A specialized interface for CRUD operations with join entity support that uses {
 
 #### Public Instance Methods
 ##### get(...) -> Optional<T>
-- **Signature:** `@Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified join entities.
 - **Parameters:**
   - `id` (`long`) — the primitive long ID of the entity to retrieve
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and optionally loads all join entities.
 - **Parameters:**
   - `id` (`long`) — the primitive long ID of the entity to retrieve
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with selected properties and loads the specified join entities.
 - **Parameters:**
   - `id` (`long`) — the primitive long ID of the entity to retrieve
@@ -12503,9 +12503,9 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with selected properties and loads multiple join entity types.
 - **Parameters:**
   - `id` (`long`) — the primitive long ID of the entity to retrieve
@@ -12513,9 +12513,9 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with selected properties and optionally loads all join entities.
 - **Parameters:**
   - `id` (`long`) — the primitive long ID of the entity to retrieve
@@ -12523,10 +12523,10 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 ##### gett(...) -> T
-- **Signature:** `@Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID and loads the specified join entities, returning {@code null} if not found.
@@ -12536,9 +12536,9 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** the retrieved entity with join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
@@ -12548,9 +12548,9 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** the retrieved entity with join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with selected properties and loads the specified join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with selected properties and loads the specified join entities, returning {@code null} if not found.
@@ -12561,9 +12561,9 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** the retrieved entity with join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.
@@ -12574,9 +12574,9 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** the retrieved entity with join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
@@ -12587,7 +12587,7 @@ A specialized interface for CRUD operations with join entity support that uses {
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** the retrieved entity with join entities loaded, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
 
 ### Interface Dao (com.landawn.abacus.jdbc.dao.Dao)
@@ -13031,19 +13031,19 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalArgumentException` — if rowMapper returns null
 ##### findOnlyOne(...) -> Optional<T>
-- **Signature:** `Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException`
+- **Signature:** `Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, SQLException`
 - **Summary:** Finds exactly one record matching the condition, throwing exception if multiple found.
 - **Contract:**
   - Finds exactly one record matching the condition, throwing exception if multiple found.
   - Use this when you expect exactly zero or one result.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Optional<User> user = dao.findOnlyOne(Filters.eq("email", "john@example.com")); // Throws DuplicatedResultException if multiple users have this email } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Optional<User> user = dao.findOnlyOne(Filters.eq("email", "john@example.com")); // Throws DuplicateResultException if multiple users have this email } </pre>
 - **Parameters:**
   - `cond` (`Condition`) — the search condition
 - **Returns:** Optional containing the single matching entity
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException`
+- **Signature:** `<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException`
 - **Summary:** Finds exactly one record and maps it, throwing exception if multiple found.
 - **Contract:**
   - Finds exactly one record and maps it, throwing exception if multiple found.
@@ -13052,10 +13052,10 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `rowMapper` (`Jdbc.RowMapper<? extends R>`) — the function to map the result
 - **Returns:** Optional containing the mapped result
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalArgumentException` — if rowMapper returns null
-- **Signature:** `<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException`
+- **Signature:** `<R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException`
 - **Summary:** Finds exactly one record using a bi-function mapper, throwing if multiple found.
 - **Contract:**
   - Finds exactly one record using a bi-function mapper, throwing if multiple found.
@@ -13064,10 +13064,10 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `rowMapper` (`Jdbc.BiRowMapper<? extends R>`) — the bi-function to map the result
 - **Returns:** Optional containing the mapped result
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalArgumentException` — if rowMapper returns null
-- **Signature:** `Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException`
+- **Signature:** `Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, SQLException`
 - **Summary:** Finds exactly one record with specified properties, throwing if multiple found.
 - **Contract:**
   - Finds exactly one record with specified properties, throwing if multiple found.
@@ -13076,9 +13076,9 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `cond` (`Condition`) — the search condition
 - **Returns:** Optional containing the single matching entity
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException`
+- **Signature:** `<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException`
 - **Summary:** Finds exactly one record with specified properties and maps it.
 - **Parameters:**
   - `selectPropNames` (`Collection<String>`) — the properties to select, {@code null} for all
@@ -13086,10 +13086,10 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `rowMapper` (`Jdbc.RowMapper<? extends R>`) — the function to map the result
 - **Returns:** Optional containing the mapped result
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalArgumentException` — if rowMapper returns null
-- **Signature:** `<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, SQLException, IllegalArgumentException`
+- **Signature:** `<R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, SQLException, IllegalArgumentException`
 - **Summary:** Finds exactly one record with specified properties using a bi-function mapper.
 - **Parameters:**
   - `selectPropNames` (`Collection<String>`) — the properties to select, {@code null} for all
@@ -13097,7 +13097,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `rowMapper` (`Jdbc.BiRowMapper<? extends R>`) — the bi-function to map the result
 - **Returns:** Optional containing the mapped result
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.IllegalArgumentException` — if rowMapper returns null
 ##### queryForBoolean(...) -> OptionalBoolean
@@ -13270,22 +13270,22 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForSingleNonNull(Type)
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException`
+- **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single value, throwing if multiple rows found.
 - **Contract:**
   - Queries for a unique single value, throwing if multiple rows found.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueResult( "email", Filters.eq("username", "john_doe"), String.class ); // Throws DuplicatedResultException if multiple users have this username } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueResult( "email", Filters.eq("username", "john_doe"), String.class ); // Throws DuplicateResultException if multiple users have this username } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `cond` (`Condition`) — the search condition
   - `targetValueType` (`Class<? extends V>`) — the class of the target value type
 - **Returns:** Nullable containing the unique value
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one row matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one row matches
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueResult(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, SQLException`
+- **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null single value, throwing if multiple rows found.
 - **Contract:**
   - Queries for a unique non-null single value, throwing if multiple rows found.
@@ -13295,10 +13295,10 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `targetValueType` (`Class<? extends V>`) — the class of the target value type
 - **Returns:** Optional containing the unique non-null value
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one row matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one row matches
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueNonNull(Class)
-- **Signature:** `@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, SQLException`
+- **Signature:** `@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique value using a custom row mapper.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -13306,7 +13306,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the function to map the result
 - **Returns:** Optional containing the unique mapped value
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one row matches
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one row matches
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueNonNull(Type)
 ##### query(...) -> Dataset
@@ -13854,7 +13854,7 @@ Interface for handling join entities in database operations.
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 ##### findOnlyOne(...) -> Optional<T>
-- **Signature:** `default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, SQLException`
+- **Signature:** `default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, SQLException`
 - **Summary:** Finds the only entity that matches the specified condition and loads the specified join entity.
 - **Contract:**
   - Throws an exception if more than one entity matches the condition.
@@ -13864,9 +13864,9 @@ Interface for handling join entities in database operations.
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified condition
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified condition
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, SQLException`
+- **Signature:** `default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, SQLException`
 - **Summary:** Finds the only entity that matches the specified condition and loads multiple types of join entities.
 - **Contract:**
   - Throws an exception if more than one entity matches the condition.
@@ -13876,9 +13876,9 @@ Interface for handling join entities in database operations.
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified condition
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified condition
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicatedResultException, SQLException`
+- **Signature:** `default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicateResultException, SQLException`
 - **Summary:** Finds the only entity that matches the specified condition, optionally loading all join entities.
 - **Contract:**
   - Throws an exception if more than one entity matches the condition.
@@ -13888,7 +13888,7 @@ Interface for handling join entities in database operations.
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified condition
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified condition
   - `java.sql.SQLException` — if a database access error occurs
 ##### list(...) -> List<T>
 - **Signature:** `@Beta default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException`
@@ -15695,10 +15695,10 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForSingleNonNull(Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
 - **Contract:**
-  - Throws {@code DuplicatedResultException} if more than one record is found.
+  - Throws {@code DuplicateResultException} if more than one record is found.
   - <p> <b> Usage Examples: </b> </p> <pre> {@code // Assuming email should be unique per user Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class); } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -15706,56 +15706,56 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - `targetValueClass` (`Class<? extends V>`) — the class of the target value type
 - **Returns:** a Nullable containing the unique result value, or empty if no entity found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueResult(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
 - **Contract:**
-  - Throws {@code DuplicatedResultException} if more than one record is found.
+  - Throws {@code DuplicateResultException} if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
   - `targetValueClass` (`Class<? extends V>`) — the class of the target value type
 - **Returns:** an Optional containing the unique non-null value, or empty if no entity found or value is null
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueNonNull(Class)
-- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.
 - **Contract:**
-  - Throws {@code DuplicatedResultException} if more than one record is found.
+  - Throws {@code DuplicateResultException} if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
   - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the function to map the result set row
 - **Returns:** an Optional containing the unique non-null mapped value, or empty if no entity found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueNonNull(Class)
 ##### get(...) -> Optional<T>
-- **Signature:** `@Override default Optional<T> get(final ID id) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default Optional<T> get(final ID id) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves the entity with the specified ID.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
 - **Returns:** an Optional containing the entity if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves the entity with the specified ID, selecting only the specified properties.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
   - `selectPropNames` (`Collection<String>`) — the properties to select, or {@code null} to select all
 - **Returns:** an Optional containing the entity with selected properties if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### gett(...) -> T
-- **Signature:** `@Override T gett(final ID id) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override T gett(final ID id) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves the entity with the specified ID.
 - **Contract:**
   - Returns the entity directly or {@code null} if not found.
@@ -15764,9 +15764,9 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - `id` (`ID`) — the entity ID
 - **Returns:** the entity if found, otherwise null
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves the entity with the specified ID, selecting only the specified properties.
 - **Contract:**
   - Returns the entity directly or {@code null} if not found.
@@ -15776,36 +15776,36 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - `selectPropNames` (`Collection<String>`) — the properties to select, or {@code null} to select all
 - **Returns:** the entity with selected properties if found, otherwise null
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### batchGet(...) -> List<T>
-- **Signature:** `@Override default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Gets multiple entities by their IDs in batch using the default batch size.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
 - **Returns:** a list of found entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Gets multiple entities by their IDs in batch using the specified batch size.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
   - `batchSize` (`int`) — the size of each batch
 - **Returns:** a list of found entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Gets multiple entities by their IDs with only the specified properties selected.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
   - `selectPropNames` (`Collection<String>`) — the properties to select, or {@code null} to select all
 - **Returns:** a list of found entities with selected properties
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Gets multiple entities by their IDs with only the specified properties selected, using the specified batch size for efficient querying.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -15813,7 +15813,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - `batchSize` (`int`) — the size of each batch
 - **Returns:** a list of found entities with selected properties
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### exists(...) -> boolean
 - **Signature:** `@Override boolean exists(final ID id) throws UncheckedSQLException`
@@ -16287,23 +16287,23 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `@Override default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Queries for a unique single result of the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
   - `targetValueType` (`Class<? extends V>`) — the class of the value type to convert to
 - **Returns:** a Nullable containing the unique value if found, or Nullable.empty() if no record exists
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Queries for a unique non-null result of the specified type.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
   - Returns empty Optional if no record found or value is {@code null} .
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -16311,19 +16311,19 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
   - `targetValueType` (`Class<? extends V>`) — the class of the value type to convert to
 - **Returns:** an Optional containing the unique non-null value if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Queries for a unique non-null result using a custom row mapper.
 - **Contract:**
-  - Throws DuplicatedResultException if more than one record is found.
+  - Throws DuplicateResultException if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
   - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the custom mapper to transform the result
 - **Returns:** an Optional containing the mapped unique non-null value if found, otherwise empty
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### get(...) -> Optional<T>
 - **Signature:** `@Override default Optional<T> get(final long id) throws UncheckedSQLException`
@@ -16427,7 +16427,7 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
 
 #### Public Instance Methods
 ##### get(...) -> Optional<T>
-- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID and loads the specified join entity class.
 - **Contract:**
   - <p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with their orders loaded Optional<User> user = userDao.get(userId, Order.class); if (user.isPresent()) { List<Order> orders = user.get().getOrders(); // Orders are already loaded } } </pre>
@@ -16436,18 +16436,18 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** an Optional containing the entity with join entities loaded, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID and optionally loads all join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** an Optional containing the entity with join entities loaded, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID with selected properties and loads the specified join entity class.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
@@ -16455,9 +16455,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** an Optional containing the entity with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID with selected properties and loads multiple join entity classes.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
@@ -16465,9 +16465,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** an Optional containing the entity with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID with selected properties and optionally loads all join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
@@ -16475,10 +16475,10 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** an Optional containing the entity with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### gett(...) -> T
-- **Signature:** `@Beta @Override default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.
 - **Contract:**
   - This is a beta API that returns {@code null} if the entity is not found.
@@ -16488,9 +16488,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** the entity with loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID and optionally loads all join entities, returning the entity directly.
 - **Contract:**
   - This is a beta API that returns {@code null} if the entity is not found.
@@ -16500,9 +16500,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** the entity with loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID with selected properties and loads the specified join entity class.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
@@ -16510,9 +16510,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** the entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID with selected properties and loads multiple join entity classes.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
@@ -16520,9 +16520,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** the entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by ID with selected properties and optionally loads all join entities.
 - **Parameters:**
   - `id` (`ID`) — the entity ID
@@ -16530,28 +16530,28 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** the entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### batchGet(...) -> List<T>
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities by IDs and loads the specified join entity class for each.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load for each entity
 - **Returns:** a list of entities with loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities by IDs and optionally loads all join entities for each.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** a list of entities with loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities with selected properties and loads the specified join entity class.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -16559,9 +16559,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load for each entity
 - **Returns:** a list of entities with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities with selected properties and loads multiple join entity classes.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -16569,9 +16569,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
 - **Returns:** a list of entities with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities with selected properties and optionally loads all join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -16579,9 +16579,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** a list of entities with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities with selected properties using a specific batch size and loads the specified join entity class.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -16590,9 +16590,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `batchSize` (`int`) — the size of each batch for processing
 - **Returns:** a list of entities with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final int batchSize) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities with selected properties using a specific batch size and loads multiple join entity classes.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -16601,9 +16601,9 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `batchSize` (`int`) — the size of each batch for processing
 - **Returns:** a list of entities with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Beta @Override default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final int batchSize) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Batch gets entities with selected properties using a specific batch size and optionally loads all join entities.
 - **Parameters:**
   - `ids` (`Collection<? extends ID>`) — the collection of entity IDs
@@ -16612,7 +16612,7 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
   - `batchSize` (`int`) — the size of each batch for processing
 - **Returns:** a list of entities with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if the size of result is bigger than the size of input IDs
+  - `com.landawn.abacus.exception.DuplicateResultException` — if the size of result is bigger than the size of input IDs
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 
 ### Interface UncheckedCrudJoinEntityHelperL (com.landawn.abacus.jdbc.dao.UncheckedCrudJoinEntityHelperL)
@@ -16629,7 +16629,7 @@ A specialized interface for CRUD operations with join entity support, specifical
 
 #### Public Instance Methods
 ##### get(...) -> Optional<T>
-- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified join entity class.
 - **Contract:**
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Fetch a user and load their orders Optional<User> userWithOrders = userDao.get(123L, Order.class); if (userWithOrders.isPresent()) { User user = userWithOrders.get(); List<Order> orders = user.getOrders(); // Orders are already loaded } } </pre>
@@ -16638,9 +16638,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
 - **Returns:** An {@link Optional} containing the entity with loaded join entities, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with the option to load all associated join entities.
 - **Contract:**
   - <p> When {@code includeAllJoinEntities} is {@code true} , all mapped relationships will be loaded.
@@ -16650,9 +16650,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** An {@link Optional} containing the entity, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads the specified join entity.
 - **Parameters:**
   - `id` (`long`) — The primary key value of the entity to retrieve
@@ -16660,9 +16660,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `joinEntitiesToLoad` (`Class<?>`) — The class of the join entities to load
 - **Returns:** An {@link Optional} containing the entity with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads multiple join entity types.
 - **Parameters:**
   - `id` (`long`) — The primary key value of the entity to retrieve
@@ -16670,9 +16670,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — Collection of join entity classes to load
 - **Returns:** An {@link Optional} containing the entity with selected properties and loaded join entities
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and optionally loads all join entities.
 - **Parameters:**
   - `id` (`long`) — The primary key value of the entity to retrieve
@@ -16680,10 +16680,10 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
 - **Returns:** An {@link Optional} containing the entity with selected properties
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
 ##### gett(...) -> T
-- **Signature:** `@Override @Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified join entity class, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID and loads the specified join entity class, returning {@code null} if not found.
@@ -16694,9 +16694,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `joinEntitiesToLoad` (`Class<?>`) — The class of the join entities to load
 - **Returns:** The entity with loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with the option to load all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with the option to load all join entities, returning {@code null} if not found.
@@ -16706,9 +16706,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `includeAllJoinEntities` (`boolean`) — If {@code true} , loads all mapped join entities
 - **Returns:** The entity, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads the specified join entity, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with specific properties and loads the specified join entity, returning {@code null} if not found.
@@ -16719,9 +16719,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `joinEntitiesToLoad` (`Class<?>`) — The class of the join entities to load
 - **Returns:** The entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads multiple join entity types, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with specific properties and loads multiple join entity types, returning {@code null} if not found.
@@ -16732,9 +16732,9 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `joinEntitiesToLoad` (`Collection<Class<?>>`) — Collection of join entity classes to load
 - **Returns:** The entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
-- **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and optionally loads all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with specific properties and optionally loads all join entities, returning {@code null} if not found.
@@ -16745,7 +16745,7 @@ A specialized interface for CRUD operations with join entity support, specifical
   - `includeAllJoinEntities` (`boolean`) — If {@code true} , loads all mapped join entities
 - **Returns:** The entity with selected properties, or {@code null} if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found by the specified {@code id}
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
   - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
 
 ### Interface UncheckedDao (com.landawn.abacus.jdbc.dao.UncheckedDao)
@@ -16915,7 +16915,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### findOnlyOne(...) -> Optional<T>
-- **Signature:** `@Override Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one record matching the condition.
 - **Contract:**
   - Throws an exception if multiple records are found.
@@ -16923,36 +16923,36 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an Optional containing the single matching record, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one record matching the condition and maps it using the row mapper.
 - **Parameters:**
   - `cond` (`Condition`) — the condition to match
   - `rowMapper` (`Jdbc.RowMapper<? extends R>`) — the function to map the result set row
 - **Returns:** an Optional containing the mapped result, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one record matching the condition and maps it using the bi-row mapper.
 - **Parameters:**
   - `cond` (`Condition`) — the condition to match
   - `rowMapper` (`Jdbc.BiRowMapper<? extends R>`) — the function to map the result set row with column labels
 - **Returns:** an Optional containing the mapped result, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one record matching the condition, selecting only the specified properties.
 - **Parameters:**
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected, or {@code null} to select all
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an Optional containing the single matching record, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one record with selected properties and maps it using the row mapper.
 - **Parameters:**
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected, or {@code null} to select all
@@ -16960,9 +16960,9 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
   - `rowMapper` (`Jdbc.RowMapper<? extends R>`) — the function to map the result set row
 - **Returns:** an Optional containing the mapped result, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one record with selected properties and maps it using the bi-row mapper.
 - **Parameters:**
   - `selectPropNames` (`Collection<String>`) — the properties (columns) to be selected, or {@code null} to select all
@@ -16970,7 +16970,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
   - `rowMapper` (`Jdbc.BiRowMapper<? extends R>`) — the function to map the result set row with column labels
 - **Returns:** an Optional containing the mapped result, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### queryForBoolean(...) -> OptionalBoolean
 - **Signature:** `@Override OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException`
@@ -17167,45 +17167,45 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForSingleNonNull(Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable} describing the value in the first row/column if it exists.
 - **Contract:**
   - Returns a {@code Nullable} describing the value in the first row/column if it exists.
-  - Throws {@code DuplicatedResultException} if more than one record is found.
+  - Throws {@code DuplicateResultException} if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the single property name to select
   - `cond` (`Condition`) — the condition to match
   - `targetValueType` (`Class<? extends V>`) — the class of the target value type
 - **Returns:** a Nullable containing the unique result value, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueResult(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
-- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the unique non-null value in the first row/column.
 - **Contract:**
-  - Throws {@code DuplicatedResultException} if more than one record is found.
+  - Throws {@code DuplicateResultException} if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the single property name to select
   - `cond` (`Condition`) — the condition to match
   - `targetValueType` (`Class<? extends V>`) — the class of the target value type
 - **Returns:** an Optional containing the unique non-null value, or empty if no match found or value is null
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueNonNull(Class)
-- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the unique non-null value mapped by the row mapper.
 - **Contract:**
-  - Throws {@code DuplicatedResultException} if more than one record is found.
+  - Throws {@code DuplicateResultException} if more than one record is found.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the single property name to select
   - `cond` (`Condition`) — the condition to match
   - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the function to map the result set row
 - **Returns:** an Optional containing the unique non-null mapped value, or empty if no match found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForUniqueNonNull(Class)
 ##### query(...) -> Dataset
@@ -17563,7 +17563,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### findOnlyOne(...) -> Optional<T>
-- **Signature:** `@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one entity matching the condition and loads the specified join entity class.
 - **Contract:**
   - Throws an exception if multiple entities are found.
@@ -17573,9 +17573,9 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an Optional containing the unique entity with loaded join entities, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found for the specified condition
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found for the specified condition
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one entity matching the condition and loads multiple join entity classes.
 - **Contract:**
   - Throws an exception if multiple entities are found.
@@ -17585,9 +17585,9 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an Optional containing the unique entity with loaded join entities, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found for the specified condition
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found for the specified condition
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **Signature:** `@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicatedResultException, UncheckedSQLException`
+- **Signature:** `@Override default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Finds exactly one entity matching the condition and optionally loads all join entities.
 - **Contract:**
   - Throws an exception if multiple entities are found.
@@ -17597,7 +17597,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
   - `cond` (`Condition`) — the condition to match
 - **Returns:** an Optional containing the unique entity with loaded join entities, or empty if not found
 - **Throws:**
-  - `com.landawn.abacus.exception.DuplicatedResultException` — if more than one record is found for the specified condition
+  - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found for the specified condition
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### list(...) -> List<T>
 - **Signature:** `@Beta @Override default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws UncheckedSQLException`

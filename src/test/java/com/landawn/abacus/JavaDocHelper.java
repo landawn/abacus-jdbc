@@ -22,10 +22,10 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -308,7 +308,7 @@ public class JavaDocHelper {
                                 if (lines.get(j).contains("*/")) {
                                     if ((i != j) && Stream.of(lines.subList(i, j + 1))
                                             .map(Fn.strip())
-                                            .flattmap(it -> Strings.split(it, " ", true))
+                                            .flatMapArray(it -> Strings.split(it, " ", true))
                                             .map(Fn.strip())
                                             .allMatch(it -> it.startsWith("/**") || it.startsWith("*/") || it.startsWith("*") || it.startsWith("@"))) {
 

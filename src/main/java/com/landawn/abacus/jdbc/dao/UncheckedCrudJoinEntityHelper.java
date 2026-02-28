@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.SQLBuilder;
@@ -82,12 +82,12 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param id the entity ID
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the entity with join entities loaded, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+    default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, joinEntitiesToLoad));
     }
 
@@ -106,12 +106,12 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the entity with join entities loaded, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
+    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, includeAllJoinEntities));
     }
 
@@ -134,13 +134,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the entity with selected properties and loaded join entities
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
     }
 
@@ -163,13 +163,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and loaded join entities
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
     }
 
@@ -183,7 +183,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * Optional<User> user = userDao.get(
      *     userId,
      *     Arrays.asList("id", "name", "email", "status"),
-     *     {@code true}  // load all join entities
+     *     true  // load all join entities
      * );
      * }</pre>
      *
@@ -193,13 +193,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the entity with selected properties and loaded join entities
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
     }
 
@@ -219,12 +219,12 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param id the entity ID
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return the entity with loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+    default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id);
 
         if (result != null) {
@@ -251,12 +251,12 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return the entity with loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
+    default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id);
 
         if (result != null && includeAllJoinEntities) {
@@ -285,13 +285,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return the entity with selected properties and loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null) {
@@ -320,13 +320,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return the entity with selected properties and loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
@@ -348,7 +348,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * User user = userDao.gett(
      *     userId,
      *     Arrays.asList("id", "name", "email", "verified"),
-     *     {@code true}  // load all join entities
+     *     true  // load all join entities
      * );
      * }</pre>
      *
@@ -358,13 +358,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return the entity with selected properties and loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {
@@ -390,12 +390,12 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param ids the collection of entity IDs
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
      * @return a list of entities with loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, null, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -408,7 +408,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * // Get multiple users with all their relationships
      * List<User> users = userDao.batchGet(
      *     userIds,
-     *     {@code true}  // load all join entities
+     *     true  // load all join entities
      * );
      * }</pre>
      *
@@ -416,12 +416,12 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, null, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -444,13 +444,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
      * @return a list of entities with selected properties and loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, selectPropNames, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -473,13 +473,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                       If {@code null}, all properties of the main entities are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return a list of entities with selected properties and loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, selectPropNames, joinEntitiesToLoad, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -493,7 +493,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * List<User> users = userDao.batchGet(
      *     userIds,
      *     Arrays.asList("id", "name", "email", "active"),
-     *     {@code true}  // load all join entities
+     *     true  // load all join entities
      * );
      * }</pre>
      *
@@ -503,13 +503,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with selected properties and loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, selectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -534,13 +534,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param joinEntitiesToLoad the class of the join entities to load for each entity
      * @param batchSize the size of each batch for processing
      * @return a list of entities with selected properties and loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad,
-            final int batchSize) throws DuplicatedResultException, UncheckedSQLException {
+            final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result)) {
@@ -575,13 +575,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param batchSize the size of each batch for processing
      * @return a list of entities with selected properties and loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad,
-            final int batchSize) throws DuplicatedResultException, UncheckedSQLException {
+            final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntitiesToLoad)) {
@@ -612,7 +612,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *     veryLargeIdCollection,
      *     Arrays.asList("id", "name", "email", "createdDate"),
      *     2000,  // large batch size
-     *     {@code true}   // load all join entities
+     *     true   // load all join entities
      * );
      * }</pre>
      *
@@ -623,13 +623,13 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD 
      *                                  if {@code false}, no join entities are loaded
      * @param batchSize the size of each batch for processing
      * @return a list of entities with selected properties and loaded join entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final boolean includeAllJoinEntities,
-            final int batchSize) throws DuplicatedResultException, UncheckedSQLException {
+            final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         final List<T> result = DaoUtil.getCrudDao(this).batchGet(ids, selectPropNames, batchSize);
 
         if (includeAllJoinEntities && N.notEmpty(result)) {

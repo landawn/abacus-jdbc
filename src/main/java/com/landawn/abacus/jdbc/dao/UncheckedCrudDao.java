@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
@@ -623,7 +623,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
     /**
      * Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
+     * Throws {@code DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -636,17 +636,17 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
      * @return a Nullable containing the unique result value, or empty if no entity found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
+     * Throws {@code DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -662,17 +662,17 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
      * @return an Optional containing the unique non-null value, or empty if no entity found or value is null
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
+     * Throws {@code DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -688,13 +688,13 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the unique non-null mapped value, or empty if no entity found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Retrieves the entity with the specified ID.
@@ -707,11 +707,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param id the entity ID
      * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default Optional<T> get(final ID id) throws DuplicatedResultException, UncheckedSQLException {
+    default Optional<T> get(final ID id) throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id));
     }
 
@@ -727,11 +727,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return an Optional containing the entity with selected properties if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException {
+    default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames));
     }
 
@@ -749,11 +749,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param id the entity ID
      * @return the entity if found, otherwise null
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    T gett(final ID id) throws DuplicatedResultException, UncheckedSQLException;
+    T gett(final ID id) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Retrieves the entity with the specified ID, selecting only the specified properties.
@@ -770,11 +770,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return the entity with selected properties if found, otherwise null
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, UncheckedSQLException;
+    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Gets multiple entities by their IDs in batch using the default batch size.
@@ -787,11 +787,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      *
      * @param ids the collection of entity IDs
      * @return a list of found entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, null);
     }
 
@@ -808,11 +808,11 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param ids the collection of entity IDs
      * @param batchSize the size of each batch
      * @return a list of found entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, null, batchSize);
     }
 
@@ -830,12 +830,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return a list of found entities with selected properties
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -855,12 +855,12 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @param batchSize the size of each batch
      * @return a list of found entities with selected properties
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Checks if an entity with the specified ID exists in the database.
@@ -1208,7 +1208,13 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
-            Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+
+            if (N.isEmpty(idPropNameList)) {
+                Beans.copyInto(entity, dbEntity);
+            } else {
+                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            }
+
             update(dbEntity);
             return dbEntity;
         }

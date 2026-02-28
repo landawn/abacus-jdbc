@@ -31,7 +31,7 @@ import javax.sql.DataSource;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.LazyEvaluation;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
@@ -408,8 +408,8 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * NamedQuery query = dao.prepareNamedQuery(
      *     "SELECT * FROM users WHERE age > :minAge AND status = :status"
      * );
-     * List<User> users = query.setParameter("minAge", 18)
-     *                         .setParameter("status", "ACTIVE")
+     * List<User> users = query.setInt("minAge", 18)
+     *                         .setString("status", "ACTIVE")
      *                         .list(User.class);
      * }</pre>
      *
@@ -972,15 +972,15 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = dao.findOnlyOne(Filters.eq("email", "john@example.com"));
-     * // Throws DuplicatedResultException if multiple users have this email
+     * // Throws DuplicateResultException if multiple users have this email
      * }</pre>
      *
      * @param cond the search condition
      * @return Optional containing the single matching entity
-     * @throws DuplicatedResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      */
-    Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, SQLException;
+    Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, SQLException;
 
     /**
      * Finds exactly one record and maps it, throwing exception if multiple found.
@@ -990,12 +990,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped result
-     * @throws DuplicatedResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, IllegalArgumentException;
+            throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
      * Finds exactly one record using a bi-function mapper, throwing if multiple found.
@@ -1005,12 +1005,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
      * @return Optional containing the mapped result
-     * @throws DuplicatedResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, IllegalArgumentException;
+            throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
      * Finds exactly one record with specified properties, throwing if multiple found.
@@ -1019,10 +1019,10 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return Optional containing the single matching entity
-     * @throws DuplicatedResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      */
-    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, SQLException;
+    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, SQLException;
 
     /**
      * Finds exactly one record with specified properties and maps it.
@@ -1033,12 +1033,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped result
-     * @throws DuplicatedResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, IllegalArgumentException;
+            throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
      * Finds exactly one record with specified properties using a bi-function mapper.
@@ -1049,12 +1049,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param rowMapper the bi-function to map the result
      * @return Optional containing the mapped result
-     * @throws DuplicatedResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if rowMapper returns null
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, SQLException, IllegalArgumentException;
+            throws DuplicateResultException, SQLException, IllegalArgumentException;
 
     /**
      * Queries for a boolean value from a single column.
@@ -1355,7 +1355,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      *     Filters.eq("username", "john_doe"),
      *     String.class
      * );
-     * // Throws DuplicatedResultException if multiple users have this username
+     * // Throws DuplicateResultException if multiple users have this username
      * }</pre>
      *
      * @param <V> the value type
@@ -1363,12 +1363,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param targetValueType the class of the target value type
      * @return Nullable containing the unique value
-     * @throws DuplicatedResultException if more than one row matches
+     * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Queries for a unique non-null single value, throwing if multiple rows found.
@@ -1389,12 +1389,12 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param targetValueType the class of the target value type
      * @return Optional containing the unique non-null value
-     * @throws DuplicatedResultException if more than one row matches
+     * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Queries for a unique value using a custom row mapper.
@@ -1417,13 +1417,13 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the search condition
      * @param rowMapper the function to map the result
      * @return Optional containing the unique mapped value
-     * @throws DuplicatedResultException if more than one row matches
+     * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Type)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Executes a query and returns the results as a Dataset.

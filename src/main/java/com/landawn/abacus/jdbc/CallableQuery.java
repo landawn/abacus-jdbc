@@ -51,6 +51,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.util.Beans;
+import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
@@ -148,8 +149,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.setNull("managerId", java.sql.Types.INTEGER);
      * }</pre>
      *
-     * @param parameterName the name of the parameter to set to {@code NULL}.
-     * @param sqlType the SQL type code defined in {@link java.sql.Types}.
+     * @param parameterName the name of the parameter to set to {@code NULL}
+     * @param sqlType the SQL type code defined in {@link java.sql.Types}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @see java.sql.Types
@@ -173,9 +174,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * query.setNull("refParam", java.sql.Types.REF, "MY_REF_TYPE");
      * }</pre>
      *
-     * @param parameterName the name of the parameter to set to {@code NULL}.
-     * @param sqlType the SQL type code from {@link java.sql.Types} (e.g., {@code STRUCT}, {@code REF}).
-     * @param typeName the fully-qualified name of the SQL user-defined type.
+     * @param parameterName the name of the parameter to set to {@code NULL}
+     * @param sqlType the SQL type code from {@link java.sql.Types} (e.g., {@code STRUCT}, {@code REF})
+     * @param typeName the fully-qualified name of the SQL user-defined type
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @see java.sql.Types
@@ -207,7 +208,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a Boolean value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -216,7 +217,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Boolean value to set, or {@code null} to set SQL NULL
+     * @param x the Boolean value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -251,7 +252,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a Byte value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -260,7 +261,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Byte value to set, or {@code null} to set SQL NULL
+     * @param x the Byte value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -295,7 +296,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a Short value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -304,7 +305,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Short value to set, or {@code null} to set SQL NULL
+     * @param x the Short value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -339,16 +340,16 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to an Integer value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Integer managerId = getManagerId();   // might return {@code null} for CEO
+     * Integer managerId = getManagerId();   // might return null for CEO
      * query.setInt("managerId", managerId);
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Integer value to set, or {@code null} to set SQL NULL
+     * @param x the Integer value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -383,7 +384,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a Long value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -392,7 +393,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Long value to set, or {@code null} to set SQL NULL
+     * @param x the Long value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -409,7 +410,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a BigInteger value as a long for the specified parameter.
      * The BigInteger must be within the range of a long value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -418,7 +419,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set, or {@code null} to set SQL NULL
+     * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @throws ArithmeticException if the BigInteger value is outside the range of a long
@@ -454,7 +455,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a Float value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -463,7 +464,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Float value to set, or {@code null} to set SQL NULL
+     * @param x the Float value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -498,7 +499,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a Double value.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -507,7 +508,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Double value to set, or {@code null} to set SQL NULL
+     * @param x the Double value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -532,7 +533,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the BigDecimal value to set, or {@code null} to set SQL NULL
+     * @param x the BigDecimal value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -544,7 +545,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a BigInteger value as a BigDecimal for the specified parameter.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -553,7 +554,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set, or {@code null} to set SQL NULL
+     * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -570,7 +571,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a BigInteger value as a String for the specified parameter.
      * This method converts the BigInteger to its string representation.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -579,7 +580,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set as string, or {@code null} to set SQL NULL
+     * @param x the BigInteger value to set as string, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      * @see #setString(String, BigInteger)
@@ -595,7 +596,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Sets the specified named parameter to a String value.
      *
      * <p><b>Null Handling:</b> If the {@code x} parameter is {@code null},
-     * the database parameter will be set to SQL NULL.</p>
+     * the database parameter will be set to SQL {@code NULL}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -608,7 +609,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the String value to set, or {@code null} to set SQL NULL
+     * @param x the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -628,7 +629,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the CharSequence value to set, or {@code null} to set SQL NULL
+     * @param x the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -655,7 +656,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a Character value as a String for the specified parameter.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -664,7 +665,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Character value to set, or {@code null} to set SQL NULL
+     * @param x the Character value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -675,7 +676,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets a BigInteger value as a String for the specified parameter.
      * The BigInteger is converted to its decimal string representation.
-     * If the value is {@code null}, the parameter will be set to SQL NULL.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -684,7 +685,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the BigInteger value to set as string, or {@code null} to set SQL NULL
+     * @param x the BigInteger value to set as string, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -708,7 +709,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the String value to set, or {@code null} to set SQL NULL
+     * @param x the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -728,7 +729,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the java.sql.Date value to set, or {@code null} to set SQL NULL
+     * @param x the java.sql.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -749,7 +750,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the java.util.Date value to set, or {@code null} to set SQL NULL
+     * @param x the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -769,7 +770,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the LocalDate value to set, or {@code null} to set SQL NULL
+     * @param x the LocalDate value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -789,7 +790,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the java.sql.Time value to set, or {@code null} to set SQL NULL
+     * @param x the java.sql.Time value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -810,7 +811,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the java.util.Date value to set, or {@code null} to set SQL NULL
+     * @param x the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -830,7 +831,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the LocalTime value to set, or {@code null} to set SQL NULL
+     * @param x the LocalTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -850,7 +851,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the java.sql.Timestamp value to set, or {@code null} to set SQL NULL
+     * @param x the java.sql.Timestamp value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -870,7 +871,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the java.util.Date value to set, or {@code null} to set SQL NULL
+     * @param x the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -890,7 +891,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the LocalDateTime value to set, or {@code null} to set SQL NULL
+     * @param x the LocalDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -911,7 +912,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the ZonedDateTime value to set, or {@code null} to set SQL NULL
+     * @param x the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -932,7 +933,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the OffsetDateTime value to set, or {@code null} to set SQL NULL
+     * @param x the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -953,7 +954,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the Instant value to set, or {@code null} to set SQL NULL
+     * @param x the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -974,7 +975,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the byte array to set, or {@code null} to set SQL NULL
+     * @param x the byte array to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1501,8 +1502,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     public CallableQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
-        for (final Map.Entry<String, ?> entry : parameters.entrySet()) {
-            setObject(entry.getKey(), entry.getValue());
+        try {
+            for (final Map.Entry<String, ?> entry : parameters.entrySet()) {
+                setObject(entry.getKey(), entry.getValue());
+            }
+        } catch (final Exception e) {
+            close();
+            throw e;
         }
 
         return this;
@@ -1548,9 +1554,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         PropInfo propInfo = null;
 
-        for (final String parameterName : parameterNames) {
-            propInfo = entityInfo.getPropInfo(parameterName);
-            propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
+        try {
+            for (final String parameterName : parameterNames) {
+                propInfo = entityInfo.getPropInfo(parameterName);
+
+                if (propInfo == null) {
+                    throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                }
+
+                propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
+            }
+        } catch (final Exception e) {
+            close();
+            throw e;
         }
 
         return this;
@@ -2046,6 +2062,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             outParams = new ArrayList<>();
         }
 
+        final boolean byIndex = outParameter.getParameterIndex() > 0;
+        Jdbc.OutParam existingOutParam = null;
+
+        for (int i = 0, size = outParams.size(); i < size; i++) {
+            existingOutParam = outParams.get(i);
+
+            if (byIndex ? existingOutParam.getParameterIndex() == outParameter.getParameterIndex()
+                    : N.equals(existingOutParam.getParameterName(), outParameter.getParameterName())) {
+                outParams.set(i, outParameter);
+                return;
+            }
+        }
+
         outParams.add(outParameter);
     }
 
@@ -2382,7 +2411,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see Dataset
      */
     public Tuple2<Dataset, Jdbc.OutParamResult> queryAndGetOutParameters() throws SQLException {
-        return queryAndGetOutParameters(Jdbc.ResultExtractor.TO_DATA_SET);
+        return queryAndGetOutParameters(Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -2519,7 +2548,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #queryAllResultSetsAndGetOutParameters(Jdbc.ResultExtractor)
      */
     public Tuple2<List<Dataset>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters() throws SQLException {
-        return queryAllResultSetsAndGetOutParameters(ResultExtractor.TO_DATA_SET);
+        return queryAllResultSetsAndGetOutParameters(ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -3214,14 +3243,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(targetType, cs.targetType);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(cstmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.BiResultExtractor.toList(targetType)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
+
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
+
+            final List<List<T>> resultList = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.BiResultExtractor.toList(targetType)));
+            }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -3275,14 +3318,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(cstmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.ResultExtractor.toList(rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
+
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
+
+            final List<List<T>> resultList = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.ResultExtractor.toList(rowMapper)));
+            }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -3339,14 +3396,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(cstmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.ResultExtractor.toList(rowFilter, rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
+
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
+
+            final List<List<T>> resultList = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.ResultExtractor.toList(rowFilter, rowMapper)));
+            }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -3407,14 +3478,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(cstmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.BiResultExtractor.toList(rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
+
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
+
+            final List<List<T>> resultList = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.BiResultExtractor.toList(rowMapper)));
+            }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 
@@ -3491,14 +3576,28 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowMapper, cs.rowMapper);
         assertNotClosed();
 
-        try {
-            JdbcUtil.execute(cstmt);
+        ObjIteratorEx<ResultSet> iter = null;
 
-            final List<List<T>> resultList = JdbcUtil.<List<T>> streamAllResultSets(cstmt, Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)).toList();
+        try {
+            final boolean isResultSet = JdbcUtil.execute(cstmt);
+
+            iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
+
+            final List<List<T>> resultList = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                resultList.add(JdbcUtil.extractAndCloseResultSet(iter.next(), Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)));
+            }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
-            closeAfterExecutionIfAllowed();
+            try {
+                if (iter != null) {
+                    iter.close();
+                }
+            } finally {
+                closeAfterExecutionIfAllowed();
+            }
         }
     }
 

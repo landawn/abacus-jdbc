@@ -18,7 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Collection;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.N;
@@ -54,7 +54,7 @@ import com.landawn.abacus.util.u.Optional;
  * 
  * <p>All methods in this interface throw {@link UncheckedSQLException} instead of checked exceptions,
  * allowing for cleaner code without explicit exception handling. Methods may also throw
- * {@link DuplicatedResultException} when multiple records are found for a unique query.</p>
+ * {@link DuplicateResultException} when multiple records are found for a unique query.</p>
  *
  * @param <T> The entity type that this helper manages
  * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
@@ -87,12 +87,12 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * @param id The primary key value of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return An {@link Optional} containing the entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
-    default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+    default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, joinEntitiesToLoad));
     }
 
@@ -116,12 +116,12 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return An {@link Optional} containing the entity, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
-    default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
+    default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, includeAllJoinEntities));
     }
 
@@ -145,13 +145,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *                        If {@code null}, all properties are selected
      * @param joinEntitiesToLoad The class of the join entities to load
      * @return An {@link Optional} containing the entity with selected properties and loaded join entities
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
     }
 
@@ -175,13 +175,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *                        If {@code null}, all properties are selected
      * @param joinEntitiesToLoad Collection of join entity classes to load
      * @return An {@link Optional} containing the entity with selected properties and loaded join entities
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
     }
 
@@ -200,7 +200,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * 
      * // Fetch complete user data without relationships  
      * Optional<User> userOnly = userDao.get(123L,
-     *     {@code null}, // Select all properties
+     *     null, // Select all properties
      *     false);   // Don't load join entities
      * }</pre>
      *
@@ -210,13 +210,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return An {@link Optional} containing the entity with selected properties
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
     }
 
@@ -238,12 +238,12 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * @param id The primary key value of the entity to retrieve
      * @param joinEntitiesToLoad The class of the join entities to load
      * @return The entity with loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
-    default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, UncheckedSQLException {
+    default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id);
 
         if (result != null) {
@@ -273,12 +273,12 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      * @param id The primary key value of the entity to retrieve
      * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
      * @return The entity, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
-    default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, UncheckedSQLException {
+    default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id);
 
         if (result != null && includeAllJoinEntities) {
@@ -309,13 +309,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad The class of the join entities to load
      * @return The entity with selected properties and loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null) {
@@ -350,13 +350,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad Collection of join entity classes to load
      * @return The entity with selected properties and loaded join entities, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
@@ -387,7 +387,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *
      * // Get complete user data without any relationships
      * User userOnly = userDao.gett(123L,
-     *     {@code null}, // All fields
+     *     null, // All fields
      *     false);   // No join entities
      * }</pre>
      *
@@ -396,13 +396,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD ext
      *                       If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
      * @return The entity with selected properties, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException If any SQL error occurs during the operation
      */
     @Override
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {

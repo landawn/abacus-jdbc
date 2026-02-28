@@ -26,21 +26,21 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.annotation.JoinedBy;
-import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.type.Type;
-import com.landawn.abacus.util.ClassUtil;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Objectory;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLBuilder.PAC;
 import com.landawn.abacus.query.SQLBuilder.PLC;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.SQLParser;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.type.Type;
+import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -245,7 +245,7 @@ public final class JoinInfo {
         final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
 
         isManyToManyJoin = StreamEx.of(joinColumnPairs)
-                .flattmap(it -> Strings.split(it, '=', true))
+                .flatMapArray(it -> Strings.split(it, '=', true))
                 .filter(it -> it.indexOf('.') > 0) //NOSONAR
                 .map(it -> it.substring(0, it.indexOf('.')).trim())
                 .anyMatch(it -> !(it.equalsIgnoreCase(entityInfo.simpleClassName) || it.equalsIgnoreCase(referencedBeanInfo.simpleClassName)));
@@ -729,6 +729,8 @@ public final class JoinInfo {
     }
 
     /**
+     * @param sbc the SQLBuilder class to use for generating SQL
+     * @return a tuple containing the SQL builder function and parameter setter
      * @deprecated Use {@link #getSelectSqlPlan(Class)}.
      */
     @Deprecated
@@ -774,6 +776,8 @@ public final class JoinInfo {
     }
 
     /**
+     * @param sbc the SQLBuilder class to use for generating SQL
+     * @return a tuple containing the batch SQL builder function and parameter setter
      * @deprecated Use {@link #getBatchSelectSqlPlan(Class)}.
      */
     @Deprecated
@@ -827,6 +831,8 @@ public final class JoinInfo {
     }
 
     /**
+     * @param sbc the SQLBuilder class to use for generating SQL
+     * @return a tuple containing the delete SQL, condition SQL, and parameter setter
      * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
      */
     @Deprecated
@@ -872,6 +878,8 @@ public final class JoinInfo {
     }
 
     /**
+     * @param sbc the SQLBuilder class to use for generating SQL
+     * @return a tuple containing the batch delete SQL builder functions and parameter setter
      * @deprecated Use {@link #getBatchDeleteSqlPlan(Class)}.
      */
     @Deprecated
@@ -1048,27 +1056,23 @@ public final class JoinInfo {
 
         final Tuple2<Class<?>, String> key = Tuple.of(entityClass, tableName);
 
-        Map<String, JoinInfo> joinInfoMap = entityJoinInfoMap.get(key);
-
-        if (joinInfoMap == null) {
+        return entityJoinInfoMap.computeIfAbsent(key, k -> {
             final DaoConfig anno = daoClass.getAnnotation(DaoConfig.class);
             final boolean allowJoiningByNullOrDefaultValue = !(anno == null || !anno.allowJoiningByNullOrDefaultValue());
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
-            joinInfoMap = new LinkedHashMap<>();
+            final Map<String, JoinInfo> map = new LinkedHashMap<>();
 
             for (final PropInfo propInfo : entityInfo.propInfoList) {
                 if (!propInfo.isAnnotationPresent(JoinedBy.class)) {
                     continue;
                 }
 
-                joinInfoMap.put(propInfo.name, new JoinInfo(entityClass, tableName, propInfo.name, allowJoiningByNullOrDefaultValue));
+                map.put(propInfo.name, new JoinInfo(entityClass, tableName, propInfo.name, allowJoiningByNullOrDefaultValue));
             }
 
-            entityJoinInfoMap.put(key, joinInfoMap);
-        }
-
-        return joinInfoMap;
+            return map;
+        });
     }
 
     /**
@@ -1176,20 +1180,16 @@ public final class JoinInfo {
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {
         final Tuple2<Class<?>, String> key = Tuple.of(entityClass, tableName);
-        Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.get(key);
 
-        if (joinEntityPropNamesByTypeMap == null) {
-            joinEntityPropNamesByTypeMap = new HashMap<>();
-            List<String> joinPropNames = null;
+        final Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.computeIfAbsent(key, k -> {
+            final Map<Class<?>, List<String>> map = new HashMap<>();
 
             for (final JoinInfo joinInfo : getEntityJoinInfo(daoClass, entityClass, tableName).values()) {
-                joinPropNames = joinEntityPropNamesByTypeMap.computeIfAbsent(joinInfo.referencedEntityClass, k -> new ArrayList<>(1));
-
-                joinPropNames.add(joinInfo.joinPropInfo.name);
+                map.computeIfAbsent(joinInfo.referencedEntityClass, kk -> new ArrayList<>(1)).add(joinInfo.joinPropInfo.name);
             }
 
-            joinEntityPropNamesByTypePool.put(key, joinEntityPropNamesByTypeMap);
-        }
+            return map;
+        });
 
         return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.emptyList());
     }

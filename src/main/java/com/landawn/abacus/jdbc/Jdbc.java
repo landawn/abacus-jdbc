@@ -419,7 +419,7 @@ public final class Jdbc {
          * A pre-defined {@code ResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
          * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}.
          */
-        ResultExtractor<Dataset> TO_DATA_SET = rs -> {
+        ResultExtractor<Dataset> TO_DATASET = rs -> {
             if (rs == null) {
                 return N.newEmptyDataset();
             }
@@ -798,7 +798,7 @@ public final class Jdbc {
          * // Counts the number of items per category, storing results in a TreeMap.
          * ResultExtractor<TreeMap<String, Long>> extractor = ResultExtractor.groupTo(
          * rs -> rs.getString("category"),
-         * rs -> rs.getInt("item_id");, // Value extractor can be anything, it's just for the collector
+         * rs -> rs.getInt("item_id"), // Value extractor can be anything, it's just for the collector
          * Collectors.counting(),
          * TreeMap::new
          * );
@@ -1099,8 +1099,8 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(
-         * rs -> rs.getInt("status");           // Filter for positive status
-         * RowExtractor.createBy(User.class);   // Use User class for type info
+         * rs -> rs.getInt("status") > 0,          // Filter for positive status
+         * RowExtractor.createBy(User.class)    // Use User class for type info
          * );
          * }</pre>
          *
@@ -1129,7 +1129,7 @@ public final class Jdbc {
          * @return a {@code ResultExtractor} that produces the transformed result
          */
         static <R> ResultExtractor<R> to(final Throwables.Function<Dataset, R, SQLException> after) {
-            return rs -> after.apply(TO_DATA_SET.apply(rs));
+            return rs -> after.apply(TO_DATASET.apply(rs));
         }
     }
 
@@ -1165,7 +1165,7 @@ public final class Jdbc {
          * A pre-defined {@code BiResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
          * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}.
          */
-        BiResultExtractor<Dataset> TO_DATA_SET = (rs, columnLabels) -> {
+        BiResultExtractor<Dataset> TO_DATASET = (rs, columnLabels) -> {
             if (rs == null) {
                 return N.newEmptyDataset();
             }
@@ -1510,7 +1510,7 @@ public final class Jdbc {
          * <pre>{@code
          * BiResultExtractor<TreeMap<String, Long>> extractor = BiResultExtractor.groupTo(
          * (rs, cols) -> rs.getString("category"),
-         * (rs, cols) -> rs.getInt("count");, // Value extractor provides input to collector
+         * (rs, cols) -> rs.getInt("count"), // Value extractor provides input to collector
          * Collectors.counting(),
          * TreeMap::new
          * );
@@ -1590,7 +1590,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(
-         * (rs, cols) -> rs.getInt("age"); >= 18,  // Filter for adults
+         * (rs, cols) -> rs.getInt("age") >= 18,  // Filter for adults
          * (rs, cols) -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
@@ -2840,14 +2840,14 @@ public final class Jdbc {
          *
          * @param <T> target type
          * @param targetClass the class to map rows to
-         * @param ignoreNonMatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are ignored;
+         * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are ignored;
          * if {@code false}, an {@code IllegalArgumentException} is thrown.
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
-        static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
-            return to(targetClass, Fn.alwaysTrue(), Fn.identity(), ignoreNonMatchedColumns);
+        static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreUnmatchedColumns) {
+            return to(targetClass, Fn.alwaysTrue(), Fn.identity(), ignoreUnmatchedColumns);
         }
 
         /**
@@ -2863,7 +2863,7 @@ public final class Jdbc {
          * <pre>{@code
          * BiRowMapper<User> mapper = BiRowMapper.to(
          * User.class,
-         * colName -> !colName.startsWith("temp_");,  // Filter out temporary columns
+         * colName -> !colName.startsWith("temp_"),  // Filter out temporary columns
          * String::toLowerCase                      // Convert column names to lowercase before matching
          * );
          * }</pre>
@@ -2894,14 +2894,14 @@ public final class Jdbc {
          * @param targetClass the class to map rows to
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
-         * @param ignoreNonMatchedColumns if {@code true}, filtered columns without a corresponding property are ignored;
+         * @param ignoreUnmatchedColumns if {@code true}, filtered columns without a corresponding property are ignored;
          * if {@code false}, an {@code IllegalArgumentException} is thrown.
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
         static <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final Predicate<? super String> columnNameFilter,
-                final Function<? super String, String> columnNameConverter, final boolean ignoreNonMatchedColumns) {
+                final Function<? super String, String> columnNameConverter, final boolean ignoreUnmatchedColumns) {
             N.checkArgNotNull(targetClass, cs.targetClass);
 
             final Predicate<? super String> columnNameFilterToBeUsed = columnNameFilter == null ? Fn.alwaysTrue() : columnNameFilter;
@@ -3123,7 +3123,7 @@ public final class Jdbc {
                                         }
 
                                         if (propInfos[i] == null) {
-                                            if (ignoreNonMatchedColumns) {
+                                            if (ignoreUnmatchedColumns) {
                                                 columnLabels[i] = null;
                                             } else {
                                                 throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
@@ -3227,15 +3227,15 @@ public final class Jdbc {
          * @param <T> target entity type
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
-         * @param ignoreNonMatchedColumns if {@code true}, columns without a matching property are ignored
+         * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are ignored
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          */
         @SequentialOnly
         @Stateful
         static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndFieldNameMap,
-                final boolean ignoreNonMatchedColumns) {
+                final boolean ignoreUnmatchedColumns) {
             if (N.isEmpty(prefixAndFieldNameMap)) {
-                return to(entityClass, ignoreNonMatchedColumns);
+                return to(entityClass, ignoreUnmatchedColumns);
             }
 
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not an entity class", entityClass);
@@ -3297,7 +3297,7 @@ public final class Jdbc {
                                 }
 
                                 if (propInfos[i] == null) {
-                                    if (ignoreNonMatchedColumns) {
+                                    if (ignoreUnmatchedColumns) {
                                         columnLabels[i] = null;
                                     } else {
                                         throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(entityClass)
@@ -4088,12 +4088,12 @@ public final class Jdbc {
              *
              * @param <T> target type
              * @param targetClass the class to map rows to
-             * @param ignoreNonMatchedColumns if {@code true}, columns without a corresponding property are ignored
+             * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are ignored
              * @return a new stateful {@code BiRowMapper<T>}
              */
             @SequentialOnly
             @Stateful
-            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreNonMatchedColumns) {
+            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreUnmatchedColumns) {
                 if (Object[].class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
                         private ColumnGetter<?>[] rsColumnGetters = null;
@@ -4201,7 +4201,7 @@ public final class Jdbc {
                                     }
 
                                     if (localPropInfos[i] == null) {
-                                        if (ignoreNonMatchedColumns) {
+                                        if (ignoreUnmatchedColumns) {
                                             columnLabels[i] = null;
                                         } else {
                                             throw new IllegalArgumentException("No property in class: " + ClassUtil.getCanonicalClassName(targetClass)
@@ -4960,17 +4960,6 @@ public final class Jdbc {
                     }
                 }
             };
-        }
-
-        /**
-         * Creates a {@link RowExtractorBuilder} with a specified default {@code ColumnGetter}. This getter
-         * will be used for any column that does not have a specific getter configured in the builder.
-         *
-         * @param defaultColumnGetter the default {@code ColumnGetter} to use.
-         * @return a new {@code RowExtractorBuilder}.
-         */
-        static RowExtractorBuilder create(final ColumnGetter<?> defaultColumnGetter) {
-            return new RowExtractorBuilder(defaultColumnGetter);
         }
 
         /**
@@ -5970,13 +5959,7 @@ public final class Jdbc {
             N.checkArgNotEmpty(qualifier, cs.qualifier);
             N.checkArgNotNull(handler, cs.handler);
 
-            if (handlerPool.containsKey(qualifier)) {
-                return false;
-            }
-
-            handlerPool.put(qualifier, handler);
-
-            return true;
+            return handlerPool.putIfAbsent(qualifier, handler) == null;
         }
 
         /**
@@ -5993,12 +5976,16 @@ public final class Jdbc {
             Handler<?> result = handlerPool.get(qualifier);
 
             if (result == null && springAppContext != null) {
-                final Object bean = springAppContext.getBean(qualifier);
+                try {
+                    final Object bean = springAppContext.getBean(qualifier);
 
-                if (bean instanceof Handler) {
-                    result = (Handler<?>) bean;
+                    if (bean instanceof Handler) {
+                        result = (Handler<?>) bean;
 
-                    handlerPool.put(qualifier, result);
+                        handlerPool.put(qualifier, result);
+                    }
+                } catch (final Exception e) {
+                    // Bean not found in Spring context, return null
                 }
             }
 
@@ -6022,18 +6009,22 @@ public final class Jdbc {
             Handler<?> result = handlerPool.get(qualifier);
 
             if (result == null && springAppContext != null) {
-                result = springAppContext.getBean(handlerClass);
+                try {
+                    result = springAppContext.getBean(handlerClass);
 
-                if (result == null) {
-                    final Object bean = springAppContext.getBean(qualifier);
+                    if (result == null) {
+                        final Object bean = springAppContext.getBean(qualifier);
 
-                    if (bean instanceof Handler) {
-                        result = (Handler<?>) bean;
+                        if (bean instanceof Handler) {
+                            result = (Handler<?>) bean;
+                        }
                     }
-                }
 
-                if (result != null) {
-                    handlerPool.put(qualifier, result);
+                    if (result != null) {
+                        handlerPool.put(qualifier, result);
+                    }
+                } catch (final Exception e) {
+                    // Bean not found in Spring context, return null
                 }
             }
 
@@ -6363,6 +6354,10 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if (result == null) {
+                return false;
+            }
+
             cache.put(defaultCacheKey, result);
 
             return true;
@@ -6371,6 +6366,10 @@ public final class Jdbc {
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if (result == null) {
+                return false;
+            }
+
             cache.put(defaultCacheKey, result);
 
             return true;

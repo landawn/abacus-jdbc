@@ -69,7 +69,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
@@ -1687,7 +1687,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true);
         when(mockResultSet.getString(1)).thenReturn("first", "second");
 
-        assertThrows(DuplicatedResultException.class, () -> query.queryForUniqueResult(String.class));
+        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueResult(String.class));
         verify(mockResultSet).close();
     }
 
@@ -1731,7 +1731,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true);
         when(mockResultSet.getString(1)).thenReturn("first", "second");
 
-        assertThrows(DuplicatedResultException.class, () -> query.queryForUniqueNonNull(String.class));
+        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueNonNull(String.class));
         verify(mockResultSet).close();
     }
 
@@ -1943,7 +1943,7 @@ public class PreparedQueryTest extends TestBase {
     public void testFindOnlyOneDuplicated() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, true);
 
-        assertThrows(DuplicatedResultException.class, () -> query.findOnlyOne());
+        assertThrows(DuplicateResultException.class, () -> query.findOnlyOne());
         verify(mockResultSet).close();
     }
 

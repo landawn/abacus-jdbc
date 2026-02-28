@@ -255,8 +255,10 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * }
  *
  * // Stream processing for large result sets
- * try (Stream<Product> productStream = JdbcUtil.stream(dataSource,
- *         Product.class, "SELECT * FROM products WHERE category = ?", category)) {
+ * try (Stream<Product> productStream = JdbcUtil.prepareQuery(dataSource,
+ *         "SELECT * FROM products WHERE category = ?")
+ *         .setString(1, category)
+ *         .stream(Product.class)) {
  *
  *     Map<String, List<Product>> productsByBrand = productStream
  *         .filter(p -> p.getPrice() > minPrice)
@@ -271,7 +273,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *     private final DataSource dataSource;
  *
  *     public Order processOrder(OrderRequest request) {
- *         return JdbcUtil.runInTransaction(dataSource, () -> {
+ *         return JdbcUtil.callInTransaction(dataSource, () -> {
  *             // Validate inventory
  *             Dataset inventoryResult = JdbcUtil.executeQuery(dataSource,
  *                 "SELECT 1 FROM inventory WHERE product_id = ? AND quantity >= ?",
@@ -577,7 +579,7 @@ public final class JdbcUtil {
 
     static final Set<Method> BUILT_IN_DAO_QUERY_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
             .filter(Dao.class::isAssignableFrom)
-            .flattmap(Class::getDeclaredMethods)
+            .flatMapArray(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
             .filter(it -> N.anyMatch(QUERY_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
@@ -585,7 +587,7 @@ public final class JdbcUtil {
 
     static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
             .filter(Dao.class::isAssignableFrom)
-            .flattmap(Class::getDeclaredMethods)
+            .flatMapArray(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
             .filter(it -> it.getAnnotation(NonDBOperation.class) == null)
             .filter(it -> N.anyMatch(UPDATE_METHOD_NAME_SET, e -> Strings.containsIgnoreCase(it.getName(), e)))
@@ -1028,6 +1030,8 @@ public final class JdbcUtil {
         return createConnection(cls, url, user, password);
     }
 
+    private static final Set<Class<? extends Driver>> registeredDriverClasses = ConcurrentHashMap.newKeySet();
+
     /**
      * Creates a new database {@link Connection} using a type-safe {@link Driver} class.
      * This method provides compile-time safety for specifying the JDBC driver and avoids potential
@@ -1060,7 +1064,9 @@ public final class JdbcUtil {
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
             throws UncheckedSQLException {
         try {
-            DriverManager.registerDriver(N.newInstance(driverClass));
+            if (registeredDriverClasses.add(driverClass)) {
+                DriverManager.registerDriver(N.newInstance(driverClass));
+            }
 
             return DriverManager.getConnection(url, user, password);
         } catch (final SQLException e) {
@@ -1627,7 +1633,7 @@ public final class JdbcUtil {
      *     // ...
      * } finally {
      *     // Quietly closes all three resources.
-     *     JdbcUtil.closeQuietly(rs, {@code true}, true);
+     *     JdbcUtil.closeQuietly(rs, true, true);
      * }
      * }</pre>
      *
@@ -1908,12 +1914,25 @@ public final class JdbcUtil {
                 } catch (final SQLException e) {
                     logger.warn("Failed to call ResultSet.absolute(), falling back to manual iteration", e);
 
-                    // Re-read actual position since cursor state is undefined after failed absolute()
-                    final int newCurrentRow = rs.getRow();
-                    long remaining = rowsToSkip - (newCurrentRow - currentRow);
+                    // After a failed absolute(), cursor state may be undefined.
+                    // Attempt to determine how many rows were skipped, but fall back to
+                    // the full count if getRow() also fails or returns an unreliable value.
+                    long remaining = rowsToSkip;
 
-                    while (remaining-- > 0L && rs.next()) {
-                        // continue.
+                    try {
+                        final int newCurrentRow = rs.getRow();
+
+                        if (newCurrentRow >= currentRow) {
+                            remaining = rowsToSkip - (newCurrentRow - currentRow);
+                        }
+                    } catch (final SQLException ignored) {
+                        // getRow() also failed; use full rowsToSkip as remaining
+                    }
+
+                    if (remaining > 0) {
+                        while (remaining-- > 0L && rs.next()) {
+                            // continue.
+                        }
                     }
 
                     resultSetClassNotSupportAbsolute.add(rs.getClass());
@@ -1967,7 +1986,113 @@ public final class JdbcUtil {
      * @see #getColumnLabelList(ResultSet)
      */
     public static List<String> getColumnNameList(final Connection conn, final String tableName) throws SQLException {
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotBlank(tableName, "tableName");
+
+        final String[] nameParts = tableName.trim().split("\\.");
+        final String catalog;
+        final String schema;
+        final String table;
+        final String fallbackQualifiedTableName;
+
+        if (nameParts.length == 1) {
+            catalog = conn.getCatalog();
+            schema = conn.getSchema();
+            table = stripIdentifierDelimiters(nameParts[0]);
+            fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, null, table);
+        } else if (nameParts.length == 2) {
+            catalog = conn.getCatalog();
+            schema = stripIdentifierDelimiters(nameParts[0]);
+            table = stripIdentifierDelimiters(nameParts[1]);
+            fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, schema, table);
+        } else if (nameParts.length == 3) {
+            catalog = stripIdentifierDelimiters(nameParts[0]);
+            schema = stripIdentifierDelimiters(nameParts[1]);
+            table = stripIdentifierDelimiters(nameParts[2]);
+            fallbackQualifiedTableName = buildSimpleQualifiedTableName(catalog, schema, table);
+        } else {
+            throw new IllegalArgumentException("Invalid table name: " + tableName);
+        }
+
+        if (Strings.isEmpty(table)) {
+            throw new IllegalArgumentException("Invalid table name: " + tableName);
+        }
+
+        final DatabaseMetaData metadata = conn.getMetaData();
+        final String schemaToUse = schema == null ? conn.getSchema() : schema;
+        List<String> columnNameList = getColumnNameList(metadata, catalog, schemaToUse, table);
+
+        if (N.isEmpty(columnNameList) && schema == null) {
+            columnNameList = getColumnNameList(metadata, catalog, null, table);
+        }
+
+        if (N.isEmpty(columnNameList)) {
+            columnNameList = getColumnNameList(metadata, catalog, schemaToUse, table.toUpperCase());
+        }
+
+        if (N.isEmpty(columnNameList)) {
+            columnNameList = getColumnNameList(metadata, catalog, schemaToUse, table.toLowerCase());
+        }
+
+        if (N.isEmpty(columnNameList) && schema == null) {
+            columnNameList = getColumnNameList(metadata, catalog, null, table.toUpperCase());
+        }
+
+        if (N.isEmpty(columnNameList) && schema == null) {
+            columnNameList = getColumnNameList(metadata, catalog, null, table.toLowerCase());
+        }
+
+        if (N.isEmpty(columnNameList) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
+            columnNameList = getColumnNameListBySelect(conn, fallbackQualifiedTableName);
+        }
+
+        if (N.isEmpty(columnNameList)) {
+            throw new SQLException("No columns found for table: " + tableName);
+        }
+
+        return columnNameList;
+    }
+
+    private static List<String> getColumnNameList(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
+            final String tableNamePattern) throws SQLException {
+        final ResultSet rs = metadata.getColumns(catalog, schemaPattern, tableNamePattern, null);
+
+        if (rs == null) {
+            return N.emptyList();
+        }
+
+        try (ResultSet rows = rs) {
+            final List<String> columnNameList = new ArrayList<>();
+            String tableNameInMetadata = null;
+            String currentTableName = null;
+            String currentSchema = null;
+            String currentCatalog = null;
+
+            while (rows.next()) {
+                tableNameInMetadata = rows.getString("TABLE_NAME");
+
+                if (!Strings.equalsAny(tableNameInMetadata, tableNamePattern, tableNamePattern.toUpperCase(), tableNamePattern.toLowerCase())) {
+                    continue;
+                }
+
+                if (currentTableName == null) {
+                    currentTableName = tableNameInMetadata;
+                    currentSchema = rows.getString("TABLE_SCHEM");
+                    currentCatalog = rows.getString("TABLE_CAT");
+                } else if (!N.equals(currentTableName, tableNameInMetadata) || !N.equals(currentSchema, rows.getString("TABLE_SCHEM"))
+                        || !N.equals(currentCatalog, rows.getString("TABLE_CAT"))) {
+                    continue;
+                }
+
+                columnNameList.add(rows.getString("COLUMN_NAME"));
+            }
+
+            return columnNameList;
+        }
+    }
+
+    private static List<String> getColumnNameListBySelect(final Connection conn, final String qualifiedTableName) throws SQLException {
+        final String query = "SELECT * FROM " + qualifiedTableName + " WHERE 1 > 2";
         PreparedStatement stmt = null;
         ResultSet rs = null;
 
@@ -2650,19 +2775,21 @@ public final class JdbcUtil {
      * @see SQLOperation
      */
     static SQLOperation getSQLOperation(final String sql) {
-        if (Strings.startsWithIgnoreCase(sql.trim(), "select ")) {
+        final String trimmedSql = sql.trim();
+
+        if (Strings.startsWithIgnoreCase(trimmedSql, "select ")) {
             return SQLOperation.SELECT;
-        } else if (Strings.startsWithIgnoreCase(sql.trim(), "update ")) {
+        } else if (Strings.startsWithIgnoreCase(trimmedSql, "update ")) {
             return SQLOperation.UPDATE;
-        } else if (Strings.startsWithIgnoreCase(sql.trim(), "insert ")) {
+        } else if (Strings.startsWithIgnoreCase(trimmedSql, "insert ")) {
             return SQLOperation.INSERT;
-        } else if (Strings.startsWithIgnoreCase(sql.trim(), "delete ")) {
+        } else if (Strings.startsWithIgnoreCase(trimmedSql, "delete ")) {
             return SQLOperation.DELETE;
-        } else if (Strings.startsWithIgnoreCase(sql.trim(), "merge ")) {
+        } else if (Strings.startsWithIgnoreCase(trimmedSql, "merge ")) {
             return SQLOperation.MERGE;
         } else {
             for (final SQLOperation so : SQLOperation.values()) {
-                if (Strings.startsWithIgnoreCase(sql.trim(), so.name())) {
+                if (Strings.startsWithIgnoreCase(trimmedSql, so.name())) {
                     return so;
                 }
             }
@@ -2874,16 +3001,13 @@ public final class JdbcUtil {
      * // Assuming a table where a trigger generates a UUID and a timestamp on insert.
      * String insertSql = "INSERT INTO documents (content) VALUES (?)";
      *
-     * Row row = JdbcUtil.prepareQuery(dataSource, insertSql, new int[]{1, 4}) // Assuming id is 1, created_at is 4
+     * // Use insert(RowMapper) to extract multiple generated columns
+     * Optional<String> generatedUuid = JdbcUtil.prepareQuery(dataSource, insertSql, new int[]{1, 4})
      *     .setString(1, "Some content...")
-     *     .insert()
-     *     .orElse(null);
+     *     .insert(rs -> rs.getString(1));
      *
-     * if (row != null) {
-     *     String generatedUuid = row.getString(1);
-     *     Timestamp creationTime = row.getTimestamp(2);
-     *     System.out.println("New document created with UUID: " + generatedUuid + " at " + creationTime);
-     * }
+     * generatedUuid.ifPresent(uuid ->
+     *     System.out.println("New document created with UUID: " + uuid));
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -2937,16 +3061,12 @@ public final class JdbcUtil {
      * // Assuming a table with an auto-incrementing 'id' and a 'created_at' column with a default value.
      * String query = "INSERT INTO logs (message) VALUES (?)";
      *
-     * Row generatedValues = JdbcUtil.prepareQuery(dataSource, query, new String[]{"id", "created_at"})
+     * Optional<Long> newId = JdbcUtil.prepareQuery(dataSource, query, new String[]{"id", "created_at"})
      *     .setString(1, "User logged in")
-     *     .insert()
-     *     .orElse(null);
+     *     .insert();
      *
-     * if (generatedValues != null) {
-     *     long newId = generatedValues.getLong("id");
-     *     Timestamp creationTime = generatedValues.getTimestamp("created_at");
-     *     System.out.println("New log entry created with ID: " + newId + " at " + creationTime);
-     * }
+     * newId.ifPresent(id ->
+     *     System.out.println("New log entry created with ID: " + id));
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3111,15 +3231,12 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Assumes columns 1 ('id') and 4 ('creation_ts') are auto-generated
-     *     Row generated = JdbcUtil.prepareQuery(conn,
+     *     Optional<Long> generatedId = JdbcUtil.prepareQuery(conn,
      *             "INSERT INTO events (message) VALUES (?)", new int[]{1, 4})
      *         .setString(1, "System startup")
-     *         .insert()
-     *         .orElse(null);
-     *     if (generated != null) {
-     *         System.out.println("New event ID: " + generated.get(0));
-     *         System.out.println("Creation timestamp: " + generated.get(1));
-     *     }
+     *         .insert();
+     *     generatedId.ifPresent(id ->
+     *         System.out.println("New event ID: " + id));
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3150,15 +3267,12 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Assumes columns 'id' and 'creation_ts' are auto-generated
-     *     Row generated = JdbcUtil.prepareQuery(conn,
+     *     Optional<Long> generatedId = JdbcUtil.prepareQuery(conn,
      *             "INSERT INTO events (message) VALUES (?)", new String[]{"id", "creation_ts"})
      *         .setString(1, "System shutdown")
-     *         .insert()
-     *         .orElse(null);
-     *     if (generated != null) {
-     *         System.out.println("New event ID: " + generated.getLong("id"));
-     *         System.out.println("Creation timestamp: " + generated.getTimestamp("creation_ts"));
-     *     }
+     *         .insert();
+     *     generatedId.ifPresent(id ->
+     *         System.out.println("New event ID: " + id));
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3298,15 +3412,10 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "SELECT * FROM users WHERE first_name = :firstName AND status = :status";
-     * try (NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sql)) {
-     *     query.setParameter("firstName", "John");
-     *     query.setParameter("status", "ACTIVE");
-     *
-     *     List<User> users = query.list(User.class);
-     *     // ...
-     * } catch (SQLException e) {
-     *     // Handle exception
-     * }
+     * List<User> users = JdbcUtil.prepareNamedQuery(dataSource, sql)
+     *     .setString("firstName", "John")
+     *     .setString("status", "ACTIVE")
+     *     .list(User.class);
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
@@ -3356,9 +3465,9 @@ public final class JdbcUtil {
      * <pre>{@code
      * Optional<Long> newUserId = JdbcUtil.prepareNamedQuery(dataSource,
      *         "INSERT INTO users (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", true)
-     *     .setParameter("firstName", "John")
-     *     .setParameter("lastName", "Doe")
-     *     .setParameter("email", "john.doe@example.com")
+     *     .setString("firstName", "John")
+     *     .setString("lastName", "Doe")
+     *     .setString("email", "john.doe@example.com")
      *     .insert();
      *
      * if (newUserId.isPresent()) {
@@ -3416,17 +3525,14 @@ public final class JdbcUtil {
      * // Assuming a table where a trigger generates a UUID at column 1 and a timestamp at column 4 on insert
      * String insertSql = "INSERT INTO documents (title, content) VALUES (:title, :content)";
      *
-     * Row row = JdbcUtil.prepareNamedQuery(dataSource, insertSql, new int[]{1, 4})
-     *     .setParameter("title", "Annual Report")
-     *     .setParameter("content", "Report content...")
-     *     .insert()
-     *     .orElse(null);
+     * // Use insert(RowMapper) to extract multiple generated columns
+     * Optional<String> generatedUuid = JdbcUtil.prepareNamedQuery(dataSource, insertSql, new int[]{1, 4})
+     *     .setString("title", "Annual Report")
+     *     .setString("content", "Report content...")
+     *     .insert(rs -> rs.getString(1));
      *
-     * if (row != null) {
-     *     String generatedUuid = row.getString(1);
-     *     Timestamp creationTime = row.getTimestamp(2);
-     *     System.out.println("Document created with UUID: " + generatedUuid + " at " + creationTime);
-     * }
+     * generatedUuid.ifPresent(uuid ->
+     *     System.out.println("Document created with UUID: " + uuid));
      * }</pre>
      *
      * @param ds The DataSource to use for the query
@@ -3480,17 +3586,13 @@ public final class JdbcUtil {
      * // Assuming a table with an auto-incrementing 'id' and a 'created_at' column with a default value
      * String query = "INSERT INTO logs (message, severity) VALUES (:message, :severity)";
      *
-     * Row generatedValues = JdbcUtil.prepareNamedQuery(dataSource, query, new String[]{"id", "created_at"})
-     *     .setParameter("message", "User logged in")
-     *     .setParameter("severity", "INFO")
-     *     .insert()
-     *     .orElse(null);
+     * Optional<Long> newId = JdbcUtil.prepareNamedQuery(dataSource, query, new String[]{"id", "created_at"})
+     *     .setString("message", "User logged in")
+     *     .setString("severity", "INFO")
+     *     .insert();
      *
-     * if (generatedValues != null) {
-     *     long newId = generatedValues.getLong("id");
-     *     Timestamp creationTime = generatedValues.getTimestamp("created_at");
-     *     System.out.println("New log entry created with ID: " + newId + " at " + creationTime);
-     * }
+     * newId.ifPresent(id ->
+     *     System.out.println("New log entry created with ID: " + id));
      * }</pre>
      *
      * @param ds The DataSource to use for the query
@@ -3545,7 +3647,7 @@ public final class JdbcUtil {
      * List<User> users = JdbcUtil.prepareNamedQuery(dataSource,
      *         "SELECT * FROM users WHERE department = :dept",
      *         (conn, sql) -> conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE))
-     *     .setParameter("dept", "Engineering")
+     *     .setString("dept", "Engineering")
      *     .list(User.class);
      * }</pre>
      *
@@ -3593,11 +3695,12 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
-     * try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, 
-     *         "UPDATE users SET status = :status WHERE id = :id")) {
-     *     int updated = query.setParameter("status", "ACTIVE")
-     *                        .setParameter("id", userId)
-     *                        .update();
+     * try {
+     *     int updated = JdbcUtil.prepareNamedQuery(conn,
+     *             "UPDATE users SET status = :status WHERE id = :id")
+     *         .setString("status", "ACTIVE")
+     *         .setLong("id", userId)
+     *         .update();
      * } finally {
      *     conn.close();
      * }
@@ -3628,9 +3731,9 @@ public final class JdbcUtil {
      * try (Connection conn = dataSource.getConnection()) {
      *     Optional<Long> newId = JdbcUtil.prepareNamedQuery(conn,
      *             "INSERT INTO products (name, price, category) VALUES (:name, :price, :category)", true)
-     *         .setParameter("name", "Laptop")
-     *         .setParameter("price", 999.99)
-     *         .setParameter("category", "Electronics")
+     *         .setString("name", "Laptop")
+     *         .setDouble("price", 999.99)
+     *         .setString("category", "Electronics")
      *         .insert();
      *     System.out.println("New product ID: " + newId.orElse(null));
      * } catch (SQLException e) {
@@ -3664,16 +3767,13 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
      *     // Assumes columns 1 ('id') and 4 ('creation_ts') are auto-generated
-     *     Row generated = JdbcUtil.prepareNamedQuery(conn,
+     *     Optional<Long> generatedId = JdbcUtil.prepareNamedQuery(conn,
      *             "INSERT INTO events (event_type, message) VALUES (:type, :msg)", new int[]{1, 4})
-     *         .setParameter("type", "SYSTEM")
-     *         .setParameter("msg", "System startup")
-     *         .insert()
-     *         .orElse(null);
-     *     if (generated != null) {
-     *         System.out.println("New event ID: " + generated.get(0));
-     *         System.out.println("Creation timestamp: " + generated.get(1));
-     *     }
+     *         .setString("type", "SYSTEM")
+     *         .setString("msg", "System startup")
+     *         .insert();
+     *     generatedId.ifPresent(id ->
+     *         System.out.println("New event ID: " + id));
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3705,19 +3805,15 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = dataSource.getConnection()) {
-     *     Row generatedValues = JdbcUtil.prepareNamedQuery(conn,
+     *     Optional<Long> newId = JdbcUtil.prepareNamedQuery(conn,
      *             "INSERT INTO notifications (user_id, message) VALUES (:userId, :msg)",
      *             new String[]{"id", "created_at"})
-     *         .setParameter("userId", 123)
-     *         .setParameter("msg", "Welcome to the system")
-     *         .insert()
-     *         .orElse(null);
+     *         .setInt("userId", 123)
+     *         .setString("msg", "Welcome to the system")
+     *         .insert();
      *
-     *     if (generatedValues != null) {
-     *         long newId = generatedValues.getLong("id");
-     *         Timestamp creationTime = generatedValues.getTimestamp("created_at");
-     *         System.out.println("New notification ID: " + newId + " at " + creationTime);
-     *     }
+     *     newId.ifPresent(id ->
+     *         System.out.println("New notification ID: " + id));
      * } catch (SQLException e) {
      *     // Handle exception
      * }
@@ -3753,7 +3849,7 @@ public final class JdbcUtil {
      *     List<Order> orders = JdbcUtil.prepareNamedQuery(conn,
      *             "SELECT * FROM orders WHERE customer_id = :customerId",
      *             (c, sql) -> c.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY))
-     *         .setParameter("customerId", 456)
+     *         .setInt("customerId", 456)
      *         .list(Order.class);
      * } catch (SQLException e) {
      *     // Handle exception
@@ -4185,16 +4281,15 @@ public final class JdbcUtil {
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource, 
-     *         "{call get_user_info(?, ?, ?)}")) {
-     *     query.setLong(1, userId);
-     *     query.registerOutParameter(2, Types.VARCHAR);
-     *     query.registerOutParameter(3, Types.DATE);
-     *     query.execute();
-     *     
-     *     String name = query.getString(2);
-     *     Date createdDate = query.getDate(3);
-     * }
+     * Jdbc.OutParamResult outResult = JdbcUtil.prepareCallableQuery(dataSource,
+     *         "{call get_user_info(?, ?, ?)}")
+     *     .setLong(1, userId)
+     *     .registerOutParameter(2, Types.VARCHAR)
+     *     .registerOutParameter(3, Types.DATE)
+     *     .executeAndGetOutParameters();
+     *
+     * String name = outResult.getOutParamValue(2);
+     * Date createdDate = outResult.getOutParamValue(3);
      * }</pre>
      * 
      *
@@ -4254,8 +4349,8 @@ public final class JdbcUtil {
      *
      *     query.setInt(1, departmentId);
      *     query.registerOutParameter(2, Types.INTEGER);
-     *     ResultSet rs = query.executeQuery();
-     *     // Process result set that can be scrolled backward
+     *     Dataset result = query.query();
+     *     // Process result that can be scrolled backward
      * }
      *
      * // Configure statement with specific timeout
@@ -4935,6 +5030,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
 
+        if (N.isEmpty(listOfParameters)) {
+            return 0;
+        }
+
         final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
@@ -5092,6 +5191,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
+
+        if (N.isEmpty(listOfParameters)) {
+            return 0;
+        }
 
         final SQLTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
 
@@ -5990,6 +6093,10 @@ public final class JdbcUtil {
             public void advance(final long count) throws IllegalArgumentException {
                 N.checkArgNotNegative(count, cs.n);
 
+                if (count == 0) {
+                    return;
+                }
+
                 final long rowsToSkip = hasNext ? count - 1 : count;
 
                 try {
@@ -6199,6 +6306,10 @@ public final class JdbcUtil {
             public void advance(final long count) {
                 N.checkArgNotNegative(count, cs.n);
 
+                if (count == 0) {
+                    return;
+                }
+
                 final long rowsToSkip = hasNext ? count - 1 : count;
 
                 try {
@@ -6369,7 +6480,7 @@ public final class JdbcUtil {
      * // Stream all email addresses
      * JdbcUtil.stream(resultSet, "email")
      *     .onClose(Fn.closeQuietly(resultSet))
-     *     .filter(email -> email != {@code null} && email.contains("@"))
+     *     .filter(email -> email != null && email.contains("@"))
      *     .forEach(email -> sendNewsletter(email));
      * }</pre>
      *
@@ -6421,7 +6532,7 @@ public final class JdbcUtil {
      * @return a Stream of Dataset containing the extracted ResultSets
      */
     public static Stream<Dataset> streamAllResultSets(final Statement stmt) {
-        return streamAllResultSets(stmt, ResultExtractor.TO_DATA_SET);
+        return streamAllResultSets(stmt, ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -6597,7 +6708,7 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter) {
-        return queryByPage(ds, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
+        return queryByPage(ds, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -6714,7 +6825,7 @@ public final class JdbcUtil {
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final Connection conn, final String query, final int pageSize,
             final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> paramSetter) {
-        return queryByPage(conn, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATA_SET);
+        return queryByPage(conn, query, pageSize, paramSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
     /**
@@ -7195,17 +7306,195 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if a database error occurs (other than table not existing)
      */
     public static boolean doesTableExist(final Connection conn, final String tableName) {
-        try {
-            execute(conn, "SELECT 1 FROM " + tableName + " WHERE 1 > 2");
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotBlank(tableName, "tableName");
 
-            return true;
-        } catch (final SQLException e) {
-            if (isTableNotExistsException(e)) {
-                return false;
+        try {
+            final String[] nameParts = tableName.trim().split("\\.");
+            final String catalog;
+            final String schema;
+            final String table;
+
+            if (nameParts.length == 1) {
+                catalog = null;
+                schema = null;
+                table = stripIdentifierDelimiters(nameParts[0]);
+            } else if (nameParts.length == 2) {
+                catalog = null;
+                schema = stripIdentifierDelimiters(nameParts[0]);
+                table = stripIdentifierDelimiters(nameParts[1]);
+            } else if (nameParts.length == 3) {
+                catalog = stripIdentifierDelimiters(nameParts[0]);
+                schema = stripIdentifierDelimiters(nameParts[1]);
+                table = stripIdentifierDelimiters(nameParts[2]);
+            } else {
+                throw new IllegalArgumentException("Invalid table name: " + tableName);
             }
 
+            if (Strings.isEmpty(table)) {
+                throw new IllegalArgumentException("Invalid table name: " + tableName);
+            }
+
+            final DatabaseMetaData metadata = conn.getMetaData();
+            final String schemaToUse = schema == null ? conn.getSchema() : schema;
+
+            if (doesTableExist(metadata, catalog, schemaToUse, table)) {
+                return true;
+            }
+
+            if (schema == null && doesTableExist(metadata, catalog, null, table)) {
+                return true;
+            }
+
+            if (doesTableExist(metadata, catalog, schemaToUse, table.toUpperCase()) || doesTableExist(metadata, catalog, schemaToUse, table.toLowerCase())) {
+                return true;
+            }
+
+            if (schema == null
+                    && (doesTableExist(metadata, catalog, null, table.toUpperCase()) || doesTableExist(metadata, catalog, null, table.toLowerCase()))) {
+                return true;
+            }
+
+            final String safeQualifiedTableName = buildSimpleQualifiedTableName(catalog, schema, table);
+
+            if (Strings.isNotEmpty(safeQualifiedTableName)) {
+                try {
+                    execute(conn, "SELECT 1 FROM " + safeQualifiedTableName + " WHERE 1 > 2");
+                    return true;
+                } catch (final SQLException e) {
+                    if (isTableNotExistsException(e)) {
+                        return false;
+                    }
+
+                    throw e;
+                }
+            }
+
+            return false;
+        } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
+    }
+
+    private static boolean doesTableExist(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern)
+            throws SQLException {
+        final ResultSet rs = metadata.getTables(catalog, schemaPattern, tableNamePattern, null);
+
+        if (rs == null) {
+            return false;
+        }
+
+        try (ResultSet rows = rs) {
+            return rows.next();
+        }
+    }
+
+    private static String buildSimpleQualifiedTableName(final String catalog, final String schema, final String tableName) {
+        if (!isSimpleSqlIdentifier(tableName)) {
+            return null;
+        }
+
+        final StringBuilder sb = new StringBuilder(64);
+
+        if (Strings.isNotEmpty(catalog)) {
+            if (!isSimpleSqlIdentifier(catalog)) {
+                return null;
+            }
+
+            sb.append(catalog).append('.');
+        }
+
+        if (Strings.isNotEmpty(schema)) {
+            if (!isSimpleSqlIdentifier(schema)) {
+                return null;
+            }
+
+            sb.append(schema).append('.');
+        }
+
+        sb.append(tableName);
+
+        return sb.toString();
+    }
+
+    private static boolean isSimpleSqlIdentifier(final String identifier) {
+        if (Strings.isEmpty(identifier)) {
+            return false;
+        }
+
+        for (int i = 0, len = identifier.length(); i < len; i++) {
+            final char ch = identifier.charAt(i);
+
+            if (!(Character.isLetterOrDigit(ch) || ch == '_' || ch == '$')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static String stripIdentifierDelimiters(final String identifier) {
+        final String trimmed = Strings.stripToEmpty(identifier);
+
+        if (trimmed.length() >= 2) {
+            final char first = trimmed.charAt(0);
+            final char last = trimmed.charAt(trimmed.length() - 1);
+
+            if ((first == '"' && last == '"') || (first == '`' && last == '`') || (first == '[' && last == ']')) {
+                return trimmed.substring(1, trimmed.length() - 1).trim();
+            }
+        }
+
+        return trimmed;
+    }
+
+    static String toQualifiedSqlIdentifier(final Connection conn, final String qualifiedName, final String argName) throws SQLException {
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotBlank(qualifiedName, argName);
+
+        final String[] rawNameParts = qualifiedName.trim().split("\\.");
+
+        if (rawNameParts.length == 0 || rawNameParts.length > 3) {
+            throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+        }
+
+        final String identifierQuote = normalizeIdentifierQuote(conn.getMetaData());
+        final StringBuilder sb = new StringBuilder(qualifiedName.length() + 6);
+
+        for (int i = 0, len = rawNameParts.length; i < len; i++) {
+            final String part = stripIdentifierDelimiters(rawNameParts[i]);
+
+            if (Strings.isEmpty(part)) {
+                throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+            }
+
+            if (i > 0) {
+                sb.append('.');
+            }
+
+            if (identifierQuote == null) {
+                if (!isSimpleSqlIdentifier(part)) {
+                    throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+                }
+
+                sb.append(part);
+            } else {
+                sb.append(identifierQuote).append(escapeIdentifierPart(part, identifierQuote)).append(identifierQuote);
+            }
+        }
+
+        return sb.toString();
+    }
+
+    private static String normalizeIdentifierQuote(final DatabaseMetaData metadata) throws SQLException {
+        final String quoteString = metadata.getIdentifierQuoteString();
+        final String normalized = quoteString == null ? null : quoteString.trim();
+
+        return Strings.isEmpty(normalized) ? null : normalized;
+    }
+
+    private static String escapeIdentifierPart(final String identifierPart, final String identifierQuote) {
+        return identifierPart.replace(identifierQuote, identifierQuote + identifierQuote);
     }
 
     /**
@@ -7238,7 +7527,12 @@ public final class JdbcUtil {
 
             return true;
         } catch (final SQLException e) {
-            return false;
+            // The table may have been created concurrently by another thread/process
+            if (doesTableExist(conn, tableName)) {
+                return false;
+            }
+
+            throw new UncheckedSQLException("Failed to create table: " + tableName, e);
         }
     }
 
@@ -7258,17 +7552,33 @@ public final class JdbcUtil {
      * @return {@code true} if the table was dropped, {@code false} if the table did not exist or could not be dropped
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
-        try {
-            if (doesTableExist(conn, tableName)) {
-                execute(conn, "DROP TABLE " + tableName);
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotBlank(tableName, "tableName");
 
-                return true;
-            }
+        final String sqlTableName;
+
+        try {
+            sqlTableName = toQualifiedSqlIdentifier(conn, tableName, "tableName");
         } catch (final SQLException e) {
-            // ignore.
+            throw new UncheckedSQLException(e);
         }
 
-        return false;
+        if (!doesTableExist(conn, tableName)) {
+            return false;
+        }
+
+        try {
+            execute(conn, "DROP TABLE " + sqlTableName);
+
+            return true;
+        } catch (final SQLException e) {
+            // The table may have been dropped concurrently by another thread/process
+            if (isTableNotExistsException(e)) {
+                return false;
+            }
+
+            throw new UncheckedSQLException("Failed to drop table: " + tableName, e);
+        }
     }
 
     /**
@@ -7277,12 +7587,13 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * DBLock lock = JdbcUtil.getDBLock(dataSource, "distributed_locks");
-     * if (lock.acquire("job_processor")) {
+     * DBLock dbLock = JdbcUtil.getDBLock(dataSource, "distributed_locks");
+     * String lockCode = dbLock.lock("job_processor");
+     * if (lockCode != null) {
      *     try {
      *         // Perform exclusive operation
      *     } finally {
-     *         lock.release("job_processor");
+     *         dbLock.unlock("job_processor", lockCode);
      *     }
      * }
      * }</pre>
@@ -7335,7 +7646,7 @@ public final class JdbcUtil {
     @Deprecated
     @Internal
     static boolean isDefaultIdPropValue(final Object value) {
-        if ((value == null) || (value instanceof Number && (((Number) value).longValue() == 0))) {
+        if ((value == null) || (value instanceof Number && (((Number) value).doubleValue() == 0))) {
             return true;
         } else if (value instanceof EntityId) {
             return N.allMatch(((EntityId) value).entrySet(), it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
@@ -7663,7 +7974,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, status, 
-     *     (id, st) -> JdbcUtil.update(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
+     *     (id, st) -> JdbcUtil.executeUpdate(dataSource, "UPDATE users SET status = ? WHERE id = ?", st, id)
      * );
      * 
      * future.thenRunAsync(() -> System.out.println("Status updated"));
@@ -7694,7 +8005,7 @@ public final class JdbcUtil {
      * <pre>{@code
      * ContinuableFuture<Void> future = JdbcUtil.asyncRun(userId, orderId, status,
      *     (uid, oid, st) -> {
-     *         JdbcUtil.update(dataSource, "UPDATE orders SET status = ? WHERE user_id = ? AND order_id = ?", 
+     *         JdbcUtil.executeUpdate(dataSource, "UPDATE orders SET status = ? WHERE user_id = ? AND order_id = ?",
      *                         st, uid, oid);
      *     }
      * );
@@ -7731,7 +8042,7 @@ public final class JdbcUtil {
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findFirst(User.class).orElse(null);
      * });
      *
-     * future.thenAccept(user -> System.out.println("Found user: " + (user != {@code null} ? user.getName() : "none")));
+     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
      * }</pre>
      *
      * @param <R> The type of the result
@@ -7787,8 +8098,8 @@ public final class JdbcUtil {
      * <pre>{@code
      * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures =
      *     JdbcUtil.asyncCall(
-     *         () -> JdbcUtil.queryForSingleResult(Long.class, dataSource, "SELECT COUNT(*) FROM orders"),
-     *         () -> JdbcUtil.queryForSingleResult(BigDecimal.class, dataSource, "SELECT SUM(total) FROM orders"),
+     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM orders").queryForSingleResult(Long.class).orElse(0L),
+     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT SUM(total) FROM orders").queryForSingleResult(BigDecimal.class).orElse(BigDecimal.ZERO),
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
      *     );
      * 
@@ -7824,10 +8135,10 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<User> future = JdbcUtil.asyncCall(123L,
-     *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).queryForSingleResult(User.class).orElse(null)
+     *     param -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?").setLong(1, param).findFirst(User.class).orElse(null)
      * );
      *
-     * future.thenAccept(user -> System.out.println("Found user: " + (user != {@code null} ? user.getName() : "none")));
+     * future.thenAccept(user -> System.out.println("Found user: " + (user != null ? user.getName() : "none")));
      * }</pre>
      *
      * @param <T> The type of the parameter
@@ -7853,9 +8164,8 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<Order>> future = JdbcUtil.asyncCall(userId, status,
-     *     (uid, st) -> JdbcUtil.query(dataSource, 
-     *                                 "SELECT * FROM orders WHERE user_id = ? AND status = ?", uid, st)
-     *                          .list(Order.class)
+     *     (uid, st) -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE user_id = ? AND status = ?")
+     *                          .setLong(1, uid).setString(2, st).list(Order.class)
      * );
      * 
      * future.thenAccept(orders -> System.out.println("Found " + orders.size() + " orders"));
@@ -7886,9 +8196,10 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<BigDecimal> future = JdbcUtil.asyncCall(startDate, endDate, category,
-     *     (start, end, cat) -> JdbcUtil.queryForSingleResult(BigDecimal.class, dataSource,
-     *         "SELECT SUM(amount) FROM sales WHERE date BETWEEN ? AND ? AND category = ?", 
-     *         start, end, cat)
+     *     (start, end, cat) -> JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT SUM(amount) FROM sales WHERE date BETWEEN ? AND ? AND category = ?")
+     *         .setDate(1, start).setDate(2, end).setString(3, cat)
+     *         .queryForSingleResult(BigDecimal.class).orElse(BigDecimal.ZERO)
      * );
      * 
      * future.thenAccept(total -> System.out.println("Total sales: " + total));
@@ -7959,16 +8270,10 @@ public final class JdbcUtil {
 
     static PropInfo getSubPropInfo(final Class<?> entityClass, final String propName) {
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-        Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.get(entityClass);
-        Optional<PropInfo> propInfoHolder = null;
+        final Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.computeIfAbsent(entityClass,
+                cls -> new ObjectPool<>((entityInfo.propInfoList.size() + 1) * 2));
+        Optional<PropInfo> propInfoHolder = propInfoQueueMap.get(propName);
         PropInfo propInfo = null;
-
-        if (propInfoQueueMap == null) {
-            propInfoQueueMap = new ObjectPool<>((entityInfo.propInfoList.size() + 1) * 2);
-            entityPropInfoQueueMap.put(entityClass, propInfoQueueMap);
-        } else {
-            propInfoHolder = propInfoQueueMap.get(propName);
-        }
 
         if (propInfoHolder == null) {
             final String[] strs = Splitter.with('.').splitToArray(propName);
@@ -8568,7 +8873,7 @@ public final class JdbcUtil {
      * JdbcUtil.isNullOrDefault(null);    // true
      * JdbcUtil.isNullOrDefault(0);       // true
      * JdbcUtil.isNullOrDefault(false);   // true
-     * JdbcUtil.isNullOrDefault("");      // {@code false} (empty string is not default)
+     * JdbcUtil.isNullOrDefault("");      // false (empty string is not default)
      * JdbcUtil.isNullOrDefault(1);       // false
      * }</pre>
      *
@@ -8576,7 +8881,7 @@ public final class JdbcUtil {
      * @return {@code true} if the value is {@code null} or the default value for its type, {@code false} otherwise
      */
     public static boolean isNullOrDefault(final Object value) {
-        return (value == null) || (value instanceof Number num && num.longValue() == 0) || (value instanceof Boolean b && !b)
+        return (value == null) || (value instanceof Number num && num.doubleValue() == 0) || (value instanceof Boolean b && !b)
                 || N.equals(value, N.defaultValueOf(value.getClass()));
     }
 
@@ -8801,7 +9106,7 @@ public final class JdbcUtil {
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
                 sqlLogger.debug(Strings.concat("[SQL]: ", sql));
             } else {
-                sqlLogger.debug(Strings.concat("[SQL]: " + Strings.abbreviate(sql, sqlLogConfig.maxSqlLogLength)));
+                sqlLogger.debug(Strings.concat("[SQL]: ", Strings.abbreviate(sql, sqlLogConfig.maxSqlLogLength)));
             }
         }
     }
@@ -9341,12 +9646,8 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * List<User> users = JdbcUtil.callInTransaction(dataSource, conn -> {
-     *     try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM users")) {
-     *         ResultSet rs = JdbcUtil.executeQuery(ps);
-     *         // Process results
-     *         return users;
-     *     }
+     * Dataset result = JdbcUtil.callInTransaction(dataSource, conn -> {
+     *     return JdbcUtil.executeQuery(conn, "SELECT * FROM users WHERE active = ?", true);
      * });
      * }</pre>
      *
@@ -9420,11 +9721,9 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runInTransaction(dataSource, conn -> {
-     *     try (PreparedStatement ps = conn.prepareStatement("UPDATE users SET active = ? WHERE id = ?")) {
-     *         ps.setBoolean(1, false);
-     *         ps.setLong(2, userId);
-     *         JdbcUtil.executeUpdate(ps);
-     *     }
+     *     JdbcUtil.executeUpdate(conn,
+     *         "UPDATE users SET active = ? WHERE id = ?",
+     *         false, userId);
      * });
      * }</pre>
      *
@@ -10529,6 +10828,10 @@ public final class JdbcUtil {
                 // ignore;
                 daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
             }
+        }
+
+        if (paramKey == null) {
+            return null;
         }
 
         return Strings.concat(fullClassMethodName, CACHE_KEY_SPLITOR, tableName, CACHE_KEY_SPLITOR, paramKey);

@@ -19,7 +19,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
@@ -84,11 +84,11 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * @param id the primitive long ID of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+    default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id, joinEntitiesToLoad));
     }
 
@@ -112,11 +112,11 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
+    default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id, includeAllJoinEntities));
     }
 
@@ -135,12 +135,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
     }
 
@@ -159,12 +159,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
     }
 
@@ -184,12 +184,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
     }
 
@@ -209,11 +209,11 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * @param id the primitive long ID of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+    default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id);
 
         if (result != null) {
@@ -240,11 +240,11 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicatedResultException, SQLException {
+    default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id);
 
         if (result != null && includeAllJoinEntities) {
@@ -272,11 +272,11 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicatedResultException, SQLException {
+    default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null) {
@@ -304,12 +304,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
@@ -340,12 +340,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends Crud
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
-     * @throws DuplicatedResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {

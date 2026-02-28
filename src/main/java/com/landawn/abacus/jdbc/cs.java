@@ -34,7 +34,7 @@ package com.landawn.abacus.jdbc;
  * <pre>{@code
  * // Using cs constants for parameter names
  * String sql = "SELECT * FROM users WHERE " + cs.columnName + " = ?";
- * query.setParameter(cs.entity, userEntity);
+ * query.setObject(cs.entity, userEntity);
  * }</pre>
  * 
  */
@@ -87,7 +87,7 @@ public final class cs { // NOSONAR
      */
     public static final String columnGetter = "columnGetter";
     /**
-     * Parameter name for zero-based column index in result sets.
+     * Parameter name for one-based column index in result sets.
      */
     public static final String columnIndex = "columnIndex";
     /**
@@ -355,15 +355,15 @@ public final class cs { // NOSONAR
      */
     public static final String id = "id";
     /**
-     * Parameter name for property values used in insert operations.
+     * Parameter name for collections of property names to include in insert operations.
      */
     public static final String propNamesToInsert = "propNamesToInsert";
     /**
-     * Parameter name for property values used in save operations.
+     * Parameter name for collections of property names to include in save operations.
      */
     public static final String propNamesToSave = "propNamesToSave";
     /**
-     * Parameter name for property values used in update operations.
+     * Parameter name for collections of property names to include in update operations.
      */
     public static final String propNamesToUpdate = "propNamesToUpdate";
     /**

@@ -187,29 +187,27 @@ public final class DBLock {
     @SuppressWarnings("deprecation")
     DBLock(final DataSource ds, final String tableName) {
         this.ds = ds;
-        // ...
-        removeExpiredLockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)"; //NOSONAR
-        // ...
-        lockSQL = "INSERT INTO " + tableName + " (host_name, target, code, status, expiry_time, update_time, create_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        // ..
-        unlockSQL = "DELETE FROM " + tableName + " WHERE target = ? AND code = ?"; //NOSONAR
-        // ..
-        refreshSQL = "UPDATE " + tableName + " SET update_time = ?, expiry_time = ? WHERE target = ? AND code = ?";
-
-        final String schema = "CREATE TABLE " + tableName
-                + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
-                + "expiry_time TIMESTAMP NOT NULL, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (target))";
-
         final Connection conn = JdbcUtil.getConnection(ds);
 
         try {
+            final String sqlTableName = JdbcUtil.toQualifiedSqlIdentifier(conn, tableName, "tableName");
+
+            removeExpiredLockSQL = "DELETE FROM " + sqlTableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)"; //NOSONAR
+            lockSQL = "INSERT INTO " + sqlTableName + " (host_name, target, code, status, expiry_time, update_time, create_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            unlockSQL = "DELETE FROM " + sqlTableName + " WHERE target = ? AND code = ?"; //NOSONAR
+            refreshSQL = "UPDATE " + sqlTableName + " SET update_time = ?, expiry_time = ? WHERE target = ? AND code = ?";
+
+            final String schema = "CREATE TABLE " + sqlTableName
+                    + "(host_name VARCHAR(64), target VARCHAR(255) NOT NULL, code VARCHAR(64), status VARCHAR(16) NOT NULL, "
+                    + "expiry_time TIMESTAMP NOT NULL, update_time TIMESTAMP NOT NULL, create_time TIMESTAMP NOT NULL, UNIQUE (target))";
+
             JdbcUtil.createTableIfNotExists(conn, tableName, schema);
 
             if (!JdbcUtil.doesTableExist(conn, tableName)) {
                 throw new IllegalStateException("Lock table does not exist after creation attempt: " + tableName);
             }
 
-            final String removeDeadLockSQL = "DELETE FROM " + tableName + " WHERE host_name = ? and create_time < ?";
+            final String removeDeadLockSQL = "DELETE FROM " + sqlTableName + " WHERE host_name = ? and create_time < ?";
 
             JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(), Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
         } catch (final SQLException e) {
@@ -481,6 +479,8 @@ public final class DBLock {
 
             if (retryInterval > 0) {
                 N.sleep(retryInterval);
+            } else {
+                N.sleep(1); // Minimum 1ms delay to prevent tight spin loop
             }
 
             now = DateUtil.currentTimestamp();

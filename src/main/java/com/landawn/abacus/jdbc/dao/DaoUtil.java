@@ -560,23 +560,23 @@ final class DaoUtil {
     }
 
     /**
-     * A cache of query preparation functions for DAO interfaces.
+     * Cache of resolved SQLBuilder subclasses for DAO interfaces.
      * <p>
-     * Maps each DAO class to a tuple containing two functions: one for creating PreparedQuery instances
-     * and one for creating NamedQuery instances. This cache avoids the overhead of reflection-based
-     * type analysis on every query preparation.
+     * Query builder type depends only on interface generic metadata, so it can be safely cached per DAO class.
+     * Prepared/Named query lambdas themselves are created per DAO instance to avoid accidentally capturing
+     * another DAO's DataSource/entity metadata.
      * </p>
      */
     @SuppressWarnings("rawtypes")
-    static final Map<Class<? extends Dao>, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPrepareQueryFuncPool = new ConcurrentHashMap<>();
+    static final Map<Class<? extends Dao>, Class<? extends SQLBuilder>> daoSqlBuilderClassPool = new ConcurrentHashMap<>();
 
     /**
-     * Retrieves or creates the query preparation functions for a given DAO instance.
+     * Creates query preparation functions for a given DAO instance.
      * <p>
      * This method returns a tuple containing two functions: one for creating PreparedQuery instances
      * and one for creating NamedQuery instances. The functions are determined based on the SQLBuilder
-     * type parameter of the DAO interface (PSC, PAC, PLC, or PSB). The results are cached to avoid
-     * repeated reflection-based type analysis.
+     * type parameter of the DAO interface (PSC, PAC, PLC, or PSB). SQLBuilder type lookup is cached
+     * by DAO class, while returned functions are instance-bound to avoid cross-DAO state leakage.
      * </p>
      * <p>
      * The returned functions can be used to build and prepare SQL queries based on select property
@@ -610,120 +610,102 @@ final class DaoUtil {
     static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
             final Dao dao) {
         final Class<? extends Dao> daoInterface = dao.getClass();
+        final Class<? extends SQLBuilder> sbc = daoSqlBuilderClassPool.computeIfAbsent(daoInterface, DaoUtil::getDaoSQLBuilderClass);
 
-        Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> tp = daoPrepareQueryFuncPool
-                .get(daoInterface);
+        @SuppressWarnings("deprecation")
+        final Class<?> targetEntityClass = dao.targetEntityClass();
 
-        if (tp == null) {
-            final Class<? extends SQLBuilder> sbc = getDaoSQLBuilderClass(daoInterface);
+        final Throwables.BiFunction<javax.sql.DataSource, SP, PreparedQuery, SQLException> prepareQueryFunc = (dataSource, sp) -> {
+            final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.query);
 
-            @SuppressWarnings("deprecation")
-            final Class<?> targetEntityClass = dao.targetEntityClass();
+            if (N.notEmpty(sp.parameters)) {
+                boolean noException = false;
 
-            final Throwables.BiFunction<javax.sql.DataSource, SP, PreparedQuery, SQLException> prepareQueryFunc = (dataSource, sp) -> {
-                final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.query);
+                try {
+                    query.setParameters(sp.parameters);
 
-                if (N.notEmpty(sp.parameters)) {
-                    boolean noException = false;
-
-                    try {
-                        query.setParameters(sp.parameters);
-
-                        noException = true;
-                    } finally {
-                        if (!noException) {
-                            query.close();
-                        }
+                    noException = true;
+                } finally {
+                    if (!noException) {
+                        query.close();
                     }
                 }
-
-                return query;
-            };
-
-            final Throwables.BiFunction<javax.sql.DataSource, SP, NamedQuery, SQLException> prepareNamedQueryFunc = (dataSource, sp) -> {
-                final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.query);
-
-                if (N.notEmpty(sp.parameters)) {
-                    boolean noException = false;
-
-                    try {
-                        query.setParameters(sp.parameters);
-
-                        noException = true;
-                    } finally {
-                        if (!noException) {
-                            query.close();
-                        }
-                    }
-                }
-
-                return query;
-            };
-
-            if (PSC.class.isAssignableFrom(sbc)) {
-                tp = Tuple.of((selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? PSC.selectFrom(targetEntityClass) : PSC.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareQueryFunc.apply(dao.dataSource(), sp);
-                }, (selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? NSC.selectFrom(targetEntityClass) : NSC.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-                });
-            } else if (PAC.class.isAssignableFrom(sbc)) {
-                tp = Tuple.of((selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? PAC.selectFrom(targetEntityClass) : PAC.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareQueryFunc.apply(dao.dataSource(), sp);
-                }, (selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? NAC.selectFrom(targetEntityClass) : NAC.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-                });
-            } else if (PLC.class.isAssignableFrom(sbc)) {
-                tp = Tuple.of((selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? PLC.selectFrom(targetEntityClass) : PLC.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareQueryFunc.apply(dao.dataSource(), sp);
-                }, (selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? NLC.selectFrom(targetEntityClass) : NLC.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-                });
-            } else if (PSB.class.isAssignableFrom(sbc)) {
-                tp = Tuple.of((selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? PSB.selectFrom(targetEntityClass) : PSB.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareQueryFunc.apply(dao.dataSource(), sp);
-                }, (selectPropNames, cond) -> {
-                    final SP sp = (selectPropNames == null ? NSB.selectFrom(targetEntityClass) : NSB.select(selectPropNames).from(targetEntityClass))
-                            .append(cond)
-                            .build();
-
-                    return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
-                });
-            } else {
-                throw new IllegalArgumentException("SQLBuilder type parameter must be SQLBuilder.PSC/PAC/PLC/PSB, but was: " + sbc);
             }
 
-            daoPrepareQueryFuncPool.put(daoInterface, tp);
-        }
+            return query;
+        };
 
-        return tp;
+        final Throwables.BiFunction<javax.sql.DataSource, SP, NamedQuery, SQLException> prepareNamedQueryFunc = (dataSource, sp) -> {
+            final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.query);
+
+            if (N.notEmpty(sp.parameters)) {
+                boolean noException = false;
+
+                try {
+                    query.setParameters(sp.parameters);
+
+                    noException = true;
+                } finally {
+                    if (!noException) {
+                        query.close();
+                    }
+                }
+            }
+
+            return query;
+        };
+
+        if (PSC.class.isAssignableFrom(sbc)) {
+            return Tuple.of((selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? PSC.selectFrom(targetEntityClass) : PSC.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareQueryFunc.apply(dao.dataSource(), sp);
+            }, (selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? NSC.selectFrom(targetEntityClass) : NSC.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
+            });
+        } else if (PAC.class.isAssignableFrom(sbc)) {
+            return Tuple.of((selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? PAC.selectFrom(targetEntityClass) : PAC.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareQueryFunc.apply(dao.dataSource(), sp);
+            }, (selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? NAC.selectFrom(targetEntityClass) : NAC.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
+            });
+        } else if (PLC.class.isAssignableFrom(sbc)) {
+            return Tuple.of((selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? PLC.selectFrom(targetEntityClass) : PLC.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareQueryFunc.apply(dao.dataSource(), sp);
+            }, (selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? NLC.selectFrom(targetEntityClass) : NLC.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
+            });
+        } else if (PSB.class.isAssignableFrom(sbc)) {
+            return Tuple.of((selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? PSB.selectFrom(targetEntityClass) : PSB.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareQueryFunc.apply(dao.dataSource(), sp);
+            }, (selectPropNames, cond) -> {
+                final SP sp = (selectPropNames == null ? NSB.selectFrom(targetEntityClass) : NSB.select(selectPropNames).from(targetEntityClass)).append(cond)
+                        .build();
+
+                return prepareNamedQueryFunc.apply(dao.dataSource(), sp);
+            });
+        } else {
+            throw new IllegalArgumentException("SQLBuilder type parameter must be SQLBuilder.PSC/PAC/PLC/PSB, but was: " + sbc);
+        }
     }
 
     private static Class<? extends SQLBuilder> getDaoSQLBuilderClass(final Class<?> daoInterface) {

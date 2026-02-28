@@ -24,7 +24,7 @@ import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -172,7 +172,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             throws SQLException {
         final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
 
-        if (result.isPresent()) {
+        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
@@ -223,11 +223,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
-     * @throws DuplicatedResultException if more than one record is found by the specified condition
+     * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent()) {
@@ -252,14 +252,14 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
-     * @throws DuplicatedResultException if more than one record is found by the specified condition
+     * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
-        if (result.isPresent()) {
+        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
@@ -284,11 +284,11 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
-     * @throws DuplicatedResultException if more than one record is found by the specified condition
+     * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {

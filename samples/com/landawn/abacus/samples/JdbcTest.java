@@ -230,7 +230,7 @@ public class JdbcTest {
         final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
                 .setInt(1, 10)
                 .setInt(2, 300)
-                .query2ResultSets(BiResultExtractor.TO_DATA_SET, BiResultExtractor.TO_DATA_SET);
+                .query2ResultSets(BiResultExtractor.TO_DATASET, BiResultExtractor.TO_DATASET);
 
         result._1.println();
         // result._2.println();

@@ -88,7 +88,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private volatile boolean _isForUpdateOnly; //NOSONAR
 
-    private volatile boolean _isMarkedByCommitOrRollbckPreviously = false; //NOSONAR
+    private volatile boolean _isMarkedByCommitOrRollbackPreviously = false; //NOSONAR
 
     SQLTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
@@ -304,7 +304,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
-        _isMarkedByCommitOrRollbckPreviously = true;
+        _isMarkedByCommitOrRollbackPreviously = true;
 
         if (refCount > 0) {
             return;
@@ -390,7 +390,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();
-        _isMarkedByCommitOrRollbckPreviously = true;
+        _isMarkedByCommitOrRollbackPreviously = true;
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
@@ -434,8 +434,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     @Override
     public void rollbackIfNotCommitted() throws UncheckedSQLException {
-        if (_isMarkedByCommitOrRollbckPreviously) { // Do nothing. It happened in finally block.
-            _isMarkedByCommitOrRollbckPreviously = false;
+        if (_isMarkedByCommitOrRollbackPreviously) { // Do nothing. It happened in finally block.
+            _isMarkedByCommitOrRollbackPreviously = false;
             return;
         }
 
@@ -539,7 +539,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
         }
 
-        _isMarkedByCommitOrRollbckPreviously = false;
+        _isMarkedByCommitOrRollbackPreviously = false;
 
         if (_conn != null) {
             try {
@@ -693,11 +693,23 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
+            Throwable throwable = null;
+
             try {
                 cmd.run();
+            } catch (final Throwable e) { //NOSONAR
+                throwable = e;
+                throw e;
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.runOutsideTransaction'."); //NOSONAR
+                    final IllegalStateException ex = new IllegalStateException(
+                            "Another transaction is opened but not closed in 'Transaction.runOutsideTransaction'."); //NOSONAR
+
+                    if (throwable != null) {
+                        throwable.addSuppressed(ex);
+                    } else {
+                        throw ex;
+                    }
                 }
             }
         }
@@ -744,11 +756,23 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         synchronized (_id) { //NOSONAR
             threadTransactionMap.remove(_id);
 
+            Throwable throwable = null;
+
             try {
                 return cmd.call();
+            } catch (final Throwable e) { //NOSONAR
+                throwable = e;
+                throw e;
             } finally {
                 if (threadTransactionMap.put(_id, this) != null) {
-                    throw new IllegalStateException("Another transaction is opened but not closed in 'Transaction.callOutsideTransaction'."); //NOSONAR
+                    final IllegalStateException ex = new IllegalStateException(
+                            "Another transaction is opened but not closed in 'Transaction.callOutsideTransaction'."); //NOSONAR
+
+                    if (throwable != null) {
+                        throwable.addSuppressed(ex);
+                    } else {
+                        throw ex;
+                    }
                 }
             }
         }

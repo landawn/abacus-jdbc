@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -827,6 +828,34 @@ public class JdbcUtilTest extends TestBase {
 
         boolean dropped = JdbcUtil.dropTableIfExists(mockConnection, "users");
         assertTrue(dropped);
+    }
+
+    @Test
+    public void testDropTableIfExists_QuotesIdentifier() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(mockDatabaseMetaData.getTables(null, null, "order", null)).thenReturn(tableRs);
+        when(tableRs.next()).thenReturn(true);
+        when(mockPreparedStatement.execute()).thenReturn(false);
+
+        boolean dropped = JdbcUtil.dropTableIfExists(mockConnection, "order");
+        assertTrue(dropped);
+        verify(mockConnection).prepareStatement("DROP TABLE \"order\"");
+    }
+
+    @Test
+    public void testToQualifiedSqlIdentifier_QuotesAndEscapes() throws SQLException {
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+
+        assertEquals("\"schema\".\"my\"\"table\"", JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "schema.my\"table", "tableName"));
+    }
+
+    @Test
+    public void testToQualifiedSqlIdentifier_RejectsUnsafeWhenNoQuoteSupport() throws SQLException {
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn(" ");
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "users;drop", "tableName"));
     }
 
     //    @Test

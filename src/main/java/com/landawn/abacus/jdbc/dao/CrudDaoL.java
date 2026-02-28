@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.util.u.Nullable;
@@ -401,14 +401,14 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Queries for a unique single result of the specified type.
      * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class);
-     * // Throws DuplicatedResultException if multiple records found
+     * // Throws DuplicateResultException if multiple records found
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
@@ -416,18 +416,18 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         return queryForUniqueResult(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
      * Queries for a unique non-null result of the specified type.
      * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      * Returns empty Optional if no record found or value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -441,18 +441,18 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the unique non-null value if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -465,12 +465,12 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicatedResultException, SQLException {
+            throws DuplicateResultException, SQLException {
         return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
     }
 
@@ -487,7 +487,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param id the primitive long ID of the entity to retrieve
      * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id) throws SQLException {
@@ -509,7 +509,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
@@ -531,7 +531,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param id the primitive long ID of the entity to retrieve
      * @return the entity if found, otherwise null
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default T gett(final long id) throws SQLException {
@@ -556,7 +556,7 @@ public interface CrudDaoL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, T
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @return the entity if found, otherwise null
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {

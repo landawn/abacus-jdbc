@@ -1519,10 +1519,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final String sql, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final String sql, final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, sql, parameters));
     //    }
     //
@@ -1535,11 +1535,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final String sql, final StatementSetter statementSetter, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, sql, statementSetter, parameters));
     //    }
     //
@@ -1552,11 +1552,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, sql, jdbcSettings, parameters));
     //    }
     //
@@ -1570,11 +1570,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, sql, statementSetter, jdbcSettings, parameters));
     //    }
     //
@@ -1587,11 +1587,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final Connection conn, final String sql, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, conn, sql, parameters));
     //    }
     //
@@ -1605,11 +1605,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final Connection conn, final String sql, final StatementSetter statementSetter,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, conn, sql, statementSetter, parameters));
     //    }
     //
@@ -1623,11 +1623,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, conn, sql, jdbcSettings, parameters));
     //    }
     //
@@ -1642,11 +1642,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Class<? extends T> targetClass, final Connection conn, final String sql, final StatementSetter statementSetter,
-    //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(targetClass, conn, sql, statementSetter, jdbcSettings, parameters));
     //    }
     //
@@ -1658,10 +1658,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(sql, rowMapper, parameters));
     //    }
     //
@@ -1674,10 +1674,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return Optional.ofNullable(gett(sql, statementSetter, rowMapper, parameters));
     //    }
     //
@@ -1690,10 +1690,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    public final <T> Optional<T> get(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return Optional.ofNullable(gett(sql, rowMapper, jdbcSettings, parameters));
     //    }
     //
@@ -1708,11 +1708,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
-    //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(sql, statementSetter, rowMapper, jdbcSettings, parameters));
     //    }
     //
@@ -1726,11 +1726,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return Optional.ofNullable(gett(conn, sql, rowMapper, parameters));
     //    }
     //
@@ -1744,7 +1744,7 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
@@ -1762,11 +1762,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, JdbcSettings jdbcSettings,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(conn, sql, rowMapper, jdbcSettings, parameters));
     //    }
     //
@@ -1782,11 +1782,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> Optional<T> get(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
-    //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        return Optional.ofNullable(gett(conn, sql, statementSetter, rowMapper, jdbcSettings, parameters));
     //    }
     //
@@ -1798,10 +1798,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final Class<? extends T> targetClass, final String sql, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> T gett(final Class<? extends T> targetClass, final String sql, final Object... parameters) throws DuplicateResultException {
     //        return gett(targetClass, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
@@ -1814,11 +1814,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final Class<? extends T> targetClass, final String sql, final StatementSetter statementSetter, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(targetClass, sql, statementSetter, null, parameters);
     //    }
     //
@@ -1831,11 +1831,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final Class<? extends T> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
@@ -1849,11 +1849,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final Class<? extends T> targetClass, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return gett(targetClass, null, sql, statementSetter, jdbcSettings, parameters);
     //    }
     //
@@ -1866,10 +1866,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final Class<? extends T> targetClass, final Connection conn, final String sql, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> T gett(final Class<? extends T> targetClass, final Connection conn, final String sql, final Object... parameters) throws DuplicateResultException {
     //        return gett(targetClass, conn, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
@@ -1883,11 +1883,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final Class<? extends T> targetClass, final Connection conn, final String sql, final StatementSetter statementSetter,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return gett(targetClass, conn, sql, statementSetter, null, parameters);
     //    }
     //
@@ -1901,11 +1901,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final Class<? extends T> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(targetClass, conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
@@ -1920,12 +1920,12 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
     //    public final <T> T gett(final Class<? extends T> targetClass, final Connection conn, final String sql, final StatementSetter statementSetter,
-    //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        N.checkArgNotNull(targetClass, "targetClass");
     //
     //        final Jdbc.RowMapper<? extends T> rowMapper = toRowMapper(targetClass);
@@ -1960,10 +1960,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <T> T gett(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) throws DuplicatedResultException {
+    //    public final <T> T gett(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters) throws DuplicateResultException {
     //        return gett(sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -1976,11 +1976,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(sql, statementSetter, rowMapper, null, parameters);
     //    }
     //
@@ -1993,11 +1993,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
     //
@@ -2011,11 +2011,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper, final JdbcSettings jdbcSettings,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return gett(null, sql, statementSetter, rowMapper, jdbcSettings, parameters);
     //    }
     //
@@ -2028,11 +2028,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <T> T gett(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(conn, sql, StatementSetter.DEFAULT, rowMapper, parameters);
     //    }
     //
@@ -2046,10 +2046,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    public final <T> T gett(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return gett(conn, sql, statementSetter, rowMapper, null, parameters);
     //    }
     //
@@ -2063,10 +2063,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    public final <T> T gett(final Connection conn, final String sql, final Jdbc.RowMapper<? extends T> rowMapper, JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return gett(conn, sql, StatementSetter.DEFAULT, rowMapper, jdbcSettings, parameters);
     //    }
     //
@@ -2081,12 +2081,12 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
     //    public final <T> T gett(final Connection conn, final String sql, final StatementSetter statementSetter, final Jdbc.RowMapper<? extends T> rowMapper,
-    //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        N.checkArgNotNull(rowMapper, "rowMapper");
     //
     //        final Jdbc.ResultExtractor<T> resultExtractor = rs -> {
@@ -2096,7 +2096,7 @@ final class SQLExecutor {
     //                result = Objects.requireNonNull(rowMapper.apply(rs));
     //
     //                if (rs.next()) {
-    //                    throw new DuplicatedResultException("More than one records found by sql: " + sql);
+    //                    throw new DuplicateResultException("More than one records found by sql: " + sql);
     //                }
     //            }
     //
@@ -3051,11 +3051,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
@@ -3069,11 +3069,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, sql, statementSetter, null, parameters);
     //    }
     //
@@ -3087,11 +3087,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
@@ -3106,11 +3106,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
-    //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, null, sql, statementSetter, jdbcSettings, parameters);
     //    }
     //
@@ -3124,11 +3124,11 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql, final Object... parameters)
-    //            throws DuplicatedResultException {
+    //            throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, conn, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
@@ -3143,10 +3143,10 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql,
-    //            final StatementSetter statementSetter, final Object... parameters) throws DuplicatedResultException {
+    //            final StatementSetter statementSetter, final Object... parameters) throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, conn, sql, statementSetter, null, parameters);
     //    }
     //
@@ -3161,16 +3161,16 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if two or more records are found.
+    //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
-    //            final Object... parameters) throws DuplicatedResultException {
+    //            final Object... parameters) throws DuplicateResultException {
     //        return queryForUniqueResult(targetClass, conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
     //    /**
     //     * Returns a {@code Nullable} describing the value in the first row/column if it exists, otherwise return an empty {@code Nullable}.
-    //     * And throws {@code DuplicatedResultException} if more than one record found.
+    //     * And throws {@code DuplicateResultException} if more than one record found.
     //     * <br />
     //     *
     //     * Special note for type conversion for {@code boolean} or {@code Boolean} type: {@code true} is returned if the
@@ -3189,12 +3189,12 @@ final class SQLExecutor {
     //     * @param parameters it can be {@code Object[]/List} for (named) parameterized query, or {@code Map<String, Object>/Entity} for named parameterized query.
     //     * DO NOT use primitive array {@code boolean[]/char[]/byte[]/short[]/int[]/long[]/float[]/double[]} for passing multiple parameters.
     //     * @return
-    //     * @throws DuplicatedResultException if more than one record found.
+    //     * @throws DuplicateResultException if more than one record found.
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
     //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql,
-    //            final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicatedResultException {
+    //            final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        return query(conn, sql, statementSetter, createUniqueResultExtractor(targetClass), jdbcSettings, parameters);
     //    }
     //
@@ -3220,7 +3220,7 @@ final class SQLExecutor {
     //                    final Nullable<V> ret = Nullable.of(N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass));
     //
     //                    if (ret.isPresent() && rs.next()) {
-    //                        throw new DuplicatedResultException(
+    //                        throw new DuplicateResultException(
     //                                "At least two results found: " + Strings.concat(ret.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetClass)));
     //                    }
     //
@@ -3283,7 +3283,7 @@ final class SQLExecutor {
     //     */
     //    @SafeVarargs
     //    public final Dataset query(final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
-    //        return query(sql, statementSetter, Jdbc.ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
+    //        return query(sql, statementSetter, Jdbc.ResultExtractor.TO_DATASET, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -3417,7 +3417,7 @@ final class SQLExecutor {
     //    @SafeVarargs
     //    public final Dataset query(final Connection conn, final String sql, final StatementSetter statementSetter, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
-    //        return query(conn, sql, statementSetter, Jdbc.ResultExtractor.TO_DATA_SET, jdbcSettings, parameters);
+    //        return query(conn, sql, statementSetter, Jdbc.ResultExtractor.TO_DATASET, jdbcSettings, parameters);
     //    }
     //
     //    /**

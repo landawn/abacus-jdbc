@@ -211,7 +211,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testResultExtractorToDataset() throws SQLException {
         when(mockResultSet.next()).thenReturn(false);
-        Dataset result = Jdbc.ResultExtractor.TO_DATA_SET.apply(mockResultSet);
+        Dataset result = Jdbc.ResultExtractor.TO_DATASET.apply(mockResultSet);
         assertNotNull(result);
     }
 
@@ -359,7 +359,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiResultExtractorToDataset() throws SQLException {
         when(mockResultSet.next()).thenReturn(false);
-        Dataset result = Jdbc.BiResultExtractor.TO_DATA_SET.apply(mockResultSet, Arrays.asList("col1"));
+        Dataset result = Jdbc.BiResultExtractor.TO_DATASET.apply(mockResultSet, Arrays.asList("col1"));
         assertNotNull(result);
     }
 
@@ -748,7 +748,7 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
-    public void testBiRowMapperToWithIgnoreNonMatchedColumns() throws SQLException {
+    public void testBiRowMapperToWithIgnoreNocountMatchBetweenedColumns() throws SQLException {
         when(mockResultSet.getLong(1)).thenReturn(1L);
         when(mockResultSet.getString(2)).thenReturn("John");
         when(mockResultSet.getInt(3)).thenReturn(25);
@@ -1653,12 +1653,12 @@ public class JdbcTest extends TestBase {
     @Test
     public void testNullHandling() throws SQLException {
         // Test null ResultSet in ResultExtractor
-        Dataset dataset = Jdbc.ResultExtractor.TO_DATA_SET.apply(null);
+        Dataset dataset = Jdbc.ResultExtractor.TO_DATASET.apply(null);
         assertNotNull(dataset);
         assertTrue(dataset.isEmpty());
 
         // Test null ResultSet in BiResultExtractor
-        Dataset biDataset = Jdbc.BiResultExtractor.TO_DATA_SET.apply(null, Arrays.asList("col1"));
+        Dataset biDataset = Jdbc.BiResultExtractor.TO_DATASET.apply(null, Arrays.asList("col1"));
         assertNotNull(biDataset);
         assertTrue(biDataset.isEmpty());
     }

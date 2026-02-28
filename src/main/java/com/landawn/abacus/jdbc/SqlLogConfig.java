@@ -160,6 +160,7 @@ final class SqlLogConfig {
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
     void set(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
+        this.isEnabled = false;
         this.minExecutionTimeForSqlPerfLog = minExecutionTimeForSqlPerfLog;
         this.maxSqlLogLength = maxSqlLogLength <= 0 ? JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH : maxSqlLogLength;
     }

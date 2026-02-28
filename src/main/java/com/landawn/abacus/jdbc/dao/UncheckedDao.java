@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.Jdbc;
@@ -434,11 +434,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      *
      * @param cond the condition to match
      * @return an Optional containing the single matching record, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    Optional<T> findOnlyOne(final Condition cond) throws DuplicatedResultException, UncheckedSQLException;
+    Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Finds exactly one record matching the condition and maps it using the row mapper.
@@ -455,11 +455,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Finds exactly one record matching the condition and maps it using the bi-row mapper.
@@ -476,11 +476,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicatedResultException, UncheckedSQLException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Finds exactly one record matching the condition, selecting only the specified properties.
@@ -496,11 +496,11 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return an Optional containing the single matching record, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicatedResultException, UncheckedSQLException;
+    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Finds exactly one record with selected properties and maps it using the row mapper.
@@ -519,12 +519,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Finds exactly one record with selected properties and maps it using the bi-row mapper.
@@ -543,12 +543,12 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalBoolean} describing the value in the first row/column if it exists.
@@ -845,7 +845,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
 
     /**
      * Returns a {@code Nullable} describing the value in the first row/column if it exists.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
+     * Throws {@code DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -857,17 +857,17 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
      * @return a Nullable containing the unique result value, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     @Override
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the unique non-null value in the first row/column.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
+     * Throws {@code DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -883,17 +883,17 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
      * @return an Optional containing the unique non-null value, or empty if no match found or value is null
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper.
-     * Throws {@code DuplicatedResultException} if more than one record is found.
+     * Throws {@code DuplicateResultException} if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -909,13 +909,13 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * @param cond the condition to match
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the unique non-null mapped value, or empty if no match found
-     * @throws DuplicatedResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicatedResultException, UncheckedSQLException;
+            throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Executes a query and returns the results as a Dataset containing all matching records.

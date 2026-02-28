@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.query.SQLBuilder;
@@ -416,7 +416,7 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
     /**
      * Queries for a unique single result of the specified type.
      * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      *
      * <p>This method ensures that at most one record matches the query.</p>
      * 
@@ -430,19 +430,19 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return queryForUniqueResult(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
      * Queries for a unique non-null result of the specified type.
      * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      * Returns empty Optional if no record found or value is {@code null}.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -455,19 +455,19 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the unique non-null value if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -483,12 +483,12 @@ public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends Unchecke
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final long id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         return queryForUniqueNonNull(singleSelectPropName, Long.valueOf(id), rowMapper);
     }
 

@@ -22,7 +22,7 @@ import java.util.concurrent.Executor;
 import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
@@ -99,7 +99,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Find user and load their orders
      * Optional<User> user = userDao.findFirst(
-     *     {@code null},  // select all user properties
+     *     null,  // select all user properties
      *     Order.class,  // also load orders
      *     Filters.eq("email", "john@example.com")
      * );
@@ -149,7 +149,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
             throws UncheckedSQLException {
         final Optional<T> result = DaoUtil.getDao(this).findFirst(selectPropNames, cond);
 
-        if (result.isPresent()) {
+        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
@@ -165,8 +165,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Find user and load all related entities
      * Optional<User> user = userDao.findFirst(
-     *     {@code null},  // select all properties
-     *     {@code true},  // load all join entities
+     *     null,  // select all properties
+     *     true,  // load all join entities
      *     Filters.eq("id", 1)
      * );
      * }</pre>
@@ -199,7 +199,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Find unique user by email and load profile
      * Optional<User> user = userDao.findOnlyOne(
-     *     {@code null},
+     *     null,
      *     UserProfile.class,
      *     Filters.eq("email", "unique@example.com")
      * );
@@ -210,12 +210,12 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param joinEntitiesToLoad the class of the join entities to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found for the specified condition
+     * @throws DuplicateResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
         if (result.isPresent()) {
@@ -243,15 +243,15 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * @param joinEntitiesToLoad the collection of join entity classes to load
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found for the specified condition
+     * @throws DuplicateResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
-        if (result.isPresent()) {
+        if (result.isPresent() && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                 loadJoinEntities(result.get(), joinEntityClass);
             }
@@ -268,7 +268,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(
      *     Arrays.asList("id", "name", "email"),
-     *     {@code true},  // load all join entities
+     *     true,  // load all join entities
      *     Filters.eq("accountNumber", "ACC-12345")
      * );
      * }</pre>
@@ -279,12 +279,12 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      *                                  if {@code false}, no join entities are loaded
      * @param cond the condition to match
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
-     * @throws DuplicatedResultException if more than one record is found for the specified condition
+     * @throws DuplicateResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final boolean includeAllJoinEntities, final Condition cond)
-            throws DuplicatedResultException, UncheckedSQLException {
+            throws DuplicateResultException, UncheckedSQLException {
         final Optional<T> result = DaoUtil.getDao(this).findOnlyOne(selectPropNames, cond);
 
         if (includeAllJoinEntities && result.isPresent()) {
@@ -302,7 +302,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Get all active users with their orders loaded
      * List<User> users = userDao.list(
-     *     {@code null},  // select all user properties
+     *     null,  // select all user properties
      *     Order.class,  // load orders for each user
      *     Filters.eq("status", "ACTIVE")
      * );
@@ -383,8 +383,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * <pre>{@code
      * // Get all premium users with all relationships loaded
      * List<User> users = userDao.list(
-     *     {@code null},
-     *     {@code true},  // load all join entities
+     *     null,
+     *     true,  // load all join entities
      *     Filters.eq("accountType", "PREMIUM")
      * );
      * }</pre>
@@ -702,7 +702,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * userDao.loadJoinEntities(
      *     user,
      *     Arrays.asList("orders", "reviews", "wishlist"),
-     *     {@code true}  // load in parallel
+     *     true  // load in parallel
      * );
      * }</pre>
      *
@@ -796,7 +796,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * userDao.loadJoinEntities(
      *     users,
      *     Arrays.asList("orders", "reviews", "addresses"),
-     *     {@code true}  // load in parallel
+     *     true  // load in parallel
      * );
      * }</pre>
      *
@@ -1258,7 +1258,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * userDao.loadJoinEntitiesIfNull(
      *     user,
      *     Arrays.asList("orders", "reviews", "wishlist"),
-     *     {@code true}  // parallel loading
+     *     true  // parallel loading
      * );
      * }</pre>
      *
@@ -1839,7 +1839,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * int deleted = userDao.deleteJoinEntities(
      *     user,
      *     Arrays.asList("orders", "reviews", "notifications"),
-     *     {@code true}  // parallel deletion
+     *     true  // parallel deletion
      * );
      * }</pre>
      *
@@ -1916,7 +1916,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends 
      * int deleted = userDao.deleteJoinEntities(
      *     users,
      *     Arrays.asList("orders", "transactions"),
-     *     {@code true}  // parallel deletion
+     *     true  // parallel deletion
      * );
      * }</pre>
      *

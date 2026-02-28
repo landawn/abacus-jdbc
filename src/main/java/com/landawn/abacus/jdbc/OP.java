@@ -51,16 +51,20 @@ public enum OP {
 
     /**
      * Retrieves exactly one record from the query results.
-     * Throws an exception if zero or more than one record is found.
-     * 
-     * <p>Use this operation when you expect exactly one result and want to fail fast
-     * if this expectation is not met. This is useful for queries by unique identifiers.</p>
-     * 
+     * Returns an empty {@code Optional} if no record is found, and throws
+     * {@code DuplicateResultException} if more than one record is found.
+     *
+     * <p>Use this operation when you expect at most one result and want to fail fast
+     * if a uniqueness constraint is violated. This is useful for queries by unique identifiers
+     * or unique columns where duplicates would indicate a data integrity issue.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE id = ?", op = OP.findOnlyOne)
-     * User getUserById(long id);
+     * Optional<User> getUserById(long id);
      * }</pre>
+     *
+     * @see AbstractQuery#findOnlyOne(Class)
      */
     findOnlyOne,
 
@@ -129,35 +133,43 @@ public enum OP {
     stream,
 
     /**
-     * Retrieves a single value from the query result.
-     * Typically used for aggregate queries that return one value.
-     * 
-     * <p>This operation expects the query to return exactly one row with one column.
-     * Common use cases include COUNT, SUM, MAX, MIN queries.</p>
-     * 
+     * Retrieves the first single column value from the query result without checking for uniqueness.
+     * Returns a {@code Nullable} that is empty if no result is found.
+     * Typically used for aggregate queries that return one value (e.g., COUNT, SUM, MAX, MIN).
+     *
+     * <p>Unlike {@link #queryForUnique}, this operation does not throw an exception if the
+     * query returns more than one row -- it simply returns the value from the first row.
+     * The query is expected to return a single column.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT MAX(salary) FROM employees", op = OP.queryForSingle)
      * Double getMaxSalary();
-     * 
+     *
      * @Query(value = "SELECT name FROM users WHERE id = ?", op = OP.queryForSingle)
      * String getUserName(long id);
      * }</pre>
+     *
+     * @see AbstractQuery#queryForSingleResult(Class)
      */
     queryForSingle,
 
     /**
-     * Retrieves a unique single value from the query result.
-     * Similar to queryForSingle but returns {@code null} if no result is found instead of throwing exception.
-     * 
-     * <p>Use this operation when the result might be empty and you want to handle it
-     * gracefully with a {@code null} return value rather than an exception.</p>
-     * 
+     * Retrieves a unique single column value from the query result, ensuring at most one row exists.
+     * Returns a {@code Nullable} that is empty if no result is found, and throws
+     * {@code DuplicateResultException} if more than one row is found.
+     *
+     * <p>Unlike {@link #queryForSingle}, this operation enforces uniqueness by verifying
+     * that the query produces at most one row. Use this when the query targets a unique
+     * column or constraint and duplicates would indicate a data integrity issue.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT email FROM users WHERE username = ?", op = OP.queryForUnique)
      * String findEmailByUsername(String username);
      * }</pre>
+     *
+     * @see AbstractQuery#queryForUniqueResult(Class)
      */
     queryForUnique,
 

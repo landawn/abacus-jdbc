@@ -150,6 +150,24 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
+     * Prepares a SQL query optimized for large result sets. Only SELECT queries are supported in read-only DAO.
+     *
+     * @param query the SQL query string to prepare (must be a SELECT statement)
+     * @return a PreparedQuery object configured for large result sets
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT statement
+     */
+    @NonDBOperation
+    @Override
+    default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException, UnsupportedOperationException {
+        if (!DaoUtil.isSelectQuery(query)) {
+            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+        }
+
+        return JdbcUtil.prepareQueryForLargeResult(dataSource(), query);
+    }
+
+    /**
      * This operation is not supported in read-only DAO.
      * Always throws {@link UnsupportedOperationException}.
      *
@@ -302,7 +320,7 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Parse query once and reuse
-     * ParsedSql parsedSql = NamedQuery.parse("SELECT * FROM users WHERE id = :id");
+     * ParsedSql parsedSql = ParsedSql.parse("SELECT * FROM users WHERE id = :id");
      *
      * // Use the parsed query multiple times
      * try (NamedQuery query = dao.prepareNamedQuery(parsedSql)) {
@@ -330,6 +348,42 @@ public interface ReadOnlyDao<T, SB extends SQLBuilder, TD extends ReadOnlyDao<T,
         }
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
+    }
+
+    /**
+     * Prepares a named parameter SQL query optimized for large result sets. Only SELECT queries are supported in read-only DAO.
+     *
+     * @param namedQuery the SQL query string with named parameters (must be a SELECT statement)
+     * @return a NamedQuery object configured for large result sets
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the specified query is not a SELECT statement
+     */
+    @NonDBOperation
+    @Override
+    default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException, UnsupportedOperationException {
+        if (!DaoUtil.isSelectQuery(namedQuery)) {
+            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+        }
+
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
+    }
+
+    /**
+     * Prepares a parsed named query optimized for large result sets. Only SELECT queries are supported in read-only DAO.
+     *
+     * @param namedQuery the pre-parsed SQL query object (must represent a SELECT statement)
+     * @return a NamedQuery object configured for large result sets
+     * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if the query is not a SELECT statement
+     */
+    @NonDBOperation
+    @Override
+    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
+        if (!DaoUtil.isSelectQuery(namedQuery.sql())) {
+            throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
+        }
+
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
     }
 
     /**

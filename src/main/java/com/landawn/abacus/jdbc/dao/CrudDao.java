@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.exception.DuplicatedResultException;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
@@ -632,14 +632,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a unique single result of the specified type.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      * 
      * <p>This method ensures that at most one record matches the query.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class);
-     * // Throws DuplicatedResultException if multiple records found
+     * // Throws DuplicateResultException if multiple records found
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
@@ -647,24 +647,24 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see Filters
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Queries for a unique non-null result of the specified type.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      * Returns empty Optional if no record found or value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> email = userDao.queryForUniqueNonNull("email", userId, String.class);
      * email.ifPresent(e -> sendEmail(e));
-     * // Throws DuplicatedResultException if multiple records found
+     * // Throws DuplicateResultException if multiple records found
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
@@ -672,17 +672,17 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the unique non-null value if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
-     * Throws DuplicatedResultException if more than one record is found.
+     * Throws DuplicateResultException if more than one record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -696,14 +696,14 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Retrieves an entity by its ID.
@@ -717,10 +717,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param id the entity ID to retrieve
      * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default Optional<T> get(final ID id) throws DuplicatedResultException, SQLException {
+    default Optional<T> get(final ID id) throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id));
     }
 
@@ -738,10 +738,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param selectPropNames the properties to select, excluding properties of joining entities. 
      *                        All properties will be selected if null
      * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
+    default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
         return Optional.ofNullable(gett(id, selectPropNames));
     }
 
@@ -759,10 +759,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param id the entity ID to retrieve
      * @return the entity if found, otherwise null
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    T gett(final ID id) throws DuplicatedResultException, SQLException;
+    T gett(final ID id) throws DuplicateResultException, SQLException;
 
     /**
      * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
@@ -781,10 +781,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param selectPropNames the properties to select, excluding properties of joining entities.
      *                        All properties will be selected if null
      * @return the entity if found, otherwise null
-     * @throws DuplicatedResultException if more than one record found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException;
+    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException;
 
     /**
      * Retrieves multiple entities by their IDs using the default batch size.
@@ -798,10 +798,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      *
      * @param ids the collection of IDs to retrieve
      * @return a list of found entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids) throws DuplicateResultException, SQLException {
         return batchGet(ids, null);
     }
 
@@ -820,10 +820,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of found entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws DuplicateResultException, SQLException {
         return batchGet(ids, null, batchSize);
     }
 
@@ -841,10 +841,10 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param selectPropNames the properties to select, excluding properties of joining entities. 
      *                        All properties will be selected if null
      * @return a list of found entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicatedResultException, SQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
         return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -867,11 +867,11 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of found entities
-     * @throws DuplicatedResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
     List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
-            throws DuplicatedResultException, SQLException;
+            throws DuplicateResultException, SQLException;
 
     /**
      * Checks if an entity with the specified ID exists in the database.
@@ -1157,7 +1157,13 @@ public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID,
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
             final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
-            Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+
+            if (N.isEmpty(idPropNameList)) {
+                Beans.copyInto(entity, dbEntity);
+            } else {
+                Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+            }
+
             update(dbEntity);
             return dbEntity;
         }
