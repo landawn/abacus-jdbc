@@ -8933,8 +8933,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 return new ArrayList<>();
             }
 
-            ids.removeIf(id -> isDefaultIdTester.test(id));
-
             return ids;
         } finally {
             closeAfterExecutionIfAllowed();
@@ -8974,8 +8972,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                 return new ArrayList<>();
             }
-
-            ids.removeIf(id -> isDefaultIdTester.test(id));
 
             return ids;
         } finally {
