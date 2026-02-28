@@ -4288,8 +4288,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     while (iter.hasNext()) {
                         params = iter.next();
 
-                        stmt.clearParameters();
-
                         for (int i = 0; i < parameterCount; i++) {
                             propInfo = propInfos[i];
 
