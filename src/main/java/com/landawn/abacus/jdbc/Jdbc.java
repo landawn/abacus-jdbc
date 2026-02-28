@@ -48,7 +48,6 @@ import java.util.stream.Collector;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
-import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -2777,6 +2776,7 @@ public final class Jdbc {
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @return a new {@code BiRowMapper} that produces a {@code Tuple2}
+         * @throws IllegalArgumentException if either mapper is null
          */
         static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<? extends T> rowMapper1, final BiRowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, cs.rowMapper1);
@@ -2804,6 +2804,7 @@ public final class Jdbc {
          * @param rowMapper2 the second mapper; must not be null
          * @param rowMapper3 the third mapper; must not be null
          * @return a new {@code BiRowMapper} that produces a {@code Tuple3}
+         * @throws IllegalArgumentException if any mapper is null
          */
         static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<? extends A> rowMapper1, final BiRowMapper<? extends B> rowMapper2,
                 final BiRowMapper<? extends C> rowMapper3) {
@@ -2835,6 +2836,7 @@ public final class Jdbc {
          * @param <T> target type
          * @param targetClass the class to map rows to
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -2856,6 +2858,7 @@ public final class Jdbc {
          * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are ignored;
          * if {@code false}, an {@code IllegalArgumentException} is thrown.
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -2886,6 +2889,7 @@ public final class Jdbc {
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -2910,6 +2914,7 @@ public final class Jdbc {
          * @param ignoreUnmatchedColumns if {@code true}, filtered columns without a corresponding property are ignored;
          * if {@code false}, an {@code IllegalArgumentException} is thrown.
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
         @SequentialOnly
         @Stateful
@@ -3221,6 +3226,7 @@ public final class Jdbc {
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null} or not a valid bean class
          */
         @SequentialOnly
         @Stateful
@@ -3242,6 +3248,7 @@ public final class Jdbc {
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
          * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are ignored
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null} or not a valid bean class
          */
         @SequentialOnly
         @Stateful
@@ -3774,6 +3781,7 @@ public final class Jdbc {
          *
          * @param entityClass the class used to infer the data type for each column based on matching property names
          * @return a stateful {@code BiRowMapper} for high-performance, type-aware, single-threaded row processing
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -3864,8 +3872,9 @@ public final class Jdbc {
          *     .to(User.class);
          * }</pre>
          *
-         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns; must not be null
          * @return a new {@code BiRowMapperBuilder}
+         * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
          */
         static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new BiRowMapperBuilder(defaultColumnGetter);
@@ -5129,8 +5138,9 @@ public final class Jdbc {
          * Creates a {@link RowExtractorBuilder} with a specified default {@code ColumnGetter}. This provides
          * a fluent API to construct a custom {@code RowExtractor}.
          *
-         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns.
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns; must not be null.
          * @return a new {@code RowExtractorBuilder}.
+         * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
          */
         static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowExtractorBuilder(defaultColumnGetter);
@@ -5308,6 +5318,7 @@ public final class Jdbc {
 
             /**
              * Configures the extractor to get an {@code Object} of a specific type from the specified column.
+             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#get(Class)}.
              *
              * @param columnIndex the 1-based index of the column.
              * @param type the class type to which the column value should be converted.
