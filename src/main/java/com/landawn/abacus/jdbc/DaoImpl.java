@@ -1524,7 +1524,7 @@ final class DaoImpl {
 
         if (cond instanceof final Limit limit) {
             switch (dbVersion) { //NOSONAR
-                case Oracle, SQL_Server, DB2:
+                case Oracle, SQLServer, DB2:
                     if (limit.getCount() > 0 && limit.getOffset() > 0) {
                         return Filters.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
                     } else if (limit.getCount() > 0) {
@@ -1543,7 +1543,7 @@ final class DaoImpl {
 
             if (limit != null) {
                 switch (dbVersion) { //NOSONAR
-                    case Oracle, SQL_Server, DB2:
+                    case Oracle, SQLServer, DB2:
 
                         if (limit.getCount() > 0 && limit.getOffset() > 0) {
                             criteria.limit("OFFSET " + limit.getOffset() + " ROWS FETCH NEXT " + limit.getCount() + " ROWS ONLY");
@@ -1559,7 +1559,7 @@ final class DaoImpl {
                 }
             } else if (count > 0) {
                 switch (dbVersion) { //NOSONAR
-                    case Oracle, SQL_Server, DB2:
+                    case Oracle, SQLServer, DB2:
                         criteria.limit("FETCH FIRST " + count + " ROWS ONLY");
                         break;
 
@@ -1615,7 +1615,7 @@ final class DaoImpl {
             }
 
             switch (dbVersion) { //NOSONAR
-                case Oracle, SQL_Server, DB2:
+                case Oracle, SQLServer, DB2:
                     criteria.limit("FETCH FIRST " + count + " ROWS ONLY");
                     break;
 

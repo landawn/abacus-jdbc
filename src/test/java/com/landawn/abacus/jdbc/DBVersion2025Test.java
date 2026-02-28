@@ -59,7 +59,7 @@ public class DBVersion2025Test extends TestBase {
         assertFalse(DBVersion.PostgreSQL_OTHERS.isMySQL());
         assertFalse(DBVersion.Oracle.isMySQL());
         assertFalse(DBVersion.DB2.isMySQL());
-        assertFalse(DBVersion.SQL_Server.isMySQL());
+        assertFalse(DBVersion.SQLServer.isMySQL());
         assertFalse(DBVersion.OTHERS.isMySQL());
     }
 
@@ -87,7 +87,7 @@ public class DBVersion2025Test extends TestBase {
         assertFalse(DBVersion.MariaDB.isPostgreSQL());
         assertFalse(DBVersion.Oracle.isPostgreSQL());
         assertFalse(DBVersion.DB2.isPostgreSQL());
-        assertFalse(DBVersion.SQL_Server.isPostgreSQL());
+        assertFalse(DBVersion.SQLServer.isPostgreSQL());
         assertFalse(DBVersion.OTHERS.isPostgreSQL());
     }
 
@@ -108,7 +108,7 @@ public class DBVersion2025Test extends TestBase {
         assertEquals(DBVersion.PostgreSQL_12, DBVersion.valueOf("PostgreSQL_12"));
         assertEquals(DBVersion.Oracle, DBVersion.valueOf("Oracle"));
         assertEquals(DBVersion.DB2, DBVersion.valueOf("DB2"));
-        assertEquals(DBVersion.SQL_Server, DBVersion.valueOf("SQL_Server"));
+        assertEquals(DBVersion.SQLServer, DBVersion.valueOf("SQLServer"));
         assertEquals(DBVersion.OTHERS, DBVersion.valueOf("OTHERS"));
     }
 
@@ -121,7 +121,7 @@ public class DBVersion2025Test extends TestBase {
         assertEquals("PostgreSQL_12", DBVersion.PostgreSQL_12.name());
         assertEquals("Oracle", DBVersion.Oracle.name());
         assertEquals("DB2", DBVersion.DB2.name());
-        assertEquals("SQL_Server", DBVersion.SQL_Server.name());
+        assertEquals("SQLServer", DBVersion.SQLServer.name());
         assertEquals("OTHERS", DBVersion.OTHERS.name());
     }
 
@@ -197,7 +197,7 @@ public class DBVersion2025Test extends TestBase {
         assertNotNull(DBVersion.PostgreSQL_OTHERS);
         assertNotNull(DBVersion.Oracle);
         assertNotNull(DBVersion.DB2);
-        assertNotNull(DBVersion.SQL_Server);
+        assertNotNull(DBVersion.SQLServer);
         assertNotNull(DBVersion.OTHERS);
     }
 }

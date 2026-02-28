@@ -191,10 +191,10 @@ public class DBProductInfo2025Test extends TestBase {
         assertEquals("19.3.0", oracleInfo.productVersion());
         assertEquals(DBVersion.Oracle, oracleInfo.version());
 
-        DBProductInfo sqlServerInfo = new DBProductInfo("Microsoft SQL Server", "2019", DBVersion.SQL_Server);
+        DBProductInfo sqlServerInfo = new DBProductInfo("Microsoft SQL Server", "2019", DBVersion.SQLServer);
         assertEquals("Microsoft SQL Server", sqlServerInfo.productName());
         assertEquals("2019", sqlServerInfo.productVersion());
-        assertEquals(DBVersion.SQL_Server, sqlServerInfo.version());
+        assertEquals(DBVersion.SQLServer, sqlServerInfo.version());
 
         DBProductInfo db2Info = new DBProductInfo("DB2", "11.5", DBVersion.DB2);
         assertEquals("DB2", db2Info.productName());

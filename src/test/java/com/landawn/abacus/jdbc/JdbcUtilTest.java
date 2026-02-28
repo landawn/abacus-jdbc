@@ -1486,7 +1486,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testStartDaoCacheOnCurrentThread() {
-        Jdbc.DaoCache cache = JdbcUtil.startDaoCacheOnCurrentThread();
+        Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
         assertNotNull(cache);
 
         JdbcUtil.closeDaoCacheOnCurrentThread();
@@ -1495,7 +1495,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testStartDaoCacheOnCurrentThreadWithCache() {
         Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
-        Jdbc.DaoCache result = JdbcUtil.startDaoCacheOnCurrentThread(cache);
+        Jdbc.DaoCache result = JdbcUtil.openDaoCacheOnCurrentThread(cache);
 
         assertEquals(cache, result);
 
@@ -1504,7 +1504,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testCloseDaoCacheOnCurrentThread() {
-        JdbcUtil.startDaoCacheOnCurrentThread();
+        JdbcUtil.openDaoCacheOnCurrentThread();
         JdbcUtil.closeDaoCacheOnCurrentThread();
         // Cache is removed from thread local
     }

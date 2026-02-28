@@ -88,7 +88,7 @@ public class DaoTest {
 
         List<Long> ids = userDao.batchInsertWithId(users);
 
-        JdbcUtil.startDaoCacheOnCurrentThread();
+        JdbcUtil.openDaoCacheOnCurrentThread();
 
         try {
             assertEquals(users.size(), ids.size());

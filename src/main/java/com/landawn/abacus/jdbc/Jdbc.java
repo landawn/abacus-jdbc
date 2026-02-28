@@ -1119,7 +1119,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Converts the ResultSet to a Dataset, then to a List of Users.
-         * ResultExtractor<List<User>> extractor = ResultExtractor.to(
+         * ResultExtractor<List<User>> extractor = ResultExtractor.toDatasetAndThen(
          * dataset -> dataset.toList(User.class)
          * );
          * }</pre>
@@ -1128,7 +1128,7 @@ public final class Jdbc {
          * @param after the function to apply to the intermediate {@code Dataset}
          * @return a {@code ResultExtractor} that produces the transformed result
          */
-        static <R> ResultExtractor<R> to(final Throwables.Function<Dataset, R, SQLException> after) {
+        static <R> ResultExtractor<R> toDatasetAndThen(final Throwables.Function<Dataset, R, SQLException> after) {
             return rs -> after.apply(TO_DATASET.apply(rs));
         }
     }
@@ -4705,41 +4705,66 @@ public final class Jdbc {
 
     /**
      * A functional interface that represents a predicate (boolean-valued function) of one {@code ResultSet} argument.
-     * Use this to filter rows after they have been fetched from the database.
+     * Use this to filter rows <b>after</b> they have been fetched from the database.
      *
-     * <p><b>Note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
-     * Use {@code RowFilter} only when the filtering logic cannot be expressed in SQL. 
-     * The row filtering should be fast enough to avoid holding DB connections for a long time or slowing down the overall performance.
-     * For performance-sensitive filtering that requires column metadata, consider using {@link BiRowFilter}.</p>
+     * <p>Unlike {@link BiRowFilter}, this interface does not receive column labels, so columns must be accessed
+     * by index (1-based) via {@code ResultSet.getXxx(int)} methods. If your filtering logic needs column names,
+     * use {@link BiRowFilter} instead.</p>
+     *
+     * <p><b>Performance note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
+     * Use {@code RowFilter} only when the filtering logic cannot be expressed in SQL (e.g., regex matching, custom business rules).
+     * The {@code test} implementation should execute quickly to avoid holding database connections longer than necessary.</p>
+     *
+     * <p>Supports logical composition via {@link #and(Throwables.Predicate)}, {@link #or(Throwables.Predicate)},
+     * and {@link #negate()}, following the same pattern as {@link java.util.function.Predicate}.</p>
+     *
+     * <p><b>Usage example:</b></p>
+     * <pre>{@code
+     * // Filter rows where the first column value is greater than 100
+     * RowFilter filter = rs -> rs.getInt(1) > 100;
+     *
+     * // Compose filters
+     * RowFilter composed = filter.and(rs -> rs.getString(2) != null)
+     *                            .negate();
+     *
+     * // Use in query
+     * list = preparedQuery.list(composed, rowMapper);
+     * }</pre>
+     *
+     * @see BiRowFilter
+     * @see RowMapper
+     * @see RowConsumer
      */
     @FunctionalInterface
     public interface RowFilter extends Throwables.Predicate<ResultSet, SQLException> {
 
         /**
-         * A {@code RowFilter} that includes every row.
+         * A {@code RowFilter} that unconditionally includes every row. Equivalent to {@code rs -> true}.
          */
         RowFilter ALWAYS_TRUE = rs -> true;
 
         /**
-         * A {@code RowFilter} that excludes every row.
+         * A {@code RowFilter} that unconditionally excludes every row. Equivalent to {@code rs -> false}.
          */
         RowFilter ALWAYS_FALSE = rs -> false;
 
         /**
-         * Evaluates this filter on the given {@code ResultSet}.
-         * This method should be fast enough to avoid holding DB connections for a long time or slowing down overall performance.
+         * Evaluates this filter on the given {@code ResultSet}, which is positioned at the current row.
          *
-         * @param rs the {@code ResultSet} positioned at the current row.
-         * @return {@code true} if the row should be included, {@code false} otherwise.
-         * @throws SQLException if a database access error occurs.
+         * <p>This method should execute quickly to avoid holding database connections longer than necessary.</p>
+         *
+         * @param rs the {@code ResultSet} positioned at the current row. Must not be {@code null}.
+         * @return {@code true} if the current row should be included in the result; {@code false} to skip it.
+         * @throws SQLException if a database access error occurs while reading from the {@code ResultSet}.
          */
         @Override
         boolean test(final ResultSet rs) throws SQLException;
 
         /**
          * Returns a filter that represents the logical negation of this filter.
+         * A row included by this filter will be excluded by the returned filter, and vice versa.
          *
-         * @return a new {@code RowFilter} that is the negation of this filter.
+         * @return a new {@code RowFilter} that is the logical negation of this filter.
          */
         @Override
         default RowFilter negate() {
@@ -4747,11 +4772,11 @@ public final class Jdbc {
         }
 
         /**
-         * Returns a composed filter that represents a short-circuiting logical AND of this
-         * filter and another.
+         * Returns a composed filter that represents a short-circuiting logical AND of this filter and another.
+         * The {@code other} predicate is not evaluated if this filter returns {@code false}.
          *
-         * @param other a {@code RowFilter} that will be logically-ANDed with this filter.
-         * @return a new composed {@code RowFilter}.
+         * @param other a predicate that will be logically-ANDed with this filter. Must not be {@code null}.
+         * @return a new composed {@code RowFilter} that returns {@code true} only if both this filter and {@code other} return {@code true}.
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
@@ -4761,10 +4786,24 @@ public final class Jdbc {
         }
 
         /**
-         * Converts this {@code RowFilter} to a {@link BiRowFilter}, which also accepts a list of column labels.
-         * The resulting {@code BiRowFilter} will ignore the column labels parameter.
+         * Returns a composed filter that represents a short-circuiting logical OR of this filter and another.
+         * The {@code other} predicate is not evaluated if this filter returns {@code true}.
          *
-         * @return a {@code BiRowFilter} that delegates to this filter.
+         * @param other a predicate that will be logically-ORed with this filter. Must not be {@code null}.
+         * @return a new composed {@code RowFilter} that returns {@code true} if either this filter or {@code other} returns {@code true}.
+         * @throws IllegalArgumentException if {@code other} is {@code null}.
+         */
+        default RowFilter or(final Throwables.Predicate<? super ResultSet, SQLException> other) {
+            N.checkArgNotNull(other);
+
+            return rs -> test(rs) || other.test(rs);
+        }
+
+        /**
+         * Converts this {@code RowFilter} to a {@link BiRowFilter} that ignores the column labels parameter.
+         * This is useful when a {@code BiRowFilter} is required by an API but your filtering logic does not need column metadata.
+         *
+         * @return a {@code BiRowFilter} that delegates to this filter's {@link #test(ResultSet)} method.
          */
         default BiRowFilter toBiRowFilter() {
             return (rs, columnLabels) -> test(rs);
@@ -4773,59 +4812,103 @@ public final class Jdbc {
 
     /**
      * A functional interface that represents a predicate (boolean-valued function) of a {@code ResultSet}
-     * and its column labels. This is more efficient than {@link RowFilter} if your filtering logic needs
-     * to access column metadata, as the metadata is fetched only once per query.
+     * and its column labels. This is the column-label-aware counterpart of {@link RowFilter}.
      *
-     * <p><b>Note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
-     * Use {@code BiRowFilter} only when the filtering logic cannot be expressed in SQL. 
-     * The row filtering should be fast enough to avoid holding DB connections for a long time or slowing down the overall performance.</p>
+     * <p>The column labels list is derived from {@link java.sql.ResultSetMetaData} and is fetched only once per query,
+     * then passed to every invocation. This allows filtering logic to reference columns by name without repeatedly
+     * querying the metadata, making it more convenient and efficient than {@link RowFilter} when column names are needed.</p>
+     *
+     * <p><b>Performance note:</b> It is generally more efficient to filter data on the database side using SQL {@code WHERE} clauses.
+     * Use {@code BiRowFilter} only when the filtering logic cannot be expressed in SQL (e.g., regex matching, custom business rules).
+     * The {@code test} implementation should execute quickly to avoid holding database connections longer than necessary.</p>
+     *
+     * <p>Supports logical composition via {@link #and(Throwables.BiPredicate)}, {@link #or(Throwables.BiPredicate)},
+     * and {@link #negate()}, following the same pattern as {@link java.util.function.Predicate}.</p>
+     *
+     * <p><b>Usage example:</b></p>
+     * <pre>{@code
+     * // Filter rows where the "status" column equals "ACTIVE"
+     * BiRowFilter filter = (rs, columnLabels) -> {
+     *     int idx = columnLabels.indexOf("status") + 1;
+     *     return "ACTIVE".equals(rs.getString(idx));
+     * };
+     *
+     * // Compose filters
+     * BiRowFilter composed = filter.and((rs, cls) -> rs.getInt(1) > 0);
+     *
+     * // Use in query
+     * list = preparedQuery.list(composed, biRowMapper);
+     * }</pre>
+     *
+     * <p>To convert a {@link RowFilter} to a {@code BiRowFilter}, use {@link RowFilter#toBiRowFilter()}.</p>
+     *
+     * @see RowFilter
+     * @see BiRowMapper
+     * @see BiRowConsumer
      */
     @FunctionalInterface
     public interface BiRowFilter extends Throwables.BiPredicate<ResultSet, List<String>, SQLException> {
 
         /**
-         * A {@code BiRowFilter} that includes every row.
+         * A {@code BiRowFilter} that unconditionally includes every row. Equivalent to {@code (rs, columnLabels) -> true}.
          */
         BiRowFilter ALWAYS_TRUE = (rs, columnLabels) -> true;
 
         /**
-         * A {@code BiRowFilter} that excludes every row.
+         * A {@code BiRowFilter} that unconditionally excludes every row. Equivalent to {@code (rs, columnLabels) -> false}.
          */
         BiRowFilter ALWAYS_FALSE = (rs, columnLabels) -> false;
 
         /**
          * Evaluates this filter on the given {@code ResultSet} and column labels.
-         * This method should be fast enough to avoid holding DB connections for a long time or slowing down overall performance.
          *
-         * @param rs the {@code ResultSet} positioned at the current row.
-         * @param columnLabels the list of column labels from the result set metadata.
-         * @return {@code true} if the row should be included, {@code false} otherwise.
-         * @throws SQLException if a database access error occurs.
+         * <p>This method should execute quickly to avoid holding database connections longer than necessary.</p>
+         *
+         * @param rs the {@code ResultSet} positioned at the current row. Must not be {@code null}.
+         * @param columnLabels an unmodifiable list of column labels from the result set metadata, fetched once per query.
+         *                     The list is 0-based (i.e., the label at index {@code i} corresponds to column index {@code i + 1} in the {@code ResultSet}).
+         * @return {@code true} if the current row should be included in the result; {@code false} to skip it.
+         * @throws SQLException if a database access error occurs while reading from the {@code ResultSet}.
          */
         @Override
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
 
         /**
          * Returns a filter that represents the logical negation of this filter.
+         * A row included by this filter will be excluded by the returned filter, and vice versa.
          *
-         * @return a new {@code BiRowFilter} that is the negation of this filter.
+         * @return a new {@code BiRowFilter} that is the logical negation of this filter.
          */
         default BiRowFilter negate() {
             return (rs, cls) -> !test(rs, cls);
         }
 
         /**
-         * Returns a composed filter that represents a short-circuiting logical AND of this
-         * filter and another.
+         * Returns a composed filter that represents a short-circuiting logical AND of this filter and another.
+         * The {@code other} predicate is not evaluated if this filter returns {@code false}.
          *
-         * @param other a {@code BiRowFilter} that will be logically-ANDed with this filter.
-         * @return a new composed {@code BiRowFilter}.
+         * @param other a predicate that will be logically-ANDed with this filter. Must not be {@code null}.
+         * @return a new composed {@code BiRowFilter} that returns {@code true} only if both this filter and {@code other} return {@code true}.
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
         default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
             N.checkArgNotNull(other);
 
             return (rs, cls) -> test(rs, cls) && other.test(rs, cls);
+        }
+
+        /**
+         * Returns a composed filter that represents a short-circuiting logical OR of this filter and another.
+         * The {@code other} predicate is not evaluated if this filter returns {@code true}.
+         *
+         * @param other a predicate that will be logically-ORed with this filter. Must not be {@code null}.
+         * @return a new composed {@code BiRowFilter} that returns {@code true} if either this filter or {@code other} returns {@code true}.
+         * @throws IllegalArgumentException if {@code other} is {@code null}.
+         */
+        default BiRowFilter or(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
+            N.checkArgNotNull(other);
+
+            return (rs, cls) -> test(rs, cls) || other.test(rs, cls);
         }
     }
 
@@ -5556,19 +5639,19 @@ public final class Jdbc {
              * A {@code BiParametersSetter} for setting a {@code java.util.Date} as a SQL DATE for the first parameter.
              */
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_DATE_JU = (preparedQuery, x) -> preparedQuery.setDate(1, x);
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_JU_DATE = (preparedQuery, x) -> preparedQuery.setDate(1, x);
 
             /**
              * A {@code BiParametersSetter} for setting a {@code java.util.Date} as a SQL TIME for the first parameter.
              */
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIME_JU = (preparedQuery, x) -> preparedQuery.setTime(1, x);
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_JU_TIME = (preparedQuery, x) -> preparedQuery.setTime(1, x);
 
             /**
              * A {@code BiParametersSetter} for setting a {@code java.util.Date} as a SQL TIMESTAMP for the first parameter.
              */
             @SuppressWarnings("rawtypes")
-            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_TIMESTAMP_JU = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
+            public static final BiParametersSetter<AbstractQuery, java.util.Date> SET_JU_TIMESTAMP = (preparedQuery, x) -> preparedQuery.setTimestamp(1, x);
 
             /**
              * A {@code BiParametersSetter} for setting a {@code byte[]} value for the first parameter.

@@ -193,7 +193,7 @@ public enum DBVersion {
     /**
      * Microsoft SQL Server.
      */
-    SQL_Server,
+    SQLServer,
 
     /**
      * Other database systems not specifically enumerated.

@@ -775,7 +775,7 @@ public final class JdbcUtil {
             } else if (Strings.containsIgnoreCase(productNameForMatch, "DB2")) {
                 dbVersion = DBVersion.DB2;
             } else if (Strings.containsIgnoreCase(productNameForMatch, "SQL SERVER")) {
-                dbVersion = DBVersion.SQL_Server;
+                dbVersion = DBVersion.SQLServer;
             }
 
             return new DBProductInfo(dbProductName, dbProductVersion, dbVersion);
@@ -10878,7 +10878,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Jdbc.DaoCache cache = JdbcUtil.startDaoCacheOnCurrentThread();
+     * Jdbc.DaoCache cache = JdbcUtil.openDaoCacheOnCurrentThread();
      * try {
      *     // DAO operations here will use the cache
      *     userDao.findById(1L);   // First call hits database
@@ -10892,10 +10892,10 @@ public final class JdbcUtil {
      * @see Jdbc.DaoCache#createByMap()
      * @see #closeDaoCacheOnCurrentThread()
      */
-    public static Jdbc.DaoCache startDaoCacheOnCurrentThread() {
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
         final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
 
-        return startDaoCacheOnCurrentThread(localThreadCache);
+        return openDaoCacheOnCurrentThread(localThreadCache);
     }
 
     /**
@@ -10909,7 +10909,7 @@ public final class JdbcUtil {
      * Map<String, Object> cacheMap = new LRUMap<>(1000);
      * Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(cacheMap);
      * 
-     * JdbcUtil.startDaoCacheOnCurrentThread(cache);
+     * JdbcUtil.openDaoCacheOnCurrentThread(cache);
      * try {
      *     // DAO operations use the custom cache
      *     productDao.findPopular();
@@ -10924,7 +10924,7 @@ public final class JdbcUtil {
      * @see Jdbc.DaoCache#createByMap(Map)
      * @see #closeDaoCacheOnCurrentThread()
      */
-    public static Jdbc.DaoCache startDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) {
         localThreadCache_TL.set(localThreadCache);
 
         return localThreadCache;
@@ -10937,7 +10937,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.startDaoCacheOnCurrentThread();
+     * JdbcUtil.openDaoCacheOnCurrentThread();
      * try {
      *     // Use cached DAO operations
      * } finally {
@@ -10945,8 +10945,8 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @see #startDaoCacheOnCurrentThread()
-     * @see #startDaoCacheOnCurrentThread(Jdbc.DaoCache)
+     * @see #openDaoCacheOnCurrentThread()
+     * @see #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
      */
     public static void closeDaoCacheOnCurrentThread() {
         localThreadCache_TL.remove();
