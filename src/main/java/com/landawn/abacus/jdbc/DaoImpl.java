@@ -4330,13 +4330,13 @@ final class DaoImpl {
                                     .settParameters(id, idParamSetter)
                                     .query((Jdbc.ResultExtractor<Optional<?>>) rs -> {
                                         if (rs.next()) {
-                                            final Object val = Optional.of(rowMapper.apply(rs));
+                                            final Object val = rowMapper.apply(rs);
 
                                             if (rs.next()) {
                                                 throw new com.landawn.abacus.exception.DuplicateResultException("At least two results found for query by id");
                                             }
 
-                                            return (Optional<?>) val;
+                                            return Optional.of(val);
                                         }
 
                                         return Optional.empty();
@@ -4442,11 +4442,11 @@ final class DaoImpl {
                                 if (idList.size() >= batchSize) {
                                     for (int i = 0, to = idList.size() - batchSize; i <= to; i += batchSize) {
                                         if (isEntityId) {
-                                            entities = proxy.list(Filters.id2Cond(idList.subList(i, i + batchSize)));
+                                            entities = proxy.list(selectPropNames, Filters.id2Cond(idList.subList(i, i + batchSize)));
                                         } else if (isMap) {
-                                            entities = proxy.list(Filters.eqAndOr(idList.subList(i, i + batchSize)));
+                                            entities = proxy.list(selectPropNames, Filters.eqAndOr(idList.subList(i, i + batchSize)));
                                         } else {
-                                            entities = proxy.list(Filters.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
+                                            entities = proxy.list(selectPropNames, Filters.eqAndOr(idList.subList(i, i + batchSize), idPropNameList));
                                         }
 
                                         if (entities.size() > batchSize) {
@@ -4462,11 +4462,12 @@ final class DaoImpl {
                                     final int remaining = idList.size() % batchSize;
 
                                     if (isEntityId) {
-                                        entities = proxy.list(Filters.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
+                                        entities = proxy.list(selectPropNames, Filters.id2Cond(idList.subList(idList.size() - remaining, idList.size())));
                                     } else if (isMap) {
-                                        entities = proxy.list(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
+                                        entities = proxy.list(selectPropNames, Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size())));
                                     } else {
-                                        entities = proxy.list(Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
+                                        entities = proxy.list(selectPropNames,
+                                                Filters.eqAndOr(idList.subList(idList.size() - remaining, idList.size()), idPropNameList));
                                     }
 
                                     if (entities.size() > remaining) {

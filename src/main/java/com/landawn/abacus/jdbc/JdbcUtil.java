@@ -1901,15 +1901,19 @@ public final class JdbcUtil {
             return rs.next() ? 1 : 0;
         } else {
             final int currentRow = rs.getRow();
+            int skipped = 0;
 
             if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow)
                     || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
                 while (rowsToSkip-- > 0L && rs.next()) {
-                    // continue.
+                    skipped++;
                 }
             } else {
                 try {
                     rs.absolute((int) rowsToSkip + currentRow);
+
+                    final int newRow = rs.getRow();
+                    skipped = (newRow > 0) ? newRow - currentRow : (int) rowsToSkip;
                 } catch (final SQLException e) {
                     logger.warn("Failed to call ResultSet.absolute(), falling back to manual iteration", e);
 
@@ -1923,6 +1927,7 @@ public final class JdbcUtil {
 
                         if (newCurrentRow >= currentRow) {
                             remaining = rowsToSkip - (newCurrentRow - currentRow);
+                            skipped = newCurrentRow - currentRow;
                         }
                     } catch (final SQLException ignored) {
                         // getRow() also failed; use full rowsToSkip as remaining
@@ -1930,7 +1935,7 @@ public final class JdbcUtil {
 
                     if (remaining > 0) {
                         while (remaining-- > 0L && rs.next()) {
-                            // continue.
+                            skipped++;
                         }
                     }
 
@@ -1938,7 +1943,7 @@ public final class JdbcUtil {
                 }
             }
 
-            return rs.getRow() - currentRow;
+            return skipped;
         }
     }
 
@@ -2256,14 +2261,12 @@ public final class JdbcUtil {
 
     static final Throwables.Function<Object, java.sql.Date, SQLException> oracleTimestampToJavaDate = obj -> ((oracle.sql.Datum) obj).dateValue();
 
-    private static final ObjectPool<Class<?>, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterPool = new ObjectPool<>(128);
+    private static final ConcurrentHashMap<Class<?>, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterPool = new ConcurrentHashMap<>();
 
     private static final Function<Object, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterGetter = ret -> {
-        Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> converterTP = columnConverterPool.get(ret.getClass());
-
-        if (converterTP == null) {
-            final Class<?> cls = ret.getClass();
+        return columnConverterPool.computeIfAbsent(ret.getClass(), cls -> {
             final String className = cls.getName();
+            Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> converterTP;
 
             if ("oracle.sql.TIMESTAMP".equals(className)) {
                 converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(),
@@ -2283,6 +2286,11 @@ public final class JdbcUtil {
                 }, (rs, columnLabel, val) -> {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final int columnIndex = getColumnIndex(metaData, columnLabel);
+
+                    if (columnIndex < 1) {
+                        return val;
+                    }
+
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
@@ -2303,6 +2311,11 @@ public final class JdbcUtil {
                 }, (rs, columnLabel, val) -> {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final int columnIndex = getColumnIndex(metaData, columnLabel);
+
+                    if (columnIndex < 1) {
+                        return val;
+                    }
+
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName)) {
@@ -2315,10 +2328,8 @@ public final class JdbcUtil {
                 converterTP = Tuple.of((rs, columnIndex, val) -> val, (rs, columnLabel, val) -> val);
             }
 
-            columnConverterPool.put(cls, converterTP);
-        }
-
-        return converterTP;
+            return converterTP;
+        });
     };
 
     private static final ColumnConverterByIndex columnConverterByIndex = (rs, columnIndex, val) -> columnConverterGetter.apply(val)._1.apply(rs, columnIndex,
@@ -6164,8 +6175,7 @@ public final class JdbcUtil {
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
-            throws IllegalArgumentException {
+    public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
@@ -6497,13 +6507,18 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(columnName, cs.columnName);
 
         final RowMapper<? extends T> rowMapper = new RowMapper<>() {
-            private int columnIndex = -1;
+            private int columnIndex = 0;
             private boolean checkDateType = true;
 
             @Override
             public T apply(final ResultSet resultSet) throws SQLException {
-                if (columnIndex == -1) {
+                if (columnIndex == 0) {
                     columnIndex = getColumnIndex(resultSet, columnName);
+
+                    if (columnIndex < 1) {
+                        throw new IllegalArgumentException("Column not found: '" + columnName + "'");
+                    }
+
                     checkDateType = JdbcUtil.checkDateType(resultSet);
                 }
 

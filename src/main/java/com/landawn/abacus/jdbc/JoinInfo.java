@@ -264,6 +264,12 @@ public final class JoinInfo {
             final String[] left = Strings.split(joinColumnPairs[0], '=', true);
             final String[] right = Strings.split(joinColumnPairs[1], '=', true);
 
+            if (left.length < 2 || right.length < 2) {
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass)
+                        + ". Each pair must contain '=' separator, e.g.: 'employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId'");
+            }
+
             if ((srcPropInfos[0] = entityInfo.getPropInfo(left[0])) == null) {
                 throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
                         + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + ". No property found with name: '" + left[0] + "' in class: "
@@ -1128,7 +1134,7 @@ public final class JoinInfo {
         return joinInfo;
     }
 
-    private static final Map<Tuple2<Class<?>, String>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
+    private static final Map<Tuple3<Class<?>, Class<?>, String>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
 
     /**
      * Retrieves all property names in an entity that join to a specific entity type.
@@ -1179,7 +1185,7 @@ public final class JoinInfo {
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {
-        final Tuple2<Class<?>, String> key = Tuple.of(entityClass, tableName);
+        final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
 
         final Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.computeIfAbsent(key, k -> {
             final Map<Class<?>, List<String>> map = new HashMap<>();

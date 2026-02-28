@@ -1370,7 +1370,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
                 ? Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.in(propNameListForQuery.get(0), N.map(it, singleKeyExtractor)))).toList()
                 : Stream.of(entities).split(batchSize).flatmap(it -> list(Filters.id2Cond(N.map(it, entityIdExtractor)))).toList();
 
-        final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.ignoringMerger());
+        final Map<Object, T> dbIdEntityMap = StreamEx.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
         final Map<Boolean, List<T>> map = StreamEx.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());
         final List<T> entitiesToUpdate = map.get(true);
         final List<T> entitiesToInsert = map.get(false);

@@ -303,8 +303,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @throws IllegalStateException if the transaction is not in a valid state for committing
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
-        final int refCount = decrementAndGetRef();
         _isMarkedByCommitOrRollbackPreviously = true;
+        final int refCount = decrementAndGetRef();
 
         if (refCount > 0) {
             return;
@@ -320,7 +320,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         }
 
         if (_status != Status.ACTIVE) {
-            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be committed"); //NOSONAR
+            throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be committed"); //NOSONAR
         }
 
         logger.info("Committing transaction(id={})", _timedId);
@@ -342,7 +342,13 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
                 actionAfterCommit.run();
             } else {
                 logger.warn("Failed to commit transaction(id={}). Automatically rolling back", _timedId);
-                executeRollback();
+
+                try {
+                    executeRollback();
+                } catch (final Exception rollbackEx) {
+                    logger.warn("Failed to rollback transaction(id={}) after failed commit. Rollback error suppressed to preserve original commit exception.",
+                            _timedId, rollbackEx);
+                }
             }
         }
     }
@@ -389,8 +395,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @throws IllegalStateException if the transaction is not in a valid state for rollback
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
-        final int refCount = decrementAndGetRef();
         _isMarkedByCommitOrRollbackPreviously = true;
+        final int refCount = decrementAndGetRef();
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
@@ -451,7 +457,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         }
 
         if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK)) {
-            throw new IllegalArgumentException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be rolled back");
+            throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be rolled back");
         }
 
         executeRollback();

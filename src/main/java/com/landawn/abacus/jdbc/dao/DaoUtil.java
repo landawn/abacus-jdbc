@@ -919,7 +919,7 @@ final class DaoUtil {
 
             final char ch = sql.charAt(fromIndex);
 
-            if (ch == '\'' || ch == '"') {
+            if (ch == '\'' || ch == '"' || ch == '`') {
                 fromIndex = skipQuotedLiteral(sql, fromIndex, ch);
                 continue;
             }

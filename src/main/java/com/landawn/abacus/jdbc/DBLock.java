@@ -528,12 +528,9 @@ public final class DBLock {
      * @param target the unique identifier of the resource whose lock is to be released. Must not be {@code null} or empty.
      * @param code the unique code obtained during lock acquisition. Must not be {@code null}.
      * @return {@code true} if the lock was successfully released; {@code false} otherwise (e.g., lock not found, code mismatch).
-     * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws UncheckedSQLException if a database access error occurs during the unlock operation.
      */
-    public boolean unlock(final String target, final String code) throws IllegalStateException {
-        assertNotClosed();
-
+    public boolean unlock(final String target, final String code) {
         final LockInfo lockInfo = targetCodePool.get(target);
         final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code);
         final boolean unLocked;
@@ -588,6 +585,19 @@ public final class DBLock {
         }
 
         isClosed = true;
+
+        // Release all held locks from the database before cancelling the refresh task
+        for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
+            try {
+                JdbcUtil.executeUpdate(ds, unlockSQL, entry.getKey(), entry.getValue().code());
+            } catch (final Exception e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to release lock for target: " + entry.getKey() + " during close", e);
+                }
+            }
+        }
+
+        targetCodePool.clear();
 
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
