@@ -1453,7 +1453,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a ZonedDateTime parameter value as a SQL Timestamp.
-     * The timestamp is converted to the system's default timezone.
+     * The ZonedDateTime is converted to its corresponding instant in time.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3082,7 +3082,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets parameters using a custom ParametersSetter that operates on this query instance.
      * This provides access to all the parameter setting methods of this class.
-     * 
+     *
+     * <p><b>Note:</b> The method name {@code settParameters} (with double "t") is intentional
+     * to avoid conflict with {@code setParameters}, which sets parameters via a
+     * {@code PreparedStatement}-based setter. This method instead operates on the
+     * {@code AbstractQuery} instance itself, providing access to the full fluent API.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.settParameters(q -> {
@@ -3118,7 +3123,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets parameters using a BiParametersSetter that operates on this query instance with additional context.
-     * 
+     *
+     * <p><b>Note:</b> The method name {@code settParameters} (with double "t") is intentional
+     * to avoid conflict with {@code setParameters}, which sets parameters via a
+     * {@code PreparedStatement}-based setter. This method instead operates on the
+     * {@code AbstractQuery} instance itself, providing access to the full fluent API.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UserFilter filter = getUserFilter();
@@ -4362,7 +4372,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return an {@code OptionalBoolean} containing the boolean value if at least one
      *         row is returned; otherwise {@code OptionalBoolean.empty()}
-     * @throws IllegalStateException if this query has been closed
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
     public OptionalBoolean queryForBoolean() throws IllegalStateException, SQLException {
@@ -4390,7 +4400,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForChar();   // SELECT grade FROM students WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalChar} containing the char value if at least one
+     * @return an {@code OptionalChar} containing the char value if at least one
      *         row is returned; otherwise {@code OptionalChar.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4422,7 +4432,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForByte();   // SELECT status_code FROM records WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalByte} containing the byte value if at least one
+     * @return an {@code OptionalByte} containing the byte value if at least one
      *         row is returned; otherwise {@code OptionalByte.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4450,7 +4460,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForShort();   // SELECT release_year FROM movies WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalShort} containing the short value if at least one
+     * @return an {@code OptionalShort} containing the short value if at least one
      *         row is returned; otherwise {@code OptionalShort.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4469,8 +4479,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes this query and returns the first column of the first row as an int value.
      *
      * <p>If the query produces no rows, an empty {@code OptionalInt} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * Commonly used for COUNT queries.
+     * Only the first column of the first row is read; any remaining rows or columns are ignored.
+     * Commonly used for COUNT queries.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4481,7 +4491,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * int totalUsers = count.orElse(0);
      * }</pre>
      *
-     * @return An {@code OptionalInt} containing the int value if at least one
+     * @return an {@code OptionalInt} containing the int value if at least one
      *         row is returned; otherwise {@code OptionalInt.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4509,7 +4519,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForLong();   // SELECT SUM(amount) FROM sales WHERE year = ?
      * }</pre>
      *
-     * @return An {@code OptionalLong} containing the long value if at least one
+     * @return an {@code OptionalLong} containing the long value if at least one
      *         row is returned; otherwise {@code OptionalLong.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4537,7 +4547,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForFloat();   // SELECT avg_rating FROM products WHERE id = ?
      * }</pre>
      *
-     * @return An {@code OptionalFloat} containing the float value if at least one
+     * @return an {@code OptionalFloat} containing the float value if at least one
      *         row is returned; otherwise {@code OptionalFloat.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4565,7 +4575,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForDouble();   // SELECT AVG(salary) FROM employees WHERE dept = ?
      * }</pre>
      *
-     * @return An {@code OptionalDouble} containing the double value if at least one
+     * @return an {@code OptionalDouble} containing the double value if at least one
      *         row is returned; otherwise {@code OptionalDouble.empty()}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4583,7 +4593,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a string value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<String>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<String>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4615,7 +4625,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a BigInteger value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<BigInteger>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<BigInteger>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4644,7 +4654,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a BigDecimal value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<BigDecimal>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<BigDecimal>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4673,7 +4683,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a Date value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<java.sql.Date>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<java.sql.Date>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p> 
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4701,7 +4711,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a Time value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<java.sql.Time>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<java.sql.Time>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4729,7 +4739,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a Timestamp value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<java.sql.Timestamp>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<java.sql.Timestamp>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4757,7 +4767,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a byte[] value.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<byte[]>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<byte[]>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4785,7 +4795,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as the specified type.
      *
-     * <p>If the query produces no rows, an empty {@link Nullable<V>} is returned.
+     * <p>If the query produces no rows, an empty {@code Nullable<V>} is returned.
      * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -5861,8 +5871,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return An {@code Optional} containing the first result as a map, or empty if no result is found
      * @throws SQLException if a database access error occurs
-     * @see #queryForUniqueResult(Class)
-     * @see #queryForUniqueNonNull(Class)
      */
     public Optional<Map<String, Object>> findFirst() throws SQLException {
         return findFirst(Jdbc.BiRowMapper.TO_MAP);
@@ -5890,8 +5898,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
-     * @see #queryForUniqueResult(Class)
-     * @see #queryForUniqueNonNull(Class)
      */
     public <T> Optional<T> findFirst(final Class<? extends T> targetType) throws NullPointerException, SQLException {
         return Optional.ofNullable(findFirstOrNull(targetType));
@@ -7769,7 +7775,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see #exists()
      */
     @Beta
-    public boolean notExists() throws SQLException {
+    public boolean notExists() throws IllegalStateException, SQLException {
         return !exists();
     }
 
@@ -8581,11 +8587,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Iterates over each row and applies the given Consumer to a DisposableObjArray.
-     * 
+     *
      * <p>This method provides a lightweight way to process rows using disposable arrays
      * that are automatically recycled. The DisposableObjArray contains all column values
      * for the current row.</p>
-     * 
+     *
+     * <p><b>Note on naming:</b> This method is named {@code foreach} (all lowercase) to
+     * distinguish it from {@link #forEach(RowConsumer)}, which accepts a {@code RowConsumer}
+     * that operates directly on a {@code ResultSet}. This method instead accepts a
+     * {@code Consumer<DisposableObjArray>} for a simpler, array-based interface.</p>
+     *
      * <p><b>Note:</b> The DisposableObjArray is only valid within the consumer execution.
      * Do not store references to it or its contents for later use.</p>
      * 
@@ -8619,9 +8630,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Iterates over each row and applies the given Consumer to a DisposableObjArray,
      * using the specified entity class to guide column retrieval.
-     * 
+     *
      * <p>This method uses the field types defined in the entity class to properly
      * retrieve values from the ResultSet, ensuring type safety and proper conversion.</p>
+     *
+     * <p><b>Note on naming:</b> This method is named {@code foreach} (all lowercase) to
+     * distinguish it from {@link #forEach(RowConsumer)}, which accepts a {@code RowConsumer}
+     * that operates directly on a {@code ResultSet}. This method instead accepts a
+     * {@code Consumer<DisposableObjArray>} for a simpler, array-based interface.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

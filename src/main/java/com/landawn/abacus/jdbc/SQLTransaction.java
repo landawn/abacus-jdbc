@@ -281,7 +281,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalArgumentException if the transaction is not in a valid state for committing
+     * @throws IllegalStateException if the transaction is not in a valid state for committing
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -300,7 +300,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalArgumentException if the transaction is not in a valid state for committing
+     * @throws IllegalStateException if the transaction is not in a valid state for committing
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         final int refCount = decrementAndGetRef();

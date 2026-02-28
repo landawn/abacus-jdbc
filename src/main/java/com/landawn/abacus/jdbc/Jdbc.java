@@ -3380,7 +3380,8 @@ public final class Jdbc {
          * );
          * }</pre>
          *
-         * @param valueFilter a bi-predicate to test column names and their corresponding values
+         * @param valueFilter a bi-predicate that receives the column name as the first argument and the column value
+         *                    as the second argument; only entries for which this predicate returns {@code true} are included
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a {@code BiRowMapper} that produces a filtered {@code Map}
          */
@@ -3428,7 +3429,8 @@ public final class Jdbc {
          * }</pre>
          *
          * @param rowExtractor the custom extractor to get values from the {@code ResultSet} row
-         * @param valueFilter a bi-predicate to test column names and their corresponding values
+         * @param valueFilter a bi-predicate that receives the column name as the first argument and the column value
+         *                    as the second argument; only entries for which this predicate returns {@code true} are included
          * @param mapSupplier a function that provides a new map instance, given the column count
          * @return a new stateful {@code BiRowMapper}.
          */
@@ -3821,6 +3823,15 @@ public final class Jdbc {
 
         /**
          * Creates a new {@code BiRowMapperBuilder} with a default column getter of {@code ColumnGetter.GET_OBJECT}.
+         * This builder provides a fluent API for constructing complex {@code BiRowMapper} instances.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * BiRowMapper<User> mapper = BiRowMapper.builder()
+         *     .getString("first_name")
+         *     .getInt("user_age")
+         *     .to(User.class);
+         * }</pre>
          *
          * @return a new {@code BiRowMapperBuilder}
          */
@@ -3831,6 +3842,14 @@ public final class Jdbc {
         /**
          * Creates a new {@code BiRowMapperBuilder} with the specified default column getter. This default
          * will be used for any column whose type is not explicitly configured by name in the builder.
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Default to String, but override "user_age" to be an Integer.
+         * BiRowMapper<User> mapper = BiRowMapper.builder(ColumnGetter.GET_STRING)
+         *     .getInt("user_age")
+         *     .to(User.class);
+         * }</pre>
          *
          * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns
          * @return a new {@code BiRowMapperBuilder}
@@ -3863,6 +3882,12 @@ public final class Jdbc {
             private final ColumnGetter<?> defaultColumnGetter;
             private final Map<String, ColumnGetter<?>> columnGetterMap;
 
+            /**
+             * Constructs a new {@code BiRowMapperBuilder} with a specified default column getter.
+             * This getter will be applied to any column name for which a specific getter has not been configured.
+             *
+             * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
+             */
             BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 this.defaultColumnGetter = defaultColumnGetter;
 
@@ -5731,8 +5756,8 @@ public final class Jdbc {
      * outParam.setParameterIndex(1);
      * outParam.setSqlType(Types.VARCHAR);
      *
-     * // Using all-args constructor
-     * OutParam outParam = new OutParam(1, "result", Types.INTEGER, null);
+     * // Using all-args constructor (parameterIndex, parameterName, sqlType, typeName, scale)
+     * OutParam outParam = new OutParam(1, "result", Types.INTEGER, null, 0);
      * }</pre>
      */
     @NoArgsConstructor
@@ -5826,7 +5851,7 @@ public final class Jdbc {
          * Returns a map containing all output parameter values. The keys of the map are
          * either the parameter index ({@code Integer}) or name ({@code String}).
          *
-         * @return an unmodifiable map of all output parameter values.
+         * @return a map of all output parameter values.
          */
         public Map<Object, Object> getOutParamValues() {
             return outParamValues;
@@ -5835,7 +5860,7 @@ public final class Jdbc {
         /**
          * Returns the list of {@link OutParam} definitions that were used to register the output parameters.
          *
-         * @return an unmodifiable list of {@code OutParam} objects.
+         * @return a list of {@code OutParam} objects.
          */
         public List<OutParam> getOutParams() {
             return outParams;
@@ -6163,10 +6188,10 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a {@code DaoCache} backed by a simple {@code java.util.HashMap}. This cache does not
+         * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not
          * perform automatic eviction.
          *
-         * @return a new {@code DaoCache} instance backed by a {@code HashMap}.
+         * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}.
          */
         static DaoCache createByMap() {
             return new DaoCacheByMap();
@@ -6315,12 +6340,12 @@ public final class Jdbc {
     }
 
     /**
-         * A simple implementation of {@link DaoCache} that uses a standard {@code java.util.Map}
-         * as the backing cache. It does not support automatic eviction or TTL.
+         * A simple implementation of {@link DaoCache} that uses a {@code java.util.concurrent.ConcurrentHashMap}
+         * as the default backing cache. It does not support automatic eviction or TTL.
          */
     record DaoCacheByMap(Map<String, Object> cache) implements DaoCache {
         /**
-         * Creates a {@code DaoCacheByMap} with a new {@code HashMap}.
+         * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}.
          */
         public DaoCacheByMap() {
             this(new ConcurrentHashMap<>());

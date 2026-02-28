@@ -1607,10 +1607,9 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the {@link Statement} associated with the {@code ResultSet} will also be closed quietly.
-     * @throws UncheckedSQLException If retrieving the {@code Statement} from the {@code ResultSet} fails.
      * @see #close(ResultSet, boolean)
      */
-    public static void closeQuietly(final ResultSet rs, final boolean closeStatement) throws UncheckedSQLException {
+    public static void closeQuietly(final ResultSet rs, final boolean closeStatement) {
         closeQuietly(rs, closeStatement, false);
     }
 
@@ -5774,7 +5773,8 @@ public final class JdbcUtil {
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed by the extractor. Must not be {@code null}.
-     * @param rowExtractor applied to extract data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
+     * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
+     *                     Must not be {@code null}.
      * @return A Dataset containing the filtered and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
      * @throws IllegalArgumentException If any argument is {@code null}
@@ -5842,7 +5842,8 @@ public final class JdbcUtil {
      * @param rs The ResultSet to extract data from, must not be {@code null}
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative
      * @param count The maximum number of rows to extract, must be non-negative
-     * @param rowExtractor applied to extract data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
+     * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
+     *                     Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction
      * @return A Dataset containing the extracted and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
@@ -5864,7 +5865,8 @@ public final class JdbcUtil {
      * @param count The maximum number of rows to extract, must be non-negative
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed. Must not be {@code null}.
-     * @param rowExtractor applied to extract data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
+     * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
+     *                     Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction completes (or if an error occurs)
      * @return A Dataset containing the filtered and transformed data
      * @throws SQLException If a SQL exception occurs while extracting data
@@ -5997,12 +5999,12 @@ public final class JdbcUtil {
      *     .forEach(row -> processRow(row));
      * }</pre>
      *
-     * @param resultSet The ResultSet to create a stream from
+     * @param rs The ResultSet to create a stream from
      * @return A Stream of Object arrays containing the data from the ResultSet
      * @throws IllegalArgumentException If the provided ResultSet is null
      */
-    public static Stream<Object[]> stream(final ResultSet resultSet) {
-        return stream(resultSet, Object[].class);
+    public static Stream<Object[]> stream(final ResultSet rs) {
+        return stream(rs, Object[].class);
     }
 
     /**
@@ -6019,16 +6021,16 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> The type of the result extracted from the ResultSet
-     * @param resultSet The ResultSet to create a stream from
+     * @param rs The ResultSet to create a stream from
      * @param targetClass The class of the result type. Column names from the ResultSet will be mapped to properties of this class
      * @return A Stream of the extracted results
      * @throws IllegalArgumentException If the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final Class<? extends T> targetClass) throws IllegalArgumentException {
+    public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(targetClass, cs.targetClass);
-        N.checkArgNotNull(resultSet, cs.resultSet);
+        N.checkArgNotNull(rs, cs.resultSet);
 
-        return stream(resultSet, BiRowMapper.to(targetClass));
+        return stream(rs, BiRowMapper.to(targetClass));
     }
 
     /**
@@ -6045,16 +6047,16 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
+     * @param rs the ResultSet to create a stream from
      * @param rowMapper the RowMapper to apply while extracting data. This mapper is called for each row in the ResultSet
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+    public static <T> Stream<T> stream(final ResultSet rs, final RowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowMapper, null));
+        return Stream.of(iterate(rs, rowMapper, null));
     }
 
     static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
@@ -6156,19 +6158,19 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
+     * @param rs the ResultSet to create a stream from
      * @param rowFilter the RowFilter to apply while filtering rows. Only rows for which this filter returns {@code true} will be included
      * @param rowMapper the RowMapper to apply while extracting data from filtered rows
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
+    public static <T> Stream<T> stream(final ResultSet rs, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowFilter, rowMapper, null));
+        return Stream.of(iterate(rs, rowFilter, rowMapper, null));
     }
 
     static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
@@ -6249,16 +6251,16 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
+     * @param rs the ResultSet to create a stream from
      * @param rowMapper the BiRowMapper to apply while extracting data. This mapper receives both the ResultSet and column labels
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+    public static <T> Stream<T> stream(final ResultSet rs, final BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException {
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowMapper, null));
+        return Stream.of(iterate(rs, rowMapper, null));
     }
 
     static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final BiRowMapper<? extends T> rowMapper, final Runnable onClose) {
@@ -6378,19 +6380,19 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
+     * @param rs the ResultSet to create a stream from
      * @param rowFilter the BiRowFilter to apply while filtering rows. Both ResultSet and column labels are provided
      * @param rowMapper the BiRowMapper to apply while extracting data from filtered rows
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
+    public static <T> Stream<T> stream(final ResultSet rs, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper)
             throws IllegalArgumentException {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
-        return Stream.of(iterate(resultSet, rowFilter, rowMapper));
+        return Stream.of(iterate(rs, rowFilter, rowMapper));
     }
 
     static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final BiRowFilter rowFilter, final BiRowMapper<? extends T> rowMapper) {
@@ -6455,19 +6457,19 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
+     * @param rs the ResultSet to create a stream from
      * @param columnIndex the index of the column to extract data from, starting from 1
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final int columnIndex) throws IllegalArgumentException {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+    public static <T> Stream<T> stream(final ResultSet rs, final int columnIndex) throws IllegalArgumentException {
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgPositive(columnIndex, cs.columnIndex);
 
-        final boolean checkDateType = JdbcUtil.checkDateType(resultSet);
-        final RowMapper<? extends T> rowMapper = rs -> (T) getColumnValue(rs, columnIndex, checkDateType);
+        final boolean checkDateType = JdbcUtil.checkDateType(rs);
+        final RowMapper<? extends T> rowMapper = resultSet -> (T) getColumnValue(resultSet, columnIndex, checkDateType);
 
-        return stream(resultSet, rowMapper);
+        return stream(rs, rowMapper);
     }
 
     /**
@@ -6485,13 +6487,13 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <T> the type of the result extracted from the ResultSet
-     * @param resultSet the ResultSet to create a stream from
+     * @param rs the ResultSet to create a stream from
      * @param columnName the name of the column to extract data from
      * @return a Stream of the extracted results
      * @throws IllegalArgumentException if the provided arguments are invalid
      */
-    public static <T> Stream<T> stream(final ResultSet resultSet, final String columnName) throws IllegalArgumentException {
-        N.checkArgNotNull(resultSet, cs.resultSet);
+    public static <T> Stream<T> stream(final ResultSet rs, final String columnName) throws IllegalArgumentException {
+        N.checkArgNotNull(rs, cs.resultSet);
         N.checkArgNotEmpty(columnName, cs.columnName);
 
         final RowMapper<? extends T> rowMapper = new RowMapper<>() {
@@ -6499,17 +6501,17 @@ public final class JdbcUtil {
             private boolean checkDateType = true;
 
             @Override
-            public T apply(final ResultSet rs) throws SQLException {
+            public T apply(final ResultSet resultSet) throws SQLException {
                 if (columnIndex == -1) {
-                    columnIndex = getColumnIndex(rs, columnName);
-                    checkDateType = JdbcUtil.checkDateType(rs);
+                    columnIndex = getColumnIndex(resultSet, columnName);
+                    checkDateType = JdbcUtil.checkDateType(resultSet);
                 }
 
-                return (T) getColumnValue(rs, columnIndex, checkDateType);
+                return (T) getColumnValue(resultSet, columnIndex, checkDateType);
             }
         };
 
-        return stream(resultSet, rowMapper);
+        return stream(rs, rowMapper);
     }
 
     /**
@@ -9656,11 +9658,12 @@ public final class JdbcUtil {
      * @param dataSource the DataSource for the transaction
      * @param cmd the function to execute with the transaction's connection
      * @return the result of the function execution
+     * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the function throws an exception
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd)
-            throws E {
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(dataSource, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -9808,6 +9811,9 @@ public final class JdbcUtil {
      * The function receives the DataSource as a parameter and can use it to create connections
      * that are not part of any active transaction.
      *
+     * <p><b>Note:</b> When obtaining a raw {@link Connection} from the DataSource within the function,
+     * the caller is responsible for closing the connection to avoid resource leaks.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = JdbcUtil.callOutsideTransaction(dataSource, ds -> {
@@ -9913,6 +9919,9 @@ public final class JdbcUtil {
      * Executes the given consumer outside any active transaction for the specified DataSource.
      * The consumer receives the DataSource as a parameter and can use it to create connections
      * that are not part of any active transaction.
+     *
+     * <p><b>Note:</b> When obtaining a raw {@link Connection} from the DataSource within the consumer,
+     * the caller is responsible for closing the connection to avoid resource leaks.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10570,6 +10579,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper) {
@@ -10586,6 +10596,7 @@ public final class JdbcUtil {
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param daoCache the cache for DAO operations (should not be shared between DAOs)
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
@@ -10611,6 +10622,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to use for database operations
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final Executor executor) {
@@ -10634,6 +10646,7 @@ public final class JdbcUtil {
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
@@ -10652,6 +10665,7 @@ public final class JdbcUtil {
      * @param daoCache the cache for DAO operations (should not be shared between DAOs)
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
@@ -10676,6 +10690,7 @@ public final class JdbcUtil {
      * @param targetTableName the specific table name to use
      * @param ds the DataSource to use for database operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds) {
@@ -10698,6 +10713,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
@@ -10715,6 +10731,7 @@ public final class JdbcUtil {
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param daoCache the cache for DAO operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use version without explicit cache parameter
      */
     @Deprecated
@@ -10740,6 +10757,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to use for database operations
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
@@ -10765,6 +10783,7 @@ public final class JdbcUtil {
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,

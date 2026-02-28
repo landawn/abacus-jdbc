@@ -55,267 +55,75 @@ import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.WD;
 
 /**
- * A comprehensive, enterprise-grade utility class providing advanced database import/export operations,
- * data migration capabilities, and high-performance batch processing for seamless data movement between
- * databases, CSV files, and in-memory datasets. This class serves as a powerful toolkit for ETL
- * (Extract, Transform, Load) operations, data synchronization, and bulk data processing scenarios
- * commonly encountered in enterprise data management and analytics applications.
+ * Utility class for database import/export operations, CSV processing, and data copying between databases.
  *
- * <p>The {@code JdbcUtils} class addresses critical challenges in enterprise data operations by providing
- * optimized, scalable solutions for moving large volumes of data efficiently while maintaining data
- * integrity and performance. It supports various data sources and destinations, offering flexible
- * configuration options for batch processing, memory management, and custom data transformations
- * suitable for production environments with strict performance and reliability requirements.</p>
+ * <p>This class provides static methods for moving data between different sources and targets,
+ * including Dataset objects, CSV files, Readers/Writers, Iterators, and database tables.
+ * All import methods support configurable batch sizes and batch intervals.</p>
  *
- * <p><b>⚠️ IMPORTANT - Production Data Operations:</b>
- * This utility is designed for enterprise production environments handling large-scale data operations.
- * Always test with representative data volumes in staging environments, configure appropriate batch
- * sizes for your system's memory constraints, and ensure proper transaction management for data
- * consistency in mission-critical applications.</p>
- *
- * <p><b>Key Features and Capabilities:</b>
- * <ul>
- *   <li><b>Multi-Source Data Import:</b> Import from Dataset, CSV files, Readers, and custom data sources</li>
- *   <li><b>Flexible Data Export:</b> Export to CSV files, Writers, and custom output formats</li>
- *   <li><b>Database-to-Database Transfer:</b> Efficient data copying between tables and databases</li>
- *   <li><b>High-Performance Batch Processing:</b> Configurable batch sizes and processing intervals</li>
- *   <li><b>Memory-Optimized Streaming:</b> Large dataset handling without memory exhaustion</li>
- *   <li><b>Column Filtering and Mapping:</b> Selective column processing with custom transformations</li>
- *   <li><b>Type-Safe Operations:</b> Automatic type conversion and validation</li>
- *   <li><b>Transaction Management:</b> Built-in support for transactional data operations</li>
- * </ul>
- *
- * <p><b>Design Philosophy:</b>
- * <ul>
- *   <li><b>Performance First:</b> Optimized for high-throughput data processing with minimal memory overhead</li>
- *   <li><b>Scalability Focus:</b> Designed to handle enterprise-scale data volumes efficiently</li>
- *   <li><b>Flexibility Priority:</b> Supports diverse data sources, formats, and transformation scenarios</li>
- *   <li><b>Reliability Emphasis:</b> Robust error handling and data integrity preservation</li>
- *   <li><b>Simplicity Goal:</b> Intuitive APIs that hide complexity while providing advanced features</li>
- * </ul>
- *
- * <p><b>Supported Data Operations:</b>
+ * <p><b>Supported Operations:</b></p>
  * <table border="1" style="border-collapse: collapse;">
  *   <caption><b>Data Operation Types and Methods</b></caption>
  *   <tr style="background-color: #f2f2f2;">
  *     <th>Operation Type</th>
  *     <th>Primary Methods</th>
  *     <th>Data Sources/Targets</th>
- *     <th>Performance Features</th>
  *   </tr>
  *   <tr>
  *     <td>Data Import</td>
- *     <td>importData(), importCSV()</td>
- *     <td>Dataset, CSV files, Readers</td>
- *     <td>Batch processing, memory streaming</td>
+ *     <td>{@code importData()}</td>
+ *     <td>Dataset, File, Reader, Iterator to database via DataSource, Connection, or PreparedStatement</td>
  *   </tr>
  *   <tr>
- *     <td>Data Export</td>
- *     <td>exportCSV(), exportData()</td>
- *     <td>CSV files, Writers, custom formats</td>
- *     <td>Large ResultSet handling, buffering</td>
+ *     <td>CSV Import</td>
+ *     <td>{@code importCSV()}</td>
+ *     <td>CSV File or Reader to database via DataSource or PreparedStatement</td>
  *   </tr>
  *   <tr>
- *     <td>Table Copying</td>
- *     <td>copy(), copyTable()</td>
- *     <td>Database tables (same/different DBs)</td>
- *     <td>Optimized fetch sizes, parallel processing</td>
+ *     <td>CSV Export</td>
+ *     <td>{@code exportCSV()}</td>
+ *     <td>Database query results (via DataSource, Connection, PreparedStatement, or ResultSet) to File or Writer</td>
  *   </tr>
  *   <tr>
- *     <td>Data Migration</td>
- *     <td>migrate(), transform()</td>
- *     <td>Cross-database data movement</td>
- *     <td>Schema mapping, type conversion</td>
+ *     <td>Data Copying</td>
+ *     <td>{@code copy()}</td>
+ *     <td>Between DataSources, Connections, or PreparedStatements (same or different databases)</td>
  *   </tr>
  *   <tr>
- *     <td>Bulk Operations</td>
- *     <td>bulkInsert(), bulkUpdate()</td>
- *     <td>Large datasets, batch collections</td>
- *     <td>Connection pooling, batch optimization</td>
- *   </tr>
- *   <tr>
- *     <td>Stream Processing</td>
- *     <td>streamImport(), streamExport()</td>
- *     <td>Continuous data flows</td>
- *     <td>Memory-efficient processing</td>
+ *     <td>Utility</td>
+ *     <td>{@code createParamSetter()}</td>
+ *     <td>Factory method to create a parameter setter from a {@link Jdbc.ColumnGetter}</td>
  *   </tr>
  * </table>
  *
- * <p><b>Core API Categories:</b>
- * <ul>
- *   <li><b>Import Operations:</b> {@code importData()}, {@code importCSV()}, {@code importFromReader()}</li>
- *   <li><b>Export Operations:</b> {@code exportCSV()}, {@code exportToWriter()}, {@code exportData()}</li>
- *   <li><b>Copy Operations:</b> {@code copy()}, {@code copyTable()}, {@code copyWithTransform()}</li>
- *   <li><b>Migration Operations:</b> {@code migrate()}, {@code migrateSchema()}, {@code transformAndCopy()}</li>
- *   <li><b>Utility Operations:</b> {@code validateData()}, {@code analyzeTable()}, {@code optimizeBatch()}</li>
- * </ul>
- *
- * <p><b>Common Usage Patterns:</b>
+ * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Import data from a Dataset to database table
  * Dataset dataset = Dataset.of("name", "age", "email")
  *     .addRow("John Doe", 30, "john@example.com")
  *     .addRow("Jane Smith", 25, "jane@example.com");
- *
  * int importedRows = JdbcUtils.importData(dataset, dataSource,
  *     "INSERT INTO users (name, age, email) VALUES (?, ?, ?)");
  *
- * // Export large table to CSV
+ * // Export query results to CSV file
  * long exportedRows = JdbcUtils.exportCSV(dataSource,
- *     "SELECT * FROM large_table ORDER BY id",
+ *     "SELECT * FROM users ORDER BY id",
  *     new File("export.csv"));
  *
  * // Copy data between databases
  * long copiedRows = JdbcUtils.copy(sourceDataSource,
- *     "SELECT id, UPPER(name) as name, age FROM source_users WHERE active = true",
+ *     "SELECT id, name, age FROM source_users WHERE active = true",
  *     targetDataSource,
  *     "INSERT INTO target_users (user_id, full_name, user_age) VALUES (?, ?, ?)");
- * }</pre>
  *
- * <p><b>Advanced Configuration and Optimization:</b>
- * <pre>{@code
- * // High-performance data migration with batch processing
+ * // Copy with custom fetch and batch sizes
  * long copiedRows = JdbcUtils.copy(sourceDataSource,
  *     "SELECT customer_id, first_name, last_name, email FROM legacy_customers",
  *     50000,  // fetch size
  *     targetDataSource,
  *     "INSERT INTO customers (id, name, email) VALUES (?, ?, ?)",
- *     10000);   // batch size
- * System.out.println("Migrated " + copiedRows + " customer records");
- *
- * // Export data to CSV file
- * long exportedRows = JdbcUtils.exportCSV(dataSource,
- *     "SELECT * FROM large_table ORDER BY id",
- *     new File("export.csv"));
+ *     10000); // batch size
  * }</pre>
- *
- * <p><b>Batch Processing and Performance Optimization:</b>
- * <ul>
- *   <li><b>Intelligent Batch Sizing:</b> Automatic optimization based on available memory and data characteristics</li>
- *   <li><b>Fetch Size Configuration:</b> Configurable ResultSet fetch sizes for large query optimization</li>
- *   <li><b>Memory Management:</b> Built-in memory monitoring and garbage collection optimization</li>
- *   <li><b>Connection Optimization:</b> Efficient connection usage with automatic cleanup</li>
- *   <li><b>Parallel Processing:</b> Multi-threaded operations for CPU-intensive transformations</li>
- *   <li><b>Progress Monitoring:</b> Real-time progress callbacks for long-running operations</li>
- * </ul>
- *
- * <p><b>Data Format Support:</b>
- * <ul>
- *   <li><b>CSV Files:</b> RFC 4180 compliant CSV parsing and generation with custom delimiters</li>
- *   <li><b>Dataset Objects:</b> Native support for Abacus Dataset structures</li>
- *   <li><b>Streaming Sources:</b> Reader/Writer interfaces for custom data sources</li>
- *   <li><b>Database Tables:</b> Direct table-to-table copying with schema awareness</li>
- *   <li><b>Custom Formats:</b> Extensible framework for additional data formats</li>
- * </ul>
- *
- * <p><b>Type Safety and Data Conversion:</b>
- * <ul>
- *   <li><b>Automatic Type Mapping:</b> Intelligent mapping between CSV strings and database types</li>
- *   <li><b>Custom Converters:</b> Support for custom type conversion functions</li>
- *   <li><b>Null Handling:</b> Robust {@code null} value processing and validation</li>
- *   <li><b>Data Validation:</b> Built-in validation for data integrity and constraints</li>
- *   <li><b>Error Recovery:</b> Configurable error handling with skip/retry options</li>
- * </ul>
- *
- * <p><b>Transaction Management and Data Integrity:</b>
- * <ul>
- *   <li><b>Automatic Transactions:</b> Configurable transaction boundaries for batch operations</li>
- *   <li><b>Rollback Support:</b> Automatic rollback on errors with recovery options</li>
- *   <li><b>Checkpointing:</b> Intermediate commits to prevent long-running transaction issues</li>
- *   <li><b>Data Consistency:</b> ACID compliance for critical data operations</li>
- *   <li><b>Deadlock Handling:</b> Automatic detection and recovery from database deadlocks</li>
- * </ul>
- *
- * <p><b>Error Handling and Monitoring:</b>
- * <ul>
- *   <li><b>Comprehensive Logging:</b> Detailed operation logs with performance metrics</li>
- *   <li><b>Exception Management:</b> Structured exception handling with detailed error context</li>
- *   <li><b>Progress Tracking:</b> Real-time progress monitoring for long operations</li>
- *   <li><b>Performance Metrics:</b> Built-in metrics for throughput and timing analysis</li>
- *   <li><b>Alerting Support:</b> Integration hooks for monitoring and alerting systems</li>
- * </ul>
- *
- * <p><b>Memory Management and Scalability:</b>
- * <ul>
- *   <li><b>Streaming Architecture:</b> Process data without loading entire datasets into memory</li>
- *   <li><b>Garbage Collection Friendly:</b> Minimal object allocation and optimized memory usage</li>
- *   <li><b>Large File Support:</b> Handle multi-gigabyte files with constant memory usage</li>
- *   <li><b>Resource Cleanup:</b> Automatic cleanup of database connections and file handles</li>
- *   <li><b>Memory Monitoring:</b> Built-in memory usage tracking and optimization suggestions</li>
- * </ul>
- *
- * <p><b>Integration with Enterprise Frameworks:</b>
- * <ul>
- *   <li><b>Spring Framework:</b> Seamless integration with Spring transaction management</li>
- *   <li><b>Hibernate/JPA:</b> Compatible with ORM frameworks for mixed scenarios</li>
- *   <li><b>ETL Tools:</b> Integration points for enterprise ETL platforms</li>
- *   <li><b>Monitoring Systems:</b> Hooks for enterprise monitoring and alerting</li>
- *   <li><b>Workflow Engines:</b> Integration with business process management systems</li>
- * </ul>
- *
- * <p><b>Best Practices and Recommendations:</b>
- * <ul>
- *   <li>Configure batch sizes based on available memory and network latency characteristics</li>
- *   <li>Use appropriate fetch sizes for large query results to optimize memory usage</li>
- *   <li>Implement proper error handling and recovery strategies for production environments</li>
- *   <li>Monitor memory usage and adjust configurations for optimal performance</li>
- *   <li>Use transactions appropriately to balance performance and data consistency</li>
- *   <li>Validate data integrity before and after large data operations</li>
- *   <li>Implement progress monitoring for long-running operations</li>
- *   <li>Test with production-scale data volumes in staging environments</li>
- * </ul>
- *
- * <p><b>Common Anti-Patterns to Avoid:</b>
- * <ul>
- *   <li>Loading entire large datasets into memory before processing</li>
- *   <li>Using inappropriate batch sizes causing memory exhaustion or poor performance</li>
- *   <li>Ignoring transaction boundaries in large data operations</li>
- *   <li>Not implementing proper error handling and recovery mechanisms</li>
- *   <li>Using single-threaded processing for CPU-intensive transformations</li>
- *   <li>Not monitoring progress and performance metrics in production</li>
- *   <li>Forgetting to properly clean up resources after operations</li>
- * </ul>
- *
- * <p><b>Performance Benchmarks and Optimization:</b>
- * <ul>
- *   <li><b>Throughput:</b> Typical performance of 50,000-100,000+ rows/second for bulk operations</li>
- *   <li><b>Memory Usage:</b> Constant memory usage regardless of dataset size</li>
- *   <li><b>Scalability:</b> Linear performance scaling with parallel processing</li>
- *   <li><b>Latency:</b> Minimal overhead for small datasets, optimized for large volumes</li>
- *   <li><b>Resource Efficiency:</b> Optimal CPU and I/O utilization patterns</li>
- * </ul>
- *
- * <p><b>Example: Enterprise Data Warehouse ETL</b>
- * <pre>{@code
- * public class DataWarehouseETL {
- *     private final DataSource sourceDB;
- *     private final DataSource warehouseDB;
- *
- *     // Daily ETL process for customer data
- *     public void dailyCustomerETL() throws SQLException {
- *         String extractQuery = "SELECT customer_id, first_name, last_name, email, " +
- *                             "registration_date, last_login, status " +
- *                             "FROM customers WHERE updated_date >= CURRENT_DATE - 1";
- *
- *         String loadQuery = "INSERT INTO dim_customer (customer_id, first_name, last_name, email, " +
- *                          "registration_date, last_login, status) " +
- *                          "VALUES (?, ?, ?, ?, ?, ?, ?)";
- *
- *         long processedRows = JdbcUtils.copy(sourceDB, extractQuery, warehouseDB, loadQuery);
- *
- *         System.out.println("Processed " + processedRows + " customer records");
- *     }
- * }
- * }</pre>
- *
- * <p><b>Security Considerations:</b>
- * <ul>
- *   <li><b>SQL Injection Prevention:</b> All operations use parameterized queries</li>
- *   <li><b>Connection Security:</b> Secure connection handling with proper credential management</li>
- *   <li><b>Data Privacy:</b> Support for data masking and anonymization during transfer</li>
- *   <li><b>Access Control:</b> Integration with database security and authorization systems</li>
- *   <li><b>Audit Logging:</b> Comprehensive audit trails for compliance and security monitoring</li>
- * </ul>
  *
  * @see Dataset
  * @see CsvUtil
@@ -323,11 +131,6 @@ import com.landawn.abacus.util.WD;
  * @see Connection
  * @see PreparedStatement
  * @see ResultSet
- * @see com.landawn.abacus.util.stream.Stream
- * @see com.landawn.abacus.annotation.Table
- * @see com.landawn.abacus.annotation.Column
- * @see <a href="https://tools.ietf.org/html/rfc4180">RFC 4180: CSV Format Specification</a>
- * @see <a href="https://docs.oracle.com/en/database/oracle/oracle-database/21/jjdbc/">Oracle JDBC Developer Guide</a>
  */
 public final class JdbcUtils {
 
@@ -338,7 +141,7 @@ public final class JdbcUtils {
     static final int DEFAULT_QUEUE_SIZE_FOR_ROW_PARSER = 1024;
 
     private JdbcUtils() {
-        // utility class.
+        // Utility class - prevent instantiation.
     }
 
     /**
@@ -1256,7 +1059,7 @@ public final class JdbcUtils {
      * @param reader the Reader containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections
      * @param insertSql the SQL insert statement with placeholders
-     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
@@ -1264,11 +1067,11 @@ public final class JdbcUtils {
      * @throws E if the function throws an exception
      */
     public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.Function<? super String, Object[], E> line2Parameters) throws SQLException, IOException, E {
+            final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
         final Connection conn = targetDataSource.getConnection();
 
         try {
-            return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, line2Parameters);
+            return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1339,7 +1142,7 @@ public final class JdbcUtils {
      * @param stmt the PreparedStatement to be used for the import
      * @param batchSize the number of rows to be inserted in each batch
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param line2Parameters a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
+     * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
@@ -1347,7 +1150,7 @@ public final class JdbcUtils {
      * @throws E if the function throws an exception
      */
     public static <E extends Exception> long importData(final Reader reader, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> line2Parameters)
+            final long batchIntervalInMillis, final Throwables.Function<? super String, Object[], E> func)
             throws IllegalArgumentException, SQLException, IOException, E {
         // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative");
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1361,7 +1164,7 @@ public final class JdbcUtils {
             Object[] row = null;
 
             while ((line = br.readLine()) != null) {
-                row = line2Parameters.apply(line);
+                row = func.apply(line);
 
                 if (row == null) {
                     continue;

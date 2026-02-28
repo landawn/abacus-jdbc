@@ -285,9 +285,6 @@ public final class DBLock {
      *         System.out.println("Lock acquired for: " + resourceIdentifier);
      *         // Perform the critical operation that requires exclusive access
      *         // ...
-     *     } catch (InterruptedException e) {
-     *         Thread.currentThread().interrupt();
-     *         System.err.println("Operation interrupted: " + e.getMessage());
      *     } finally {
      *         // Ensure the lock is released, even if an error occurs
      *         dbLock.unlock(resourceIdentifier, lockCode);
@@ -344,7 +341,7 @@ public final class DBLock {
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the specified timeout.
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
-     * @see #lock(String, long, long, long)
+     * @see #lock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
      */
     public String lock(final String target, final long timeout) {

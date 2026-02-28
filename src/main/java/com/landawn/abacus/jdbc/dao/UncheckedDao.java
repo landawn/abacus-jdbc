@@ -78,16 +78,16 @@ import com.landawn.abacus.util.u.OptionalShort;
 public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
-     * Saves the specified entity to the database. This is typically an insert operation
-     * for new entities or an update operation for existing entities.
-     * 
+     * Saves (inserts) the specified entity to the database.
+     * All non-null properties of the entity will be included in the INSERT statement.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("John", "Doe");
      * userDao.save(user);
      * }</pre>
      *
-     * @param entityToSave the entity to save
+     * @param entityToSave the entity to insert
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -103,8 +103,8 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
      * userDao.save(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToSave the entity to save
-     * @param propNamesToSave the properties to save, or {@code null} to save all properties
+     * @param entityToSave the entity to insert
+     * @param propNamesToSave the property names to include in the INSERT
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

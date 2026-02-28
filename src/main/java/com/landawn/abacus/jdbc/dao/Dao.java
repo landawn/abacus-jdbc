@@ -115,7 +115,7 @@ import com.landawn.abacus.util.stream.Stream;
  * User user = userDao.getFirstAndLastNameBy(123L);
  * }</pre>
  * 
- * <p><b>Usage Examples:</b></p>
+ * <p><b>Transaction Example:</b></p>
  * <pre>{@code
  * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
@@ -361,7 +361,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param query the SQL query string
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
-     * @see JdbcUtil#prepareNamedQueryForLargeResult(DataSource, String)
+     * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
     @NonDBOperation
@@ -376,7 +376,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition for the WHERE clause
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
-     * @see JdbcUtil#prepareNamedQueryForLargeResult(DataSource, String)
+     * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
     @NonDBOperation
