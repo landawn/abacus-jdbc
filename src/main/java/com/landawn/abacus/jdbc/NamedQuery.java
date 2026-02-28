@@ -4322,6 +4322,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     Collection params = null;
                     while (iter.hasNext()) {
                         params = (Collection) iter.next();
+                        stmt.clearParameters();
                         setParameters(params);
                         addBatch();
                     }
@@ -4332,6 +4333,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     Object[] params = null;
                     while (iter.hasNext()) {
                         params = (Object[]) iter.next();
+                        stmt.clearParameters();
                         setParameters(params);
                         addBatch();
                     }

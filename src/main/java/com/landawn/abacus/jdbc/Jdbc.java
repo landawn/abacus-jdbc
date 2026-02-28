@@ -270,7 +270,14 @@ public final class Jdbc {
                         final Type[] localFieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
-                            localFieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
+                            final PropInfo propInfo = entityInfo.getPropInfo(fieldNameList.get(i));
+
+                            if (propInfo == null) {
+                                throw new IllegalArgumentException(
+                                        "No property found with name: " + fieldNameList.get(i) + " in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                            }
+
+                            localFieldTypes[i] = propInfo.dbType;
                         }
 
                         fieldTypes = localFieldTypes;
@@ -331,7 +338,14 @@ public final class Jdbc {
                         final Type[] localFieldTypes = new Type[len];
 
                         for (int i = 0; i < len; i++) {
-                            localFieldTypes[i] = entityInfo.getPropInfo(fieldNameList.get(i)).dbType;
+                            final PropInfo propInfo = entityInfo.getPropInfo(fieldNameList.get(i));
+
+                            if (propInfo == null) {
+                                throw new IllegalArgumentException(
+                                        "No property found with name: " + fieldNameList.get(i) + " in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                            }
+
+                            localFieldTypes[i] = propInfo.dbType;
                         }
 
                         fieldTypes = localFieldTypes;
@@ -6315,14 +6329,10 @@ public final class Jdbc {
             Handler<?> result = get(handlerClass);
 
             if (result == null) {
-                try {
-                    result = N.newInstance(handlerClass);
+                result = N.newInstance(handlerClass);
 
-                    if (result != null) {
-                        register(result);
-                    }
-                } catch (final Exception e) {
-                    // ignore
+                if (result != null) {
+                    register(result);
                 }
             }
 

@@ -18,6 +18,7 @@ package com.landawn.abacus.jdbc;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1077,7 +1078,7 @@ public final class JoinInfo {
                 map.put(propInfo.name, new JoinInfo(entityClass, tableName, propInfo.name, allowJoiningByNullOrDefaultValue));
             }
 
-            return map;
+            return Collections.unmodifiableMap(map);
         });
     }
 
@@ -1194,7 +1195,9 @@ public final class JoinInfo {
                 map.computeIfAbsent(joinInfo.referencedEntityClass, kk -> new ArrayList<>(1)).add(joinInfo.joinPropInfo.name);
             }
 
-            return map;
+            map.replaceAll((k2, v) -> Collections.unmodifiableList(v));
+
+            return Collections.unmodifiableMap(map);
         });
 
         return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.emptyList());

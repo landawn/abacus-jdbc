@@ -9904,22 +9904,36 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             addBatchAction = defaultAddBatchAction;
 
             if (defaultFetchDirection >= 0) {
-                stmt.setFetchDirection(defaultFetchDirection);
+                try {
+                    stmt.setFetchDirection(defaultFetchDirection);
+                } catch (final SQLException e) {
+                    logger.warn("Failed to reset fetch direction", e);
+                }
             }
 
             if (defaultFetchSize >= 0) {
-                stmt.setFetchSize(defaultFetchSize);
+                try {
+                    stmt.setFetchSize(defaultFetchSize);
+                } catch (final SQLException e) {
+                    logger.warn("Failed to reset fetch size", e);
+                }
             }
 
             if (defaultMaxFieldSize >= 0) {
-                stmt.setMaxFieldSize(defaultMaxFieldSize);
+                try {
+                    stmt.setMaxFieldSize(defaultMaxFieldSize);
+                } catch (final SQLException e) {
+                    logger.warn("Failed to reset max field size", e);
+                }
             }
 
             if (defaultQueryTimeout >= 0) {
-                stmt.setQueryTimeout(defaultQueryTimeout);
+                try {
+                    stmt.setQueryTimeout(defaultQueryTimeout);
+                } catch (final SQLException e) {
+                    logger.warn("Failed to reset query timeout", e);
+                }
             }
-        } catch (final SQLException e) {
-            logger.warn("Failed to reset statement", e);
         } finally {
             JdbcUtil.closeQuietly(stmt);
         }

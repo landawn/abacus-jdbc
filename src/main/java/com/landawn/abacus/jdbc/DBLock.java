@@ -531,6 +531,8 @@ public final class DBLock {
      * @throws UncheckedSQLException if a database access error occurs during the unlock operation.
      */
     public boolean unlock(final String target, final String code) {
+        assertNotClosed();
+
         final LockInfo lockInfo = targetCodePool.get(target);
         final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code);
         final boolean unLocked;

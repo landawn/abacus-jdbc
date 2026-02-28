@@ -4597,7 +4597,12 @@ public final class JdbcUtil {
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
         if (N.notEmpty(parameters)) {
-            setParameters(parsedSql, stmt, parameters);
+            try {
+                setParameters(parsedSql, stmt, parameters);
+            } catch (final Exception e) {
+                closeQuietly(stmt);
+                throw e;
+            }
         }
 
         return stmt;
@@ -4621,7 +4626,12 @@ public final class JdbcUtil {
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
         if (N.notEmpty(parameters)) {
-            setParameters(parsedSql, stmt, parameters);
+            try {
+                setParameters(parsedSql, stmt, parameters);
+            } catch (final Exception e) {
+                closeQuietly(stmt);
+                throw e;
+            }
         }
 
         return stmt;
@@ -4645,9 +4655,14 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
-        for (final Object parameters : parametersList) {
-            setParameters(parsedSql, stmt, N.asArray(parameters));
-            stmt.addBatch();
+        try {
+            for (final Object parameters : parametersList) {
+                setParameters(parsedSql, stmt, N.asArray(parameters));
+                stmt.addBatch();
+            }
+        } catch (final Exception e) {
+            closeQuietly(stmt);
+            throw e;
         }
 
         return stmt;
@@ -4671,9 +4686,14 @@ public final class JdbcUtil {
         final ParsedSql parsedSql = ParsedSql.parse(sql);
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
-        for (final Object parameters : parametersList) {
-            setParameters(parsedSql, stmt, N.asArray(parameters));
-            stmt.addBatch();
+        try {
+            for (final Object parameters : parametersList) {
+                setParameters(parsedSql, stmt, N.asArray(parameters));
+                stmt.addBatch();
+            }
+        } catch (final Exception e) {
+            closeQuietly(stmt);
+            throw e;
         }
 
         return stmt;
