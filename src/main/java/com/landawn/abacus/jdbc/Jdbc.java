@@ -2257,7 +2257,15 @@ public final class Jdbc {
 
             /**
              * Configures the mapper to retrieve an object of a specific type from the specified column index.
-             * A suitable {@code ColumnGetter} for the given type will be used.
+             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#get(Class)}.
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * RowMapper<Object[]> mapper = RowMapper.builder()
+             *     .getObject(1, LocalDate.class)
+             *     .getObject(2, BigDecimal.class)
+             *     .toArray();
+             * }</pre>
              *
              * @param columnIndex the 1-based index of the column
              * @param type the target class type to convert the column value to
@@ -2610,7 +2618,8 @@ public final class Jdbc {
     public interface BiRowMapper<T> extends Throwables.BiFunction<ResultSet, List<String>, T, SQLException> {
 
         /**
-         * A pre-defined mapper that converts a row into an {@code Object[]}.
+         * A pre-defined mapper that converts a row into an {@code Object[]}, with one element per column.
+         * Column values are extracted using {@link JdbcUtil#getColumnValue(ResultSet, int)}.
          */
         BiRowMapper<Object[]> TO_ARRAY = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2624,7 +2633,8 @@ public final class Jdbc {
         };
 
         /**
-         * A pre-defined mapper that converts a row into a {@code List<Object>}.
+         * A pre-defined mapper that converts a row into a {@code List<Object>}, with one element per column.
+         * Column values are extracted using {@link JdbcUtil#getColumnValue(ResultSet, int)}.
          */
         BiRowMapper<List<Object>> TO_LIST = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2639,7 +2649,8 @@ public final class Jdbc {
 
         /**
          * A pre-defined mapper that converts a row into a {@code Map<String, Object>},
-         * where keys are the column labels.
+         * where keys are the column labels and values are the column values.
+         * The resulting map does not guarantee any particular iteration order.
          */
         BiRowMapper<Map<String, Object>> TO_MAP = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2654,7 +2665,8 @@ public final class Jdbc {
 
         /**
          * A pre-defined mapper that converts a row into a {@code LinkedHashMap<String, Object>},
-         * preserving the order of columns from the {@code ResultSet}.
+         * preserving the order of columns as they appear in the {@code ResultSet}.
+         * Use this instead of {@link #TO_MAP} when column ordering matters.
          */
         BiRowMapper<Map<String, Object>> TO_LINKED_HASH_MAP = (rs, columnLabels) -> {
             final int columnCount = columnLabels.size();
@@ -2668,8 +2680,9 @@ public final class Jdbc {
         };
 
         /**
-         * A pre-defined mapper that converts a row into an {@code EntityId}. The property names
-         * in the {@code EntityId} correspond to the column labels.
+         * A pre-defined mapper that converts a row into an {@code EntityId}, where each column label
+         * becomes a property name and each column value becomes a property value. This is useful for
+         * creating lightweight identifier objects from query results without defining a full entity class.
          */
         @SuppressWarnings("deprecation")
         BiRowMapper<EntityId> TO_ENTITY_ID = (rs, columnLabels) -> {
@@ -4033,6 +4046,15 @@ public final class Jdbc {
 
             /**
              * Configures the mapper to retrieve an object of a specific type from the specified column.
+             * A suitable {@code ColumnGetter} for the given type will be resolved via {@link ColumnGetter#get(Class)}.
+             *
+             * <p><b>Usage Examples:</b></p>
+             * <pre>{@code
+             * BiRowMapper<User> mapper = BiRowMapper.builder()
+             *     .getObject("created_date", LocalDate.class)
+             *     .getObject("balance", BigDecimal.class)
+             *     .to(User.class);
+             * }</pre>
              *
              * @param columnName the name of the column
              * @param type the target class type to convert the column value to
@@ -4914,7 +4936,30 @@ public final class Jdbc {
 
     /**
      * A functional interface for extracting data from the current row of a {@code ResultSet} into a
-     * target {@code Object} array. This is useful for efficiently processing rows in bulk.
+     * target {@code Object} array. Unlike {@link RowMapper}, which creates a new object per row,
+     * {@code RowExtractor} populates a pre-allocated array, making it more efficient for bulk data
+     * extraction into a {@link Dataset}.
+     *
+     * <p>Instances can be created via the factory methods {@link #createBy(Class)} or
+     * the fluent {@link #builder()} API for fine-grained control over column extraction.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Create an extractor using entity class for type mapping
+     * RowExtractor extractor = RowExtractor.createBy(User.class);
+     * Dataset dataset = JdbcUtil.extractData(rs, extractor);
+     *
+     * // Create a custom extractor via builder
+     * RowExtractor extractor = RowExtractor.builder()
+     *     .getInt(1)
+     *     .getString(2)
+     *     .getTimestamp(3)
+     *     .build();
+     * }</pre>
+     *
+     * @see RowMapper
+     * @see BiRowMapper
+     * @see Dataset
      */
     @FunctionalInterface
     public interface RowExtractor extends Throwables.BiConsumer<ResultSet, Object[], SQLException> {
@@ -5095,6 +5140,24 @@ public final class Jdbc {
          * A builder for creating customized {@link RowExtractor} instances. This allows for specifying
          * different {@link ColumnGetter}s for individual columns, providing fine-grained control over
          * how data is extracted from a {@code ResultSet}.
+         *
+         * <p>
+         * <b>Warning:</b> All {@code RowExtractor} instances created by this builder are stateful,
+         * as they cache metadata (like column count and getter configurations) upon first execution.
+         * They should not be cached, shared, or used in parallel streams.
+         * </p>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * RowExtractor extractor = RowExtractor.builder()
+         *     .getInt(1)        // Column 1 as int
+         *     .getString(2)     // Column 2 as String
+         *     .getTimestamp(3)  // Column 3 as Timestamp
+         *     .build();
+         * }</pre>
+         *
+         * @see RowExtractor#builder()
+         * @see RowExtractor#builder(ColumnGetter)
          */
         class RowExtractorBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
@@ -5326,7 +5389,27 @@ public final class Jdbc {
      * A functional interface for extracting a typed value from a specified column of a {@code ResultSet}.
      * This provides a type-safe and reusable way to retrieve column data.
      *
+     * <p>Pre-defined getters are provided for all common JDBC types (e.g., {@link #GET_BOOLEAN},
+     * {@link #GET_INT}, {@link #GET_STRING}, etc.). Custom getters can be created using lambda expressions
+     * or the {@link #get(Class)} / {@link #get(Type)} factory methods.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Using a predefined getter
+     * ColumnGetter<Integer> intGetter = ColumnGetter.GET_INT;
+     * Integer value = intGetter.apply(rs, 1);
+     *
+     * // Using a type-based factory method
+     * ColumnGetter<LocalDate> dateGetter = ColumnGetter.get(LocalDate.class);
+     *
+     * // Custom lambda getter
+     * ColumnGetter<String> upperCaseGetter = (rs, idx) -> rs.getString(idx).toUpperCase();
+     * }</pre>
+     *
      * @param <V> extracted value type
+     * @see RowMapper
+     * @see BiRowMapper
+     * @see RowExtractor.RowExtractorBuilder
      */
     @FunctionalInterface
     public interface ColumnGetter<V> {
@@ -5460,8 +5543,14 @@ public final class Jdbc {
     }
 
     /**
-     * A utility class containing helpers and constants for column-specific operations,
-     * primarily focused on single-column results.
+     * A utility class containing helpers and constants for column-specific operations.
+     * This class organizes predefined {@link RowMapper} and {@link BiParametersSetter} instances
+     * that target specific columns, primarily the first column ({@link ColumnOne}).
+     *
+     * <p>This is especially useful for queries that return a single column, such as
+     * {@code SELECT count(*) FROM ...} or {@code SELECT name FROM ... WHERE id = ?}.</p>
+     *
+     * @see ColumnOne
      */
     public static final class Columns {
         private Columns() {
@@ -5469,8 +5558,37 @@ public final class Jdbc {
         }
 
         /**
-         * A utility class providing predefined {@link RowMapper} and {@link BiParametersSetter} instances
-         * for operations on the first column of a {@code ResultSet} or the first parameter of a {@code PreparedStatement}.
+         * Provides predefined {@link RowMapper} and {@link BiParametersSetter} instances for
+         * the first column of a {@code ResultSet} or the first parameter of a {@code PreparedStatement}.
+         *
+         * <p>This class is the primary entry point for single-column result extraction. It contains:</p>
+         * <ul>
+         *   <li>{@code GET_*} constants: {@link RowMapper} instances for extracting typed values from column 1
+         *       (e.g., {@link #GET_INT}, {@link #GET_STRING}, {@link #GET_DATE}).</li>
+         *   <li>{@code SET_*} constants: {@link BiParametersSetter} instances for binding typed values to parameter 1
+         *       (e.g., {@link #SET_INT}, {@link #SET_STRING}, {@link #SET_DATE}).</li>
+         *   <li>Factory methods: {@link #get(Class)}, {@link #set(Class)}, {@link #readJson(Class)}, {@link #readXml(Class)}
+         *       for dynamic type-based mappers and setters.</li>
+         * </ul>
+         *
+         * <p><b>Usage Examples:</b></p>
+         * <pre>{@code
+         * // Extract a single integer value (e.g., count, max, sum)
+         * int count = preparedQuery.queryForSingleNonNull(ColumnOne.GET_INT);
+         *
+         * // Extract a single string value
+         * String name = preparedQuery.queryForSingleNonNull(ColumnOne.GET_STRING);
+         *
+         * // Use a type-based mapper for custom types
+         * RowMapper<LocalDate> mapper = ColumnOne.get(LocalDate.class);
+         *
+         * // Set a single parameter by type
+         * preparedQuery.setParameters(ColumnOne.SET_INT, userId);
+         * }</pre>
+         *
+         * @see ColumnGetter
+         * @see RowMapper
+         * @see BiParametersSetter
          */
         public static final class ColumnOne {
             /**
@@ -5889,7 +6007,21 @@ public final class Jdbc {
 
     /**
      * A container for the results of output parameters from a stored procedure execution.
-     * It provides methods to retrieve parameter values by their index or name.
+     * It provides methods to retrieve parameter values by their 1-based index or name.
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // After calling a stored procedure with output parameters
+     * OutParamResult result = callableQuery.call(outParams);
+     *
+     * // Retrieve by index
+     * int id = result.getOutParamValue(1);
+     *
+     * // Retrieve by name
+     * String name = result.getOutParamValue("result_name");
+     * }</pre>
+     *
+     * @see OutParam
      */
     @EqualsAndHashCode
     @ToString
@@ -6002,6 +6134,25 @@ public final class Jdbc {
     /**
      * A factory for creating and managing {@link Handler} instances. It provides a central registry
      * for handlers and supports integration with the Spring Framework's application context.
+     *
+     * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from
+     * the Spring application context if available. The factory also provides convenience methods
+     * to create handlers from lambda expressions.</p>
+     *
+     * <p><b>Usage Examples:</b></p>
+     * <pre>{@code
+     * // Create a handler with before/after actions
+     * Handler<UserDao> handler = HandlerFactory.create(
+     *     (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()),
+     *     (result, proxy, args, sig) -> System.out.println("After: " + result)
+     * );
+     *
+     * // Register and retrieve a handler by class
+     * HandlerFactory.register(myHandler);
+     * Handler<?> h = HandlerFactory.get(MyHandler.class);
+     * }</pre>
+     *
+     * @see Handler
      */
     public static final class HandlerFactory {
 
@@ -6256,6 +6407,15 @@ public final class Jdbc {
      *
      * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p>
      * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p>
+     *
+     * <p>Two built-in implementations are provided:</p>
+     * <ul>
+     *   <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li>
+     *   <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li>
+     * </ul>
+     *
+     * @see DefaultDaoCache
+     * @see DaoCacheByMap
      */
     public interface DaoCache {
 
@@ -6355,6 +6515,12 @@ public final class Jdbc {
     /**
      * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching
      * with support for time-to-live (TTL) and idle time-based eviction.
+     *
+     * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all
+     * entries associated with the affected table. If the table name cannot be determined from the cache key,
+     * the entire cache is cleared.</p>
+     *
+     * @see DaoCache#create(int, long)
      */
     public static final class DefaultDaoCache implements DaoCache {
         private final KeyedObjectPool<String, PoolableWrapper<Object>> pool;
@@ -6423,9 +6589,16 @@ public final class Jdbc {
     }
 
     /**
-         * A simple implementation of {@link DaoCache} that uses a {@code java.util.concurrent.ConcurrentHashMap}
-         * as the default backing cache. It does not support automatic eviction or TTL.
-         */
+     * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to
+     * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not
+     * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly
+     * invalidated by a data modification operation or manual clearing.
+     *
+     * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p>
+     *
+     * @see DaoCache#createByMap()
+     * @see DaoCache#createByMap(Map)
+     */
     record DaoCacheByMap(Map<String, Object> cache) implements DaoCache {
         /**
          * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}.
