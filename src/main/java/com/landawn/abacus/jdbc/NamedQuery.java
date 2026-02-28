@@ -3977,7 +3977,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         } else if (parameters instanceof EntityId) {
             setParameters((EntityId) parameters);
         } else if (parameterCount == 1) {
-            setObject(1, parameters);
+            try {
+                setObject(1, parameters);
+            } catch (final Exception e) {
+                close();
+                throw e;
+            }
         } else {
             close();
             throw new IllegalArgumentException("Unsupported named parameter type: " + parameters.getClass() + " for SQL: " + namedSql.sql());
@@ -4283,6 +4288,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     while (iter.hasNext()) {
                         params = iter.next();
 
+                        stmt.clearParameters();
+
                         for (int i = 0; i < parameterCount; i++) {
                             propInfo = propInfos[i];
 
@@ -4301,6 +4308,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                     while (iter.hasNext()) {
                         params = (Map<String, ?>) iter.next();
+                        stmt.clearParameters();
                         setParameters(params);
                         addBatch();
                     }
@@ -4331,6 +4339,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     EntityId params = null;
                     while (iter.hasNext()) {
                         params = (EntityId) iter.next();
+                        stmt.clearParameters();
                         setParameters(params);
                         addBatch();
                     }
