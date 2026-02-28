@@ -4270,6 +4270,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                     for (int i = 0; i < parameterCount; i++) {
                         propInfos[i] = entityInfo.getPropInfo(parameterNames.get(i));
+
+                        if (propInfos[i] == null && !JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
+                            throw new IllegalArgumentException(
+                                    "No property found with name: " + parameterNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                        }
                     }
 
                     PropInfo propInfo = null;

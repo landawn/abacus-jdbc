@@ -228,10 +228,6 @@ final class DaoImpl {
 
     private static final String _1 = "1";
 
-    private static final String PN_NOW = "now";
-    private static final String PN_SYS_TIME = "sysTime";
-    private static final String PN_SYS_DATE = "sysDate";
-
     private static final JsonParser jsonParser = ParserFactory.createJsonParser();
     private static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
 
@@ -1306,7 +1302,8 @@ final class DaoImpl {
 
                 final List<String> diffParamNames = N.difference(queryInfo.parsedSql.getNamedParameters(), N.asList(paramNames));
 
-                if (N.notEmpty(diffParamNames) && !N.allMatch(diffParamNames, it -> Strings.equalsAny(it, PN_NOW, PN_SYS_TIME, PN_SYS_DATE))) {
+                if (N.notEmpty(diffParamNames)
+                        && !N.allMatch(diffParamNames, it -> Strings.equalsAny(it, JdbcUtil.PN_NOW, JdbcUtil.PN_SYS_TIME, JdbcUtil.PN_SYS_DATE))) {
                     throw new UnsupportedOperationException("In method: " + fullClassMethodName
                             + ", The named parameters in sql are different from the names bound by method parameters: " + diffParamNames);
                 }
@@ -1366,43 +1363,43 @@ final class DaoImpl {
         }
 
         if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
-            if (queryInfo.parsedSql.getNamedParameters().contains(PN_NOW)) {
+            if (queryInfo.parsedSql.getNamedParameters().contains(JdbcUtil.PN_NOW)) {
                 if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_NOW, Dates.currentTimestamp());
                 } else {
                     final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
                     parametersSetter = (preparedQuery, args) -> {
                         tmp.accept(preparedQuery, args);
-                        ((NamedQuery) preparedQuery).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                        ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_NOW, Dates.currentTimestamp());
                     };
                 }
 
             }
 
-            if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_TIME)) {
+            if (queryInfo.parsedSql.getNamedParameters().contains(JdbcUtil.PN_SYS_TIME)) {
                 if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_SYS_TIME, Dates.currentTimestamp());
                 } else {
                     final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
                     parametersSetter = (preparedQuery, args) -> {
                         tmp.accept(preparedQuery, args);
-                        ((NamedQuery) preparedQuery).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                        ((NamedQuery) preparedQuery).setTimestamp(JdbcUtil.PN_SYS_TIME, Dates.currentTimestamp());
                     };
                 }
 
             }
 
-            if (queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_DATE)) {
+            if (queryInfo.parsedSql.getNamedParameters().contains(JdbcUtil.PN_SYS_DATE)) {
                 if (parametersSetter == null) {
-                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setDate(PN_SYS_DATE, Dates.currentDate());
+                    parametersSetter = (preparedQuery, args) -> ((NamedQuery) preparedQuery).setDate(JdbcUtil.PN_SYS_DATE, Dates.currentDate());
                 } else {
                     final BiParametersSetter<AbstractQuery, Object[]> tmp = parametersSetter;
 
                     parametersSetter = (preparedQuery, args) -> {
                         tmp.accept(preparedQuery, args);
-                        ((NamedQuery) preparedQuery).setDate(PN_SYS_DATE, Dates.currentDate());
+                        ((NamedQuery) preparedQuery).setDate(JdbcUtil.PN_SYS_DATE, Dates.currentDate());
                     };
                 }
 
@@ -1484,20 +1481,20 @@ final class DaoImpl {
 
             if (queryInfo.isBatch) {
                 if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
-                    final boolean hasNow = queryInfo.parsedSql.getNamedParameters().contains(PN_NOW);
-                    final boolean hasSysTime = queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_TIME);
-                    final boolean hasSysDate = queryInfo.parsedSql.getNamedParameters().contains(PN_SYS_DATE);
+                    final boolean hasNow = queryInfo.parsedSql.getNamedParameters().contains(JdbcUtil.PN_NOW);
+                    final boolean hasSysTime = queryInfo.parsedSql.getNamedParameters().contains(JdbcUtil.PN_SYS_TIME);
+                    final boolean hasSysDate = queryInfo.parsedSql.getNamedParameters().contains(JdbcUtil.PN_SYS_DATE);
 
                     if (hasNow || hasSysTime || hasSysDate) {
                         preparedQuery.configAddBatchAction((q, s) -> {
                             if (hasNow) {
-                                ((NamedQuery) q).setTimestamp(PN_NOW, Dates.currentTimestamp());
+                                ((NamedQuery) q).setTimestamp(JdbcUtil.PN_NOW, Dates.currentTimestamp());
                             }
                             if (hasSysTime) {
-                                ((NamedQuery) q).setTimestamp(PN_SYS_TIME, Dates.currentTimestamp());
+                                ((NamedQuery) q).setTimestamp(JdbcUtil.PN_SYS_TIME, Dates.currentTimestamp());
                             }
                             if (hasSysDate) {
-                                ((NamedQuery) q).setDate(PN_SYS_DATE, Dates.currentDate());
+                                ((NamedQuery) q).setDate(JdbcUtil.PN_SYS_DATE, Dates.currentDate());
                             }
                             ((PreparedStatement) s).addBatch();
                         });

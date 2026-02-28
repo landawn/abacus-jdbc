@@ -542,6 +542,14 @@ public final class JdbcUtil {
 
     static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
 
+    static final String PN_NOW = "now";
+
+    static final String PN_SYS_TIME = "sysTime";
+
+    static final String PN_SYS_DATE = "sysDate";
+
+    static final Set<String> SYS_DATE_TIME_NAME_SET = Set.of(PN_NOW, PN_SYS_TIME, PN_SYS_DATE);
+
     static final char CHAR_ZERO = 0;
 
     // static final int MAX_BATCH_SIZE = 1000;
