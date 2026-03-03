@@ -42,6 +42,7 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.SK;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
 import com.landawn.abacus.util.CsvUtil;
@@ -52,7 +53,6 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
-import com.landawn.abacus.util.WD;
 
 /**
  * Utility class for database import/export operations, CSV processing, and data copying between databases.
@@ -1952,7 +1952,7 @@ public final class JdbcUtils {
             throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySql);
 
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 
             setFetchForLargeResult(conn, stmt);
 
@@ -2186,7 +2186,7 @@ public final class JdbcUtils {
     public static long exportCSV(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySql);
 
-        final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.getParameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
         try {
             setFetchForLargeResult(conn, stmt);
@@ -2293,7 +2293,7 @@ public final class JdbcUtils {
                 throw new IllegalArgumentException(columnNameSet + " are not included in the query result");
             }
 
-            final char separator = WD._COMMA;
+            final char separator = SK._COMMA;
 
             for (int i = 0, j = 0, len = columnNames.length; i < len; i++) {
                 if (columnNames[i] == null) {
@@ -2870,17 +2870,17 @@ public final class JdbcUtils {
 
         final StringBuilder sb = new StringBuilder();
 
-        sb.append(WD.SELECT).append(WD._SPACE);
+        sb.append(SK.SELECT).append(SK._SPACE);
 
         final Iterator<String> iter = selectColumnNames.iterator();
         final int lastIdx = selectColumnNames.size() - 1;
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(iter.next()).append(WD.COMMA_SPACE);
+            sb.append(iter.next()).append(SK.COMMA_SPACE);
         }
 
-        sb.append(iter.next()).append(WD._SPACE).append(WD.FROM).append(WD._SPACE).append(tableName);
+        sb.append(iter.next()).append(SK._SPACE).append(SK.FROM).append(SK._SPACE).append(tableName);
 
         return sb.toString();
     }
@@ -2892,21 +2892,21 @@ public final class JdbcUtils {
 
         final StringBuilder sb = new StringBuilder();
 
-        sb.append(WD.INSERT).append(WD._SPACE).append(WD.INTO).append(WD._SPACE).append(tableName).append(WD._PARENTHESES_L);
+        sb.append(SK.INSERT).append(SK._SPACE).append(SK.INTO).append(SK._SPACE).append(tableName).append(SK._PARENTHESIS_L);
 
         final Iterator<String> iter = selectColumnNames.iterator();
         final int lastIdx = selectColumnNames.size() - 1;
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(iter.next()).append(WD.COMMA_SPACE);
+            sb.append(iter.next()).append(SK.COMMA_SPACE);
         }
 
         sb.append(iter.next())
-                .append(WD._PARENTHESES_R)
-                .append(WD._SPACE)
-                .append(WD.VALUES)
-                .append(WD._SPACE)
+                .append(SK._PARENTHESIS_R)
+                .append(SK._SPACE)
+                .append(SK.VALUES)
+                .append(SK._SPACE)
                 .append(Strings.repeat("?", selectColumnNames.size(), ", ", "(", ")"));
 
         return sb.toString();

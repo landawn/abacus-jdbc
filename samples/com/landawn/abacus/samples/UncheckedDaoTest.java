@@ -95,7 +95,7 @@ public class UncheckedDaoTest {
 
     //    @Test
     //    public void test_cacheSql() {
-    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).sql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).toSql();
     //        uncheckedUserDao.cacheSql("selectById", sql);
     //
     //        assertEquals(sql, uncheckedUserDao.getCachedSql("selectById"));

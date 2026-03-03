@@ -50,7 +50,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.Filters.CB;
+import com.landawn.abacus.query.Filters.CriteriaBuilder.CB;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.SQLParser;
 import com.landawn.abacus.samples.entity.Address;
@@ -133,20 +133,20 @@ public class DaoTest {
 
         userDao.batchInsertWithId(users);
 
-        N.println("......");   // breakpoint here
+        N.println("......"); // breakpoint here
 
         userDao.stream(Filters.gt("id", 0)).forEach(N::println);
 
-        N.println("......");   // breakpoint here
+        N.println("......"); // breakpoint here
 
         final Stream<User> stream = userDao.stream(Filters.gt("id", 0));
         N.println(stream.hashCode());
 
-        N.println("......");   // breakpoint here
+        N.println("......"); // breakpoint here
 
         userDao.stream(Filters.gt("id", 0)).forEach(N::println);
 
-        N.println("......");   // breakpoint here
+        N.println("......"); // breakpoint here
 
         userDao.delete(Filters.ge("id", 0));
     }
@@ -229,12 +229,13 @@ public class DaoTest {
         assertEquals(users.size(), userDao.count(ids));
         assertEquals(users.size(), userDao.list(Filters.criteria().distinct()).size());
 
-        assertEquals(users.size(), userDao.list(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct()).size());
-
         assertEquals(users.size(),
-                userDao.prepareNamedQueryForLargeResult(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
-                        .list()
-                        .size());
+                userDao.list(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct()).size());
+
+        assertEquals(users.size(), userDao
+                .prepareNamedQueryForLargeResult(Filters.criteria().where(Filters.notEqual("firstName", "aaaaaa")).orderBy("firstName", "lastName").distinct())
+                .list()
+                .size());
 
         assertEquals(users.size(), userDao.batchDelete(users));
 
@@ -296,7 +297,7 @@ public class DaoTest {
     //
     //        NSC.deleteFrom(User.class)
     //                .where(Filters.ge("id", users.get(0).getId()))
-    //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.query, sp.parameters.toArray()));
+    //                .accept(sp -> JdbcUtil.executeUpdate(userDao.dataSource(), sp.toSql(), sp.parameters().toArray()));
     //    }
 
     @Test
@@ -403,8 +404,8 @@ public class DaoTest {
         userDao.batchInsertWithId(users);
 
         try (Connection conn = JdbcTest.dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from user1");
-                ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement("select * from user1");
+             ResultSet rs = stmt.executeQuery()) {
             JdbcUtils.exportCSV(rs, IOUtil.newOutputStreamWriter(System.out));
         }
 
@@ -412,8 +413,8 @@ public class DaoTest {
         N.println(Strings.repeat("=", 80));
 
         try (Connection conn = JdbcTest.dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from user1");
-                ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement("select * from user1");
+             ResultSet rs = stmt.executeQuery()) {
             JdbcUtils.exportCSV(rs, JdbcUtil.getColumnLabelList(rs), IOUtil.newOutputStreamWriter(System.out));
         }
 
@@ -510,7 +511,7 @@ public class DaoTest {
 
     //    @Test
     //    public void test_cacheSql() throws SQLException {
-    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).sql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).toSql();
     //        userDao.cacheSql("selectById", sql);
     //
     //        assertEquals(sql, userDao.getCachedSql("selectById"));
@@ -1050,14 +1051,14 @@ public class DaoTest {
 
         userDao.list(Filters.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList()).forEach(Fn.println());
 
-        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
-                .forEach(Fn.println());
+        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class)).forEach(Fn.println());
 
         userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
                 .forEach(Fn.println());
 
-        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
-                .forEach(Fn.println());
+        userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class)).forEach(Fn.println());
 
         userDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());
 
@@ -1394,7 +1395,7 @@ public class DaoTest {
                 .on("employee_id = ep.employee_id")
                 .leftJoin("project")
                 .on("ep.project_id = project.project_id")
-                .sql();
+                .toSql();
 
         final List<Employee> employees = employeeDao.prepareQuery(query).query().toMergedEntities(Employee.class);
 

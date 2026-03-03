@@ -22,7 +22,12 @@ import java.lang.reflect.WildcardType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
@@ -45,7 +50,16 @@ import com.landawn.abacus.query.SQLBuilder.PLC;
 import com.landawn.abacus.query.SQLBuilder.PSB;
 import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.util.*;
+import com.landawn.abacus.util.Array;
+import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.ExceptionUtil;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Result;
+import com.landawn.abacus.util.Seid;
+import com.landawn.abacus.util.Strings;
+import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.function.Function;
 
@@ -437,7 +451,7 @@ final class DaoUtil {
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
         for (final ContinuableFuture<Void> f : futures) {
-            f.gett().ifFailure(throwUncheckedSQLException);
+            f.getAsResult().ifFailure(throwUncheckedSQLException);
         }
     }
 
@@ -473,7 +487,7 @@ final class DaoUtil {
         Result<Integer, Exception> ret = null;
 
         for (final ContinuableFuture<Integer> f : futures) {
-            ret = f.gett();
+            ret = f.getAsResult();
 
             if (ret.isFailure()) {
                 throwUncheckedSQLException.accept(ret.getException());
@@ -511,7 +525,7 @@ final class DaoUtil {
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
         for (final ContinuableFuture<Void> f : futures) {
-            f.gett().ifFailure(throwSQLExceptionAction);
+            f.getAsResult().ifFailure(throwSQLExceptionAction);
         }
     }
 
@@ -547,7 +561,7 @@ final class DaoUtil {
         Result<Integer, Exception> ret = null;
 
         for (final ContinuableFuture<Integer> f : futures) {
-            ret = f.gett();
+            ret = f.getAsResult();
 
             if (ret.isFailure()) {
                 throwSQLExceptionAction.accept(ret.getException());
@@ -616,13 +630,13 @@ final class DaoUtil {
         final Class<?> targetEntityClass = dao.targetEntityClass();
 
         final Throwables.BiFunction<javax.sql.DataSource, SP, PreparedQuery, SQLException> prepareQueryFunc = (dataSource, sp) -> {
-            final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.query);
+            final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, sp.sql());
 
-            if (N.notEmpty(sp.parameters)) {
+            if (N.notEmpty(sp.parameters())) {
                 boolean noException = false;
 
                 try {
-                    query.setParameters(sp.parameters);
+                    query.setParameters(sp.parameters());
 
                     noException = true;
                 } finally {
@@ -636,13 +650,13 @@ final class DaoUtil {
         };
 
         final Throwables.BiFunction<javax.sql.DataSource, SP, NamedQuery, SQLException> prepareNamedQueryFunc = (dataSource, sp) -> {
-            final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.query);
+            final NamedQuery query = JdbcUtil.prepareNamedQuery(dataSource, sp.sql());
 
-            if (N.notEmpty(sp.parameters)) {
+            if (N.notEmpty(sp.parameters())) {
                 boolean noException = false;
 
                 try {
-                    query.setParameters(sp.parameters);
+                    query.setParameters(sp.parameters());
 
                     noException = true;
                 } finally {

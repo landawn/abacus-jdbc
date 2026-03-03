@@ -364,13 +364,13 @@ public final class JoinInfo {
             for (final Map.Entry<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> entry : sqlBuilderFuncMap
                     .entrySet()) {
 
-                final String middleSelectSql = entry.getValue()._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).sql();
-                final String leftSelectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).sql();
+                final String middleSelectSql = entry.getValue()._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).toSql();
+                final String leftSelectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).toSql();
 
                 final int whereIndex = leftSelectSql.lastIndexOf(" WHERE ");
                 N.checkState(whereIndex >= 0, "SQL query does not contain ' WHERE ' clause: %s", leftSelectSql);
                 final String middleSelectSqlWhereIn = leftSelectSql.substring(whereIndex).replace(inCondToReplace, middleSelectSql);
-                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).sql() + middleSelectSqlWhereIn;
+                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).toSql() + middleSelectSqlWhereIn;
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                     if (N.isEmpty(selectPropNames)) {
@@ -381,9 +381,9 @@ public final class JoinInfo {
                             newSelectPropNames.add(referencedPropInfos[0].name);
                             newSelectPropNames.addAll(selectPropNames);
 
-                            return entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).sql();
+                            return entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).toSql();
                         } else {
-                            return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).sql();
+                            return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).toSql();
                         }
                     }
                 };
@@ -412,8 +412,8 @@ public final class JoinInfo {
                         .anyMatch(it -> middleSelectWords.get(2).equalsIgnoreCase(it.get(0)));
 
                 final String leftSelectSqlForBatch = hasSameColumnName //
-                        ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableName).sql()
-                        : entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass).sql();
+                        ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableName).toSql()
+                        : entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass).toSql();
 
                 final int fromIndexInBatch = leftSelectSqlForBatch.lastIndexOf(" FROM ");
                 N.checkState(fromIndexInBatch >= 0, "SQL query does not contain ' FROM ' clause: %s", leftSelectSqlForBatch);
@@ -437,8 +437,8 @@ public final class JoinInfo {
                         final StringBuilder sb = Objectory.createStringBuilder();
 
                         final String tmpSql = hasSameColumnName //
-                                ? entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableName).sql()
-                                : entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).sql();
+                                ? entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableName).toSql()
+                                : entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).toSql();
 
                         sb.append(tmpSql, 0, tmpSql.length() - fromLength).append(", ").append(middleCondPropName).append(batchSelectFromToJoinOn);
 
@@ -453,16 +453,16 @@ public final class JoinInfo {
                 batchSelectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSQLBuilder, batchParaSetter));
 
                 final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
-                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).sql() + middleSelectSqlWhereIn;
-                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).sql() + middleSelectSqlWhereIn;
-                final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql();
+                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).toSql() + middleSelectSqlWhereIn;
+                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).toSql() + middleSelectSqlWhereIn;
+                final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).toSql();
 
                 setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
                 deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, cascadeDeleteDefinedInDB ? null : middleDeleteSql, paramSetter));
 
                 final String batchDeleteSqlHeader = entry.getValue()._4.apply(referencedEntityClass)
                         .where(cond)
-                        .sql()
+                        .toSql()
                         .replace(inCondToReplace, middleSelectSql)
                         .replace(" = ?)", " IN (");
 
@@ -474,7 +474,7 @@ public final class JoinInfo {
                     }
                 };
 
-                final String batchMiddleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).sql().replace(" = ?", " IN (");
+                final String batchMiddleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).toSql().replace(" = ?", " IN (");
 
                 final IntFunction<String> batchMiddleDeleteSQLBuilder = size -> {
                     if (size == 1) {
@@ -583,13 +583,13 @@ public final class JoinInfo {
             for (final Map.Entry<Class<? extends SQLBuilder>, Tuple4<Function<Collection<String>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>, Function<Class<?>, SQLBuilder>>> entry : sqlBuilderFuncMap
                     .entrySet()) {
 
-                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).sql();
+                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).toSql();
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                     if (N.isEmpty(selectPropNames)) {
                         return selectSql;
                     } else {
-                        return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).where(cond).sql();
+                        return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).where(cond).toSql();
                     }
                 };
 
@@ -605,7 +605,7 @@ public final class JoinInfo {
                         return sqlBuilder.apply(selectPropNames);
                     } else {
                         if (N.isEmpty(selectPropNames)) {
-                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), size).sql();
+                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), size).toSql();
                         } else {
                             if (!N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
                                 final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
@@ -616,10 +616,10 @@ public final class JoinInfo {
 
                                 newSelectPropNames.addAll(selectPropNames);
 
-                                return appendWhereFunc.apply(entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass), size).sql();
+                                return appendWhereFunc.apply(entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass), size).toSql();
                             }
 
-                            return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).sql();
+                            return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), size).toSql();
                         }
                     }
                 };
@@ -627,8 +627,8 @@ public final class JoinInfo {
                 batchSelectSQLBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSelectSQLBuilder, batchParaSetter));
 
                 final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
-                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).where(cond).sql();
-                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).where(cond).sql();
+                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).where(cond).toSql();
+                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).where(cond).toSql();
 
                 setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
                 deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, null, paramSetter));
@@ -637,7 +637,7 @@ public final class JoinInfo {
                     if (size == 1) {
                         return deleteSql;
                     } else {
-                        return appendWhereFunc.apply(entry.getValue()._4.apply(referencedEntityClass), size).sql();
+                        return appendWhereFunc.apply(entry.getValue()._4.apply(referencedEntityClass), size).toSql();
                     }
                 };
 

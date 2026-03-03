@@ -1691,7 +1691,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
-        final Condition cond = Filters.eqAnd(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.allEqual(entity, uniquePropNamesForQuery);
 
         return upsert(entity, cond);
     }
@@ -1731,7 +1731,7 @@ public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<
         } else {
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+            final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
                 Beans.copyInto(entity, dbEntity);

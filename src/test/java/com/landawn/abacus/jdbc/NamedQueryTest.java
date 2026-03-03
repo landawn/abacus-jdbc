@@ -71,8 +71,8 @@ public class NamedQueryTest extends TestBase {
     public void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
         when(mockPreparedStatement.getConnection()).thenReturn(mockConnection);
-        when(mockParsedSql.getNamedParameters()).thenReturn(ImmutableList.of("param1", "param2"));
-        when(mockParsedSql.getParameterCount()).thenReturn(2);
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1", "param2"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
         when(mockParsedSql.sql()).thenReturn("SELECT * FROM table WHERE col1 = :param1 AND col2 = :param2");
 
         namedQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
@@ -1171,15 +1171,15 @@ public class NamedQueryTest extends TestBase {
     }
 
     @Test
-    public void testMultipleOccurrencesOfParameter() throws SQLException {
+    public void testMultipleFrequencyOfParameter() throws SQLException {
         // Create a query with duplicate parameter names
-        when(mockParsedSql.getNamedParameters()).thenReturn(ImmutableList.of("id", "id", "name"));
-        when(mockParsedSql.getParameterCount()).thenReturn(3);
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id", "id", "name"));
+        when(mockParsedSql.parameterCount()).thenReturn(3);
         namedQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
 
         namedQuery.setInt("id", 123);
 
-        // Both occurrences of "id" should be set
+        // Both frequency of "id" should be set
         verify(mockPreparedStatement).setInt(1, 123);
         verify(mockPreparedStatement).setInt(2, 123);
     }

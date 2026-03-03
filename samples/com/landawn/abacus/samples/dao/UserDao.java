@@ -241,7 +241,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     static final class SqlTable {
 
         @SqlScript
-        static final String sql_listToSet = PSC.selectFrom(User.class).where(Filters.gt("id")).sql() + ";";
+        static final String sql_listToSet = PSC.selectFrom(User.class).where(Filters.gt("id")).toSql() + ";";
     }
 
     static final class Handlers {

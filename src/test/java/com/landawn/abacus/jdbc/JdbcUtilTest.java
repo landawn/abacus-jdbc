@@ -887,7 +887,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testGetNamedParameters() {
         String sql = "SELECT * FROM users WHERE name = :name AND age > :age";
-        List<String> params = JdbcUtil.getNamedParameters(sql);
+        List<String> params = JdbcUtil.namedParameters(sql);
 
         assertEquals(2, params.size());
         assertTrue(params.contains("name"));
@@ -900,8 +900,8 @@ public class JdbcUtilTest extends TestBase {
         ParsedSql parsed = JdbcUtil.parseSql(sql);
 
         assertNotNull(parsed);
-        assertEquals(1, parsed.getParameterCount());
-        assertTrue(parsed.getNamedParameters().contains("id"));
+        assertEquals(1, parsed.parameterCount());
+        assertTrue(parsed.namedParameters().contains("id"));
     }
 
     @Test

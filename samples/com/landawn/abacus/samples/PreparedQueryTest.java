@@ -84,7 +84,7 @@ public class PreparedQueryTest {
 
         N.println(firstNameV);
 
-        final String sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
+        final String sql = PSC.deleteFrom(User.class).where("id >= ?").toSql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, id)
                 .update();
@@ -113,7 +113,7 @@ public class PreparedQueryTest {
                 .list(Jdbc.BiRowMapper.to(User.class, null, it -> it.replaceFirst("acc.", "")))
                 .forEach(Fn.println());
 
-        sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
+        sql = PSC.deleteFrom(User.class).where("id >= ?").toSql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
                 .update();
@@ -131,7 +131,7 @@ public class PreparedQueryTest {
 
         final long minId = N.min(ids);
 
-        String sql = PSC.selectFrom(User.class).where("id >= ?").sql();
+        String sql = PSC.selectFrom(User.class).where("id >= ?").toSql();
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
@@ -152,7 +152,7 @@ public class PreparedQueryTest {
                 .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1), Fn.replacingMerger()))
                 .forEach(Fn.println("="));
 
-        sql = PSC.deleteFrom(User.class).where("id >= ?").sql();
+        sql = PSC.deleteFrom(User.class).where("id >= ?").toSql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
                 .update();
@@ -161,7 +161,7 @@ public class PreparedQueryTest {
     @Test
     public void test_ColumnGetter() throws SQLException {
 
-        String sql = PSC.insertInto(User.class).sql();
+        String sql = PSC.insertInto(User.class).toSql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .setString(2, "Forrest")
@@ -170,17 +170,17 @@ public class PreparedQueryTest {
                 .setString(5, "123@email.com")
                 .insert();
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).sql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).toSql()) //
                 .setParameters(User.builder().firstName("Forrest").build(), N.asList(s.firstName))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).sql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).toSql()) //
                 .setParametersFrom(1, N.asList("Forrest"))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 
-        sql = PSC.selectFrom(User.class).where("id = ?").sql();
+        sql = PSC.selectFrom(User.class).where("id = ?").toSql();
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
@@ -215,7 +215,7 @@ public class PreparedQueryTest {
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigInteger().ifPresent(Fn.println());
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigDecimal().ifPresent(Fn.println());
 
-        sql = PSC.deleteFrom(User.class).where(Filters.eq(s.id)).sql();
+        sql = PSC.deleteFrom(User.class).where(Filters.eq(s.id)).toSql();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .update();

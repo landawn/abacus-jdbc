@@ -176,7 +176,7 @@ class CodeGenerationUtilTest {
         User user = Beans.newRandom(User.class);
         user.setEmail(null);
 
-        String sql = SCSB.insert(user).into(User.class).sql();
+        String sql = SCSB.insert(user).into(User.class).toSql();
         N.println(sql);
 
         String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, sql);
@@ -184,7 +184,7 @@ class CodeGenerationUtilTest {
 
         N.println("==================================");
 
-        sql = SCSB.insert(user).into(User.class).sql();
+        sql = SCSB.insert(user).into(User.class).toSql();
         N.println(sql);
 
         updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, sql, "id > 2");

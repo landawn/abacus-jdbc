@@ -1544,7 +1544,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                      correspond to a valid property in the entity
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
-     * @see JdbcUtil#getNamedParameters(String)
+     * @see JdbcUtil#namedParameters(String)
      */
     public CallableQuery setParameters(final Object entity, final List<String> parameterNames) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);

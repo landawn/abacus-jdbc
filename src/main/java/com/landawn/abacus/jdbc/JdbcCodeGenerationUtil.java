@@ -188,7 +188,6 @@ public final class JdbcCodeGenerationUtil {
             .fieldNameConverter((tableName, columnName) -> Strings.toCamelCase(columnName))
             .build();
 
-    @SuppressWarnings("deprecation")
     private static final BiMap<String, String> eccClassNameMap = BiMap.copyOf(N.asMap("Boolean", "boolean", "Character", "char", "Byte", "byte", "Short",
             "short", "Integer", "int", "Long", "long", "Float", "float", "Double", "double"));
 

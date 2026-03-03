@@ -2297,7 +2297,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
-        final Condition cond = Filters.eqAnd(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.allEqual(entity, uniquePropNamesForQuery);
 
         return upsert(entity, cond);
     }
@@ -2337,7 +2337,7 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
         } else {
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+            final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
                 Beans.copyInto(entity, dbEntity);

@@ -1131,7 +1131,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
 
         return upsert(entity, idPropNameList);
     }
@@ -1163,7 +1163,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(uniquePropNamesForQuery, cs.uniquePropNamesForQuery);
 
-        final Condition cond = Filters.eqAnd(entity, uniquePropNamesForQuery);
+        final Condition cond = Filters.allEqual(entity, uniquePropNamesForQuery);
 
         return upsert(entity, cond);
     }
@@ -1207,7 +1207,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         } else {
             final Class<?> cls = entity.getClass();
             @SuppressWarnings("deprecation")
-            final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+            final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
                 Beans.copyInto(entity, dbEntity);
@@ -1271,7 +1271,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         final T entity = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = entity.getClass();
         @SuppressWarnings("deprecation")
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
 
         return batchUpsert(entities, idPropNameList, batchSize);
     }
@@ -1388,7 +1388,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
                 final Set<String> ignoredPropNames = N.newHashSet(propNameListForQuery);
 
                 @SuppressWarnings("deprecation")
-                final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls);
+                final List<String> idPropNameList = QueryUtil.getIdPropNames(cls);
 
                 if (N.notEmpty(idPropNameList)) {
                     ignoredPropNames.addAll(idPropNameList);
@@ -1469,7 +1469,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
         final Class<?> cls = entity.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
@@ -1592,7 +1592,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends Unche
 
         final T first = N.firstOrNullIfEmpty(entities);
         final Class<?> cls = first.getClass();
-        final List<String> idPropNameList = QueryUtil.getIdFieldNames(cls); // must not empty.
+        final List<String> idPropNameList = QueryUtil.getIdPropNames(cls); // must not empty.
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
