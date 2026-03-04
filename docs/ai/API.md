@@ -1,7 +1,7 @@
-# abacus-jdbc API Index (v4.6.1)
+# abacus-jdbc API Index (v4.6.2)
 - Build: unknown
 - Java: 17
-- Generated: 2026-02-28
+- Generated: 2026-03-03
 
 ## Packages
 - com.landawn.abacus.jdbc
@@ -3422,7 +3422,7 @@ A wrapper class for {@link CallableStatement} that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the entity or parameterNames is null
   - `java.sql.SQLException` — if a database access error occurs or if a parameter name doesn't correspond to a valid property in the entity
-- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#getNamedParameters(String)
+- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#namedParameters(String)
 ##### registerOutParameter(...) -> CallableQuery
 - **Signature:** `public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType) throws SQLException`
 - **Summary:** Registers a parameter as an OUT parameter with the specified SQL type.
@@ -3910,7 +3910,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Throws:**
   - `java.lang.IllegalStateException` — if this {@code DBLock} instance has been closed.
 ##### unlock(...) -> boolean
-- **Signature:** `public boolean unlock(final String target, final String code) throws IllegalStateException`
+- **Signature:** `public boolean unlock(final String target, final String code)`
 - **Summary:** Releases the distributed lock on the specified target resource.
 - **Contract:**
   - The lock is released only if the provided {@code code} matches the unique code associated with the currently held lock for that target.
@@ -3922,8 +3922,6 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
   - `target` (`String`) — the unique identifier of the resource whose lock is to be released. Must not be {@code null} or empty.
   - `code` (`String`) — the unique code obtained during lock acquisition. Must not be {@code null} .
 - **Returns:** {@code true} if the lock was successfully released; {@code false} otherwise (e.g., lock not found, code mismatch).
-- **Throws:**
-  - `java.lang.IllegalStateException` — if this {@code DBLock} instance has been closed.
 ##### close(...) -> void
 - **Signature:** `public void close()`
 - **Summary:** Closes this {@code DBLock} instance, releasing all associated resources.
@@ -4332,8 +4330,8 @@ A functional interface for extracting a result from a {@code ResultSet} .
   - `rowFilter` (`RowFilter`) — a predicate to filter rows
   - `rowExtractor` (`RowExtractor`) — the custom row extractor to process each accepted row
 - **Returns:** a {@code ResultExtractor} that produces a filtered {@code Dataset}
-##### to(...) -> ResultExtractor<R>
-- **Signature:** `static <R> ResultExtractor<R> to(final Throwables.Function<Dataset, R, SQLException> after)`
+##### toDatasetAndThen(...) -> ResultExtractor<R>
+- **Signature:** `static <R> ResultExtractor<R> toDatasetAndThen(final Throwables.Function<Dataset, R, SQLException> after)`
 - **Summary:** Creates a {@code ResultExtractor} that first converts the {@code ResultSet} to a {@code Dataset} and then applies a transformation function to it.
 - **Parameters:**
   - `after` (`Throwables.Function<Dataset, R, SQLException>`) — the function to apply to the intermediate {@code Dataset}
@@ -4933,7 +4931,7 @@ A functional interface for mapping the current row of a {@code ResultSet} to an 
 - **Signature:** `static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter)`
 - **Summary:** Creates a new {@code BiRowMapperBuilder} with the specified default column getter.
 - **Parameters:**
-  - `defaultColumnGetter` (`ColumnGetter<?>`) — the default {@code ColumnGetter} to use for unconfigured columns
+  - `defaultColumnGetter` (`ColumnGetter<?>`) — the default {@code ColumnGetter} to use for unconfigured columns; must not be null
 - **Returns:** a new {@code BiRowMapperBuilder}
 
 #### Public Instance Methods
@@ -5202,32 +5200,44 @@ A functional interface that represents a predicate (boolean-valued function) of 
 #### Public Instance Methods
 ##### test(...) -> boolean
 - **Signature:** `@Override boolean test(final ResultSet rs) throws SQLException`
-- **Summary:** Evaluates this filter on the given {@code ResultSet} .
+- **Summary:** Evaluates this filter on the given {@code ResultSet} , which is positioned at the current row.
 - **Contract:**
-  - This method should be fast enough to avoid holding DB connections for a long time or slowing down overall performance.
+  - <p> This method should execute quickly to avoid holding database connections longer than necessary.
 - **Parameters:**
-  - `rs` (`ResultSet`) — the {@code ResultSet} positioned at the current row.
-- **Returns:** {@code true} if the row should be included, {@code false} otherwise.
+  - `rs` (`ResultSet`) — the {@code ResultSet} positioned at the current row. Must not be {@code null} .
+- **Returns:** {@code true} if the current row should be included in the result; {@code false} to skip it.
 - **Throws:**
-  - `java.sql.SQLException` — if a database access error occurs.
+  - `java.sql.SQLException` — if a database access error occurs while reading from the {@code ResultSet} .
 ##### negate(...) -> RowFilter
 - **Signature:** `@Override default RowFilter negate()`
 - **Summary:** Returns a filter that represents the logical negation of this filter.
 - **Parameters:**
   - (none)
-- **Returns:** a new {@code RowFilter} that is the negation of this filter.
+- **Returns:** a new {@code RowFilter} that is the logical negation of this filter.
 ##### and(...) -> RowFilter
 - **Signature:** `default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other)`
 - **Summary:** Returns a composed filter that represents a short-circuiting logical AND of this filter and another.
+- **Contract:**
+  - The {@code other} predicate is not evaluated if this filter returns {@code false} .
 - **Parameters:**
-  - `other` (`Throwables.Predicate<? super ResultSet, SQLException>`) — a {@code RowFilter} that will be logically-ANDed with this filter.
-- **Returns:** a new composed {@code RowFilter} .
+  - `other` (`Throwables.Predicate<? super ResultSet, SQLException>`) — a predicate that will be logically-ANDed with this filter. Must not be {@code null} .
+- **Returns:** a new composed {@code RowFilter} that returns {@code true} only if both this filter and {@code other} return {@code true} .
+##### or(...) -> RowFilter
+- **Signature:** `default RowFilter or(final Throwables.Predicate<? super ResultSet, SQLException> other)`
+- **Summary:** Returns a composed filter that represents a short-circuiting logical OR of this filter and another.
+- **Contract:**
+  - The {@code other} predicate is not evaluated if this filter returns {@code true} .
+- **Parameters:**
+  - `other` (`Throwables.Predicate<? super ResultSet, SQLException>`) — a predicate that will be logically-ORed with this filter. Must not be {@code null} .
+- **Returns:** a new composed {@code RowFilter} that returns {@code true} if either this filter or {@code other} returns {@code true} .
 ##### toBiRowFilter(...) -> BiRowFilter
 - **Signature:** `default BiRowFilter toBiRowFilter()`
-- **Summary:** Converts this {@code RowFilter} to a {@link BiRowFilter} , which also accepts a list of column labels.
+- **Summary:** Converts this {@code RowFilter} to a {@link BiRowFilter} that ignores the column labels parameter.
+- **Contract:**
+  - This is useful when a {@code BiRowFilter} is required by an API but your filtering logic does not need column metadata.
 - **Parameters:**
   - (none)
-- **Returns:** a {@code BiRowFilter} that delegates to this filter.
+- **Returns:** a {@code BiRowFilter} that delegates to this filter's {@link #test(ResultSet)} method.
 
 ### Interface BiRowFilter (com.landawn.abacus.jdbc.Jdbc.BiRowFilter)
 A functional interface that represents a predicate (boolean-valued function) of a {@code ResultSet} and its column labels.
@@ -5246,25 +5256,35 @@ A functional interface that represents a predicate (boolean-valued function) of 
 - **Signature:** `@Override boolean test(ResultSet rs, List<String> columnLabels) throws SQLException`
 - **Summary:** Evaluates this filter on the given {@code ResultSet} and column labels.
 - **Contract:**
-  - This method should be fast enough to avoid holding DB connections for a long time or slowing down overall performance.
+  - <p> This method should execute quickly to avoid holding database connections longer than necessary.
 - **Parameters:**
-  - `rs` (`ResultSet`) — the {@code ResultSet} positioned at the current row.
-  - `columnLabels` (`List<String>`) — the list of column labels from the result set metadata.
-- **Returns:** {@code true} if the row should be included, {@code false} otherwise.
+  - `rs` (`ResultSet`) — the {@code ResultSet} positioned at the current row. Must not be {@code null} .
+  - `columnLabels` (`List<String>`) — an unmodifiable list of column labels from the result set metadata, fetched once per query. The list is 0-based (i.e., the label at index {@code i} corresponds to column index {@code i + 1} in the {@code ResultSet} ).
+- **Returns:** {@code true} if the current row should be included in the result; {@code false} to skip it.
 - **Throws:**
-  - `java.sql.SQLException` — if a database access error occurs.
+  - `java.sql.SQLException` — if a database access error occurs while reading from the {@code ResultSet} .
 ##### negate(...) -> BiRowFilter
 - **Signature:** `default BiRowFilter negate()`
 - **Summary:** Returns a filter that represents the logical negation of this filter.
 - **Parameters:**
   - (none)
-- **Returns:** a new {@code BiRowFilter} that is the negation of this filter.
+- **Returns:** a new {@code BiRowFilter} that is the logical negation of this filter.
 ##### and(...) -> BiRowFilter
 - **Signature:** `default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other)`
 - **Summary:** Returns a composed filter that represents a short-circuiting logical AND of this filter and another.
+- **Contract:**
+  - The {@code other} predicate is not evaluated if this filter returns {@code false} .
 - **Parameters:**
-  - `other` (`Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException>`) — a {@code BiRowFilter} that will be logically-ANDed with this filter.
-- **Returns:** a new composed {@code BiRowFilter} .
+  - `other` (`Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException>`) — a predicate that will be logically-ANDed with this filter. Must not be {@code null} .
+- **Returns:** a new composed {@code BiRowFilter} that returns {@code true} only if both this filter and {@code other} return {@code true} .
+##### or(...) -> BiRowFilter
+- **Signature:** `default BiRowFilter or(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other)`
+- **Summary:** Returns a composed filter that represents a short-circuiting logical OR of this filter and another.
+- **Contract:**
+  - The {@code other} predicate is not evaluated if this filter returns {@code true} .
+- **Parameters:**
+  - `other` (`Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException>`) — a predicate that will be logically-ORed with this filter. Must not be {@code null} .
+- **Returns:** a new composed {@code BiRowFilter} that returns {@code true} if either this filter or {@code other} returns {@code true} .
 
 ### Interface RowExtractor (com.landawn.abacus.jdbc.Jdbc.RowExtractor)
 A functional interface for extracting data from the current row of a {@code ResultSet} into a target {@code Object} array.
@@ -5318,7 +5338,7 @@ A functional interface for extracting data from the current row of a {@code Resu
 - **Signature:** `static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter)`
 - **Summary:** Creates a {@link RowExtractorBuilder} with a specified default {@code ColumnGetter} .
 - **Parameters:**
-  - `defaultColumnGetter` (`ColumnGetter<?>`) — the default {@code ColumnGetter} to use for unconfigured columns.
+  - `defaultColumnGetter` (`ColumnGetter<?>`) — the default {@code ColumnGetter} to use for unconfigured columns; must not be null.
 - **Returns:** a new {@code RowExtractorBuilder} .
 
 #### Public Instance Methods
@@ -5481,7 +5501,7 @@ A functional interface for extracting a typed value from a specified column of a
   - `java.sql.SQLException` — if a database access error occurs.
 
 ### Class Columns (com.landawn.abacus.jdbc.Jdbc.Columns)
-A utility class containing helpers and constants for column-specific operations, primarily focused on single-column results.
+A utility class containing helpers and constants for column-specific operations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -5496,7 +5516,7 @@ A utility class containing helpers and constants for column-specific operations,
 - (none)
 
 ### Class ColumnOne (com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne)
-A utility class providing predefined {@link RowMapper} and {@link BiParametersSetter} instances for operations on the first column of a {@code ResultSet} or the first parameter of a {@code PreparedStatement} .
+Provides predefined {@link RowMapper} and {@link BiParametersSetter} instances for the first column of a {@code ResultSet} or the first parameter of a {@code PreparedStatement} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -5569,7 +5589,7 @@ Represents an output parameter for a stored procedure call.
 
 #### Public Instance Methods
 ##### <init>(...) -> void
-- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * @param parameterIndex the 1-based index of the parameter. * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. */ public static OutParam of(int parameterIndex, int sqlType) { final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the results of output parameters from a stored procedure execution. * It provides methods to retrieve parameter values by their index or name. */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * @return a map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return outParamValues; } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * @return a list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return outParams; } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Calling method: " + sig._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * It can be used for logging results, result transformation, or resource cleanup. * * @param result the value returned by the method. If the method's return type is void, this will be {@code null}. * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Throwable e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; handlerPool.put(qualifier, result); } } catch (final Exception e) { // Bean not found in Spring context, return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); if (result == null) { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } if (result != null) { handlerPool.put(qualifier, result); } } catch (final Exception e) { // Bean not found in Spring context, return null } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { try { result = N.newInstance(handlerClass); if (result != null) { register(result); } } catch (final Exception e) { // ignore } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // singleton. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@code LocalCache}. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. */ static DaoCache createByMap(Map<String, Object> map) { return new DaoCacheByMap(map); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableWrapper<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableWrapper<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries associated with that table. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} that uses a {@code java.util.concurrent.ConcurrentHashMap} * as the default backing cache. It does not support automatic eviction or TTL. */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. */ DaoCacheByMap { } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName)); } } } }`
+- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * @param parameterIndex the 1-based index of the parameter. * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. */ public static OutParam of(int parameterIndex, int sqlType) { final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the results of output parameters from a stored procedure execution. * It provides methods to retrieve parameter values by their 1-based index or name. * * <p><b>Usage Examples:</b></p> * <pre>{@code * // After calling a stored procedure with output parameters * OutParamResult result = callableQuery.call(outParams); * * // Retrieve by index * int id = result.getOutParamValue(1); * * // Retrieve by name * String name = result.getOutParamValue("result_name"); * }</pre> * * @see OutParam */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * @return a map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return outParamValues; } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * @return a list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return outParams; } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Calling method: " + sig._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * It can be used for logging results, result transformation, or resource cleanup. * * @param result the value returned by the method. If the method's return type is void, this will be {@code null}. * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. * * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from * the Spring application context if available. The factory also provides convenience methods * to create handlers from lambda expressions.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Create a handler with before/after actions * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result) * ); * * // Register and retrieve a handler by class * HandlerFactory.register(myHandler); * Handler<?> h = HandlerFactory.get(MyHandler.class); * }</pre> * * @see Handler */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Throwable e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; handlerPool.put(qualifier, result); } } catch (final Exception e) { // Bean not found in Spring context, return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); } catch (final Exception e) { // Bean not found in Spring context by class } if (result == null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } catch (final Exception e) { // Bean not found in Spring context by qualifier } } if (result != null) { handlerPool.put(qualifier, result); } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { result = N.newInstance(handlerClass); if (result != null) { register(result); } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // singleton. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> * * <p>Two built-in implementations are provided:</p> * <ul> * <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li> * <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li> * </ul> * * @see DefaultDaoCache * @see DaoCacheByMap */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@code LocalCache}. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. */ static DaoCache createByMap(Map<String, Object> map) { N.checkArgNotNull(map, "map"); return new DaoCacheByMap(map); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. * * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all * entries associated with the affected table. If the table name cannot be determined from the cache key, * the entire cache is cleared.</p> * * @see DaoCache#create(int, long) */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableWrapper<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableWrapper<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries associated with that table. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly * invalidated by a data modification operation or manual clearing. * * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p> * * @see DaoCache#createByMap() * @see DaoCache#createByMap(Map) */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. */ DaoCacheByMap { N.checkArgNotNull(cache, "cache"); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName)); } } } }`
 - **Parameters:**
   - (none)
 
@@ -7696,8 +7716,8 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if the provided arguments are invalid
   - `java.sql.SQLException` — if a SQL exception occurs while retrieving the output parameters
-##### getNamedParameters(...) -> List<String>
-- **Signature:** `public static List<String> getNamedParameters(final String sql)`
+##### namedParameters(...) -> List<String>
+- **Signature:** `public static List<String> namedParameters(final String sql)`
 - **Summary:** Extracts the named parameters from the given SQL string.
 - **Parameters:**
   - `sql` (`String`) — the SQL string containing named parameters (e.g., :paramName)
@@ -8251,8 +8271,8 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Returns:** a DAO instance implementing the specified interface
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if required parameters are invalid
-##### startDaoCacheOnCurrentThread(...) -> Jdbc.DaoCache
-- **Signature:** `public static Jdbc.DaoCache startDaoCacheOnCurrentThread()`
+##### openDaoCacheOnCurrentThread(...) -> Jdbc.DaoCache
+- **Signature:** `public static Jdbc.DaoCache openDaoCacheOnCurrentThread()`
 - **Summary:** Enables DAO query result caching for the current thread.
 - **Contract:**
   - Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
@@ -8260,7 +8280,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
   - (none)
 - **Returns:** the created DaoCache for the current thread
 - **See also:** Jdbc.DaoCache#createByMap(), #closeDaoCacheOnCurrentThread()
-- **Signature:** `public static Jdbc.DaoCache startDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache)`
+- **Signature:** `public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache)`
 - **Summary:** Enables the specified DAO cache for the current thread.
 - **Contract:**
   - Must be paired with {@link #closeDaoCacheOnCurrentThread()} to prevent memory leaks.
@@ -8275,7 +8295,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
   - This method should always be called in a finally block after starting a thread-local cache to prevent memory leaks.
 - **Parameters:**
   - (none)
-- **See also:** #startDaoCacheOnCurrentThread(), #startDaoCacheOnCurrentThread(Jdbc.DaoCache)
+- **See also:** #openDaoCacheOnCurrentThread(), #openDaoCacheOnCurrentThread(Jdbc.DaoCache)
 
 #### Public Instance Methods
 - (none)
@@ -9271,7 +9291,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNull(final String parameterName, final int sqlType) throws SQLException`
 - **Summary:** Sets the specified named parameter to SQL {@code NULL} .
 - **Contract:**
-  - If the parameter appears multiple times in the query, all occurrences will be set to NULL.
+  - If the parameter appears multiple times in the query, all frequency will be set to NULL.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter to be set to NULL (without the ':' prefix)
   - `sqlType` (`int`) — the SQL type code defined in {@link java.sql.Types}
@@ -9842,7 +9862,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a CLOB (Character Large Object) parameter using a Reader for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
@@ -9853,7 +9873,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a CLOB (Character Large Object) parameter using a Reader with a specified length for the parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the CLOB data
@@ -9866,7 +9886,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNClob(final String parameterName, final java.sql.NClob x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an NCLOB (National Character Large Object) parameter for the specified parameter name.
 - **Contract:**
-  - <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.NClob`) — the NClob object, or {@code null} to set SQL {@code NULL}
@@ -9877,7 +9897,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an NCLOB (National Character Large Object) parameter using a Reader for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
@@ -9888,7 +9908,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an NCLOB (National Character Large Object) parameter using a Reader with a specified length.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the NCLOB data
@@ -9901,7 +9921,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setURL(final String parameterName, final URL x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a URL parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`URL`) — the URL object, or {@code null} to set SQL {@code NULL}
@@ -9913,7 +9933,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an SQL XML parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.SQLXML`) — the SQLXML object, or {@code null} to set SQL {@code NULL}
@@ -9925,7 +9945,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setRowId(final String parameterName, final java.sql.RowId x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a RowId parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.RowId`) — the RowId object, or {@code null} to set SQL {@code NULL}
@@ -9937,7 +9957,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setRef(final String parameterName, final java.sql.Ref x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a Ref (SQL REF) parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.Ref`) — the Ref object, or {@code null} to set SQL {@code NULL}
@@ -9949,7 +9969,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setArray(final String parameterName, final java.sql.Array x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Array parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.Array`) — the Array object, or {@code null} to set SQL {@code NULL}
@@ -9961,7 +9981,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setObject(final String parameterName, final Object x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Object parameter for the specified parameter name, using the default SQL type mapping.
 - **Contract:**
-  - Common mappings include: <ul> <li> String \\u2192 VARCHAR/CHAR </li> <li> Integer/Long \\u2192 INTEGER/BIGINT </li> <li> BigDecimal \\u2192 NUMERIC/DECIMAL </li> <li> Date/Timestamp \\u2192 DATE/TIMESTAMP </li> <li> Boolean \\u2192 BOOLEAN/BIT </li> <li> byte\[\] \\u2192 BINARY/VARBINARY </li> </ul> <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - Common mappings include: <ul> <li> String \\u2192 VARCHAR/CHAR </li> <li> Integer/Long \\u2192 INTEGER/BIGINT </li> <li> BigDecimal \\u2192 NUMERIC/DECIMAL </li> <li> Date/Timestamp \\u2192 DATE/TIMESTAMP </li> <li> Boolean \\u2192 BOOLEAN/BIT </li> <li> byte\[\] \\u2192 BINARY/VARBINARY </li> </ul> <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value, or {@code null} to set SQL {@code NULL}
@@ -9974,7 +9994,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Contract:**
   - <p> This method allows explicit control over the SQL type used when setting the parameter value.
   - Use this when the default type mapping is not sufficient or when you need to ensure a specific SQL type.
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value, or {@code null} to set SQL {@code NULL}
@@ -9987,7 +10007,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Object parameter with a specified SQL type and scale/length for the parameter name.
 - **Contract:**
-  - <p> This method provides the most control over parameter setting, allowing specification of both SQL type and additional type-specific information: <ul> <li> For numeric types (DECIMAL, NUMERIC): scaleOrLength represents the number of digits after the decimal point </li> <li> For character types (CHAR, VARCHAR): scaleOrLength represents the length of the string </li> <li> For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes </li> </ul> <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - <p> This method provides the most control over parameter setting, allowing specification of both SQL type and additional type-specific information: <ul> <li> For numeric types (DECIMAL, NUMERIC): scaleOrLength represents the number of digits after the decimal point </li> <li> For character types (CHAR, VARCHAR): scaleOrLength represents the length of the string </li> <li> For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes </li> </ul> <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value
@@ -10001,7 +10021,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Object parameter with a specified SQLType for the parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value, or {@code null} to set SQL {@code NULL}
@@ -10014,7 +10034,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Summary:** Sets an Object parameter with a specified SQLType and scale/length for the parameter name.
 - **Contract:**
   - <p> This method provides the most control when using JDBC 4.2 SQLType, allowing specification of both SQL type and additional type-specific information.
-  - <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value
@@ -10028,7 +10048,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Summary:** Sets an Object parameter using a custom Type handler for the parameter name.
 - **Contract:**
   - This is particularly useful for complex type mappings or when working with custom data types.
-  - <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+  - <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`T`) — the object containing the parameter value
@@ -10056,7 +10076,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if parameters is {@code null} or of an unsupported type
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** JdbcUtil#getNamedParameters(String)
+- **See also:** JdbcUtil#namedParameters(String)
 - **Signature:** `public NamedQuery setParameters(final Object entity, final Collection<String> parameterNames) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets specific parameters from an entity object using only the specified parameter names.
 - **Parameters:**
@@ -10066,7 +10086,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if entity or parameterNames is {@code null} , if entity is not a bean class, if a property is not found in the entity, or if a parameter name is not found in the query
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#getNamedParameters(String)
+- **See also:** Beans#getPropNameList(Class), Beans#getPropNames(Class, Collection), JdbcUtil#namedParameters(String)
 - **Signature:** `public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> parametersSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets parameters using a custom parameter setter function.
 - **Contract:**
@@ -10722,16 +10742,16 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
   - (none)
 - **Returns:** the qualifier string, or empty string if not specified
 ##### type(...) -> Class<? extends Jdbc.Handler<? extends Dao>>
-- **Signature:** `pre> * * @return the handler class, defaults to {@link EmptyHandler} (no-op) */ @SuppressWa`
+- **Signature:** `@SuppressWarnings("rawtypes") Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class`
 - **Summary:** Specifies the handler implementation class.
 - **Contract:**
   - The class must extend {@link Jdbc.Handler} with the appropriate DAO type parameter.
-  - <p> The handler lifecycle methods are called in this order: </p> <ol> <li> {@code beforeInvoke()} - Before the actual method invocation </li> <li> Actual DAO method execution </li> <li> {@code afterInvoke()} - After the method completes (whether successfully or with an exception) </li> </ol> <p> Example handler implementation: </p> <pre> {@code public class SecurityHandler extends Jdbc.Handler<BaseDao> { @Override public void beforeInvoke(BaseDao dao, Method method, Object\[\] args) { // Check user permissions if (!hasPermission(method)) { throw new SecurityException("Access denied"); } } @Override public Object afterInvoke(Object result, BaseDao dao, Method method, Object\[\] args) { // Can modify or filter results return filterSensitiveData(result); } } } </pre>
+  - <p> The handler lifecycle methods are called in this order: </p> <ol> <li> {@code beforeInvoke()} - Before the actual method invocation </li> <li> Actual DAO method execution </li> <li> {@code afterInvoke()} - After the method completes (whether successfully or with an exception) </li> </ol> <p> Example handler implementation: </p> <pre> {@code public class SecurityHandler extends Jdbc.Handler<BaseDao> { @Override public void beforeInvoke(BaseDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Check user permissions if (!hasPermission(methodSignature._1)) { throw new SecurityException("Access denied"); } } @Override public void afterInvoke(Object result, BaseDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Can filter or log results filterSensitiveData(result); } } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the handler class, defaults to {@link EmptyHandler} (no-op)
 ##### filter(...) -> String\[\]
-- **Signature:** `* }</pre> * * @return`
+- **Signature:** `String[] filter() default { ".*" }`
 - **Summary:** Specifies filter patterns for methods when the annotation is applied at the class level.
 - **Contract:**
   - Specifies filter patterns for methods when the annotation is applied at the class level.
@@ -10740,7 +10760,7 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
   - (none)
 - **Returns:** array of filter patterns, default matches all methods
 ##### isForInvokeFromOutsideOfDaoOnly(...) -> boolean
-- **Signature:** `@return {@code true} if handler only applies to externa`
+- **Signature:** `boolean isForInvokeFromOutsideOfDaoOnly() default false`
 - **Summary:** Specifies whether this handler should only be applied to external invocations of the DAO.
 - **Contract:**
   - Specifies whether this handler should only be applied to external invocations of the DAO.
@@ -10767,7 +10787,7 @@ Container annotation for multiple {@link Handler} annotations.
 - **Signature:** `Handler[] value()`
 - **Summary:** Returns the array of {@link Handler} annotations contained in this list.
 - **Contract:**
-  - <p> When multiple handlers are applied to a DAO or method, they form a chain of interceptors, with each handler having the opportunity to: </p> <ul> <li> Modify input parameters before invocation </li> <li> Prevent the actual method execution </li> <li> Transform or filter the results </li> <li> Handle exceptions in custom ways </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Accessing HandlerList programmatically via reflection HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class); if (handlers != null) { for (Handler handler : handlers.value()) { System.out.println("Handler type: " + handler.type()); System.out.println("Filter: " + Arrays.toString(handler.filter())); } } // Multiple handlers are automatically wrapped in HandlerList @Handler(type = LoggingHandler.class) @Handler(type = SecurityHandler.class) @Handler(type = CacheHandler.class) public interface UserDao extends CrudDao<User, Long> { // The compiler wraps these in a HandlerList annotation } } </pre>
+  - <p> When multiple handlers are applied to a DAO or method, they form a chain of interceptors, with each handler having the opportunity to: </p> <ul> <li> Modify input parameters before invocation </li> <li> Prevent the actual method execution </li> <li> Transform or filter the results </li> <li> Handle exceptions in custom ways </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Accessing HandlerList programmatically via reflection HandlerList handlers = MyDao.class.getAnnotation(HandlerList.class); if (handlers != null) { for (Handler handler : handlers.value()) { System.out.println("Handler type: " + handler.type()); System.out.println("Filter: " + Arrays.toString(handler.filter())); } } // Multiple handlers are automatically wrapped in HandlerList @Handler(type = LoggingHandler.class) @Handler(type = SecurityHandler.class) @Handler(type = CacheHandler.class) public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> { // The compiler wraps these in a HandlerList annotation } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** array of Handler annotations

@@ -1684,7 +1684,7 @@ public final class Jdbc {
      * }</pre>
      *
      * @param <T> entity type to map each row to
-     * @see ColumnOne
+     * @see Columns.ColumnOne
      */
     @FunctionalInterface
     public interface RowMapper<T> extends Throwables.Function<ResultSet, T, SQLException> {
