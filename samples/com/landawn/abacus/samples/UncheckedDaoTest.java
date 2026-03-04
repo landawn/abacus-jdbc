@@ -459,7 +459,8 @@ public class UncheckedDaoTest {
 
             uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
+            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1))
+                    .ifPresent(Fn.println());
         }
 
         uncheckedUserDao.updateFirstAndLastName("Tom", "Hanks", 100);
@@ -537,14 +538,17 @@ public class UncheckedDaoTest {
                 .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
-                .forEach(Fn.println());
-
-        uncheckedUserDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                        Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(List.class))
                 .forEach(Fn.println());
 
         uncheckedUserDao
-                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
+                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.builder().getString("firstName").to(LinkedHashMap.class))
+                .forEach(Fn.println());
+
+        uncheckedUserDao
+                .list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null,
+                        Jdbc.BiRowMapper.builder().get("firstName", ResultSet::getString).to(User.class))
                 .forEach(Fn.println());
 
         uncheckedUserDao.list(Filters.gt("id", 0), (rs, cnl) -> rs.getString(1) != null, Jdbc.BiRowMapper.to(User.class)).forEach(Fn.println());

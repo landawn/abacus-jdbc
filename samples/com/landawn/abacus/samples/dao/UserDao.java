@@ -154,18 +154,21 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     int deleteByIdsWithSqlFragment(@SqlFragment("tableName") String tableName, List<Long> userIds) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
-    User selectByIdWithSqlFragment(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;
+    User selectByIdWithSqlFragment(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id)
+            throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id >= ? ORDER BY {whatever -> orderBy{{P}}")
-    List<User> selectByIdWithSqlFragment_2(@SqlFragment("tableName") String tableName, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy, long id) throws SQLException;
+    List<User> selectByIdWithSqlFragment_2(@SqlFragment("tableName") String tableName, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy, long id)
+            throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id >= ? AND first_name != ? ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
     List<User> selectByIdWithSqlFragment_3(@SqlFragment("tableName") String tableName, long id, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy,
             @SqlFragment("{count}") long count, String firstName) throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id >= :id AND first_name != :firstName ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
-    List<User> selectByIdWithSqlFragment_4(@SqlFragment("tableName") String tableName, @Bind("id") long id, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy,
-            @SqlFragment("{count}") long count, @Bind("firstName") String firstName) throws SQLException;
+    List<User> selectByIdWithSqlFragment_4(@SqlFragment("tableName") String tableName, @Bind("id") long id,
+            @SqlFragment("{whatever -> orderBy{{P}}") String orderBy, @SqlFragment("{count}") long count, @Bind("firstName") String firstName)
+            throws SQLException;
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     boolean exists(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id) throws SQLException;

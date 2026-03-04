@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -778,6 +779,29 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void teststreamAllResultSets_MultipleResultSets() throws SQLException {
+        final ResultSet rs1 = mock(ResultSet.class);
+        final ResultSet rs2 = mock(ResultSet.class);
+        final ResultSetMetaData md = mock(ResultSetMetaData.class);
+
+        when(mockStatement.getResultSet()).thenReturn(rs1, rs2);
+        when(mockStatement.getMoreResults()).thenReturn(true, false);
+        when(mockStatement.getUpdateCount()).thenReturn(-1);
+
+        when(rs1.getMetaData()).thenReturn(md);
+        when(rs2.getMetaData()).thenReturn(md);
+        when(md.getColumnCount()).thenReturn(1);
+        when(md.getColumnLabel(1)).thenReturn("col");
+        when(rs1.next()).thenReturn(false);
+        when(rs2.next()).thenReturn(false);
+
+        List<Dataset> list = JdbcUtil.streamAllResultSets(mockStatement).toList();
+
+        assertEquals(2, list.size());
+        verify(mockStatement, times(2)).getResultSet();
+    }
+
+    @Test
     public void testQueryByPage() throws SQLException {
         String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 10";
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -882,6 +906,20 @@ public class JdbcUtilTest extends TestBase {
         assertNotNull(result);
         assertEquals("result", result.getOutParamValue(1));
         assertEquals(42, (Integer) result.getOutParamValue(2));
+    }
+
+    @Test
+    public void testGetOutParameters_NullPrimitiveOutParam() throws SQLException {
+        List<OutParam> outParams = Arrays.asList(OutParam.of(1, Types.INTEGER), OutParam.of(2, Types.BOOLEAN));
+
+        when(mockCallableStatement.getInt(1)).thenReturn(0);
+        when(mockCallableStatement.getBoolean(2)).thenReturn(false);
+        when(mockCallableStatement.wasNull()).thenReturn(true, true);
+
+        OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, outParams);
+
+        assertNull(result.getOutParamValue(1));
+        assertNull(result.getOutParamValue(2));
     }
 
     @Test

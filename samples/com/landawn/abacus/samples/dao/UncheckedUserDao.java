@@ -137,8 +137,8 @@ public interface UncheckedUserDao
             @SqlFragment("{count}") long count, String firstName);
 
     @Query("SELECT * FROM {tableName} where id >= :id AND first_name != :firstName ORDER BY {whatever -> orderBy{{P}} LIMIT {count}")
-    List<User> selectByIdWithSqlFragment_4(@SqlFragment("tableName") String tableName, @Bind("id") long id, @SqlFragment("{whatever -> orderBy{{P}}") String orderBy,
-            @SqlFragment("{count}") long count, @Bind("firstName") String firstName);
+    List<User> selectByIdWithSqlFragment_4(@SqlFragment("tableName") String tableName, @Bind("id") long id,
+            @SqlFragment("{whatever -> orderBy{{P}}") String orderBy, @SqlFragment("{count}") long count, @Bind("firstName") String firstName);
 
     @Query("SELECT * FROM {tableName} where id = :id ORDER BY {{orderBy}}")
     boolean exists(@SqlFragment("tableName") String tableName, @SqlFragment("{{orderBy}}") String orderBy, @Bind("id") long id);

@@ -96,7 +96,7 @@ import com.landawn.abacus.query.AbstractQueryBuilder.SP;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SK;
+import com.landawn.abacus.util.SK;
 import com.landawn.abacus.query.SQLBuilder;
 import com.landawn.abacus.query.SQLBuilder.NAC;
 import com.landawn.abacus.query.SQLBuilder.NLC;
@@ -941,7 +941,7 @@ final class DaoImpl {
                     final Class<?> resultExtractorReturnClass = resultExtractorReturnType instanceof Class ? (Class<?>) resultExtractorReturnType
                             : (Class<?>) ((ParameterizedType) resultExtractorReturnType).getRawType();
 
-                    if (!returnType.isAssignableFrom(resultExtractorReturnClass)) {
+                    if (!ClassUtil.wrap(returnType).isAssignableFrom(ClassUtil.wrap(resultExtractorReturnClass))) {
                         throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName()
                                 + " is not assignable from the return type of ResultExtractor: " + resultExtractorReturnClass);
                     }
@@ -1803,10 +1803,23 @@ final class DaoImpl {
         }
 
         final java.lang.reflect.Type[] typeArguments = Stream.of(allInterfaces)
-                .filter(it -> N.notEmpty(it.getGenericInterfaces()) && it.getGenericInterfaces()[0] instanceof ParameterizedType)
-                .map(it -> ((ParameterizedType) it.getGenericInterfaces()[0]).getActualTypeArguments())
+                .flatMapArray(Class::getGenericInterfaces)
+                .select(ParameterizedType.class)
+                .filter(it -> {
+                    if (!(it.getRawType() instanceof final Class<?> rawType)) {
+                        return false;
+                    }
+
+                    return Dao.class.isAssignableFrom(rawType) || UncheckedDao.class.isAssignableFrom(rawType);
+                })
+                .map(ParameterizedType::getActualTypeArguments)
+                .filter(it -> N.notEmpty(it) && it[0] instanceof Class)
                 .first()
                 .orElseNull();
+
+        if (isCrudDao && (N.isEmpty(typeArguments) || (typeArguments.length < 2) || !(typeArguments[1] instanceof Class))) {
+            throw new IllegalArgumentException("Failed to resolve entity/id generic type parameters for DAO interface: " + daoClassName);
+        }
 
         if (N.notEmpty(typeArguments)) {
             if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !Beans.isBeanClass((Class) typeArguments[0])) {
@@ -1821,11 +1834,11 @@ final class DaoImpl {
                         + " extends JoinEntityHelper, but the entity class: " + typeArguments[0] + " has no sub-entity properties.");
             }
 
-            if (typeArguments.length >= 2 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
+            if (typeArguments.length >= 2 && typeArguments[1] instanceof Class && SQLBuilder.class.isAssignableFrom((Class) typeArguments[1])) {
                 if (!(typeArguments[1].equals(PSC.class) || typeArguments[1].equals(PAC.class) || typeArguments[1].equals(PLC.class))) {
                     throw new IllegalArgumentException("SQLBuilder Type parameter must be: SQLBuilder.PSC/PAC/PLC. Can't be: " + typeArguments[1]);
                 }
-            } else if ((typeArguments.length >= 3 && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]))
+            } else if ((typeArguments.length >= 3 && typeArguments[2] instanceof Class && SQLBuilder.class.isAssignableFrom((Class) typeArguments[2]))
                     && !(typeArguments[2].equals(PSC.class) || typeArguments[2].equals(PAC.class) || typeArguments[2].equals(PLC.class))) {
                 throw new IllegalArgumentException("SQLBuilder Type parameter must be: SQLBuilder.PSC/PAC/PLC. Can't be: " + typeArguments[2]);
             }
@@ -5158,10 +5171,14 @@ final class DaoImpl {
 
                     final boolean hasRowMapperOrResultExtractor = paramLen > 0 && isRowMapperOrResultExtractor.test(lastParamType);
 
-                    final boolean hasRowFilter = paramLen >= 2 && (Jdbc.RowFilter.class.isAssignableFrom(paramTypes[paramLen - 2])
-                            || Jdbc.BiRowFilter.class.isAssignableFrom(paramTypes[paramLen - 2]));
+                    final int[] rowFilterParamIndexes = IntStreamEx.range(0, paramLen).filter(i -> isRowFilter.test(paramTypes[i])).toArray();
+                    final boolean hasRowFilter = N.notEmpty(rowFilterParamIndexes);
 
-                    if (hasRowFilter && !(hasRowMapperOrResultExtractor
+                    if (N.len(rowFilterParamIndexes) > 1) {
+                        throw new UnsupportedOperationException("Only one RowFilter/BiRowFilter parameter is supported in method: " + fullClassMethodName);
+                    }
+
+                    if (hasRowFilter && !(rowFilterParamIndexes[0] == paramLen - 2 && hasRowMapperOrResultExtractor
                             && (Jdbc.RowMapper.class.isAssignableFrom(lastParamType) || Jdbc.BiRowMapper.class.isAssignableFrom(lastParamType)))) {
                         throw new UnsupportedOperationException(
                                 "Parameter 'RowFilter/BiRowFilter' is not supported without last parameter to be 'RowMapper/BiRowMapper' in method: "

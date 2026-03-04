@@ -42,7 +42,7 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SK;
+import com.landawn.abacus.util.SK;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
 import com.landawn.abacus.util.CsvUtil;

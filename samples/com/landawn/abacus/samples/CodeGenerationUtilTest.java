@@ -56,7 +56,7 @@ class CodeGenerationUtilTest {
                 .generateScreamingSnakeCase(true)
                 .generateFunctionPropName(true)
                 .functionClassName("f")
-                .propFunctions(N.asLinkedHashMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
+                .propFunctions(N.asMap("min", CodeGenerationUtil.MIN_FUNC, "max", CodeGenerationUtil.MAX_FUNC))
                 .build();
 
         N.println(CodeGenerationUtil.generatePropNameTableClasses(codeConfig));

@@ -3925,6 +3925,8 @@ public final class Jdbc {
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
              */
             BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
+                N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
+
                 this.defaultColumnGetter = defaultColumnGetter;
 
                 columnGetterMap = new HashMap<>(9);
@@ -5384,10 +5386,10 @@ public final class Jdbc {
                         if (rsColumnGetters == null) {
                             rsColumnCount = rs.getMetaData().getColumnCount();
                             rsColumnGetters = initColumnGetter(rsColumnCount);
+                        }
 
-                            if (N.len(outputRow) < rsColumnCount) {
-                                throw new IllegalArgumentException("The length of output array is less than the column count of ResultSet");
-                            }
+                        if (N.len(outputRow) < rsColumnCount) {
+                            throw new IllegalArgumentException("The length of output array is less than the column count of ResultSet");
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
@@ -6295,20 +6297,24 @@ public final class Jdbc {
             if (result == null && springAppContext != null) {
                 try {
                     result = springAppContext.getBean(handlerClass);
+                } catch (final Exception e) {
+                    // Bean not found in Spring context by class
+                }
 
-                    if (result == null) {
+                if (result == null) {
+                    try {
                         final Object bean = springAppContext.getBean(qualifier);
 
                         if (bean instanceof Handler) {
                             result = (Handler<?>) bean;
                         }
+                    } catch (final Exception e) {
+                        // Bean not found in Spring context by qualifier
                     }
+                }
 
-                    if (result != null) {
-                        handlerPool.put(qualifier, result);
-                    }
-                } catch (final Exception e) {
-                    // Bean not found in Spring context, return null
+                if (result != null) {
+                    handlerPool.put(qualifier, result);
                 }
             }
 
@@ -6469,6 +6475,8 @@ public final class Jdbc {
          * @return a new {@code DaoCache} instance backed by the provided map.
          */
         static DaoCache createByMap(Map<String, Object> map) {
+            N.checkArgNotNull(map, "map");
+
             return new DaoCacheByMap(map);
         }
 
@@ -6643,6 +6651,7 @@ public final class Jdbc {
          * @param cache the map to be used for caching.
          */
         DaoCacheByMap {
+            N.checkArgNotNull(cache, "cache");
         }
 
         @Override

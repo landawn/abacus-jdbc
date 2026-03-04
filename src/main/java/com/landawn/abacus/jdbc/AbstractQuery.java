@@ -6976,6 +6976,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
             throws SQLException, E {
+        checkArgNotNull(func, cs.func);
+
         return func.apply(list(targetType));
     }
 
@@ -7013,6 +7015,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.RowMapper<? extends T> rowMapper,
             final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
+        checkArgNotNull(func, cs.func);
+
         return func.apply(list(rowMapper));
     }
 
@@ -7051,6 +7055,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.BiRowMapper<? extends T> rowMapper,
             final Throwables.Function<? super List<T>, ? extends R, E> func) throws SQLException, E {
+        checkArgNotNull(func, cs.func);
+
         return func.apply(list(rowMapper));
     }
 
@@ -7094,6 +7100,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Class<? extends T> targetType, final Throwables.Consumer<? super List<T>, E> consumer)
             throws SQLException, E {
+        checkArgNotNull(consumer, cs.consumer);
+
         consumer.accept(list(targetType));
     }
 
@@ -7123,6 +7131,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.RowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
             throws SQLException, E {
+        checkArgNotNull(consumer, cs.consumer);
+
         consumer.accept(list(rowMapper));
     }
 
@@ -7156,6 +7166,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.BiRowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
             throws SQLException, E {
+        checkArgNotNull(consumer, cs.consumer);
+
         consumer.accept(list(rowMapper));
     }
 

@@ -8,10 +8,14 @@ import static org.mockito.Mockito.mock;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -20,6 +24,8 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.Query;
+import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.query.SQLBuilder.PSC;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
@@ -59,6 +65,25 @@ public class DaoImplTest extends TestBase {
     interface ProcedureDao {
         @Query(value = "call test_proc(?, ?)", isProcedure = true)
         void callProc(@Bind("p1") String first, String second);
+    }
+
+    interface PrimitiveExtractorDao {
+        @Query("select count(*) from test")
+        int count(Jdbc.ResultExtractor<Integer> extractor);
+    }
+
+    interface Marker {
+    }
+
+    interface BaseDao<T> extends Dao<T, PSC, BaseDao<T>> {
+    }
+
+    interface ReorderedGenericDao extends Marker, BaseDao<TestEntity> {
+    }
+
+    interface InvalidRowFilterPositionDao extends Dao<TestEntity, PSC, InvalidRowFilterPositionDao> {
+        @Query("select * from test")
+        List<TestEntity> findByFilter(Jdbc.RowFilter rowFilter);
     }
 
     static final class StubQuery extends AbstractQuery<PreparedStatement, StubQuery> {
@@ -115,5 +140,44 @@ public class DaoImplTest extends TestBase {
 
         assertTrue(ex.getCause() instanceof UnsupportedOperationException);
         assertTrue(ex.getCause().getMessage().contains("either all procedure parameters must be bound"));
+    }
+
+    @Test
+    void testResultExtractorPrimitiveReturnTypeCompatibility() throws Exception {
+        Method daoMethod = PrimitiveExtractorDao.class.getMethod("count", Jdbc.ResultExtractor.class);
+        Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+        factory.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> func = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
+                .invoke(null, TestEntity.class, daoMethod, null, null, null, true, true, false, OP.DEFAULT, false, "PrimitiveExtractorDao.count");
+
+        assertNotNull(func);
+    }
+
+    @Test
+    void testCreateDaoWithReorderedGenericInterfaces() throws Exception {
+        ReorderedGenericDao dao = DaoImpl.createDao(ReorderedGenericDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
+        assertNotNull(dao);
+    }
+
+    @Test
+    void testCreateDaoRejectsRowFilterInUnsupportedPosition() throws Exception {
+        assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+    }
+
+    private static DataSource mockDataSourceForDaoCreation() throws SQLException {
+        DataSource ds = mock(DataSource.class);
+        Connection conn = mock(Connection.class);
+        DatabaseMetaData meta = mock(DatabaseMetaData.class);
+
+        org.mockito.Mockito.when(ds.getConnection()).thenReturn(conn);
+        org.mockito.Mockito.when(conn.getMetaData()).thenReturn(meta);
+        org.mockito.Mockito.when(meta.getDatabaseProductName()).thenReturn("MySQL");
+        org.mockito.Mockito.when(meta.getDatabaseProductVersion()).thenReturn("8.0");
+
+        return ds;
     }
 }

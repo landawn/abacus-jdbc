@@ -6677,15 +6677,31 @@ public final class JdbcUtil {
                     try {
                         while (true) {
                             if (isNextResultSet) {
-                                resultSetHolder.setValue(stmt.getResultSet());
                                 isNextResultSet = false;
-                                break;
-                            } else if (stmt.getUpdateCount() != -1) {
-                                isNextResultSet = stmt.getMoreResults();
-                            } else {
-                                noMoreResult = true;
 
-                                break;
+                                final ResultSet resultSet = stmt.getResultSet();
+
+                                if (resultSet != null) {
+                                    resultSetHolder.setValue(resultSet);
+                                    break;
+                                }
+                            } else {
+                                isNextResultSet = stmt.getMoreResults();
+
+                                if (isNextResultSet) {
+                                    isNextResultSet = false;
+
+                                    final ResultSet resultSet = stmt.getResultSet();
+
+                                    if (resultSet != null) {
+                                        resultSetHolder.setValue(resultSet);
+                                        break;
+                                    }
+                                } else if (stmt.getUpdateCount() == -1) {
+                                    noMoreResult = true;
+
+                                    break;
+                                }
                             }
                         }
                     } catch (final SQLException e) {
@@ -7002,95 +7018,99 @@ public final class JdbcUtil {
         Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException;
     }
 
+    private static Object nullIfWasNull(final CallableStatement stmt, final Object value) throws SQLException {
+        return stmt.wasNull() ? null : value;
+    }
+
     private static final Map<Integer, OutParameterGetter> sqlTypeGetterMap = new HashMap<>(Types.class.getDeclaredFields().length * 2);
 
     static {
         sqlTypeGetterMap.put(Types.BOOLEAN, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getBoolean(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getBoolean(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getBoolean(outParameterName);
+                return nullIfWasNull(stmt, stmt.getBoolean(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.BIT, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getByte(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getByte(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getByte(outParameterName);
+                return nullIfWasNull(stmt, stmt.getByte(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.TINYINT, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getByte(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getByte(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getByte(outParameterName);
+                return nullIfWasNull(stmt, stmt.getByte(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.SMALLINT, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getShort(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getShort(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getShort(outParameterName);
+                return nullIfWasNull(stmt, stmt.getShort(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.INTEGER, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getInt(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getInt(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getInt(outParameterName);
+                return nullIfWasNull(stmt, stmt.getInt(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.BIGINT, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getLong(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getLong(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getLong(outParameterName);
+                return nullIfWasNull(stmt, stmt.getLong(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.FLOAT, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getFloat(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getFloat(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getFloat(outParameterName);
+                return nullIfWasNull(stmt, stmt.getFloat(outParameterName));
             }
         });
         sqlTypeGetterMap.put(Types.DOUBLE, new OutParameterGetter() {
             @Override
             public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
-                return stmt.getDouble(outParameterIndex);
+                return nullIfWasNull(stmt, stmt.getDouble(outParameterIndex));
             }
 
             @Override
             public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
-                return stmt.getDouble(outParameterName);
+                return nullIfWasNull(stmt, stmt.getDouble(outParameterName));
             }
         });
 

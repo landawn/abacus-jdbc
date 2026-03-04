@@ -444,7 +444,6 @@ public class cs2025Test extends TestBase {
         assertEquals("propsToUpdate", cs.propsToUpdate);
     }
 
-
     @Test
     public void testJoinEntityPropNameConstant() {
         assertEquals("joinEntityPropName", cs.joinEntityPropName);
