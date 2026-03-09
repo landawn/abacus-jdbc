@@ -32189,7 +32189,7 @@
               "javadoc_summary": "Checks if there is an active transaction for the given DataSource in the current thread.",
               "contract": [
                 "Checks if there is an active transaction for the given DataSource in the current thread.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); // ..."
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); // ..."
               ],
               "examples": [],
               "see_also": []
@@ -32201,8 +32201,8 @@
                 "public",
                 "static"
               ],
-              "signature": "public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException",
-              "return_type": "SQLTransaction",
+              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException",
+              "return_type": "SqlTransaction",
               "type_params": [],
               "params": [
                 {
@@ -32223,15 +32223,15 @@
                 "<p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.",
                 "Always use a try-finally block to ensure the transaction is properly completed even if exceptions occur.",
                 "</p> <p> <b> Spring Integration: </b> </p> <p> If Spring's transaction management is active, JdbcUtil will automatically participate in the Spring transaction instead of creating a new one.",
-                "AND balance >= ?\", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException(\"Insufficient balance\"); } JdbcUtil.executeUpdate(dataSource, \"INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)\", accountId, amount, \"DEBIT\"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error(\"Transaction failed: \" + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, \"INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)\", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>"
+                "AND balance >= ?\", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException(\"Insufficient balance\"); } JdbcUtil.executeUpdate(dataSource, \"INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)\", accountId, amount, \"DEBIT\"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error(\"Transaction failed: \" + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, \"INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)\", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>"
               ],
               "examples": [],
               "see_also": [
                 "#beginTransaction(javax.sql.DataSource, IsolationLevel)",
                 "#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)",
-                "SQLTransaction#commit()",
-                "SQLTransaction#rollback()",
-                "SQLTransaction#rollbackIfNotCommitted()"
+                "SqlTransaction#commit()",
+                "SqlTransaction#rollback()",
+                "SqlTransaction#rollbackIfNotCommitted()"
               ]
             },
             {
@@ -32241,8 +32241,8 @@
                 "public",
                 "static"
               ],
-              "signature": "public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException",
-              "return_type": "SQLTransaction",
+              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException",
+              "return_type": "SqlTransaction",
               "type_params": [],
               "params": [
                 {
@@ -32280,8 +32280,8 @@
                 "public",
                 "static"
               ],
-              "signature": "public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException",
-              "return_type": "SQLTransaction",
+              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException",
+              "return_type": "SqlTransaction",
               "type_params": [],
               "params": [
                 {
@@ -41814,8 +41814,8 @@
           ]
         },
         {
-          "fqn": "com.landawn.abacus.jdbc.SQLTransaction",
-          "name": "SQLTransaction",
+          "fqn": "com.landawn.abacus.jdbc.SqlTransaction",
+          "name": "SqlTransaction",
           "kind": "class",
           "modifiers": [
             "public",
@@ -41874,7 +41874,7 @@
               "throws": [],
               "javadoc_summary": "Returns the isolation level of this transaction.",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE); IsolationLevel level = tran.isolationLevel(); if (level == IsolationLevel.SERIALIZABLE) { // Handle high isolation scenario } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE); IsolationLevel level = tran.isolationLevel(); if (level == IsolationLevel.SERIALIZABLE) { // Handle high isolation scenario } } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -41894,7 +41894,7 @@
               "throws": [],
               "javadoc_summary": "Returns the current status of this transaction.",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); Transaction.Status status = tran.status(); if (status == Transaction.Status.ACTIVE) { // Transaction is still active and can be committed or rolled back } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); Transaction.Status status = tran.status(); if (status == Transaction.Status.ACTIVE) { // Transaction is still active and can be committed or rolled back } } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -41917,7 +41917,7 @@
                 "Checks if this transaction is currently active.",
                 "A transaction is active if it has not been committed, rolled back, or marked for rollback.",
                 "<p> This is a convenience method equivalent to checking if the status equals {@link Status#ACTIVE} .",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); if (tran.isActive()) { // Safe to perform operations within this transaction performDatabaseOperations(); } } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); if (tran.isActive()) { // Safe to perform operations within this transaction performDatabaseOperations(); } } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -42220,7 +42220,7 @@
               "javadoc_summary": "Indicates whether some other object is \"equal to\" this transaction.",
               "contract": [
                 "Two transactions are considered equal if they have the same timed ID.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource); SQLTransaction tran2 = tran1; if (tran1.equals(tran2)) { // Same transaction instance } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource); SqlTransaction tran2 = tran1; if (tran1.equals(tran2)) { // Same transaction instance } } </pre>"
               ],
               "examples": [],
               "see_also": []

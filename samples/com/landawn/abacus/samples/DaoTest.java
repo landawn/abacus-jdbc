@@ -48,7 +48,7 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
-import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.query.SqlParser;
@@ -576,13 +576,13 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             userDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(userDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 
@@ -636,13 +636,13 @@ public class DaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             userDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(userDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             userDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 

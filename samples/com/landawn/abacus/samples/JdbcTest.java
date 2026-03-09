@@ -34,7 +34,7 @@ import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
 import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
-import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlBuilder.NSC;
 import com.landawn.abacus.query.SqlBuilder.PSC;
@@ -94,7 +94,7 @@ public class JdbcTest {
     static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
     static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
 
-    // static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
+    // static final SqlExecutor sqlExecutor = new SqlExecutor(dataSource);
 
     // initialize DB schema.
     static {
@@ -439,7 +439,7 @@ public class JdbcTest {
         final User userFromDB = userDao.gett(100L);
         System.out.println(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
             userDao.queryForBoolean("firstName", Filters.eq("id", 100)); // throw exception.
@@ -450,7 +450,7 @@ public class JdbcTest {
 
         assertEquals("Forrest", userDao.gett(100L).getFirstName());
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
             userDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
             tran.commit();

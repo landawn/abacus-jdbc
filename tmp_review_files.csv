@@ -77,7 +77,7 @@ src/main/java\com\landawn\abacus\jdbc\PreparedQuery.java
 src/main/java\com\landawn\abacus\jdbc\Propagation.java
 src/main/java\com\landawn\abacus\jdbc\ResultSetProxy.java
 src/main/java\com\landawn\abacus\jdbc\SpringApplicationContext.java
-src/main/java\com\landawn\abacus\jdbc\SQLExecutor.java
+src/main/java\com\landawn\abacus\jdbc\SqlExecutor.java
 src/main/java\com\landawn\abacus\jdbc\SqlLogConfig.java
-src/main/java\com\landawn\abacus\jdbc\SQLTransaction.java
+src/main/java\com\landawn\abacus\jdbc\SqlTransaction.java
 src/main/java\com\landawn\abacus\jdbc\Transaction.java

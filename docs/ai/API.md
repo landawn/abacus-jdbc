@@ -7959,36 +7959,36 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Checks if there is an active transaction for the given DataSource in the current thread.
 - **Contract:**
   - Checks if there is an active transaction for the given DataSource in the current thread.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); // ...
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); // ...
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to check for an active transaction
 - **Returns:** {@code true} if there is an active transaction, {@code false} otherwise
-##### beginTransaction(...) -> SQLTransaction
-- **Signature:** `public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException`
+##### beginTransaction(...) -> SqlTransaction
+- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException`
 - **Summary:** Begins a new database transaction with the default isolation level for the specified DataSource.
 - **Contract:**
   - <p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.
   - Always use a try-finally block to ensure the transaction is properly completed even if exceptions occur.
   - </p> <p> <b> Spring Integration: </b> </p> <p> If Spring's transaction management is active, JdbcUtil will automatically participate in the Spring transaction instead of creating a new one.
-  - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
+  - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
 - **Parameters:**
   - `dataSource` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
-- **Returns:** a {@link SQLTransaction} object representing the new transaction that must be committed or rolled back
+- **Returns:** a {@link SqlTransaction} object representing the new transaction that must be committed or rolled back
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs while beginning the transaction
-- **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel), #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean), SQLTransaction#commit(), SQLTransaction#rollback(), SQLTransaction#rollbackIfNotCommitted()
-- **Signature:** `public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException`
+- **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel), #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean), SqlTransaction#commit(), SqlTransaction#rollback(), SqlTransaction#rollbackIfNotCommitted()
+- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException`
 - **Summary:** Begins a new transaction with the specified isolation level for the given DataSource.
 - **Contract:**
   - The transaction must be explicitly committed or rolled back.
 - **Parameters:**
   - `dataSource` (`javax.sql.DataSource`) — the DataSource for which to begin the transaction
   - `isolationLevel` (`IsolationLevel`) — the isolation level for the transaction
-- **Returns:** a SQLTransaction object representing the new transaction
+- **Returns:** a SqlTransaction object representing the new transaction
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a SQL exception occurs while beginning the transaction
 - **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
-- **Signature:** `public static SQLTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException`
+- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException`
 - **Summary:** Starts a global transaction which will be shared by all in-line database queries with the same DataSource in the same thread.
 - **Contract:**
   - If a Spring transaction is already active with the specified DataSource, the Connection from the Spring transaction will be used.
@@ -7996,7 +7996,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
   - `dataSource` (`javax.sql.DataSource`) — the DataSource for which to begin the transaction
   - `isolationLevel` (`IsolationLevel`) — the isolation level for the transaction
   - `isForUpdateOnly` (`boolean`) — whether this transaction is only for update operations
-- **Returns:** a SQLTransaction object representing the transaction
+- **Returns:** a SqlTransaction object representing the transaction
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a SQL exception occurs while beginning the transaction
 - **See also:** JdbcUtil#getConnection(javax.sql.DataSource), JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
@@ -10194,7 +10194,7 @@ Enumeration that represents transaction propagation behaviors.
 #### Public Instance Methods
 - (none)
 
-### Class SQLTransaction (com.landawn.abacus.jdbc.SQLTransaction)
+### Class SqlTransaction (com.landawn.abacus.jdbc.SqlTransaction)
 Represents a SQL transaction that manages database transaction lifecycle and connection state.
 
 **Thread-safety:** unspecified
@@ -10225,7 +10225,7 @@ Represents a SQL transaction that manages database transaction lifecycle and con
 - **Signature:** `@Override public IsolationLevel isolationLevel()`
 - **Summary:** Returns the isolation level of this transaction.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE); IsolationLevel level = tran.isolationLevel(); if (level == IsolationLevel.SERIALIZABLE) { // Handle high isolation scenario } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE); IsolationLevel level = tran.isolationLevel(); if (level == IsolationLevel.SERIALIZABLE) { // Handle high isolation scenario } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the transaction isolation level, never {@code null}
@@ -10234,7 +10234,7 @@ Represents a SQL transaction that manages database transaction lifecycle and con
 - **Signature:** `@Override public Transaction.Status status()`
 - **Summary:** Returns the current status of this transaction.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); Transaction.Status status = tran.status(); if (status == Transaction.Status.ACTIVE) { // Transaction is still active and can be committed or rolled back } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); Transaction.Status status = tran.status(); if (status == Transaction.Status.ACTIVE) { // Transaction is still active and can be committed or rolled back } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the current transaction status, never {@code null}
@@ -10246,7 +10246,7 @@ Represents a SQL transaction that manages database transaction lifecycle and con
   - Checks if this transaction is currently active.
   - A transaction is active if it has not been committed, rolled back, or marked for rollback.
   - <p> This is a convenience method equivalent to checking if the status equals {@link Status#ACTIVE} .
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran = JdbcUtil.beginTransaction(dataSource); if (tran.isActive()) { // Safe to perform operations within this transaction performDatabaseOperations(); } } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); if (tran.isActive()) { // Safe to perform operations within this transaction performDatabaseOperations(); } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} if the transaction is active, {@code false} otherwise
@@ -10331,7 +10331,7 @@ Represents a SQL transaction that manages database transaction lifecycle and con
 - **Summary:** Indicates whether some other object is "equal to" this transaction.
 - **Contract:**
   - Two transactions are considered equal if they have the same timed ID.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource); SQLTransaction tran2 = tran1; if (tran1.equals(tran2)) { // Same transaction instance } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource); SqlTransaction tran2 = tran1; if (tran1.equals(tran2)) { // Same transaction instance } } </pre>
 - **Parameters:**
   - `obj` (`Object`) — the reference object with which to compare
 - **Returns:** {@code true} if this transaction is equal to the obj argument; {@code false} otherwise

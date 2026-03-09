@@ -40,7 +40,7 @@ import com.landawn.abacus.util.Throwables;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED)) {
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED)) {
  *     // Execute database operations
  *     dao.save(entity);
  *     dao.update(anotherEntity);
@@ -55,12 +55,12 @@ import com.landawn.abacus.util.Throwables;
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel)
  */
 @SuppressWarnings("resource")
-public final class SQLTransaction implements Transaction, AutoCloseable {
+public final class SqlTransaction implements Transaction, AutoCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(SQLTransaction.class);
+    private static final Logger logger = LoggerFactory.getLogger(SqlTransaction.class);
 
-    private static final Map<String, SQLTransaction> threadTransactionMap = new ConcurrentHashMap<>();
-    // private static final Map<String, SQLTransaction> attachedThreadTransactionMap = new ConcurrentHashMap<>();
+    private static final Map<String, SqlTransaction> threadTransactionMap = new ConcurrentHashMap<>();
+    // private static final Map<String, SqlTransaction> attachedThreadTransactionMap = new ConcurrentHashMap<>();
 
     private final String _id; //NOSONAR
 
@@ -90,7 +90,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
 
     private volatile boolean _isMarkedByCommitOrRollbackPreviously = false; //NOSONAR
 
-    SQLTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
+    SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
@@ -118,7 +118,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * String transactionId = tran.id();
      * logger.info("Starting transaction: " + transactionId);
      * }</pre>
@@ -136,7 +136,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     Connection conn = tran.connection();
      *     // Use the connection for custom operations
@@ -163,7 +163,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
      * IsolationLevel level = tran.isolationLevel();
      * if (level == IsolationLevel.SERIALIZABLE) {
      *     // Handle high isolation scenario
@@ -185,7 +185,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * Transaction.Status status = tran.status();
      * if (status == Transaction.Status.ACTIVE) {
      *     // Transaction is still active and can be committed or rolled back
@@ -210,7 +210,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * if (tran.isActive()) {
      *     // Safe to perform operations within this transaction
      *     performDatabaseOperations();
@@ -269,7 +269,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform database operations
      *     dao.save(entity);
@@ -363,7 +363,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p>Example of preferred usage:</p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform database operations
      *     dao.save(entity);
@@ -424,7 +424,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform database operations
      *     dao.save(entity);
@@ -647,7 +647,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param creator the transaction creator type, must not be {@code null}
      * @return the active transaction for this thread, or {@code null} if none exists
      */
-    static SQLTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) {
+    static SqlTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) {
         return threadTransactionMap.get(getTransactionId(ds, creator));
     }
 
@@ -658,7 +658,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      * @param tran the transaction to register, must not be {@code null}
      * @return the previously registered transaction for this thread and data source, or {@code null} if none existed
      */
-    static SQLTransaction putTransaction(final SQLTransaction tran) {
+    static SqlTransaction putTransaction(final SqlTransaction tran) {
         return threadTransactionMap.put(tran._id, tran);
     }
 
@@ -673,7 +673,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform transactional operations
      *     dao.update(entity);
@@ -732,7 +732,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
      *     // Perform transactional operations
      *     dao.save(entity);
@@ -818,7 +818,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     // perform operations
      *     tran.commit();
      * } // Automatically calls close(), which calls rollbackIfNotCommitted()
@@ -838,10 +838,10 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource1);
-     * SQLTransaction tran2 = JdbcUtil.beginTransaction(dataSource2);
+     * SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource1);
+     * SqlTransaction tran2 = JdbcUtil.beginTransaction(dataSource2);
      *
-     * Set<SQLTransaction> transactions = new HashSet<>();
+     * Set<SqlTransaction> transactions = new HashSet<>();
      * transactions.add(tran1);
      * transactions.add(tran2);
      * }</pre>
@@ -859,8 +859,8 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran1 = JdbcUtil.beginTransaction(dataSource);
-     * SQLTransaction tran2 = tran1;
+     * SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran2 = tran1;
      *
      * if (tran1.equals(tran2)) {
      *     // Same transaction instance
@@ -872,7 +872,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      */
     @Override
     public boolean equals(final Object obj) {
-        return obj instanceof SQLTransaction && _timedId.equals(((SQLTransaction) obj)._timedId);
+        return obj instanceof SqlTransaction && _timedId.equals(((SqlTransaction) obj)._timedId);
     }
 
     /**
@@ -881,16 +881,16 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * logger.debug("Transaction details: " + tran.toString());
-     * // Output: SQLTransaction={id=...}
+     * // Output: SqlTransaction={id=...}
      * }</pre>
      *
      * @return a string representation of this transaction
      */
     @Override
     public String toString() {
-        return "SQLTransaction={id=" + _timedId + "}";
+        return "SqlTransaction={id=" + _timedId + "}";
     }
 
     /**
@@ -905,7 +905,7 @@ public final class SQLTransaction implements Transaction, AutoCloseable {
         JDBC_UTIL,
 
         /**
-         * Transaction created by SQLExecutor (deprecated, not used).
+         * Transaction created by SqlExecutor (deprecated, not used).
          * @deprecated not used
          */
         @Deprecated

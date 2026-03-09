@@ -1214,28 +1214,28 @@ public class JdbcUtilTest extends TestBase {
     public void testIsInTransaction() throws SQLException {
         assertFalse(JdbcUtil.isInTransaction(mockDataSource));
 
-        SQLTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
         assertTrue(JdbcUtil.isInTransaction(mockDataSource));
         tran.rollbackIfNotCommitted();
     }
 
     @Test
     public void testBeginTransaction() throws SQLException {
-        SQLTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
         assertNotNull(tran);
         tran.rollbackIfNotCommitted();
     }
 
     @Test
     public void testBeginTransactionWithIsolation() throws SQLException {
-        SQLTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED);
         assertNotNull(tran);
         tran.rollbackIfNotCommitted();
     }
 
     @Test
     public void testBeginTransactionWithIsolationAndUpdateOnly() throws SQLException {
-        SQLTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
         assertNotNull(tran);
         tran.rollbackIfNotCommitted();
     }

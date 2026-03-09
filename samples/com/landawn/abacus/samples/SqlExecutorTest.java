@@ -13,7 +13,7 @@
  */
 package com.landawn.abacus.samples;
 
-public class SQLExecutorTest {
+public class SqlExecutorTest {
 
     //    @Test
     //    public void batch_stream() throws SQLException {

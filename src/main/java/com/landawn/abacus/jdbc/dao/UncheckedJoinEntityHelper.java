@@ -25,7 +25,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.SqlBuilder;
@@ -1583,7 +1583,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1631,7 +1631,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1777,7 +1777,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1891,7 +1891,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
         } else {
             int result = 0;
             final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {

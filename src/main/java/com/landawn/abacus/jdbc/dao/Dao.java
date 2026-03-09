@@ -117,7 +117,7 @@ import com.landawn.abacus.util.stream.Stream;
  * 
  * <p><b>Transaction Example:</b></p>
  * <pre>{@code
- * final SQLTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+ * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
  *     User user = userDao.gett(id);
  *     userDao.update(user);

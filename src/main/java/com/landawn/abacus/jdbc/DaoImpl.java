@@ -198,7 +198,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p><b>Thread Safety:</b></p>
  * <p>This class is thread-safe. Method metadata and SQL parsing results are cached in concurrent maps.
  * However, the underlying database connections and transactions are managed per-thread through
- * {@link SQLExecutor} and connection pooling.</p>
+ * {@link SqlExecutor} and connection pooling.</p>
  *
  * <p><b>Important Notes:</b></p>
  * <ul>
@@ -2375,7 +2375,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
@@ -2412,7 +2412,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
@@ -2445,7 +2445,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
@@ -3912,7 +3912,7 @@ final class DaoImpl {
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames).closeAfterExecution(false)) {
@@ -3985,7 +3985,7 @@ final class DaoImpl {
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames).closeAfterExecution(false)) {
@@ -4056,7 +4056,7 @@ final class DaoImpl {
                                         .addBatchParameters(entities)
                                         .batchInsert(keyExtractor, isDefaultIdTester);
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedInsertSql, returnColumnNames).closeAfterExecution(false)) {
@@ -4638,7 +4638,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 result = N.sum(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParameters(entities).batchUpdate());
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(namedUpdateByIdSQL).closeAfterExecution(false)) {
@@ -4672,7 +4672,7 @@ final class DaoImpl {
                             if (entities.size() <= batchSize) {
                                 result = N.sum(proxy.prepareNamedQuery(query).addBatchParameters(entities).batchUpdate());
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                 try {
                                     try (NamedQuery nameQuery = proxy.prepareNamedQuery(query).closeAfterExecution(false)) {
@@ -4718,7 +4718,7 @@ final class DaoImpl {
                         //        if (N.isEmpty(entityJoinInfo)) {
                         //            return proxy.prepareNamedQuery(namedDeleteByIdSQL).setParametersFrom(entity, idParamSetterByEntity).update();
                         //        } else {
-                        //            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                        //            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //            long result = 0;
                         //
                         //            try {
@@ -4759,7 +4759,7 @@ final class DaoImpl {
                             if (idsOrEntities.size() <= batchSize) {
                                 return N.sum(proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(idsOrEntities, paramSetter).batchUpdate());
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 long result = 0;
 
                                 try {
@@ -4799,7 +4799,7 @@ final class DaoImpl {
                         //            return ((CrudDao) proxy).batchDelete(entities, batchSize);
                         //        }
                         //
-                        //        final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                        //        final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                         //        long result = 0;
                         //
                         //        try {
@@ -4973,7 +4973,7 @@ final class DaoImpl {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
                             } else {
                                 long result = 0;
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                 try {
                                     result = joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -5011,7 +5011,7 @@ final class DaoImpl {
                                     return joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
                                 } else {
                                     int result = 0;
-                                    final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
+                                    final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                     try {
                                         result = joinEntityDao.prepareQuery(tp._1).setParameters(first, tp._3).update();
@@ -5026,7 +5026,7 @@ final class DaoImpl {
                                 }
                             } else {
                                 long result = 0;
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(joinEntityDao.dataSource());
 
                                 try {
                                     final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = propJoinInfo
@@ -5567,7 +5567,7 @@ final class DaoImpl {
 
                                     ids = preparedQuery.batchInsert(keyExtractor, isDefaultIdTester);
                                 } else {
-                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
@@ -5688,7 +5688,7 @@ final class DaoImpl {
                                         updatedRecordCount = N.sum(preparedQuery.batchUpdate());
                                     }
                                 } else {
-                                    final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                    final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
 
                                     try {
                                         try (AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, fullClassMethodName, method,
@@ -5848,7 +5848,7 @@ final class DaoImpl {
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
 
                             try {
@@ -5886,7 +5886,7 @@ final class DaoImpl {
                                         + transactionalAnno.propagation() + ") must be called in a transaction.");
                             }
 
-                            final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                             Object result = null;
 
                             try {
@@ -5923,7 +5923,7 @@ final class DaoImpl {
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
 
                                 try {
@@ -5954,7 +5954,7 @@ final class DaoImpl {
 
                                 return result;
                             } else {
-                                final SQLTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 Object result = null;
 
                                 try {

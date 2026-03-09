@@ -1019,7 +1019,7 @@
 
 ### 2.0
 
-* Remove `SQLExecutor/Mapper`.
+* Remove `SqlExecutor/Mapper`.
 * Remove `DataSource` and the package.
 * Improvements and bug fix.
 
@@ -1284,7 +1284,7 @@
 ### 1.9.6
 
 * Add `Dao.batchDeleteByIds`.
-* Rename `SQLExecutor.w` to `SQLExecutor.create`.
+* Rename `SqlExecutor.w` to `SqlExecutor.create`.
 * Improvements and bug fix.
 
 

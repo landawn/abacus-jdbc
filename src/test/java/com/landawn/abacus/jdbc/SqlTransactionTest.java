@@ -27,7 +27,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.Throwables;
 
-public class SQLTransactionTest extends TestBase {
+public class SqlTransactionTest extends TestBase {
 
     @Mock
     private DataSource dataSource;
@@ -45,7 +45,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testConstructor() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         assertNotNull(transaction.id());
         assertEquals(connection, transaction.connection());
@@ -58,7 +58,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testCommit() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.commit();
 
@@ -71,7 +71,7 @@ public class SQLTransactionTest extends TestBase {
     @Test
     public void testCommitWhenOriginalAutoCommitFalse() throws SQLException {
         when(connection.getAutoCommit()).thenReturn(false);
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.commit();
 
@@ -82,7 +82,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testCommitFailure() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         doThrow(new SQLException("Commit failed")).when(connection).commit();
 
@@ -93,7 +93,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testRollback() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.rollback();
 
@@ -105,7 +105,7 @@ public class SQLTransactionTest extends TestBase {
     @Test
     public void testRollbackWhenOriginalAutoCommitFalse() throws SQLException {
         when(connection.getAutoCommit()).thenReturn(false);
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.rollback();
 
@@ -116,7 +116,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testRollbackIfNotCommitted() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.rollbackIfNotCommitted();
 
@@ -126,7 +126,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testRollbackIfNotCommittedAfterCommit() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.commit();
         transaction.rollbackIfNotCommitted();
@@ -138,7 +138,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testRunNotInMe() throws Exception {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         final boolean[] executed = { false };
         Throwables.Runnable<Exception> runnable = () -> executed[0] = true;
@@ -150,7 +150,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testCallNotInMe() throws Exception {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         Throwables.Callable<String, Exception> callable = () -> "test result";
 
@@ -161,7 +161,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testClose() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         transaction.close();
 
@@ -171,7 +171,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testIncrementAndGetRef() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         int refCount = transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false);
 
@@ -182,7 +182,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testIsForUpdateOnly() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         assertFalse(transaction.isForUpdateOnly());
 
@@ -192,7 +192,7 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testGetTransactionId() {
-        String id = SQLTransaction.getTransactionId(dataSource, SQLTransaction.CreatedBy.JDBC_UTIL);
+        String id = SqlTransaction.getTransactionId(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL);
         assertNotNull(id);
         assertTrue(id.contains(String.valueOf(System.identityHashCode(dataSource))));
         assertTrue(id.contains(String.valueOf(Thread.currentThread().getId())));
@@ -201,8 +201,8 @@ public class SQLTransactionTest extends TestBase {
     @Test
     public void testBeginTransactionReusesWhenThreadNameChanges() throws SQLException {
         final String originalThreadName = Thread.currentThread().getName();
-        SQLTransaction transaction1 = null;
-        SQLTransaction transaction2 = null;
+        SqlTransaction transaction1 = null;
+        SqlTransaction transaction2 = null;
 
         try {
             transaction1 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
@@ -231,8 +231,8 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testEquals() throws SQLException {
-        SQLTransaction transaction1 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
-        SQLTransaction transaction2 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction1 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction2 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         assertEquals(transaction1, transaction2);
         assertNotEquals(transaction1, null);
@@ -241,18 +241,18 @@ public class SQLTransactionTest extends TestBase {
 
     @Test
     public void testHashCode() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         assertEquals(transaction.id().hashCode(), transaction.hashCode());
     }
 
     @Test
     public void testToString() throws SQLException {
-        SQLTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
         String toString = transaction.toString();
         assertNotNull(toString);
-        assertTrue(toString.contains("SQLTransaction"));
+        assertTrue(toString.contains("SqlTransaction"));
         assertTrue(toString.contains("id="));
     }
 }

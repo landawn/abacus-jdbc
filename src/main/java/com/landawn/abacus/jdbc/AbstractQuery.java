@@ -180,7 +180,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     //        /**
     //         * It's designed to void try-catch.
-    //         * This method should be called immediately after {@code JdbcUtil#prepareCallableQuery/SQLExecutor#prepareQuery}.
+    //         * This method should be called immediately after {@code JdbcUtil#prepareCallableQuery/SqlExecutor#prepareQuery}.
     //         *
     //         * @return
     //         */

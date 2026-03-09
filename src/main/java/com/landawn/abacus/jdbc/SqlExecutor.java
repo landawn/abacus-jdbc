@@ -46,7 +46,7 @@ package com.landawn.abacus.jdbc;
  * <p><b>Historical CRUD Pattern:</b></p>
  * <pre>{@code
  * static final DataSource dataSource = JdbcUtil.createDataSource(...);
- * static final SQLExecutor sqlExecutor = new SQLExecutor(dataSource);
+ * static final SqlExecutor sqlExecutor = new SqlExecutor(dataSource);
  *
  * Account account = createAccount();
  *
@@ -69,7 +69,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p><b>Historical Transaction Pattern:</b></p>
  * <pre>{@code
- * final SQLTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
+ * final SqlTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
  * try {
  *     sqlExecutor.insert(...);
  *     sqlExecutor.update(...);
@@ -94,13 +94,13 @@ package com.landawn.abacus.jdbc;
  */
 @Deprecated
 // Archive for history. Replaced by PreparedQuery and Dao.
-final class SQLExecutor {
-    private SQLExecutor() throws IllegalArgumentException {
+final class SqlExecutor {
+    private SqlExecutor() throws IllegalArgumentException {
         // no use.
     }
     //
     //    /** The Constant logger. */
-    //    private static final Logger logger = LoggerFactory.getLogger(SQLExecutor.class);
+    //    private static final Logger logger = LoggerFactory.getLogger(SqlExecutor.class);
     //
     //    /** The Constant ID. */
     //    static final String ID = "id";
@@ -276,7 +276,7 @@ final class SQLExecutor {
     //     * @see JdbcUtil#createDataSource(String)
     //     * @see JdbcUtil#createDataSource(java.io.InputStream)
     //     */
-    //    public SQLExecutor(final DataSource dataSource) {
+    //    public SqlExecutor(final DataSource dataSource) {
     //        this(dataSource, null);
     //    }
     //
@@ -288,7 +288,7 @@ final class SQLExecutor {
     //     * @see JdbcUtil#createDataSource(String)
     //     * @see JdbcUtil#createDataSource(java.io.InputStream)
     //     */
-    //    public SQLExecutor(final DataSource dataSource, final JdbcSettings jdbcSettings) {
+    //    public SqlExecutor(final DataSource dataSource, final JdbcSettings jdbcSettings) {
     //        this(dataSource, jdbcSettings, null);
     //    }
     //
@@ -301,7 +301,7 @@ final class SQLExecutor {
     //     * @see JdbcUtil#createDataSource(String)
     //     * @see JdbcUtil#createDataSource(java.io.InputStream)
     //     */
-    //    public SQLExecutor(final DataSource dataSource, final JdbcSettings jdbcSettings, final SqlMapper sqlMapper) {
+    //    public SqlExecutor(final DataSource dataSource, final JdbcSettings jdbcSettings, final SqlMapper sqlMapper) {
     //        N.checkArgNotNull(dataSource, "dataSource");
     //
     //        this._ds = dataSource;
@@ -338,8 +338,8 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @Beta
-    //    public static SQLExecutor create(final String url, final String user, final String password) {
-    //        return new SQLExecutor(JdbcUtil.createHikariDataSource(url, user, password));
+    //    public static SqlExecutor create(final String url, final String user, final String password) {
+    //        return new SqlExecutor(JdbcUtil.createHikariDataSource(url, user, password));
     //    }
     //
     //    /**
@@ -351,8 +351,8 @@ final class SQLExecutor {
     //     * @return
     //     */
     //    @Beta
-    //    public static SQLExecutor create(final DataSource dataSource) {
-    //        return new SQLExecutor(dataSource);
+    //    public static SqlExecutor create(final DataSource dataSource) {
+    //        return new SqlExecutor(dataSource);
     //    }
     //
     //    /**
@@ -2710,7 +2710,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalBoolean queryForBoolean(final String sql, final Object... parameters) {
@@ -2723,7 +2723,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalChar queryForChar(final String sql, final Object... parameters) {
@@ -2736,7 +2736,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalByte queryForByte(final String sql, final Object... parameters) {
@@ -2749,7 +2749,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalShort queryForShort(final String sql, final Object... parameters) {
@@ -2762,7 +2762,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalInt queryForInt(final String sql, final Object... parameters) {
@@ -2775,7 +2775,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalLong queryForLong(final String sql, final Object... parameters) {
@@ -2788,7 +2788,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalFloat queryForFloat(final String sql, final Object... parameters) {
@@ -2801,7 +2801,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalDouble queryForDouble(final String sql, final Object... parameters) {
@@ -2814,7 +2814,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<BigDecimal> queryForBigDecimal(final String sql, final Object... parameters) {
@@ -2827,7 +2827,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<String> queryForString(final String sql, final Object... parameters) {
@@ -2840,7 +2840,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<Date> queryForDate(final String sql, final Object... parameters) {
@@ -2853,7 +2853,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<Time> queryForTime(final String sql, final Object... parameters) {
@@ -2866,7 +2866,7 @@ final class SQLExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SQLExecutor#queryForSingleResult(Class, String, Object...).
+    //     * @see SqlExecutor#queryForSingleResult(Class, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<Timestamp> queryForTimestamp(final String sql, final Object... parameters) {
@@ -3846,9 +3846,9 @@ final class SQLExecutor {
     //                                    JdbcUtil.closeQuietly(rs, true, false);
     //                                } finally {
     //                                    if (noTransactionForStream) {
-    //                                        SQLExecutor.this.close(localConn, ds);
+    //                                        SqlExecutor.this.close(localConn, ds);
     //                                    } else {
-    //                                        SQLExecutor.this.close(localConn, inputConn, ds);
+    //                                        SqlExecutor.this.close(localConn, inputConn, ds);
     //                                    }
     //                                }
     //                            }
@@ -3859,9 +3859,9 @@ final class SQLExecutor {
     //                                JdbcUtil.closeQuietly(resultSet, true, false);
     //                            } finally {
     //                                if (noTransactionForStream) {
-    //                                    SQLExecutor.this.close(localConn, ds);
+    //                                    SqlExecutor.this.close(localConn, ds);
     //                                } else {
-    //                                    SQLExecutor.this.close(localConn, inputConn, ds);
+    //                                    SqlExecutor.this.close(localConn, inputConn, ds);
     //                                }
     //                            }
     //                        }
@@ -4040,7 +4040,7 @@ final class SQLExecutor {
     //     * @return
     //     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
     //     */
-    //    public SQLTransaction beginTransaction() {
+    //    public SqlTransaction beginTransaction() {
     //        return beginTransaction(IsolationLevel.DEFAULT);
     //    }
     //
@@ -4052,7 +4052,7 @@ final class SQLExecutor {
     //     * @return
     //     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
     //     */
-    //    public SQLTransaction beginTransaction(final IsolationLevel isolationLevel) {
+    //    public SqlTransaction beginTransaction(final IsolationLevel isolationLevel) {
     //        return beginTransaction(isolationLevel, false);
     //    }
     //
@@ -4064,7 +4064,7 @@ final class SQLExecutor {
     //     * @return
     //     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
     //     */
-    //    public SQLTransaction beginTransaction(final boolean forUpdateOnly) {
+    //    public SqlTransaction beginTransaction(final boolean forUpdateOnly) {
     //        return beginTransaction(IsolationLevel.DEFAULT, forUpdateOnly);
     //    }
     //
@@ -4077,7 +4077,7 @@ final class SQLExecutor {
     //     * @return
     //     * @see #beginTransaction(IsolationLevel, boolean, JdbcSettings)
     //     */
-    //    public SQLTransaction beginTransaction(IsolationLevel isolationLevel, boolean forUpdateOnly) {
+    //    public SqlTransaction beginTransaction(IsolationLevel isolationLevel, boolean forUpdateOnly) {
     //        return beginTransaction(isolationLevel, forUpdateOnly, null);
     //    }
     //
@@ -4088,7 +4088,7 @@ final class SQLExecutor {
     //     * <br />
     //     * Otherwise a {@code Connection} directly from the specified {@code DataSource}(Connection pool) will be borrowed and used.
     //     * <br />
-    //     * Transactions started by {@code SQLExecutor.beginTransaction} won't be shared by {@code JdbcUtil.beginTransaction} or Spring.
+    //     * Transactions started by {@code SqlExecutor.beginTransaction} won't be shared by {@code JdbcUtil.beginTransaction} or Spring.
     //     *
     //     * <br />
     //     * <br />
@@ -4100,7 +4100,7 @@ final class SQLExecutor {
     //     *
     //     * <pre>
     //     * <code>
-    //     *   final SQLTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
+    //     *   final SqlTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
     //     *   try {
     //     *       // sqlExecutor.insert(...);
     //     *       // sqlExecutor.update(...);
@@ -4119,7 +4119,7 @@ final class SQLExecutor {
     //     * @param jdbcSettings
     //     * @return
     //     */
-    //    public SQLTransaction beginTransaction(final IsolationLevel isolationLevel, final boolean forUpdateOnly,
+    //    public SqlTransaction beginTransaction(final IsolationLevel isolationLevel, final boolean forUpdateOnly,
     //            @SuppressWarnings("unused") final JdbcSettings jdbcSettings) {
     //        N.checkArgNotNull(isolationLevel, "isolationLevel");
     //
@@ -4129,7 +4129,7 @@ final class SQLExecutor {
     //
     //        //    final DataSource ds = _ds;
     //        //
-    //        //    SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+    //        //    SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
     //        //
     //        //    if (tran == null) {
     //        //        Connection conn = null;
@@ -4137,7 +4137,7 @@ final class SQLExecutor {
     //        //
     //        //        try {
     //        //            conn = getConnection(ds);
-    //        //            tran = new SQLTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.JDBC_UTIL,
+    //        //            tran = new SqlTransaction(ds, conn, isolationLevel == IsolationLevel.DEFAULT ? _defaultIsolationLevel : isolationLevel, CreatedBy.JDBC_UTIL,
     //        //                    true);
     //        //            tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
     //        //
@@ -4150,10 +4150,10 @@ final class SQLExecutor {
     //        //            }
     //        //        }
     //        //
-    //        //        logger.info("Create a new SQLTransaction(id={})", tran.id());
-    //        //        SQLTransaction.putTransaction(tran);
+    //        //        logger.info("Create a new SqlTransaction(id={})", tran.id());
+    //        //        SqlTransaction.putTransaction(tran);
     //        //    } else {
-    //        //        logger.info("Reusing the existing SQLTransaction(id={})", tran.id());
+    //        //        logger.info("Reusing the existing SqlTransaction(id={})", tran.id());
     //        //        tran.incrementAndGetRef(isolationLevel, forUpdateOnly);
     //        //    }
     //        //
@@ -4302,7 +4302,7 @@ final class SQLExecutor {
     //            return inputConn;
     //        }
     //
-    //        final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+    //        final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
     //
     //        if (tran == null || (tran.isForUpdateOnly() && op == SqlOperation.SELECT)) {
     //            return getConnection(ds);
@@ -4555,7 +4555,7 @@ final class SQLExecutor {
     //     */
     //    protected void close(final Connection localConn, final Connection inputConn, final DataSource ds) {
     //        if (inputConn == null) {
-    //            final SQLTransaction tran = SQLTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+    //            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
     //
     //            if (tran != null && tran.connection() == localConn) {
     //                // ignore.

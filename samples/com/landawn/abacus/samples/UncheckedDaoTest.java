@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Criteria;
@@ -158,13 +158,13 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(uncheckedUserDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 
@@ -218,13 +218,13 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_SUPPORTS(userFromDB.getId());
         }
 
         assertTrue(uncheckedUserDao.exists(userFromDB.getId()));
 
-        try (SQLTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
             uncheckedUserDao.delete_propagation_REQUIRES_NEW(userFromDB.getId());
         }
 

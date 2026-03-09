@@ -29,7 +29,7 @@ import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.SQLTransaction;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
@@ -1317,7 +1317,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         final List<T> entitiesToInsert = map.get(false);
 
         final List<T> result = new ArrayList<>(entities.size());
-        final SQLTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
+        final SqlTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
 
         try {
             if (N.notEmpty(entitiesToInsert)) {
