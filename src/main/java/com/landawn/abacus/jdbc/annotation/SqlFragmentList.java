@@ -36,7 +36,7 @@ import java.util.Collection;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Dynamic column selection
  *     @Query("SELECT {columns} FROM users WHERE id = :id")
  *     Map<String, Object> findColumnsById(

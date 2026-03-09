@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.concurrent.Executor;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only interface for managing join entity relationships in database operations without checked exceptions.
@@ -35,7 +35,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with unchecked exceptions
- * public interface UserReadOnlyDao extends UncheckedReadOnlyJoinEntityHelper<User, SQLBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyJoinEntityHelper<User, SqlBuilder.PSC, UserReadOnlyDao> {
  *     // All load operations work normally with unchecked exceptions
  *     // All delete operations will throw UnsupportedOperationException
  * }
@@ -59,14 +59,14 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> The entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see UncheckedJoinEntityHelper
  * @see ReadOnlyJoinEntityHelper
  * @see UncheckedSQLException
  */
-public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>>
+public interface UncheckedReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>>
         extends UncheckedJoinEntityHelper<T, SB, TD>, ReadOnlyJoinEntityHelper<T, SB, TD> {
 
     /**

@@ -81,9 +81,9 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.AbstractQueryBuilder.SP;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
-import com.landawn.abacus.query.SQLMapper;
-import com.landawn.abacus.query.SQLOperation;
+import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.query.SqlMapper;
+import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -555,7 +555,7 @@ public final class JdbcUtil {
     // static final int MAX_BATCH_SIZE = 1000;
 
     // TODO is it right to do it?
-    // static final KeyedObjectPool<Statement, PoolableWrapper<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
+    // static final KeyedObjectPool<Statement, PoolableAdapter<String>> stmtPoolForSql = PoolFactory.createKeyedObjectPool(1000, 3000);
 
     // ...
     static final String CURRENT_DIR_PATH = "./";
@@ -2772,48 +2772,48 @@ public final class JdbcUtil {
     }
 
     /**
-     * Determines the {@link SQLOperation} type from a given SQL string by analyzing its leading keyword.
+     * Determines the {@link SqlOperation} type from a given SQL string by analyzing its leading keyword.
      * This method trims the SQL string and performs a case-insensitive check for keywords like
      * {@code SELECT}, {@code UPDATE}, {@code INSERT}, {@code DELETE}, etc.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLOperation op1 = JdbcUtil.getSQLOperation("SELECT * FROM users");
-     * // op1 is SQLOperation.SELECT
+     * SqlOperation op1 = JdbcUtil.getSqlOperation("SELECT * FROM users");
+     * // op1 is SqlOperation.SELECT
      *
-     * SQLOperation op2 = JdbcUtil.getSQLOperation("  insert into accounts (id, name) values (1, 'test')");
-     * // op2 is SQLOperation.INSERT
+     * SqlOperation op2 = JdbcUtil.getSqlOperation("  insert into accounts (id, name) values (1, 'test')");
+     * // op2 is SqlOperation.INSERT
      *
-     * SQLOperation op3 = JdbcUtil.getSQLOperation("CREATE TABLE new_table (...)");
-     * // op3 might be SQLOperation.CREATE or SQLOperation.UNKNOWN depending on the implementation
+     * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (...)");
+     * // op3 might be SqlOperation.CREATE or SqlOperation.UNKNOWN depending on the implementation
      * }</pre>
      *
      * @param sql The SQL statement to analyze.
-     * @return The identified {@link SQLOperation}, or {@link SQLOperation#UNKNOWN} if the operation cannot be determined.
-     * @see SQLOperation
+     * @return The identified {@link SqlOperation}, or {@link SqlOperation#UNKNOWN} if the operation cannot be determined.
+     * @see SqlOperation
      */
-    static SQLOperation getSQLOperation(final String sql) {
+    static SqlOperation getSqlOperation(final String sql) {
         final String trimmedSql = sql.trim();
 
         if (Strings.startsWithIgnoreCase(trimmedSql, "select ")) {
-            return SQLOperation.SELECT;
+            return SqlOperation.SELECT;
         } else if (Strings.startsWithIgnoreCase(trimmedSql, "update ")) {
-            return SQLOperation.UPDATE;
+            return SqlOperation.UPDATE;
         } else if (Strings.startsWithIgnoreCase(trimmedSql, "insert ")) {
-            return SQLOperation.INSERT;
+            return SqlOperation.INSERT;
         } else if (Strings.startsWithIgnoreCase(trimmedSql, "delete ")) {
-            return SQLOperation.DELETE;
+            return SqlOperation.DELETE;
         } else if (Strings.startsWithIgnoreCase(trimmedSql, "merge ")) {
-            return SQLOperation.MERGE;
+            return SqlOperation.MERGE;
         } else {
-            for (final SQLOperation so : SQLOperation.values()) {
+            for (final SqlOperation so : SqlOperation.values()) {
                 if (Strings.startsWithIgnoreCase(trimmedSql, so.name())) {
                     return so;
                 }
             }
         }
 
-        return SQLOperation.UNKNOWN;
+        return SqlOperation.UNKNOWN;
     }
 
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
@@ -4724,10 +4724,10 @@ public final class JdbcUtil {
     }
 
     static SQLTransaction getTransaction(final javax.sql.DataSource ds, final String sql, final CreatedBy createdBy) {
-        final SQLOperation sqlOperation = JdbcUtil.getSQLOperation(sql);
+        final SqlOperation sqlOperation = JdbcUtil.getSqlOperation(sql);
         final SQLTransaction tran = SQLTransaction.getTransaction(ds, createdBy);
 
-        if (tran == null || (tran.isForUpdateOnly() && sqlOperation == SQLOperation.SELECT)) {
+        if (tran == null || (tran.isForUpdateOnly() && sqlOperation == SqlOperation.SELECT)) {
             return null;
         } else {
             return tran;
@@ -8344,7 +8344,7 @@ public final class JdbcUtil {
                     }
 
                     if (propInfo.type.isCollection()) {
-                        propClass = propInfo.type.getElementType().clazz();
+                        propClass = propInfo.type.elementType().javaType();
                     } else {
                         propClass = propInfo.clazz;
                     }
@@ -8966,14 +8966,14 @@ public final class JdbcUtil {
         propInfo = entityInfo.getPropInfo(prefix + "s"); // Trying to do something smart?
         final int len = prefix.length() + 1;
 
-        if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
+        if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.elementType().isBean()))
                 && N.noneMatch(columnLabelList, it -> it.length() > len && it.charAt(len) == '.' && Strings.startsWithIgnoreCase(it, prefix + "s."))) {
             // good
         } else {
             propInfo = entityInfo.getPropInfo(prefix + "es"); // Trying to do something smart?
             final int len2 = prefix.length() + 2;
 
-            if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.getElementType().isBean()))
+            if (propInfo != null && (propInfo.type.isBean() || (propInfo.type.isCollection() && propInfo.type.elementType().isBean()))
                     && N.noneMatch(columnLabelList, it -> it.length() > len2 && it.charAt(len2) == '.' && Strings.startsWithIgnoreCase(it, prefix + "es."))) {
                 // good
             } else {
@@ -10302,7 +10302,7 @@ public final class JdbcUtil {
 
         if (map == null) {
             final List<String> idPropNameList = QueryUtil.getIdPropNames(entityClass);
-            final boolean isNoId = N.isEmpty(idPropNameList) || QueryUtil.isFakeId(idPropNameList);
+            final boolean isNoId = N.isEmpty(idPropNameList);
             final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
             final BeanInfo entityInfo = isNoId ? null : ParserUtil.getBeanInfo(entityClass);
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
@@ -10434,13 +10434,13 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the entity
      * @param <ID> the type of the ID
-     * @param <SB> the type of the SQLBuilder
+     * @param <SB> the type of the SqlBuilder
      * @param <TD> the type of the CrudDao
      * @param daoInterface the DAO interface class
      * @param idExtractor the RowMapper used to extract the ID from ResultSet
      * @throws IllegalArgumentException if daoInterface or idExtractor is null
      */
-    public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
+    public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(idExtractor, cs.idExtractor);
@@ -10465,13 +10465,13 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the entity
      * @param <ID> the type of the ID
-     * @param <SB> the type of the SQLBuilder
+     * @param <SB> the type of the SqlBuilder
      * @param <TD> the type of the CrudDao
      * @param daoInterface the DAO interface class
      * @param idExtractor the BiRowMapper used to extract the ID with column information
      * @throws IllegalArgumentException if daoInterface or idExtractor is null
      */
-    public static <T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
+    public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgNotNull(idExtractor, cs.idExtractor);
@@ -10502,7 +10502,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Define a DAO interface extending CrudDao or Dao
-     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     // Automatic CRUD methods are inherited:
      *     // - save(User user)
      *     // - batchSave(Collection<User> users)
@@ -10561,7 +10561,7 @@ public final class JdbcUtil {
      * <p><b>Advanced DAO Features:</b></p>
      * <pre>{@code
      * // Define a DAO with complex queries
-     * public interface OrderDao extends CrudDao<Order, Long, SQLBuilder.PSC, OrderDao> {
+     * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
      *     // Aggregate queries
      *     @Select("SELECT COUNT(*) FROM orders WHERE status = ?")
      *     long countByStatus(String status);
@@ -10598,7 +10598,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @see Dao
      * @see CrudDao
-     * @see #createDao(Class, javax.sql.DataSource, SQLMapper)
+     * @see #createDao(Class, javax.sql.DataSource, SqlMapper)
      * @see #createDao(Class, javax.sql.DataSource, Executor)
      */
     @SuppressWarnings("rawtypes")
@@ -10612,7 +10612,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLMapper sqlMapper = SQLMapper.fromFile("sql/user-queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.fromFile("sql/user-queries.xml");
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
      * }</pre>
      *
@@ -10624,7 +10624,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper) {
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper) {
         return createDao(daoInterface, ds, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -10643,7 +10643,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Jdbc.DaoCache daoCache) {
         return createDao(daoInterface, ds, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
     }
@@ -10677,7 +10677,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLMapper sqlMapper = SQLMapper.fromFile("sql/queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.fromFile("sql/queries.xml");
      * ExecutorService executor = Executors.newCachedThreadPool();
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, executor);
      * }</pre>
@@ -10691,7 +10691,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Executor executor) {
         return createDao(daoInterface, ds, sqlMapper, null, executor);
     }
@@ -10712,7 +10712,7 @@ public final class JdbcUtil {
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
-    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SQLMapper sqlMapper,
+    public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Jdbc.DaoCache daoCache, final Executor executor) {
         return DaoImpl.createDao(daoInterface, null, ds, sqlMapper, daoCache, executor);
     }
@@ -10745,7 +10745,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLMapper sqlMapper = SQLMapper.fromFile("sql/legacy-queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.fromFile("sql/legacy-queries.xml");
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
      * }</pre>
      *
@@ -10759,7 +10759,7 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper) {
+            final SqlMapper sqlMapper) {
         return createDao(daoInterface, targetTableName, ds, sqlMapper, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -10779,7 +10779,7 @@ public final class JdbcUtil {
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Jdbc.DaoCache daoCache) {
+            final SqlMapper sqlMapper, final Jdbc.DaoCache daoCache) {
         return createDao(daoInterface, targetTableName, ds, sqlMapper, daoCache, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -10813,7 +10813,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLMapper sqlMapper = SQLMapper.fromResource("/sql/custom-queries.xml");
+     * SqlMapper sqlMapper = SqlMapper.fromResource("/sql/custom-queries.xml");
      * ExecutorService executor = Executors.newWorkStealingPool();
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, sqlMapper, executor);
      * }</pre>
@@ -10829,7 +10829,7 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Executor executor) {
+            final SqlMapper sqlMapper, final Executor executor) {
         return createDao(daoInterface, targetTableName, ds, sqlMapper, null, executor);
     }
 
@@ -10851,7 +10851,7 @@ public final class JdbcUtil {
     @Deprecated
     @SuppressWarnings("rawtypes")
     public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds,
-            final SQLMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
+            final SqlMapper sqlMapper, final Jdbc.DaoCache cache, final Executor executor) throws IllegalArgumentException {
         return DaoImpl.createDao(daoInterface, targetTableName, ds, sqlMapper, cache, executor);
     }
 

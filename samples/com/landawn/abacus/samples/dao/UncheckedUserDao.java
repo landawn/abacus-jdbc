@@ -29,14 +29,14 @@ import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
 import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
 public interface UncheckedUserDao
-        extends UncheckedCrudDao<User, Long, SQLBuilder.PSC, UncheckedUserDao>, UncheckedJoinEntityHelper<User, SQLBuilder.PSC, UncheckedUserDao> {
+        extends UncheckedCrudDao<User, Long, SqlBuilder.PSC, UncheckedUserDao>, UncheckedJoinEntityHelper<User, SqlBuilder.PSC, UncheckedUserDao> {
 
     @Query("INSERT INTO user1 (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
     void insertWithId(User user);

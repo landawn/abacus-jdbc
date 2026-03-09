@@ -22,7 +22,7 @@ import java.util.List;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -53,7 +53,7 @@ import com.landawn.abacus.util.u.Optional;
  *     private List<Role> roles;
  * }
  * 
- * public interface UserDao extends CrudJoinEntityHelper<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Inherits methods for loading joined entities
  * }
  * 
@@ -73,13 +73,13 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
-public interface CrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities.

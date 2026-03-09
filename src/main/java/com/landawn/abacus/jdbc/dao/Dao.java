@@ -47,8 +47,8 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
-import com.landawn.abacus.query.SQLMapper;
+import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
@@ -94,7 +94,7 @@ import com.landawn.abacus.util.stream.Stream;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     @Query("INSERT INTO user (id, first_name, last_name, email) VALUES (:id, :firstName, :lastName, :email)")
  *     void insertWithId(User user) throws SQLException;
  *
@@ -128,11 +128,11 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type parameter for fluent API support
  *
  * @see JdbcUtil#createDao(Class, DataSource)
- * @see JdbcUtil#createDao(Class, DataSource, SQLMapper)
+ * @see JdbcUtil#createDao(Class, DataSource, SqlMapper)
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
@@ -140,7 +140,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @see Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Retrieves the underlying data source used by this DAO for database connections.
@@ -152,20 +152,20 @@ public interface Dao<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
     javax.sql.DataSource dataSource();
 
     /**
-     * Retrieves the {@code SQLMapper} instance configured for this DAO.
-     * The SQLMapper provides SQL query templates that can be referenced by name.
-     * If no SQLMapper is configured, an empty SQLMapper instance will be returned.
+     * Retrieves the {@code SqlMapper} instance configured for this DAO.
+     * The SqlMapper provides SQL query templates that can be referenced by name.
+     * If no SqlMapper is configured, an empty SqlMapper instance will be returned.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SQLMapper sqlMapper = dao.sqlMapper();
+     * SqlMapper sqlMapper = dao.sqlMapper();
      * String query = sqlMapper.get("findUserByEmail");
      * }</pre>
      *
-     * @return the SQLMapper instance, never null
+     * @return the SqlMapper instance, never null
      */
     @NonDBOperation
-    SQLMapper sqlMapper();
+    SqlMapper sqlMapper();
 
     /**
      * Retrieves the class object representing the entity type managed by this DAO.

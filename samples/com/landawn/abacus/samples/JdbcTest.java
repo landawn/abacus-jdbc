@@ -36,8 +36,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JdbcUtils;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SQLBuilder.NSC;
-import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SqlBuilder.NSC;
+import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.samples.dao.AddressDao;
 import com.landawn.abacus.samples.dao.DeviceDao;
 import com.landawn.abacus.samples.dao.EmployeeDao;
@@ -209,7 +209,7 @@ public class JdbcTest {
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
-        final String sql = NSC.insertInto(User.class).toSql();
+        final String sql = NSC.insertInto(User.class).build().query();
         JdbcUtil.prepareNamedQuery(dataSource, sql).addBatchParameters(users).batchInsert();
 
         //        try (Connection conn = dataSource.getConnection()) {
@@ -224,8 +224,8 @@ public class JdbcTest {
 
         assertEquals(users.size(), userDao.batchUpdate(users));
 
-        final String query1 = NSC.selectFrom(User.class).where(Filters.lt("id", 0)).toSql();
-        final String query2 = NSC.selectFrom(User.class).where(Filters.gt("id", 200)).toSql();
+        final String query1 = NSC.selectFrom(User.class).where(Filters.lt("id", 0)).build().query();
+        final String query2 = NSC.selectFrom(User.class).where(Filters.gt("id", 200)).build().query();
 
         final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concat(query1 + "; " + query2))
                 .setInt(1, 10)
@@ -254,7 +254,7 @@ public class JdbcTest {
         final PreparedStatement stmt = null;
 
         try {
-            final String sql = NSC.insertInto(User.class).toSql();
+            final String sql = NSC.insertInto(User.class).build().query();
             JdbcUtil.prepareNamedQuery(dataSource, sql).addBatchParameters(users).batchInsert();
         } finally {
             JdbcUtil.closeQuietly(stmt, conn);
@@ -272,7 +272,7 @@ public class JdbcTest {
         PreparedStatement stmt = null;
 
         try {
-            final String sql = PSC.insertInto(User.class).toSql();
+            final String sql = PSC.insertInto(User.class).build().query();
             conn = dataSource.getConnection();
             stmt = conn.prepareStatement(sql);
             stmt.setLong(1, 100);
@@ -288,7 +288,7 @@ public class JdbcTest {
         User userFromDB = null;
 
         try {
-            final String sql = PSC.selectFrom(User.class).where("id = ?").toSql();
+            final String sql = PSC.selectFrom(User.class).where("id = ?").build().query();
 
             conn = dataSource.getConnection();
             stmt = conn.prepareStatement(sql);
@@ -313,7 +313,7 @@ public class JdbcTest {
         System.out.println(userFromDB);
 
         try {
-            final String sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").toSql();
+            final String sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").build().query();
 
             conn = dataSource.getConnection();
             stmt = conn.prepareStatement(sql);
@@ -326,7 +326,7 @@ public class JdbcTest {
         }
 
         try {
-            final String sql = PSC.deleteFrom(User.class).where("id = ?").toSql();
+            final String sql = PSC.deleteFrom(User.class).where("id = ?").build().query();
 
             conn = dataSource.getConnection();
             stmt = conn.prepareStatement(sql);
@@ -350,7 +350,7 @@ public class JdbcTest {
     @Test
     public void crud_by_PreparedQuery() throws SQLException {
 
-        String sql = PSC.insertInto(User.class).toSql();
+        String sql = PSC.insertInto(User.class).build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .setString(2, "Forrest")
@@ -359,20 +359,20 @@ public class JdbcTest {
                 .setString(5, "123@email.com")
                 .insert();
 
-        sql = PSC.selectFrom(User.class).where("id = ?").toSql();
+        sql = PSC.selectFrom(User.class).where("id = ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
                 .ifPresent(System.out::println);
 
-        sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").toSql();
+        sql = PSC.update(User.class).set("firstName", "lastName").where("id = ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setString(1, "Tom")
                 .setString(2, "Hanks")
                 .setLong(3, 100)
                 .update();
 
-        sql = PSC.deleteFrom(User.class).where("id = ?").toSql();
+        sql = PSC.deleteFrom(User.class).where("id = ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .update();

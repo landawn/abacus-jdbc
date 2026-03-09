@@ -42,7 +42,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <pre>{@code
  * // Enable logging for entire DAO
  * @SqlLogEnabled
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     List<User> findByStatus(String status);
  * }
  * 

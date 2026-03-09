@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @SqlMapper("sql/UserDao.xml")
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     
  *     @Query(id = "findActiveUsers")
  *     List<User> findActiveUsers();
@@ -73,7 +73,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE })
-public @interface SqlMapper {
+public @interface SqlSource {
 
     /**
      * Specifies the path to the SQL mapper XML file.

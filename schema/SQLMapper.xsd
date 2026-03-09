@@ -7,8 +7,8 @@
 		</xsd:documentation>
 	</xsd:annotation>
 
-	<xsd:element name="sqlMapper" type="tns:SQLMapper" />
-	<xsd:complexType name="SQLMapper">
+	<xsd:element name="sqlMapper" type="tns:SqlMapper" />
+	<xsd:complexType name="SqlMapper">
 		<xsd:sequence>
 			<xsd:element name="sql" type="tns:SQL" />
 		</xsd:sequence>

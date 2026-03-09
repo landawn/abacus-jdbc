@@ -140,7 +140,7 @@ public @interface Cache {
      * 
      * // Usage
      * @Cache(impl = MyCustomDaoCache.class)
-     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     // Methods here
      * }
      * }</pre>

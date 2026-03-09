@@ -22,7 +22,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -36,7 +36,7 @@ import com.landawn.abacus.util.u.Optional;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedCrudJoinEntityHelper<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedCrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Inherits both CRUD and join entity operations
  * }
  * 
@@ -57,12 +57,12 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @param <T> The entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedJoinEntityHelper
  * @see UncheckedCrudDao
  */
-public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
         extends UncheckedJoinEntityHelper<T, SB, TD>, CrudJoinEntityHelper<T, ID, SB, TD> {
 
     /**

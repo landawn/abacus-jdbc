@@ -18,7 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A CRUD Data Access Object interface for entities with {@code Long} type primary keys
@@ -47,7 +47,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define an append-only DAO for audit logs with Long IDs
- * public interface AuditLogDao extends NoUpdateCrudDaoL<AuditLog, SQLBuilder.PSC, AuditLogDao> {
+ * public interface AuditLogDao extends NoUpdateCrudDaoL<AuditLog, SqlBuilder.PSC, AuditLogDao> {
  *     // Can insert new audit logs and read existing ones
  *     // Cannot update or delete audit logs (immutable records)
  *
@@ -81,7 +81,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see NoUpdateCrudDao
  * @see CrudDaoL
@@ -89,7 +89,7 @@ import com.landawn.abacus.query.SQLBuilder;
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public interface NoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends NoUpdateCrudDaoL<T, SB, TD>>
+public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateCrudDaoL<T, SB, TD>>
         extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**

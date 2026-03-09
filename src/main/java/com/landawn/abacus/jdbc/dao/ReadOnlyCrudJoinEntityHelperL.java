@@ -15,7 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only interface for handling join entity operations with CRUD DAOs that use
@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support for Long IDs
- * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, SQLBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends ReadOnlyCrudJoinEntityHelperL<User, SqlBuilder.PSC, UserReadOnlyDao> {
  *     // Can read join entities (e.g., user roles, permissions)
  *     // Cannot delete join entities
  * }
@@ -59,13 +59,13 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type with Long ID (self-referencing for method chaining)
  * @see ReadOnlyCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see CrudDaoL
  */
-public interface ReadOnlyCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>>
+public interface ReadOnlyCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>>
         extends ReadOnlyCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {
 
 }

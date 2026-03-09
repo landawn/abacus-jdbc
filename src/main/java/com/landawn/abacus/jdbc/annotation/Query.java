@@ -44,7 +44,7 @@ import com.landawn.abacus.util.RegExUtil;
  *
  * <p>Basic usage examples:</p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // SELECT operation
  *     @Query("SELECT * FROM users WHERE status = :status")
  *     List<User> findByStatus(@Bind("status") String status);
@@ -130,7 +130,7 @@ import com.landawn.abacus.util.RegExUtil;
  * @see Bind
  * @see SqlFragment
  * @see SqlFragmentList
- * @see SqlMapper
+ * @see SqlSource
  * @see Handler
  * @see OP
  * @see OutParameter
@@ -211,7 +211,7 @@ public @interface Query {
      * This allows SQL to be defined separately from Java code, enabling better organization and reusability.
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
      *
-     * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlMapper} annotation,
+     * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlSource} annotation,
      * which points to XML files or other configuration sources containing SQL definitions.</p>
      *
      * <p>Benefits of using external SQL mappers:</p>
@@ -228,7 +228,7 @@ public @interface Query {
      * <pre>{@code
      * // In DAO interface
      * @SqlMapper("user-queries.xml")
-     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     @Query(id = "findUsersByComplexCriteria")
      *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);
      *
@@ -1034,7 +1034,7 @@ public @interface Query {
     //     *
     //     * <p>Basic examples:</p>
     //     * <pre>{@code
-    //     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+    //     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
     //     *     // Default: throws checked SQLException
     //     *     @Query("SELECT * FROM users WHERE id = :id")
     //     *     User findById(@Bind("id") long id) throws SQLException;

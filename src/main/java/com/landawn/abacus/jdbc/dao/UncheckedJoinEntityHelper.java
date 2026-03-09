@@ -28,7 +28,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ContinuableFuture;
@@ -84,12 +84,12 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> The entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("resource")
-public interface UncheckedJoinEntityHelper<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
     /**
      * Finds the first entity matching the condition and loads the specified join entity class.

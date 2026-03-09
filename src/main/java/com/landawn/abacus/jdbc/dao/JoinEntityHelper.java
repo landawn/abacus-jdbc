@@ -31,7 +31,7 @@ import com.landawn.abacus.jdbc.SQLTransaction;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ContinuableFuture;
@@ -70,14 +70,14 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> {
+public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Retrieves the class type of the target DAO interface.
      * Internal use only.
@@ -421,13 +421,17 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
      */
     @Beta
     default Stream<T> stream(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) {
-        return DaoUtil.getDao(this).stream(selectPropNames, cond).split(JdbcUtil.DEFAULT_BATCH_SIZE).onEach(batchEntities -> {
-            try {
-                loadJoinEntities(batchEntities, joinEntitiesToLoad);
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
-            }
-        }).flatmap(Fn.identity());
+        return DaoUtil.getDao(this)
+                .stream(selectPropNames, cond) // 
+                .split(JdbcUtil.DEFAULT_BATCH_SIZE)
+                .map(Fn.tap(batchEntities -> {
+                    try {
+                        loadJoinEntities(batchEntities, joinEntitiesToLoad);
+                    } catch (final SQLException e) {
+                        throw new UncheckedSQLException(e);
+                    }
+                }))
+                .flatmap(Fn.identity());
     }
 
     /**
@@ -453,7 +457,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
-                .onEach(batchEntities -> {
+                .map(Fn.tap(batchEntities -> {
                     try {
                         for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                             loadJoinEntities(batchEntities, joinEntityClass);
@@ -461,7 +465,7 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     }
-                })
+                }))
                 .flatmap(Fn.identity());
     }
 
@@ -490,13 +494,13 @@ public interface JoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB
             return DaoUtil.getDao(this)
                     .stream(selectPropNames, cond)
                     .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
-                    .onEach(t -> {
+                    .map(Fn.tap(t -> {
                         try {
                             loadAllJoinEntities(t);
                         } catch (final SQLException e) {
                             throw new UncheckedSQLException(e);
                         }
-                    })
+                    }))
                     .flatmap(Fn.identity());
 
         } else {

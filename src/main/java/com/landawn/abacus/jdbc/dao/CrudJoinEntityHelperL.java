@@ -20,7 +20,7 @@ import java.util.Collection;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -44,7 +44,7 @@ import com.landawn.abacus.util.u.Optional;
  *     private List<Order> orders;
  * }
  * 
- * public interface UserDao extends CrudJoinEntityHelperL<User, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudJoinEntityHelperL<User, SqlBuilder.PSC, UserDao> {
  *     // Inherits join entity methods with Long ID type
  * }
  * 
@@ -59,13 +59,13 @@ import com.landawn.abacus.util.u.Optional;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * 
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see CrudJoinEntityHelper
  */
-public interface CrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudJoinEntityHelper<T, Long, SB, TD> {
+public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudJoinEntityHelper<T, Long, SB, TD> {
 
     /**
      * Retrieves an entity by its ID and loads the specified join entities.

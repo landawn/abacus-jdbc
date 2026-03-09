@@ -42,8 +42,9 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SQLTransaction;
-import com.landawn.abacus.query.SQLParser;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.SqlParser;
+import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.samples.entity.Address;
 import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.samples.entity.Employee;
@@ -95,7 +96,7 @@ public class UncheckedDaoTest {
 
     //    @Test
     //    public void test_cacheSql() {
-    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).toSql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.eq("id")).build().query();
     //        uncheckedUserDao.cacheSql("selectById", sql);
     //
     //        assertEquals(sql, uncheckedUserDao.getCachedSql("selectById"));
@@ -121,7 +122,7 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        uncheckedUserDao.query(Filters.criteria().groupBy("lastName").having(Filters.ne("lastName", "aa")).orderBy("firstName")).println();
+        uncheckedUserDao.query(Criteria.builder().groupBy("lastName").having(Filters.ne("lastName", "aa")).orderBy("firstName").build()).println();
         uncheckedUserDao.deleteById(id);
 
         assertFalse(uncheckedUserDao.exists(id));
@@ -667,9 +668,9 @@ public class UncheckedDaoTest {
     }
 
     @Test
-    public void test_SQLParser() {
+    public void test_SqlParser() {
         final String sql = "SELECT employee_id AS \"employeeId\", first_name AS \"firstName\", last_name AS \"lastName\" FROM employee WHERE 1 < 2";
-        SQLParser.parse(sql).forEach(Fn.println());
+        SqlParser.parse(sql).forEach(Fn.println());
     }
 
     @Test

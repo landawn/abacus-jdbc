@@ -35,8 +35,8 @@ import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.query.SQLBuilder.NSC;
-import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SqlBuilder.NSC;
+import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {
@@ -84,7 +84,7 @@ public class PreparedQueryTest {
 
         N.println(firstNameV);
 
-        final String sql = PSC.deleteFrom(User.class).where("id >= ?").toSql();
+        final String sql = PSC.deleteFrom(User.class).where("id >= ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, id)
                 .update();
@@ -113,7 +113,7 @@ public class PreparedQueryTest {
                 .list(Jdbc.BiRowMapper.to(User.class, null, it -> it.replaceFirst("acc.", "")))
                 .forEach(Fn.println());
 
-        sql = PSC.deleteFrom(User.class).where("id >= ?").toSql();
+        sql = PSC.deleteFrom(User.class).where("id >= ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
                 .update();
@@ -131,7 +131,7 @@ public class PreparedQueryTest {
 
         final long minId = N.min(ids);
 
-        String sql = PSC.selectFrom(User.class).where("id >= ?").toSql();
+        String sql = PSC.selectFrom(User.class).where("id >= ?").build().query();
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
@@ -152,7 +152,7 @@ public class PreparedQueryTest {
                 .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1), Fn.replacingMerger()))
                 .forEach(Fn.println("="));
 
-        sql = PSC.deleteFrom(User.class).where("id >= ?").toSql();
+        sql = PSC.deleteFrom(User.class).where("id >= ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
                 .update();
@@ -161,7 +161,7 @@ public class PreparedQueryTest {
     @Test
     public void test_ColumnGetter() throws SQLException {
 
-        String sql = PSC.insertInto(User.class).toSql();
+        String sql = PSC.insertInto(User.class).build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .setString(2, "Forrest")
@@ -170,17 +170,17 @@ public class PreparedQueryTest {
                 .setString(5, "123@email.com")
                 .insert();
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).toSql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).build().query()) //
                 .setParameters(User.builder().firstName("Forrest").build(), N.asList(s.firstName))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 
-        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).toSql()) //
+        JdbcUtil.prepareNamedQuery(dataSource, NSC.selectFrom(User.class).where(Filters.eq(s.firstName)).build().query()) //
                 .setParametersFrom(1, N.asList("Forrest"))
                 .findOnlyOne(User.class)
                 .ifPresent(System.out::println);
 
-        sql = PSC.selectFrom(User.class).where("id = ?").toSql();
+        sql = PSC.selectFrom(User.class).where("id = ?").build().query();
 
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
@@ -215,7 +215,7 @@ public class PreparedQueryTest {
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigInteger().ifPresent(Fn.println());
         JdbcUtil.prepareQuery(dataSource, "select id from user1").queryForBigDecimal().ifPresent(Fn.println());
 
-        sql = PSC.deleteFrom(User.class).where(Filters.eq(s.id)).toSql();
+        sql = PSC.deleteFrom(User.class).where(Filters.eq(s.id)).build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, 100)
                 .update();

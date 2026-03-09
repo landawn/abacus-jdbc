@@ -18,9 +18,9 @@ public class SQLExecutorTest {
     //    @Test
     //    public void batch_stream() throws SQLException {
     //        List<User> users = N.fill(User.class, 99);
-    //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).toSql();
+    //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).build().query();
     //        List<Long> ids = sqlExecutor.batchInsert(sql_insert, users);
-    //        String sql = NSC.selectFrom(User.class).where(Filters.in("id", ids)).toSql();
+    //        String sql = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build().query();
     //
     //        for (int i = 0; i < 1000; i++) {
     //            assertEquals(99, sqlExecutor.stream(User.class, sql, ids).count());
@@ -42,7 +42,7 @@ public class SQLExecutorTest {
     //    public void batch_01() throws SQLException {
     //
     //        List<User> users = N.fill(User.class, 99);
-    //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).toSql();
+    //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).build().query();
     //        JdbcSettings jdbcSettings = JdbcSettings.create().setBatchSize(1000);
     //        // insert 99 users, less the specified batch size.
     //        List<Long> ids = sqlExecutor.batchInsert(sql_insert, jdbcSettings, users);
@@ -51,7 +51,7 @@ public class SQLExecutorTest {
     //        assertEquals(users.size(), ids.size());
     //
     //        SP sp = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build();
-    //        sqlExecutor.query(sp.toSql(), sp.parameters()).println();
+    //        sqlExecutor.query(sp.build().query(), sp.parameters()).println();
     //
     //        // insert 3001 users, bigger the specified batch size.
     //        users = N.fill(User.class, 3001);
@@ -61,7 +61,7 @@ public class SQLExecutorTest {
     //        assertEquals(users.size(), ids.size());
     //
     //        sp = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build();
-    //        sqlExecutor.query(sp.toSql(), sp.parameters()).println();
+    //        sqlExecutor.query(sp.build().query(), sp.parameters()).println();
     //
     //        userDao.delete(Filters.alwaysTrue());
     //    }
@@ -69,7 +69,7 @@ public class SQLExecutorTest {
     //    @Test
     //    public void batch_25() throws SQLException {
     //        List<User> users = N.fill(User.class, 19764);
-    //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).toSql();
+    //        String sql_insert = NSC.insertInto(User.class, N.asSet("id")).build().query();
     //        JdbcSettings jdbcSettings = JdbcSettings.create().setBatchSize(5000);
     //        // insert 99 users, less the specified batch size.
     //        List<Long> ids = sqlExecutor.batchInsert(sql_insert, jdbcSettings, users);
@@ -77,7 +77,7 @@ public class SQLExecutorTest {
     //        assertEquals(users.size(), ids.size());
     //
     //        SP sp = NSC.selectFrom(User.class).where(Filters.in("id", ids)).build();
-    //        assertEquals(users.size(), sqlExecutor.query(sp.toSql(), sp.parameters()).size());
+    //        assertEquals(users.size(), sqlExecutor.query(sp.build().query(), sp.parameters()).size());
     //
     //        userDao.delete(Filters.alwaysTrue());
     //    }

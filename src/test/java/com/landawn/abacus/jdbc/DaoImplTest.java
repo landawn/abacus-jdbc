@@ -25,7 +25,7 @@ import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.Dao;
-import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;

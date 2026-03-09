@@ -976,7 +976,7 @@
 
 ### 2.5.3
 
-* Refactoring `SQLBuilder`.
+* Refactoring `SqlBuilder`.
 * Improvements and bug fix.
 
 

@@ -42,7 +42,7 @@ import com.landawn.abacus.jdbc.Propagation;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     
  *     // Simple transaction with default settings
  *     @Transactional

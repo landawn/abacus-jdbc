@@ -9,14 +9,14 @@ Experience the simplicity of working with SQL/DB as naturally as working with Co
 
 This library focuses on three core areas:
 
-*  Write or generate `SQL scripts` (optional):: [SQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SQLBuilder_view.html), 
-[DynamicSQLBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSQLBuilder_view.html).
+*  Write or generate `SQL scripts` (optional):: [SqlBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/SqlBuilder_view.html), 
+[DynamicSqlBuilder](https://htmlpreview.github.io/?https://github.com/landawn/abacus-jdbc/blob/master/docs/DynamicSqlBuilder_view.html).
 
 ```java
 // Manually write the sql in plain string.
 String query = "SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?";
 
-// Or by SQLBuilder
+// Or by SqlBuilder
 String query = PSC.select("id", "firstName, "lastName", "email").from(User.class).where(Filters.eq("firstName")).sql();
 // Or if select all columns from user:
 String query = PSC.selectFrom(User.class).where(Filters.eq("firstName")).sql();
@@ -56,7 +56,7 @@ PreparedQuery preparedQuery = JdbcUtil.prepareQuery(dataSource, query...);
 																		   
 
 // Sql can also be associated to a self-defined DAO method. (There are tens of most used predefined methods in DAO interfaces which be used without write single line of code).
-public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao>, JoinEntityHelper<User, SqlBuilder.PSC, UserDao> {
     // This is just a sample. Normally there are pre-defined methods available for this query: userDao.list(Condition cond).
     // Methods defined in Dao interface don't require implementation. Of course, Customized implemnetation is also supported by default method.
     @Query("SELECT id, first_name, last_name, email FROM user WHERE first_Name = ?")
@@ -67,7 +67,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     List<User> selectUserByFirstName(String firstName) throws SQLException;
 
     // Or id of the sql script defined in below nested static class.
-    // Instead of writing sql scripts manually, you can also use SQLBuilder/DynamicSQLBuilder to write sql scripts.
+    // Instead of writing sql scripts manually, you can also use SqlBuilder/DynamicSqlBuilder to write sql scripts.
     @Query(id = "selectUserByFirstName")
     List<User> selectUserByFirstName(String firstName) throws SQLException;
     

@@ -15,7 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only CRUD DAO interface with join entity helper capabilities that uses primitive {@code long} for ID operations
@@ -34,7 +34,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with primitive long IDs
- * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, SQLBuilder.PSC, ReadOnlyUserDao> {
+ * public interface ReadOnlyUserDao extends UncheckedReadOnlyCrudJoinEntityHelperL<User, SqlBuilder.PSC, ReadOnlyUserDao> {
  *     // Inherits read-only operations with join loading and primitive long ID support
  * }
  *
@@ -59,12 +59,12 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> The entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelperL
  */
-public interface UncheckedReadOnlyCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
+public interface UncheckedReadOnlyCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
         extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelperL<T, SB, TD> {
     // This interface combines read-only restrictions with join entity capabilities
     // and primitive long ID support. All methods are inherited from parent interfaces.

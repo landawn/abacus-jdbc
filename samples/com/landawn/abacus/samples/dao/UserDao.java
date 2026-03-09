@@ -37,14 +37,14 @@ import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
-import com.landawn.abacus.jdbc.annotation.SqlMapper;
+import com.landawn.abacus.jdbc.annotation.SqlSource;
 import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.query.SQLBuilder;
-import com.landawn.abacus.query.SQLBuilder.PSC;
+import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.samples.dao.handler.UserDaoHandlerA;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.ImmutableList;
@@ -58,9 +58,9 @@ import com.landawn.abacus.util.stream.Stream;
 @Handler(qualifier = "handler1", filter = ".*")
 @Handler(qualifier = "handler2", filter = ".*", isForInvokeFromOutsideOfDaoOnly = true)
 @DaoConfig(addLimitForSingleQuery = true, callGenerateIdForInsertIfIdNotSet = false)
-@SqlMapper("./samples/userSqlMapper.xml")
+@SqlSource("./samples/userSqlMapper.xml")
 // @SqlLogEnabled(true)
-public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao>, JoinEntityHelper<User, SqlBuilder.PSC, UserDao> {
 
     @NonDBOperation
     @Override
@@ -244,7 +244,7 @@ public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>, J
     static final class SqlTable {
 
         @SqlScript
-        static final String sql_listToSet = PSC.selectFrom(User.class).where(Filters.gt("id")).toSql() + ";";
+        static final String sql_listToSet = PSC.selectFrom(User.class).where(Filters.gt("id")).build().query() + ";";
     }
 
     static final class Handlers {

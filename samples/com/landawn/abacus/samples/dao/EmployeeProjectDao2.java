@@ -15,7 +15,7 @@ package com.landawn.abacus.samples.dao;
 
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.samples.entity.EmployeeProject;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
-public interface EmployeeProjectDao2 extends CrudDao<EmployeeProject, EmployeeProject, SQLBuilder.PSC, EmployeeProjectDao2> {
+public interface EmployeeProjectDao2 extends CrudDao<EmployeeProject, EmployeeProject, SqlBuilder.PSC, EmployeeProjectDao2> {
 }

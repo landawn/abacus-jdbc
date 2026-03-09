@@ -16,7 +16,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only CRUD (Create, Read, Update, Delete) Data Access Object interface specifically
@@ -44,7 +44,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO for reports with Long IDs
- * public interface ReportDao extends ReadOnlyCrudDaoL<Report, SQLBuilder.PSC, ReportDao> {
+ * public interface ReportDao extends ReadOnlyCrudDaoL<Report, SqlBuilder.PSC, ReportDao> {
  *     // Inherits all read-only operations with Long ID type
  *     // Can use both primitive long and Long object IDs
  *
@@ -69,7 +69,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see ReadOnlyCrudDao
  * @see NoUpdateCrudDaoL
@@ -77,6 +77,6 @@ import com.landawn.abacus.query.SQLBuilder;
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface ReadOnlyCrudDaoL<T, SB extends SQLBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>
+public interface ReadOnlyCrudDaoL<T, SB extends SqlBuilder, TD extends ReadOnlyCrudDaoL<T, SB, TD>>
         extends ReadOnlyCrudDao<T, Long, SB, TD>, NoUpdateCrudDaoL<T, SB, TD> {
 }

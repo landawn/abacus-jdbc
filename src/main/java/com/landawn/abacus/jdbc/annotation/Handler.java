@@ -57,7 +57,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * 
  * // Apply handler to entire DAO
  * @Handler(type = LoggingHandler.class)
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // All methods will be intercepted by LoggingHandler
  * }
  * 
@@ -151,7 +151,7 @@ public @interface Handler {
      * <pre>{@code
      * @Handler(type = ReadOnlyHandler.class, filter = {"find.*", "get.*", "query.*"})
      * @Handler(type = AuditHandler.class, filter = {"save.*", "update.*", "delete.*"})
-     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     // Read methods will use ReadOnlyHandler
      *     // Write methods will use AuditHandler
      * }
@@ -171,7 +171,7 @@ public @interface Handler {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(type = TransactionHandler.class, isForInvokeFromOutsideOfDaoOnly = true)
-     * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     @Query("SELECT * FROM users WHERE id = :id")
      *     User findById(@Bind("id") Long id);
      *

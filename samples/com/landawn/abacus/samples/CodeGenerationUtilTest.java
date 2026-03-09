@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil;
 import com.landawn.abacus.jdbc.JdbcCodeGenerationUtil.EntityCodeConfig;
-import com.landawn.abacus.query.SQLBuilder.SCSB;
+import com.landawn.abacus.query.SqlBuilder.SCSB;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
@@ -176,7 +176,7 @@ class CodeGenerationUtilTest {
         User user = Beans.newRandom(User.class);
         user.setEmail(null);
 
-        String sql = SCSB.insert(user).into(User.class).toSql();
+        String sql = SCSB.insert(user).into(User.class).build().query();
         N.println(sql);
 
         String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, sql);
@@ -184,7 +184,7 @@ class CodeGenerationUtilTest {
 
         N.println("==================================");
 
-        sql = SCSB.insert(user).into(User.class).toSql();
+        sql = SCSB.insert(user).into(User.class).build().query();
         N.println(sql);
 
         updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, sql, "id > 2");

@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only CRUD DAO interface that provides only query operations without any insert, update, or delete capabilities.
@@ -37,7 +37,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudDao<User, Long, SQLBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudDao<User, Long, SqlBuilder.PSC, UserReadOnlyDao> {
  *     // Only query methods available, no insert/update/delete
  * }
  *
@@ -65,13 +65,13 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedReadOnlyDao
  * @see UncheckedNoUpdateCrudDao
  */
 @Beta
-public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>
+public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>
         extends UncheckedReadOnlyDao<T, SB, TD>, UncheckedNoUpdateCrudDao<T, ID, SB, TD>, ReadOnlyCrudDao<T, ID, SB, TD> {
 
     /**

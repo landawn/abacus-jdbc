@@ -19,7 +19,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A no-update CRUD DAO interface that uses {@code Long} as the ID type with unchecked exception handling.
@@ -35,7 +35,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, SQLBuilder.PSC, EventLogDao> {
+ * public interface EventLogDao extends UncheckedNoUpdateCrudDaoL<EventLog, SqlBuilder.PSC, EventLogDao> {
  *     // Can insert and query, but not update/delete
  * }
  *
@@ -53,13 +53,13 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedNoUpdateCrudDao
  * @see UncheckedCrudDaoL
  */
 @Beta
-public interface UncheckedNoUpdateCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDaoL<T, SB, TD>>
+public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends UncheckedNoUpdateCrudDaoL<T, SB, TD>>
         extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
 
     /**

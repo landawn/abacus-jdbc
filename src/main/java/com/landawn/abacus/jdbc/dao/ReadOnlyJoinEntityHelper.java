@@ -18,7 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only interface for handling join entity operations in a Data Access Object (DAO) pattern.
@@ -44,7 +44,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only DAO with join entity support
- * public interface UserReadOnlyDao extends ReadOnlyJoinEntityHelper<User, SQLBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends ReadOnlyJoinEntityHelper<User, SqlBuilder.PSC, UserReadOnlyDao> {
  *     // All load operations work normally
  *     // All delete operations will throw UnsupportedOperationException
  * }
@@ -75,14 +75,14 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see JoinEntityHelper
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy
  */
 @SuppressWarnings("RedundantThrows")
-public interface ReadOnlyJoinEntityHelper<T, SB extends SQLBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
+public interface ReadOnlyJoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 
     /**
      * This operation is not supported in read-only mode.

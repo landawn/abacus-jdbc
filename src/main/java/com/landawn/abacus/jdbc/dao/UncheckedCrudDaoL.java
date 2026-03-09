@@ -22,7 +22,7 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -48,7 +48,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedCrudDaoL<User, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedCrudDaoL<User, SqlBuilder.PSC, UserDao> {
  *     // Inherits all UncheckedCrudDao methods with Long ID type
  *     // Plus convenience methods that accept primitive long
  * }
@@ -60,13 +60,13 @@ import com.landawn.abacus.util.u.OptionalShort;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedCrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedCrudDaoL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
+public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
         extends UncheckedCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**

@@ -37,7 +37,7 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
@@ -66,7 +66,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Custom query methods can be added here
  * }
  * 
@@ -79,7 +79,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for fluent interface support
  * 
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
@@ -90,7 +90,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings({ "RedundantThrows", "resource" })
-public interface CrudDao<T, ID, SB extends SQLBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
+public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
      * Returns the functional interface of {@code Jdbc.BiRowMapper} that extracts the ID from a database row.

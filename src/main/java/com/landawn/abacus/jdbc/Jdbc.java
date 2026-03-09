@@ -54,7 +54,7 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.pool.KeyedObjectPool;
 import com.landawn.abacus.pool.PoolFactory;
 import com.landawn.abacus.pool.Poolable;
-import com.landawn.abacus.pool.PoolableWrapper;
+import com.landawn.abacus.pool.PoolableAdapter;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Array;
@@ -6552,7 +6552,7 @@ public final class Jdbc {
      * @see DaoCache#create(int, long)
      */
     public static final class DefaultDaoCache implements DaoCache {
-        private final KeyedObjectPool<String, PoolableWrapper<Object>> pool;
+        private final KeyedObjectPool<String, PoolableAdapter<Object>> pool;
 
         /**
          * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay.
@@ -6568,7 +6568,7 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            final PoolableWrapper<Object> w = pool.get(defaultCacheKey);
+            final PoolableAdapter<Object> w = pool.get(defaultCacheKey);
 
             return w == null ? null : w.value();
         }

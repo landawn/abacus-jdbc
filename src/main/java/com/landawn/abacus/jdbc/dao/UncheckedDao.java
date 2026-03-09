@@ -33,7 +33,7 @@ import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Beans;
@@ -61,7 +61,7 @@ import com.landawn.abacus.util.u.OptionalShort;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * UncheckedDao<User, SQLBuilder.PSC, UserDao> userDao = ...;
+ * UncheckedDao<User, SqlBuilder.PSC, UserDao> userDao = ...;
  * User user = new User("John", "Doe");
  * userDao.save(user);
  * 
@@ -69,13 +69,13 @@ import com.landawn.abacus.util.u.OptionalShort;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.jdbc.dao.Dao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedDao<T, SB extends SQLBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
+public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<T, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
      * Saves (inserts) the specified entity to the database.

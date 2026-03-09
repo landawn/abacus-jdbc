@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
@@ -54,7 +54,7 @@ import com.landawn.abacus.query.condition.Condition;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a DAO for immutable transaction records
- * public interface TransactionDao extends NoUpdateCrudDao<Transaction, String, SQLBuilder.PSC, TransactionDao> {
+ * public interface TransactionDao extends NoUpdateCrudDao<Transaction, String, SqlBuilder.PSC, TransactionDao> {
  *     // Custom read methods can be added
  * }
  *
@@ -104,7 +104,7 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  * @see NoUpdateDao
  * @see CrudDao
@@ -112,7 +112,7 @@ import com.landawn.abacus.query.condition.Condition;
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public interface NoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
+public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpdateCrudDao<T, ID, SB, TD>>
         extends NoUpdateDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
     /**

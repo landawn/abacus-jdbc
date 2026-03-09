@@ -17,9 +17,9 @@ import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.dao.UncheckedCrudDaoL;
 import com.landawn.abacus.jdbc.dao.UncheckedReadOnlyCrudJoinEntityHelper;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 @PerfLog(minExecutionTimeForSql = 101, minExecutionTimeForOperation = 100)
-public interface UncheckedUserDaoL extends UncheckedCrudDaoL<User, SQLBuilder.PSC, UncheckedUserDaoL>,
-        UncheckedReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder.PSC, UncheckedUserDaoL> {
+public interface UncheckedUserDaoL extends UncheckedCrudDaoL<User, SqlBuilder.PSC, UncheckedUserDaoL>,
+        UncheckedReadOnlyCrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UncheckedUserDaoL> {
 }

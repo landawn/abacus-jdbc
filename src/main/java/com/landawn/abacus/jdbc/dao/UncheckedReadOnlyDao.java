@@ -18,7 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Collection;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only DAO interface that provides only query operations without any write capabilities.
@@ -43,7 +43,7 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface ReportDao extends UncheckedReadOnlyDao<Report, SQLBuilder.PSC, ReportDao> {
+ * public interface ReportDao extends UncheckedReadOnlyDao<Report, SqlBuilder.PSC, ReportDao> {
  *     // Only query methods are available
  * }
  *
@@ -68,13 +68,13 @@ import com.landawn.abacus.query.SQLBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedNoUpdateDao
  * @see ReadOnlyDao
  */
 @Beta
-public interface UncheckedReadOnlyDao<T, SB extends SQLBuilder, TD extends UncheckedReadOnlyDao<T, SB, TD>>
+public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends UncheckedReadOnlyDao<T, SB, TD>>
         extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
 
     /**

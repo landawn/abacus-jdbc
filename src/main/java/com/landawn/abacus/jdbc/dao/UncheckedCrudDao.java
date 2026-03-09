@@ -37,7 +37,7 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
@@ -67,7 +67,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends UncheckedCrudDao<User, Long, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends UncheckedCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Custom query methods can be added here
  * }
  *
@@ -82,7 +82,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
@@ -92,7 +92,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  */
 @SuppressWarnings("resource")
 @Beta
-public interface UncheckedCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
         extends UncheckedDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
     /**

@@ -21,7 +21,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
@@ -43,7 +43,7 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface AuditLogDao extends UncheckedNoUpdateCrudDao<AuditLog, Long, SQLBuilder.PSC, AuditLogDao> {
+ * public interface AuditLogDao extends UncheckedNoUpdateCrudDao<AuditLog, Long, SqlBuilder.PSC, AuditLogDao> {
  *     // Only read and insert operations available
  * }
  *
@@ -80,14 +80,14 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.Filters
  * @see NoUpdateCrudDao
  * @see UncheckedCrudDao
  */
 @Beta
-public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SQLBuilder, TD extends UncheckedNoUpdateCrudDao<T, ID, SB, TD>>
+public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends UncheckedNoUpdateCrudDao<T, ID, SB, TD>>
         extends UncheckedNoUpdateDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD>, UncheckedCrudDao<T, ID, SB, TD> {
 
     /**

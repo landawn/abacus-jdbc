@@ -33,8 +33,8 @@ import java.lang.annotation.Target;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SQLBuilder.PSC, UserDao>,
- *                                  JoinEntityHelper<User, SQLBuilder.PSC, UserDao> {
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao>,
+ *                                  JoinEntityHelper<User, SqlBuilder.PSC, UserDao> {
  *
  *     @Query(id = "listUserWithBiggerId")
  *     Set<User> listUserWithBiggerIdToSet(int id) throws SQLException;

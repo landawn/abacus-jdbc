@@ -18,10 +18,10 @@ import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.dao.NoUpdateCrudDao;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 @CacheResult(transfer = "none")
 @Cache(capacity = 1000, evictDelay = 6000)
 @RefreshCache
-public interface NoUpdateUserDao extends NoUpdateCrudDao<User, Long, SQLBuilder.PSC, NoUpdateUserDao> {
+public interface NoUpdateUserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, NoUpdateUserDao> {
 }

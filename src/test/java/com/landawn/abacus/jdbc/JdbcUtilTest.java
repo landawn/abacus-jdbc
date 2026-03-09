@@ -50,7 +50,7 @@ import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableMap;
@@ -1428,7 +1428,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testSetIdExtractorForDao() {
-        interface TestDao extends CrudDao<Object, Long, SQLBuilder, TestDao> {
+        interface TestDao extends CrudDao<Object, Long, SqlBuilder, TestDao> {
         }
 
         RowMapper<Long> extractor = rs -> rs.getLong(1);
@@ -1438,7 +1438,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testSetIdExtractorForDaoWithBiRowMapper() {
-        interface TestDao extends CrudDao<Object, Long, SQLBuilder, TestDao> {
+        interface TestDao extends CrudDao<Object, Long, SqlBuilder, TestDao> {
         }
 
         BiRowMapper<Long> extractor = (rs, labels) -> rs.getLong(1);
@@ -1457,7 +1457,7 @@ public class JdbcUtilTest extends TestBase {
     //    @Test
     //    public void testCreateDaoWithSqlMapper() {
     //        interface TestDao extends Dao {}
-    //        SQLMapper sqlMapper = mock(SQLMapper.class);
+    //        SqlMapper sqlMapper = mock(SqlMapper.class);
     //        
     //        TestDao dao = JdbcUtil.createDao(TestDao.class, mockDataSource, sqlMapper);
     //        assertNotNull(dao);

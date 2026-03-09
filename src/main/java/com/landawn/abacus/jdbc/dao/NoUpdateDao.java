@@ -30,7 +30,7 @@ import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Throwables;
 
@@ -61,7 +61,7 @@ import com.landawn.abacus.util.Throwables;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a no-update DAO for append-only audit logs
- * public interface AuditLogDao extends NoUpdateDao<AuditLog, SQLBuilder.PSC, AuditLogDao> {
+ * public interface AuditLogDao extends NoUpdateDao<AuditLog, SqlBuilder.PSC, AuditLogDao> {
  *     // Custom read methods
  * }
  *
@@ -103,14 +103,14 @@ import com.landawn.abacus.util.Throwables;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-referential type of the DAO for fluent API support
  * @see com.landawn.abacus.query.Filters
  * @see Dao
  */
 @SuppressWarnings("RedundantThrows")
 @Beta
-public interface NoUpdateDao<T, SB extends SQLBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
+public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T, SB, TD>> extends Dao<T, SB, TD> {
     /**
      * Prepares a SQL query for execution. Only SELECT and INSERT queries are supported.
      * This method creates a {@link PreparedQuery} object that can be used to execute

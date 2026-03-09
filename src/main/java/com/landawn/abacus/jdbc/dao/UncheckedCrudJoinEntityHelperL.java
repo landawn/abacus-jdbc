@@ -20,7 +20,7 @@ import java.util.Collection;
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -38,7 +38,7 @@ import com.landawn.abacus.util.u.Optional;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * UncheckedCrudJoinEntityHelperL<User, SQLBuilder, ?> userDao = daoFactory.createJoinDaoL(User.class);
+ * UncheckedCrudJoinEntityHelperL<User, SqlBuilder, ?> userDao = daoFactory.createJoinDaoL(User.class);
  * 
  * // Fetch user with primitive long ID and load associated orders
  * Optional<User> user = userDao.get(123L, Order.class);
@@ -57,13 +57,13 @@ import com.landawn.abacus.util.u.Optional;
  * {@link DuplicateResultException} when multiple records are found for a unique query.</p>
  *
  * @param <T> The entity type that this helper manages
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> The self-referential type parameter for the DAO, extending {@link UncheckedCrudDaoL}
  * @see UncheckedCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see UncheckedCrudDaoL
  */
-public interface UncheckedCrudJoinEntityHelperL<T, SB extends SQLBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
+public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends UncheckedCrudDaoL<T, SB, TD>>
         extends UncheckedCrudJoinEntityHelper<T, Long, SB, TD>, CrudJoinEntityHelperL<T, SB, TD> {
 
     /**

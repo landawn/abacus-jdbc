@@ -15,7 +15,7 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A specialized interface that combines read-only operations with join entity support for CRUD DAOs with unchecked exceptions.
@@ -30,7 +30,7 @@ import com.landawn.abacus.query.SQLBuilder;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only CRUD DAO with join entity support
- * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudJoinEntityHelper<User, Long, SQLBuilder.PSC, UserReadOnlyDao> {
+ * public interface UserReadOnlyDao extends UncheckedReadOnlyCrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserReadOnlyDao> {
  *     // Inherits read-only CRUD and join entity operations with unchecked exceptions
  * }
  *
@@ -63,12 +63,12 @@ import com.landawn.abacus.query.SQLBuilder;
  *
  * @param <T> The entity type that this helper manages
  * @param <ID> the ID type of the entity
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> The self-referential type parameter for the DAO, extending {@link UncheckedCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelper
  * @see UncheckedCrudDao
  */
-public interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SQLBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
+public interface UncheckedReadOnlyCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends UncheckedCrudDao<T, ID, SB, TD>>
         extends UncheckedReadOnlyJoinEntityHelper<T, SB, TD>, UncheckedCrudJoinEntityHelper<T, ID, SB, TD> {
 }

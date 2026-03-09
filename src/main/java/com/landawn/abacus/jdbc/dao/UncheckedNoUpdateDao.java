@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Beta;
-import com.landawn.abacus.query.SQLBuilder;
+import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
@@ -40,7 +40,7 @@ import com.landawn.abacus.query.condition.Condition;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, SQLBuilder.PSC, EventLogDao> {
+ * public interface EventLogDao extends UncheckedNoUpdateDao<EventLog, SqlBuilder.PSC, EventLogDao> {
  *     // Can insert new logs and query existing logs
  *     // But cannot update or delete any logs
  * }
@@ -69,12 +69,12 @@ import com.landawn.abacus.query.condition.Condition;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SQLBuilder type used to generate SQL scripts (must be one of SQLBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
-public interface UncheckedNoUpdateDao<T, SB extends SQLBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
+public interface UncheckedNoUpdateDao<T, SB extends SqlBuilder, TD extends UncheckedNoUpdateDao<T, SB, TD>>
         extends UncheckedDao<T, SB, TD>, NoUpdateDao<T, SB, TD> {
 
     /**
