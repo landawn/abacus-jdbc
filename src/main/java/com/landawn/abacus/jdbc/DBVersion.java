@@ -121,7 +121,7 @@ public enum DBVersion {
     MySQL_9,
 
     /**
-     * MySQL version 10.x (MariaDB).
+     * MySQL version 10.x.
      */
     MySQL_10,
 

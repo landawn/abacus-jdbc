@@ -5810,7 +5810,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
      * 
-     * <p>Similar to {@link #findOnlyOne(BiRowMapper)}, but returns {@code null} instead of an empty Optional when no record is found.</p>
+     * <p>Similar to {@link #findOnlyOne(Jdbc.BiRowMapper)}, but returns {@code null} instead of an empty Optional when no record is found.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5964,7 +5964,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns the first result as an {@code Optional} containing an object extracted by the specified {@code BiRowMapper}.
      * 
-     * <p>Similar to {@link #findFirst(RowMapper)}, but the mapper also receives the column labels.</p>
+     * <p>Similar to {@link #findFirst(Jdbc.RowMapper)}, but the mapper also receives the column labels.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6162,7 +6162,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes a query and returns the first result extracted by the specified {@code BiRowMapper}.
      * 
-     * <p>Similar to {@link #findFirst(BiRowMapper)}, but returns {@code null} instead of an empty Optional when no result is found.</p>
+     * <p>Similar to {@link #findFirst(Jdbc.BiRowMapper)}, but returns {@code null} instead of an empty Optional when no result is found.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

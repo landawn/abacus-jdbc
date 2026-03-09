@@ -126,8 +126,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to SQL {@code NULL}.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to NULL.
-     * If the parameter appears multiple times in the query, all frequency will be set to NULL.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to NULL.
+     * If the parameter appears multiple times in the query, all occurrences will be set to NULL.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -190,7 +190,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to SQL {@code NULL} with a specified SQL type and type name.
      * 
-     * <p>This method is particularly useful for database-specific SQL types. It sets all frequency 
+     * <p>This method is particularly useful for database-specific SQL types. It sets all occurrences 
      * of the named parameter in the SQL query to NULL with the specified type information.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -255,7 +255,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a boolean value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified boolean value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified boolean value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -343,7 +343,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a byte value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified byte value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified byte value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -431,7 +431,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a short value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified short value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified short value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -519,7 +519,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to an int value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified int value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified int value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -663,7 +663,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a long value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified long value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified long value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -782,7 +782,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a float value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified float value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified float value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -870,7 +870,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a double value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified double value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified double value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -958,7 +958,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a BigDecimal value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified BigDecimal value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified BigDecimal value.
      * BigDecimal is the preferred type for precise decimal values in databases.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -1072,7 +1072,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a String value.
      * 
-     * <p>This method sets all frequency of the named parameter in the SQL query to the specified String value.
+     * <p>This method sets all occurrences of the named parameter in the SQL query to the specified String value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1225,7 +1225,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameter to a national character string value.
      * 
      * <p>This method is used for databases that distinguish between regular strings and national character strings
-     * (NCHAR, NVARCHAR). It sets all frequency of the named parameter to the specified value.
+     * (NCHAR, NVARCHAR). It sets all occurrences of the named parameter to the specified value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2756,7 +2756,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
      * 
      * <p>This method is useful for setting large text data without loading it entirely into memory.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2821,7 +2821,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method provides more control over the amount of data read from the Reader compared to 
      * {@link #setClob(String, Reader)}. If the parameter name appears multiple times in the query, 
-     * all frequency will be set to the same value.
+     * all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2886,7 +2886,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets an NCLOB (National Character Large Object) parameter for the specified parameter name.
      * NCLOBs are used to store large amounts of national character set data.
      * 
-     * <p>If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2952,7 +2952,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
      * 
      * <p>This method is useful for setting large Unicode text data without loading it entirely into memory.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3016,7 +3016,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' characters from the Reader.
      * 
      * <p>This method provides more control over the amount of Unicode data read from the Reader.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3082,7 +3082,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets a URL parameter for the specified parameter name.
      * 
      * <p>The URL is stored as a DATALINK value in the database. If the parameter name appears 
-     * multiple times in the query, all frequency will be set to the same value.
+     * multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3145,7 +3145,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets an SQL XML parameter for the specified parameter name.
      * 
      * <p>The SQLXML interface is used for mapping SQL XML data type. If the parameter name appears 
-     * multiple times in the query, all frequency will be set to the same value.
+     * multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3210,7 +3210,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets a RowId parameter for the specified parameter name.
      * 
      * <p>RowId is a SQL data type that represents the address of a row in a database table.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3274,7 +3274,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets a Ref (SQL REF) parameter for the specified parameter name.
      * 
      * <p>A Ref is a reference to an SQL structured type value in the database.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3338,7 +3338,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets an Array parameter for the specified parameter name.
      * 
      * <p>The Array interface is the mapping for the SQL ARRAY type. If the parameter name appears 
-     * multiple times in the query, all frequency will be set to the same value.
+     * multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3413,7 +3413,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>byte[] → BINARY/VARBINARY</li>
      * </ul>
      * 
-     * <p>If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3480,7 +3480,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method allows explicit control over the SQL type used when setting the parameter value.
      * Use this when the default type mapping is not sufficient or when you need to ensure a specific SQL type.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3556,7 +3556,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes</li>
      * </ul>
      * 
-     * <p>If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3629,7 +3629,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p>This method uses the JDBC 4.2 SQLType interface for type specification, providing better 
      * type safety and vendor-specific type support compared to using int constants from java.sql.Types.
-     * If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3700,7 +3700,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * of both SQL type and additional type-specific information. The meaning of scaleOrLength depends 
      * on the SQL type being used.
      * 
-     * <p>If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3775,7 +3775,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * complete control over how Java objects are converted to SQL values. This is particularly 
      * useful for complex type mappings or when working with custom data types.
      * 
-     * <p>If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+     * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

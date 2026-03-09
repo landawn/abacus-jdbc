@@ -227,7 +227,7 @@ public @interface Query {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // In DAO interface
-     * @SqlMapper("user-queries.xml")
+     * @SqlSource("user-queries.xml")
      * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     @Query(id = "findUsersByComplexCriteria")
      *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria);

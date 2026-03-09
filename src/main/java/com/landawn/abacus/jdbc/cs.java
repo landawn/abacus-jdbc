@@ -43,7 +43,7 @@ public final class cs { // NOSONAR
      * Private constructor to prevent instantiation of this utility class.
      */
     private cs() {
-        // singleton
+        // utility class - prevent instantiation
     }
 
     /**

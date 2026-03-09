@@ -3424,7 +3424,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3476,7 +3476,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3535,7 +3535,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3596,7 +3596,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3656,7 +3656,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -3899,7 +3899,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -3943,7 +3943,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -3989,7 +3989,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -4036,7 +4036,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -4083,7 +4083,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -4237,7 +4237,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -4258,7 +4258,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
      * </p>
      *
      * @param ds The DataSource to use for the query
@@ -4294,7 +4294,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code CallableQuery} is closed.
      * </p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -4353,7 +4353,7 @@ public final class JdbcUtil {
      * This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * {@code DataSource} and will be automatically closed when the {@code CallableQuery} is closed.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -7651,10 +7651,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if is table not exists exception.
+     * Checks if the given exception indicates a "table not exists" error.
      *
-     * @param e
-     * @return {@code true}, if is table not exists exception
+     * @param e the throwable to check
+     * @return {@code true} if the exception indicates a table does not exist, {@code false} otherwise
      */
     static boolean isTableNotExistsException(final Throwable e) {
         if (e instanceof final SQLException sqlException) {
@@ -7681,10 +7681,10 @@ public final class JdbcUtil {
     static final com.landawn.abacus.util.function.Predicate<Object> defaultIdTester = JdbcUtil::isDefaultIdPropValue;
 
     /**
-     * Checks if is default id prop value.
+     * Checks if the given value is a default/unset ID property value (null, zero for numbers, or a bean with all default ID values).
      *
-     * @param value
-     * @return {@code true}, if is default id prop value
+     * @param value the value to check
+     * @return {@code true} if the value is a default ID property value, {@code false} otherwise
      * @deprecated for internal only.
      */
     @Deprecated

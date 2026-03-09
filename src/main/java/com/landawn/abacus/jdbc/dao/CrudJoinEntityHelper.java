@@ -520,8 +520,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * // Process large number of users in batches of 100
      * List<User> users = userDao.batchGet(thousandsOfUserIds,
      *                                     Arrays.asList("id", "name", "status"),
-     *                                     100,  // batch size
-     *                                     Order.class);
+     *                                     Order.class,
+     *                                     100);  // batch size
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
@@ -559,8 +559,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * // Load users with multiple relationships in batches
      * List<User> users = userDao.batchGet(userIds,
      *                                     null,  // all properties
-     *                                     50,    // batch size
-     *                                     Arrays.asList(Order.class, UserProfile.class, Role.class));
+     *                                     Arrays.asList(Order.class, UserProfile.class, Role.class),
+     *                                     50);   // batch size
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
@@ -604,8 +604,8 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * // Get all users with complete data in optimized batches
      * List<User> users = userDao.batchGet(userIds,
      *                                     Arrays.asList("id", "name", "email", "status"),
-     *                                     200,   // larger batch size
-     *                                     true);   // load all relationships
+     *                                     true,    // load all relationships
+     *                                     200);    // batch size
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve

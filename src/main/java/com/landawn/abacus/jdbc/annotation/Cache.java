@@ -116,7 +116,7 @@ public @interface Cache {
 
     /**
      * Specifies the implementation class for the DAO cache.
-     * The implementation must extend {@link DaoCache} and have a public constructor
+     * The implementation must implement {@link DaoCache} and have a public constructor
      * that accepts two parameters: {@code (int capacity, long evictDelay)}.
      * 
      * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which provides a
@@ -125,9 +125,9 @@ public @interface Cache {
      * 
      * <p>Example custom cache implementation:</p>
      * <pre>{@code
-     * public class MyCustomDaoCache extends DaoCache {
+     * public class MyCustomDaoCache implements DaoCache {
      *     public MyCustomDaoCache(int capacity, long evictDelay) {
-     *         super(capacity, evictDelay);
+     *         // Custom initialization
      *         // Custom initialization
      *     }
      *     

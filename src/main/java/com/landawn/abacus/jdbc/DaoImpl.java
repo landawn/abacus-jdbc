@@ -198,7 +198,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p><b>Thread Safety:</b></p>
  * <p>This class is thread-safe. Method metadata and SQL parsing results are cached in concurrent maps.
  * However, the underlying database connections and transactions are managed per-thread through
- * {@link SqlExecutor} and connection pooling.</p>
+ * {@link SqlTransaction} and connection pooling.</p>
  *
  * <p><b>Important Notes:</b></p>
  * <ul>
@@ -374,10 +374,13 @@ final class DaoImpl {
             "exist", "notExist", "has", "is");
 
     /**
-     * Checks if is list query.
+     * Checks if the specified method is a list query based on its return type, operation type, and naming convention.
      *
-     * @param method
-     * @return {@code true}, if is list query
+     * @param method the DAO method to check
+     * @param returnType the return type of the method
+     * @param op the operation type specified for the method
+     * @param fullClassMethodName the fully qualified class and method name for error reporting
+     * @return {@code true} if the method is a list query, {@code false} otherwise
      */
     private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();

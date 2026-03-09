@@ -523,8 +523,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * List<User> users = userDao.batchGet(
      *     largeUserIdSet,
      *     Arrays.asList("id", "name", "email"),
-     *     500,  // batch size
-     *     Order.class
+     *     Order.class,
+     *     500   // batch size
      * );
      * }</pre>
      *
@@ -564,8 +564,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * List<User> users = userDao.batchGet(
      *     thousandsOfIds,
      *     Arrays.asList("id", "name", "status"),
-     *     1000,  // batch size
-     *     Arrays.asList(Order.class, UserProfile.class, Address.class)
+     *     Arrays.asList(Order.class, UserProfile.class, Address.class),
+     *     1000   // batch size
      * );
      * }</pre>
      *
@@ -611,8 +611,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * List<User> users = userDao.batchGet(
      *     veryLargeIdCollection,
      *     Arrays.asList("id", "name", "email", "createdDate"),
-     *     2000,  // large batch size
-     *     true   // load all join entities
+     *     true,  // load all join entities
+     *     2000   // batch size
      * );
      * }</pre>
      *

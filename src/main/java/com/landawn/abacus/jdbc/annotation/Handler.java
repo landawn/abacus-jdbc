@@ -43,7 +43,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Custom handler implementation
- * public class LoggingHandler extends Jdbc.Handler<UserDao> {
+ * public class LoggingHandler implements Jdbc.Handler<UserDao> {
  *     @Override
  *     public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
  *         logger.info("Calling method: " + methodSignature._1.getName());
@@ -105,7 +105,7 @@ public @interface Handler {
 
     /**
      * Specifies the handler implementation class.
-     * The class must extend {@link Jdbc.Handler} with the appropriate DAO type parameter.
+     * The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
      * 
      * <p>The handler lifecycle methods are called in this order:</p>
      * <ol>
@@ -116,7 +116,7 @@ public @interface Handler {
      * 
      * <p>Example handler implementation:</p>
      * <pre>{@code
-     * public class SecurityHandler extends Jdbc.Handler<BaseDao> {
+     * public class SecurityHandler implements Jdbc.Handler<BaseDao> {
      *     @Override
      *     public void beforeInvoke(BaseDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Check user permissions

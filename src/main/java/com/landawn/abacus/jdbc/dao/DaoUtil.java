@@ -90,7 +90,7 @@ import com.landawn.abacus.util.function.Function;
 @Internal
 final class DaoUtil {
     private DaoUtil() {
-        // singleton.
+        // utility class - prevent instantiation.
     }
 
     /**

@@ -39,7 +39,7 @@ import java.lang.annotation.Target;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * @SqlMapper("sql/UserDao.xml")
+ * @SqlSource("sql/UserDao.xml")
  * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     
  *     @Query(id = "findActiveUsers")
@@ -90,9 +90,9 @@ public @interface SqlSource {
      * 
      * <p>Example paths:</p>
      * <pre>{@code
-     * @SqlMapper("sql/UserDao.xml")              // In sql directory
-     * @SqlMapper("com/example/dao/UserDao.xml")  // Package-based path
-     * @SqlMapper("mappers/user-queries.xml")     // Custom naming
+     * @SqlSource("sql/UserDao.xml")              // In sql directory
+     * @SqlSource("com/example/dao/UserDao.xml")  // Package-based path
+     * @SqlSource("mappers/user-queries.xml")     // Custom naming
      * }</pre>
      *
      * @return the classpath-relative path to the SQL mapper XML file.
