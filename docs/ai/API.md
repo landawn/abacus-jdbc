@@ -1,7 +1,7 @@
-# abacus-jdbc API Index (v4.6.2)
+# abacus-jdbc API Index (v4.6.3)
 - Build: unknown
 - Java: 17
-- Generated: 2026-03-03
+- Generated: 2026-03-09
 
 ## Packages
 - com.landawn.abacus.jdbc
@@ -1871,7 +1871,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Executes a query and returns a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
 - **Contract:**
   - Executes a query and returns a single result extracted by the specified {@code BiRowMapper} if exactly one record is found.
-  - <p> Similar to {@link #findOnlyOne(BiRowMapper)} , but returns {@code null} instead of an empty Optional when no record is found.
+  - <p> Similar to {@link #findOnlyOne(Jdbc.BiRowMapper)} , but returns {@code null} instead of an empty Optional when no record is found.
 - **Parameters:**
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to the result object
 - **Returns:** The mapped object if exactly one record is found, otherwise {@code null}
@@ -1975,7 +1975,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `public <T> T findFirstOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, SQLException`
 - **Summary:** Executes a query and returns the first result extracted by the specified {@code BiRowMapper} .
 - **Contract:**
-  - <p> Similar to {@link #findFirst(BiRowMapper)} , but returns {@code null} instead of an empty Optional when no result is found.
+  - <p> Similar to {@link #findFirst(Jdbc.BiRowMapper)} , but returns {@code null} instead of an empty Optional when no result is found.
 - **Parameters:**
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the {@code BiRowMapper} used to map the result set to an object
 - **Returns:** The first result mapped by the rowMapper, or {@code null} if no result is found
@@ -3923,7 +3923,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
   - `code` (`String`) — the unique code obtained during lock acquisition. Must not be {@code null} .
 - **Returns:** {@code true} if the lock was successfully released; {@code false} otherwise (e.g., lock not found, code mismatch).
 ##### close(...) -> void
-- **Signature:** `public void close()`
+- **Signature:** `public synchronized void close()`
 - **Summary:** Closes this {@code DBLock} instance, releasing all associated resources.
 - **Contract:**
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.getDBLock(dataSource, "my_locks_table"); try { // Perform operations using the DBLock instance String lockCode = dbLock.lock("some_resource"); if (lockCode != null) { try { // ...
@@ -6203,7 +6203,7 @@ Configuration class for customizing entity code generation.
 
 #### Public Instance Methods
 ##### <init>(...) -> void
-- **Signature:** `class EntityCodeConfig { /** * The source directory where the generated entity class file will be saved. * If specified, the generated class will be written to this directory following the package structure. * Example: "./src/main/java" */ private String srcDir; /** * The package name for the generated entity class. * Example: "com.example.entity" */ private String packageName; /** * The class name for the generated entity. * If not specified, it will be derived from the table name using camelCase conversion. */ private String className; /** * Function to convert database column names to Java field names. * First parameter is entity/table name, second is column name. * Default implementation converts column names to camelCase. * Example: (tableName, columnName) -> Strings.toCamelCase(columnName) */ private BiFunction<String, String, String> fieldNameConverter; /** * Function to convert database column types to Java field types. * Parameters: entity/table name, field name, column name, column class name (from ResultSetMetaData). * Example: (entity, field, column, className) -> className.replace("java.lang.", "") */ private QuadFunction<String, String, String, String, String> fieldTypeConverter; /** * List of customized field mappings. * Each tuple contains: (column name, field name, field class). * Allows overriding default field names and types for specific columns. */ private List<Tuple3<String, String, Class<?>>> customizedFields; /** * List of customized database type annotations. * Each tuple contains: (field name, database type). * Used to generate @Type annotations for special database types. */ private List<Tuple2<String, String>> customizedFieldDbTypes; /** * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.). * Default is {@code false} (uses primitives where possible). */ private boolean useBoxedType; private boolean mapBigIntegerToLong; private boolean mapBigDecimalToDouble; private Collection<String> readOnlyFields; private Collection<String> nonUpdatableFields; private Collection<String> idFields; private String idField; private Collection<String> excludedFields; private String additionalFieldsOrLines; private List<String> classNamesToImport; private Class<? extends Annotation> tableAnnotationClass; private Class<? extends Annotation> columnAnnotationClass; private Class<? extends Annotation> idAnnotationClass; private boolean chainAccessor; private boolean generateBuilder; private boolean generateCopyMethod; private boolean generateFieldNameTable; private boolean extendFieldNameTableClassName; // private String fieldNameTableClassName; // Always be "NT"; // private List<Tuple2<String, String>> customizedJsonFields; @Beta private JsonXmlConfig jsonXmlConfig; /** * Configuration for JSON and XML serialization/deserialization settings. * * <p>This class allows customization of how entity fields are serialized to * and deserialized from JSON and XML formats. It includes settings for naming * conventions, field filtering, date/time formatting, and enum handling.</p> * * <p>This feature is marked as {@code @Beta} and may be subject to changes * in future releases.</p> */ @Builder @Data @AllArgsConstructor @Accessors(chain = true) public static class JsonXmlConfig { private NamingPolicy namingPolicy; private String ignoredFields; private String dateFormat; private String timeZone; private String numberFormat; private EnumType enumerated; /** * Constructs a new JsonXmlConfig instance with default values. */ public JsonXmlConfig() { } } } }`
+- **Signature:** `class EntityCodeConfig { /** * The source directory where the generated entity class file will be saved. * If specified, the generated class will be written to this directory following the package structure. * Example: "./src/main/java" */ private String srcDir; /** * The package name for the generated entity class. * Example: "com.example.entity" */ private String packageName; /** * The class name for the generated entity. * If not specified, it will be derived from the table name using camelCase conversion. */ private String className; /** * Function to convert database column names to Java field names. * First parameter is entity/table name, second is column name. * Default implementation converts column names to camelCase. * Example: (tableName, columnName) -> Strings.toCamelCase(columnName) */ private BiFunction<String, String, String> fieldNameConverter; /** * Function to convert database column types to Java field types. * Parameters: entity/table name, field name, column name, column class name (from ResultSetMetaData). * Example: (entity, field, column, className) -> className.replace("java.lang.", "") */ private QuadFunction<String, String, String, String, String> fieldTypeConverter; /** * List of customized field mappings. * Each tuple contains: (column name, field name, field class). * Allows overriding default field names and types for specific columns. */ private List<Tuple3<String, String, Class<?>>> customizedFields; /** * List of customized database type annotations. * Each tuple contains: (field name, database type). * Used to generate @Type annotations for special database types. */ private List<Tuple2<String, String>> customizedFieldDbTypes; /** * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.). * Default is {@code false} (uses primitives where possible). */ private boolean useBoxedType; /** * Whether to map {@link BigInteger} columns to {@code long} type. * Default is {@code false}. */ private boolean mapBigIntegerToLong; /** * Whether to map {@link BigDecimal} columns to {@code double} type. * Default is {@code false}. */ private boolean mapBigDecimalToDouble; /** * Collection of field names that should be annotated with {@code @ReadOnly}. * Read-only fields cannot be updated or inserted. A field cannot be both read-only and non-updatable. */ private Collection<String> readOnlyFields; /** * Collection of field names that should be annotated with {@code @NonUpdatable}. * Non-updatable fields can be inserted but cannot be updated. A field cannot be both read-only and non-updatable. */ private Collection<String> nonUpdatableFields; /** * Collection of field names that should be annotated with {@code @Id}. * These fields represent the primary key columns of the table. * If not specified, primary keys are auto-detected from database metadata. */ private Collection<String> idFields; /** * A single field name to be annotated with {@code @Id}. * This is a convenience alternative to {@link #idFields} when there is only one primary key column. */ private String idField; /** * Collection of field names to exclude from the generated entity class. * Fields in this collection will not appear in the generated code. */ private Collection<String> excludedFields; /** * Additional fields or lines of code to append to the generated entity class body. * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}). * Lines starting with {@code //} are treated as comments and stripped during field parsing. */ private String additionalFieldsOrLines; /** * List of fully qualified class names to add as import statements in the generated entity class. * Example: {@code Arrays.asList("java.time.LocalDate", "com.example.MyType")} */ private List<String> classNamesToImport; /** * The annotation class to use for the {@code @Table} annotation on the generated entity. * Default is {@link com.landawn.abacus.annotation.Table}. * Can be set to {@code jakarta.persistence.Table} or {@code javax.persistence.Table} for JPA compatibility. */ private Class<? extends Annotation> tableAnnotationClass; /** * The annotation class to use for the {@code @Column} annotation on generated fields. * Default is {@link com.landawn.abacus.annotation.Column}. * Can be set to {@code jakarta.persistence.Column} or {@code javax.persistence.Column} for JPA compatibility. */ private Class<? extends Annotation> columnAnnotationClass; /** * The annotation class to use for the {@code @Id} annotation on primary key fields. * Default is {@link com.landawn.abacus.annotation.Id}. * Can be set to {@code jakarta.persistence.Id} or {@code javax.persistence.Id} for JPA compatibility. */ private Class<? extends Annotation> idAnnotationClass; /** * Whether to generate Lombok {@code @Accessors(chain = true)} annotation on the entity class. * When {@code true}, setter methods return {@code this} for method chaining. * Default is {@code false}. */ private boolean chainAccessor; /** * Whether to generate Lombok {@code @Builder} annotation on the entity class. * Default is {@code false}. */ private boolean generateBuilder; /** * Whether to generate a {@code copy()} method in the entity class. * The copy method creates a shallow copy of the entity with all field values copied. * Default is {@code false}. */ private boolean generateCopyMethod; /** * Whether to generate an inner interface containing field name constants. * The interface is named {@code x} (see {@link JdbcCodeGenerationUtil#X}) and contains * {@code String} constants for each field name, providing type-safe field references. * Default is {@code false}. */ private boolean generateFieldNameTable; /** * Whether to extend the field name table class name with additional context. * Default is {@code false}. */ private boolean extendFieldNameTableClassName; // private String fieldNameTableClassName; // Always be "NT"; // private List<Tuple2<String, String>> customizedJsonFields; /** * Configuration for JSON and XML serialization/deserialization annotations. * When set, a {@code @JsonXmlConfig} annotation is generated on the entity class * with the specified settings for naming policy, date format, etc. * This feature is marked as {@code @Beta} and may change in future releases. */ @Beta private JsonXmlConfig jsonXmlConfig; /** * Configuration for JSON and XML serialization/deserialization settings. * * <p>This class allows customization of how entity fields are serialized to * and deserialized from JSON and XML formats. It includes settings for naming * conventions, field filtering, date/time formatting, and enum handling.</p> * * <p>This feature is marked as {@code @Beta} and may be subject to changes * in future releases.</p> */ @Builder @Data @AllArgsConstructor @Accessors(chain = true) public static class JsonXmlConfig { /** * The naming policy for JSON/XML serialization (e.g., LOWER_CAMEL_CASE, UPPER_CASE_WITH_UNDERSCORE). * Controls how Java field names are converted to JSON/XML property names. */ private NamingPolicy namingPolicy; /** * Comma-separated list of field names to ignore during JSON/XML serialization. * Example: {@code "password, secretKey, internalId"} */ private String ignoredFields; /** * The date format pattern used for serializing date/time fields. * Example: {@code "yyyy-MM-dd HH:mm:ss"} */ private String dateFormat; /** * The time zone ID used for date/time formatting. * Example: {@code "UTC"}, {@code "America/New_York"} */ private String timeZone; /** * The number format pattern used for serializing numeric fields. * Example: {@code "#,##0.00"} */ private String numberFormat; /** * The enum serialization strategy. * Controls whether enums are serialized by name or ordinal. */ private EnumType enumerated; /** * Constructs a new JsonXmlConfig instance with default values. */ public JsonXmlConfig() { } } } }`
 - **Parameters:**
   - (none)
 
@@ -6787,7 +6787,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named-parameter SQL query for execution, returning a {@link NamedQuery} object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to get the connection from.
   - `namedSql` (`String`) — The SQL query with named parameters (e.g., {@code :paramName} ).
@@ -6800,7 +6800,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query with auto-generated keys support using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Optional<Long> newUserId = JdbcUtil.prepareNamedQuery(dataSource, "INSERT INTO users (first_name, last_name, email) VALUES (:firstName, :lastName, :email)", true) .setString("firstName", "John") .setString("lastName", "Doe") .setString("email", "john.doe@example.com") .insert(); if (newUserId.isPresent()) { System.out.println("New user created with ID: " + newUserId.get()); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
@@ -6815,7 +6815,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
@@ -6829,7 +6829,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
@@ -6843,7 +6843,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
@@ -6916,7 +6916,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
@@ -6929,7 +6929,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query with auto-generated keys support using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
@@ -6943,7 +6943,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
@@ -6957,7 +6957,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
@@ -6971,7 +6971,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
@@ -7045,7 +7045,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query optimized for large result sets using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`String`) — The named SQL string to prepare
@@ -7056,7 +7056,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a named SQL query optimized for large result sets using the provided DataSource and ParsedSql object.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `namedSql` (`ParsedSql`) — The ParsedSql object containing the named SQL
@@ -7078,7 +7078,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a callable SQL query (stored procedure) using the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code CallableQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query
   - `sql` (`String`) — The SQL string for the stored procedure call
@@ -7091,7 +7091,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Prepares a callable SQL query using a custom statement creator with the provided DataSource.
 - **Contract:**
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
-  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+  - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code CallableQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The DataSource to use for the query, must not be {@code null}
   - `sql` (`String`) — The SQL string for the stored procedure call, must not be {@code null} or empty
@@ -9291,7 +9291,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNull(final String parameterName, final int sqlType) throws SQLException`
 - **Summary:** Sets the specified named parameter to SQL {@code NULL} .
 - **Contract:**
-  - If the parameter appears multiple times in the query, all frequency will be set to NULL.
+  - If the parameter appears multiple times in the query, all occurrences will be set to NULL.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter to be set to NULL (without the ':' prefix)
   - `sqlType` (`int`) — the SQL type code defined in {@link java.sql.Types}
@@ -9862,7 +9862,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a CLOB (Character Large Object) parameter using a Reader for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
@@ -9873,7 +9873,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a CLOB (Character Large Object) parameter using a Reader with a specified length for the parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the CLOB data
@@ -9886,7 +9886,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNClob(final String parameterName, final java.sql.NClob x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an NCLOB (National Character Large Object) parameter for the specified parameter name.
 - **Contract:**
-  - <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.NClob`) — the NClob object, or {@code null} to set SQL {@code NULL}
@@ -9897,7 +9897,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNClob(final String parameterName, final Reader x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an NCLOB (National Character Large Object) parameter using a Reader for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
@@ -9908,7 +9908,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setNClob(final String parameterName, final Reader x, final long length) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an NCLOB (National Character Large Object) parameter using a Reader with a specified length.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Reader`) — the Reader object containing the NCLOB data
@@ -9921,7 +9921,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setURL(final String parameterName, final URL x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a URL parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`URL`) — the URL object, or {@code null} to set SQL {@code NULL}
@@ -9933,7 +9933,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an SQL XML parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.SQLXML`) — the SQLXML object, or {@code null} to set SQL {@code NULL}
@@ -9945,7 +9945,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setRowId(final String parameterName, final java.sql.RowId x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a RowId parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.RowId`) — the RowId object, or {@code null} to set SQL {@code NULL}
@@ -9957,7 +9957,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setRef(final String parameterName, final java.sql.Ref x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets a Ref (SQL REF) parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.Ref`) — the Ref object, or {@code null} to set SQL {@code NULL}
@@ -9969,7 +9969,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setArray(final String parameterName, final java.sql.Array x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Array parameter for the specified parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`java.sql.Array`) — the Array object, or {@code null} to set SQL {@code NULL}
@@ -9981,7 +9981,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setObject(final String parameterName, final Object x) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Object parameter for the specified parameter name, using the default SQL type mapping.
 - **Contract:**
-  - Common mappings include: <ul> <li> String \\u2192 VARCHAR/CHAR </li> <li> Integer/Long \\u2192 INTEGER/BIGINT </li> <li> BigDecimal \\u2192 NUMERIC/DECIMAL </li> <li> Date/Timestamp \\u2192 DATE/TIMESTAMP </li> <li> Boolean \\u2192 BOOLEAN/BIT </li> <li> byte\[\] \\u2192 BINARY/VARBINARY </li> </ul> <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - Common mappings include: <ul> <li> String \\u2192 VARCHAR/CHAR </li> <li> Integer/Long \\u2192 INTEGER/BIGINT </li> <li> BigDecimal \\u2192 NUMERIC/DECIMAL </li> <li> Date/Timestamp \\u2192 DATE/TIMESTAMP </li> <li> Boolean \\u2192 BOOLEAN/BIT </li> <li> byte\[\] \\u2192 BINARY/VARBINARY </li> </ul> <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value, or {@code null} to set SQL {@code NULL}
@@ -9994,7 +9994,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Contract:**
   - <p> This method allows explicit control over the SQL type used when setting the parameter value.
   - Use this when the default type mapping is not sufficient or when you need to ensure a specific SQL type.
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value, or {@code null} to set SQL {@code NULL}
@@ -10007,7 +10007,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setObject(final String parameterName, final Object x, final int sqlType, final int scaleOrLength) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Object parameter with a specified SQL type and scale/length for the parameter name.
 - **Contract:**
-  - <p> This method provides the most control over parameter setting, allowing specification of both SQL type and additional type-specific information: <ul> <li> For numeric types (DECIMAL, NUMERIC): scaleOrLength represents the number of digits after the decimal point </li> <li> For character types (CHAR, VARCHAR): scaleOrLength represents the length of the string </li> <li> For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes </li> </ul> <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - <p> This method provides the most control over parameter setting, allowing specification of both SQL type and additional type-specific information: <ul> <li> For numeric types (DECIMAL, NUMERIC): scaleOrLength represents the number of digits after the decimal point </li> <li> For character types (CHAR, VARCHAR): scaleOrLength represents the length of the string </li> <li> For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes </li> </ul> <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value
@@ -10021,7 +10021,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Signature:** `public NamedQuery setObject(final String parameterName, final Object x, final SQLType sqlType) throws IllegalArgumentException, SQLException`
 - **Summary:** Sets an Object parameter with a specified SQLType for the parameter name.
 - **Contract:**
-  - If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value, or {@code null} to set SQL {@code NULL}
@@ -10034,7 +10034,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Summary:** Sets an Object parameter with a specified SQLType and scale/length for the parameter name.
 - **Contract:**
   - <p> This method provides the most control when using JDBC 4.2 SQLType, allowing specification of both SQL type and additional type-specific information.
-  - <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`Object`) — the object containing the parameter value
@@ -10048,7 +10048,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **Summary:** Sets an Object parameter using a custom Type handler for the parameter name.
 - **Contract:**
   - This is particularly useful for complex type mappings or when working with custom data types.
-  - <p> If the parameter name appears multiple times in the query, all frequency will be set to the same value.
+  - <p> If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
 - **Parameters:**
   - `parameterName` (`String`) — the name of the parameter (without the ':' prefix)
   - `x` (`T`) — the object containing the parameter value
@@ -10559,7 +10559,7 @@ Enables caching at the DAO level for database query results.
 - **Signature:** `Class<? extends DaoCache> impl() default Jdbc.DefaultDaoCache.class`
 - **Summary:** Specifies the implementation class for the DAO cache.
 - **Contract:**
-  - The implementation must extend {@link DaoCache} and have a public constructor that accepts two parameters: {@code (int capacity, long evictDelay)} .
+  - The implementation must implement {@link DaoCache} and have a public constructor that accepts two parameters: {@code (int capacity, long evictDelay)} .
 - **Parameters:**
   - (none)
 - **Returns:** the cache implementation class
@@ -10745,8 +10745,8 @@ Defines an interceptor handler for DAO methods or entire DAO interfaces.
 - **Signature:** `@SuppressWarnings("rawtypes") Class<? extends Jdbc.Handler<? extends Dao>> type() default EmptyHandler.class`
 - **Summary:** Specifies the handler implementation class.
 - **Contract:**
-  - The class must extend {@link Jdbc.Handler} with the appropriate DAO type parameter.
-  - <p> The handler lifecycle methods are called in this order: </p> <ol> <li> {@code beforeInvoke()} - Before the actual method invocation </li> <li> Actual DAO method execution </li> <li> {@code afterInvoke()} - After the method completes (whether successfully or with an exception) </li> </ol> <p> Example handler implementation: </p> <pre> {@code public class SecurityHandler extends Jdbc.Handler<BaseDao> { @Override public void beforeInvoke(BaseDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Check user permissions if (!hasPermission(methodSignature._1)) { throw new SecurityException("Access denied"); } } @Override public void afterInvoke(Object result, BaseDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Can filter or log results filterSensitiveData(result); } } } </pre>
+  - The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
+  - <p> The handler lifecycle methods are called in this order: </p> <ol> <li> {@code beforeInvoke()} - Before the actual method invocation </li> <li> Actual DAO method execution </li> <li> {@code afterInvoke()} - After the method completes (whether successfully or with an exception) </li> </ol> <p> Example handler implementation: </p> <pre> {@code public class SecurityHandler implements Jdbc.Handler<BaseDao> { @Override public void beforeInvoke(BaseDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Check user permissions if (!hasPermission(methodSignature._1)) { throw new SecurityException("Access denied"); } } @Override public void afterInvoke(Object result, BaseDao proxy, Object\[\] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // Can filter or log results filterSensitiveData(result); } } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the handler class, defaults to {@link EmptyHandler} (no-op)
@@ -11253,29 +11253,6 @@ Controls SQL statement logging for DAO methods or classes.
   - (none)
 - **Returns:** array of filter patterns (default matches all methods)
 
-### Annotation SqlMapper (com.landawn.abacus.jdbc.annotation.SqlMapper)
-Associates a DAO interface with an external SQL mapper XML file.
-
-**Thread-safety:** unspecified
-**Nullability:** unspecified
-
-#### Public Constructors
-- (none)
-
-#### Public Static Methods
-- (none)
-
-#### Public Instance Methods
-##### value(...) -> String
-- **Signature:** `String value() default ""`
-- **Summary:** Specifies the path to the SQL mapper XML file.
-- **Contract:**
-  - The path is relative to the classpath root and should include the file extension.
-  - <p> If not specified (empty string), the default mapper file location will be used.
-- **Parameters:**
-  - (none)
-- **Returns:** the classpath-relative path to the SQL mapper XML file.
-
 ### Annotation SqlScript (com.landawn.abacus.jdbc.annotation.SqlScript)
 Marks a {@code static final String} field (typically inside a DAO interface's nested helper class) as an embeddable SQL script that can be referenced by {@code @Query(id = "...")} .
 
@@ -11298,6 +11275,29 @@ Marks a {@code static final String} field (typically inside a DAO interface's ne
 - **Parameters:**
   - (none)
 - **Returns:** the identifier used by {@link Query#id()} ; empty means the annotated field name is used
+
+### Annotation SqlSource (com.landawn.abacus.jdbc.annotation.SqlSource)
+Associates a DAO interface with an external SQL mapper XML file.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- (none)
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+##### value(...) -> String
+- **Signature:** `String value() default ""`
+- **Summary:** Specifies the path to the SQL mapper XML file.
+- **Contract:**
+  - The path is relative to the classpath root and should include the file extension.
+  - <p> If not specified (empty string), the default mapper file location will be used.
+- **Parameters:**
+  - (none)
+- **Returns:** the classpath-relative path to the SQL mapper XML file.
 
 ### Annotation Transactional (com.landawn.abacus.jdbc.annotation.Transactional)
 Declares transaction boundaries for DAO methods.
