@@ -1317,7 +1317,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         final List<T> entitiesToInsert = map.get(false);
 
         final List<T> result = new ArrayList<>(entities.size());
-        final SqlTransaction tran = N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate) ? JdbcUtil.beginTransaction(dataSource()) : null;
+        final SqlTransaction tran = (N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate))
+                || (N.notEmpty(entitiesToInsert) && entitiesToInsert.size() > batchSize)
+                || (N.notEmpty(entitiesToUpdate) && entitiesToUpdate.size() > batchSize) ? JdbcUtil.beginTransaction(dataSource()) : null;
 
         try {
             if (N.notEmpty(entitiesToInsert)) {

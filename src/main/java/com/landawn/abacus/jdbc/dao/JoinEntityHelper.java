@@ -514,7 +514,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * userDao.loadJoinEntities(user, Order.class);
      * // Now user.getOrders() contains the loaded orders
      * }</pre>
@@ -533,7 +533,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Load only specific fields from orders
      * userDao.loadJoinEntities(user, Order.class, Arrays.asList("id", "totalAmount", "orderDate"));
      * }</pre>
@@ -616,7 +616,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * userDao.loadJoinEntities(user, "orders");
      * // The 'orders' property is now populated
      * }</pre>
@@ -644,7 +644,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Load only specific fields from the 'addresses' join entity
      * userDao.loadJoinEntities(user, "addresses", Arrays.asList("street", "city", "zipCode"));
      *
@@ -733,7 +733,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses", "paymentMethods"));
      * // Multiple join entities are now loaded
      * }</pre>
@@ -758,7 +758,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Load multiple join entities in parallel
      * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses", "reviews"), true);
      * }</pre>
@@ -785,7 +785,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * userDao.loadJoinEntities(user, Arrays.asList("orders", "addresses"), customExecutor);
      * }</pre>
      *
@@ -892,7 +892,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * userDao.loadAllJoinEntities(user);
      * // All join entities (orders, addresses, etc.) are now loaded
      * }</pre>
@@ -911,7 +911,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Load all join entities in parallel
      * userDao.loadAllJoinEntities(user, true);
      * }</pre>
@@ -937,7 +937,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool customPool = new ForkJoinPool(8);
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * userDao.loadAllJoinEntities(user, customPool);
      * }</pre>
      *
@@ -1543,7 +1543,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Delete all orders associated with the user
      * int deletedCount = userDao.deleteJoinEntities(user, Order.class);
      * }</pre>
@@ -1651,7 +1651,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Delete all addresses associated with the user
      * int deletedCount = userDao.deleteJoinEntities(user, "addresses");
      * System.out.println("Deleted " + deletedCount + " addresses");
@@ -1719,7 +1719,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Delete orders and addresses in a single transaction
      * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"));
      * }</pre>
@@ -1761,7 +1761,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Delete multiple join entity types in parallel (not transactional)
      * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses", "reviews"), true);
      * }</pre>
@@ -1790,7 +1790,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService deleteExecutor = Executors.newFixedThreadPool(3);
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * int deletedCount = userDao.deleteJoinEntities(user, Arrays.asList("orders", "addresses"), deleteExecutor);
      * }</pre>
      *
@@ -1923,7 +1923,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Delete all related data (orders, addresses, reviews, etc.)
      * int deletedCount = userDao.deleteAllJoinEntities(user);
      * }</pre>
@@ -1943,7 +1943,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * // Delete all join entities in parallel (not transactional)
      * int deletedCount = userDao.deleteAllJoinEntities(user, true);
      * }</pre>
@@ -1971,7 +1971,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService cleanupExecutor = Executors.newCachedThreadPool();
-     * User user = userDao.findById(1L).orElseThrow();
+     * User user = userDao.get(1L).orElseThrow();
      * int deletedCount = userDao.deleteAllJoinEntities(user, cleanupExecutor);
      * }</pre>
      *

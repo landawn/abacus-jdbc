@@ -293,9 +293,10 @@ final class DaoImpl {
                 }
             }
 
-            final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT ") || Strings.startsWithIgnoreCase(sql.trim(), "SELECT ");
-            final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT ") || Strings.startsWithIgnoreCase(sql.trim(), "INSERT ")
-                    || ((Strings.startsWithIgnoreCase(sql, "WITH ") || Strings.startsWithIgnoreCase(sql.trim(), "WITH "))
+            final String trimmedSql = Strings.trim(sql);
+            final boolean isSelect = Strings.startsWithIgnoreCase(sql, "SELECT ") || Strings.startsWithIgnoreCase(trimmedSql, "SELECT ");
+            final boolean isInsert = Strings.startsWithIgnoreCase(sql, "INSERT ") || Strings.startsWithIgnoreCase(trimmedSql, "INSERT ")
+                    || ((Strings.startsWithIgnoreCase(sql, "WITH ") || Strings.startsWithIgnoreCase(trimmedSql, "WITH "))
                             && Strings.containsIgnoreCase(sql, " INSERT ") && Strings.containsIgnoreCase(sql, " INTO "));
 
             return new QueryInfo(sql, parsedSql, queryTimeout, fetchSize, isBatch, batchSize, op, isSingleParameter, tmp.autoSetSysTimeParam(), isSelect,
@@ -1688,6 +1689,40 @@ final class DaoImpl {
         return entities;
     }
 
+    /**
+     * Creates a dynamic proxy implementation of the specified DAO interface backed by the given {@link javax.sql.DataSource}.
+     *
+     * <p>This is the core factory method for DAO proxy creation. It processes all annotations (e.g., {@code @Query},
+     * {@code @Insert}, {@code @Update}, {@code @Delete}, {@code @Transactional}, {@code @CacheResult}) defined on
+     * the DAO interface methods and builds an {@link InvocationHandler} that intercepts each method call to execute
+     * the corresponding SQL operation.</p>
+     *
+     * <p>Created DAO instances are cached by a composite key derived from the interface class, target table name,
+     * data source identity, SQL mapper identity, DAO cache identity, and executor identity. Subsequent calls with
+     * the same parameters return the cached instance.</p>
+     *
+     * <p>The method also processes:</p>
+     * <ul>
+     *   <li>{@code @SqlSource} annotations to load external SQL mapper files</li>
+     *   <li>{@code @SqlScript} annotated fields for embedded SQL definitions</li>
+     *   <li>{@code @DaoConfig} for configuration options like {@code addLimitForSingleQuery}</li>
+     *   <li>{@code @Handler} and {@code @HandlerList} for custom method handlers</li>
+     *   <li>{@code @PerfLog} for performance logging of DAO method invocations</li>
+     *   <li>{@code @SqlLogEnabled} for SQL statement logging control</li>
+     * </ul>
+     *
+     * @param <TD> the DAO interface type, must extend {@link Dao}
+     * @param daoInterface the DAO interface class to create a proxy for; must be an interface
+     * @param targetTableName the database table name to use, or {@code null}/{@code ""} to derive from the entity class
+     * @param ds the {@link javax.sql.DataSource} providing database connections
+     * @param sqlMapper an optional {@link SqlMapper} containing pre-defined SQL statements keyed by ID; may be {@code null}
+     * @param inputDaoCache an optional {@link Jdbc.DaoCache} for caching query results of methods annotated with
+     *        {@code @CacheResult}; may be {@code null}
+     * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
+     * @return a proxy instance implementing the specified DAO interface
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}, is not an interface, or if
+     *         {@code ds} is {@code null}; also thrown for duplicate SQL keys or invalid annotation configurations
+     */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
             final Jdbc.DaoCache inputDaoCache, final Executor executor) {
@@ -6408,6 +6443,23 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static final Map<String, Dao> joinEntityDaoPool = new ConcurrentHashMap<>();
 
+    /**
+     * Resolves the most appropriate DAO instance for loading a join entity referenced by a {@code @JoinedBy} relationship.
+     *
+     * <p>This method searches the internal DAO pool for a registered DAO whose target entity class matches the
+     * specified {@code referencedEntityClass} and whose data source matches the provided {@code ds}. If a matching
+     * DAO is found, it is cached in the join entity DAO pool for subsequent lookups and returned. If no matching
+     * DAO is found, a warning is logged and the {@code defaultDao} is returned as a fallback.</p>
+     *
+     * <p><b>Note:</b> The fallback {@code defaultDao} is intentionally not cached to allow the correct DAO to be
+     * found on later invocations if it is registered after this call (e.g., during application initialization).</p>
+     *
+     * @param referencedEntityClass the entity class of the join target (the entity being referenced)
+     * @param ds the {@link javax.sql.DataSource} that the returned DAO should be associated with
+     * @param defaultDao the fallback DAO to return if no specific DAO is found for the referenced entity class
+     * @return the DAO instance best suited for loading instances of {@code referencedEntityClass}, or
+     *         {@code defaultDao} if no matching DAO has been registered
+     */
     @SuppressWarnings("rawtypes")
     static Dao getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final Dao defaultDao) {
         final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
@@ -6433,6 +6485,14 @@ final class DaoImpl {
         return defaultDao;
     }
 
+    /**
+     * Immutable value object holding parsed metadata about a SQL query derived from a DAO method's {@code @Query}
+     * (or equivalent) annotation.
+     *
+     * <p>Each field corresponds to an attribute of the annotation or a derived property of the SQL statement itself.
+     * Instances are created once during DAO proxy initialization and reused for every invocation of the associated
+     * DAO method.</p>
+     */
     static final class QueryInfo {
         final String sql;
         final ParsedSql parsedSql;
@@ -6448,6 +6508,29 @@ final class DaoImpl {
         final boolean isProcedure;
         final boolean isNamedQuery;
 
+        /**
+         * Constructs a new {@code QueryInfo} from annotation attributes and derived SQL properties.
+         *
+         * <p>Trailing semicolons in the SQL string are automatically stripped. If {@code parsedSql} is {@code null},
+         * the SQL string is parsed automatically. The {@code isNamedQuery} flag is derived from the presence of
+         * named parameters in the parsed SQL or from the {@code fragmentContainsNamedParameters} hint.</p>
+         *
+         * @param sql the raw SQL string (must not be blank); trailing semicolons are removed
+         * @param parsedSql the pre-parsed SQL, or {@code null} to parse from {@code sql}
+         * @param queryTimeout the query timeout in seconds (0 means no timeout)
+         * @param fetchSize the JDBC fetch size hint (0 means use driver default)
+         * @param isBatch {@code true} if this query should be executed as a batch operation
+         * @param batchSize the number of statements per batch execution
+         * @param op the {@link OP} operation type controlling execution behavior
+         * @param isSingleParameter {@code true} if a single method parameter should be bound as-is rather than decomposed
+         * @param autoSetSysTimeParam {@code true} to automatically set system time parameters (e.g., create/update timestamps)
+         * @param isSelect {@code true} if this is a SELECT statement
+         * @param isInsert {@code true} if this is an INSERT statement
+         * @param isProcedure {@code true} if this SQL represents a stored procedure call
+         * @param fragmentContainsNamedParameters {@code true} if any {@code @SqlFragment} parameters use named parameters
+         * @throws IllegalArgumentException if {@code sql} is blank, or if {@code fragmentContainsNamedParameters} is
+         *         {@code true} but the SQL uses positional (?) parameters without named parameters
+         */
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
                 final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
                 final boolean isProcedure, final boolean fragmentContainsNamedParameters) {

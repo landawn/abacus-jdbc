@@ -28,7 +28,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,6 @@ import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.util.SK;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
 import com.landawn.abacus.util.CsvUtil;
@@ -51,6 +49,7 @@ import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Objectory;
+import com.landawn.abacus.util.SK;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 
@@ -648,14 +647,32 @@ public final class JdbcUtils {
     public static <E extends Exception> int importData(final Dataset dataset, final Collection<String> selectColumnNames,
             final Throwables.Predicate<? super Object[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis)
             throws SQLException, E {
-        final Type<?> objType = N.typeOf(Object.class);
-        final Map<String, Type<?>> columnTypeMap = new HashMap<>();
+        N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
+                batchSize, batchIntervalInMillis);
 
-        for (final String propName : selectColumnNames) {
-            columnTypeMap.put(propName, objType);
+        final List<String> allColumnNames = dataset.columnNames();
+        final List<String> selectedColumnNameList = new ArrayList<>(selectColumnNames);
+
+        // Validate that all selected column names exist in the dataset
+        for (final String colName : selectedColumnNameList) {
+            if (!allColumnNames.contains(colName)) {
+                throw new IllegalArgumentException("Column '" + colName + "' is not found in dataset columns: " + allColumnNames);
+            }
         }
 
-        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
+        // Map selected column names to their indices in the dataset
+        final int[] selectedColumnIndices = new int[selectedColumnNameList.size()];
+        for (int i = 0; i < selectedColumnNameList.size(); i++) {
+            selectedColumnIndices[i] = allColumnNames.indexOf(selectedColumnNameList.get(i));
+        }
+
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (t, row) -> {
+            for (int i = 0; i < selectedColumnIndices.length; i++) {
+                t.setObject(i + 1, row[selectedColumnIndices[i]]);
+            }
+        };
+
+        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1157,7 +1174,8 @@ public final class JdbcUtils {
                 batchSize, batchIntervalInMillis);
 
         long result = 0;
-        final BufferedReader br = Objectory.createBufferedReader(reader);
+        final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
+        final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
 
         try {
             String line = null;
@@ -1189,7 +1207,9 @@ public final class JdbcUtils {
                 JdbcUtil.executeBatch(stmt);
             }
         } finally {
-            Objectory.recycle(br);
+            if (!isBufferedReader) {
+                Objectory.recycle(br);
+            }
         }
 
         return result;
@@ -2357,11 +2377,11 @@ public final class JdbcUtils {
     }
 
     private static final Supplier<Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException>> supplierOfStmtSetterByRS = () -> new Throwables.BiConsumer<>() {
-        private int columnCount = 0;
+        private int columnCount = -1;
 
         @Override
         public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
-            if (columnCount == 0) {
+            if (columnCount < 0) {
                 columnCount = rs.getMetaData().getColumnCount();
             }
 

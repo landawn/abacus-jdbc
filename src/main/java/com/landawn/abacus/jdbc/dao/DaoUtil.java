@@ -1024,8 +1024,14 @@ final class DaoUtil {
         fromIndex++;
 
         while (fromIndex < sql.length()) {
-            if (sql.charAt(fromIndex) == quoteChar) {
+            final char ch = sql.charAt(fromIndex);
+
+            if (ch == '\\') {
+                // Skip backslash-escaped character (e.g., \' in MySQL)
+                fromIndex += 2;
+            } else if (ch == quoteChar) {
                 if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex + 1) == quoteChar) {
+                    // Doubled quote escape (SQL standard)
                     fromIndex += 2;
                 } else {
                     fromIndex++;

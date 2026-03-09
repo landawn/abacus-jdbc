@@ -1936,32 +1936,128 @@ public final class JdbcCodeGenerationUtil {
          * Whether to use boxed types (Integer, Long, etc.) instead of primitives (int, long, etc.).
          * Default is {@code false} (uses primitives where possible).
          */
-
         private boolean useBoxedType;
+
+        /**
+         * Whether to map {@link BigInteger} columns to {@code long} type.
+         * Default is {@code false}.
+         */
         private boolean mapBigIntegerToLong;
+
+        /**
+         * Whether to map {@link BigDecimal} columns to {@code double} type.
+         * Default is {@code false}.
+         */
         private boolean mapBigDecimalToDouble;
 
+        /**
+         * Collection of field names that should be annotated with {@code @ReadOnly}.
+         * Read-only fields cannot be updated or inserted. A field cannot be both read-only and non-updatable.
+         */
         private Collection<String> readOnlyFields;
+
+        /**
+         * Collection of field names that should be annotated with {@code @NonUpdatable}.
+         * Non-updatable fields can be inserted but cannot be updated. A field cannot be both read-only and non-updatable.
+         */
         private Collection<String> nonUpdatableFields;
+
+        /**
+         * Collection of field names that should be annotated with {@code @Id}.
+         * These fields represent the primary key columns of the table.
+         * If not specified, primary keys are auto-detected from database metadata.
+         */
         private Collection<String> idFields;
+
+        /**
+         * A single field name to be annotated with {@code @Id}.
+         * This is a convenience alternative to {@link #idFields} when there is only one primary key column.
+         */
         private String idField;
 
+        /**
+         * Collection of field names to exclude from the generated entity class.
+         * Fields in this collection will not appear in the generated code.
+         */
         private Collection<String> excludedFields;
+
+        /**
+         * Additional fields or lines of code to append to the generated entity class body.
+         * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}).
+         * Lines starting with {@code //} are treated as comments and stripped during field parsing.
+         */
         private String additionalFieldsOrLines;
+
+        /**
+         * List of fully qualified class names to add as import statements in the generated entity class.
+         * Example: {@code Arrays.asList("java.time.LocalDate", "com.example.MyType")}
+         */
         private List<String> classNamesToImport;
 
+        /**
+         * The annotation class to use for the {@code @Table} annotation on the generated entity.
+         * Default is {@link com.landawn.abacus.annotation.Table}.
+         * Can be set to {@code jakarta.persistence.Table} or {@code javax.persistence.Table} for JPA compatibility.
+         */
         private Class<? extends Annotation> tableAnnotationClass;
+
+        /**
+         * The annotation class to use for the {@code @Column} annotation on generated fields.
+         * Default is {@link com.landawn.abacus.annotation.Column}.
+         * Can be set to {@code jakarta.persistence.Column} or {@code javax.persistence.Column} for JPA compatibility.
+         */
         private Class<? extends Annotation> columnAnnotationClass;
+
+        /**
+         * The annotation class to use for the {@code @Id} annotation on primary key fields.
+         * Default is {@link com.landawn.abacus.annotation.Id}.
+         * Can be set to {@code jakarta.persistence.Id} or {@code javax.persistence.Id} for JPA compatibility.
+         */
         private Class<? extends Annotation> idAnnotationClass;
 
+        /**
+         * Whether to generate Lombok {@code @Accessors(chain = true)} annotation on the entity class.
+         * When {@code true}, setter methods return {@code this} for method chaining.
+         * Default is {@code false}.
+         */
         private boolean chainAccessor;
+
+        /**
+         * Whether to generate Lombok {@code @Builder} annotation on the entity class.
+         * Default is {@code false}.
+         */
         private boolean generateBuilder;
+
+        /**
+         * Whether to generate a {@code copy()} method in the entity class.
+         * The copy method creates a shallow copy of the entity with all field values copied.
+         * Default is {@code false}.
+         */
         private boolean generateCopyMethod;
+
+        /**
+         * Whether to generate an inner interface containing field name constants.
+         * The interface is named {@code x} (see {@link JdbcCodeGenerationUtil#X}) and contains
+         * {@code String} constants for each field name, providing type-safe field references.
+         * Default is {@code false}.
+         */
         private boolean generateFieldNameTable;
+
+        /**
+         * Whether to extend the field name table class name with additional context.
+         * Default is {@code false}.
+         */
         private boolean extendFieldNameTableClassName;
         // private String fieldNameTableClassName; // Always be "NT";
 
         // private List<Tuple2<String, String>> customizedJsonFields;
+
+        /**
+         * Configuration for JSON and XML serialization/deserialization annotations.
+         * When set, a {@code @JsonXmlConfig} annotation is generated on the entity class
+         * with the specified settings for naming policy, date format, etc.
+         * This feature is marked as {@code @Beta} and may change in future releases.
+         */
         @Beta
         private JsonXmlConfig jsonXmlConfig;
 
@@ -1980,16 +2076,40 @@ public final class JdbcCodeGenerationUtil {
         @AllArgsConstructor
         @Accessors(chain = true)
         public static class JsonXmlConfig {
+            /**
+             * The naming policy for JSON/XML serialization (e.g., LOWER_CAMEL_CASE, UPPER_CASE_WITH_UNDERSCORE).
+             * Controls how Java field names are converted to JSON/XML property names.
+             */
             private NamingPolicy namingPolicy;
 
+            /**
+             * Comma-separated list of field names to ignore during JSON/XML serialization.
+             * Example: {@code "password, secretKey, internalId"}
+             */
             private String ignoredFields;
 
+            /**
+             * The date format pattern used for serializing date/time fields.
+             * Example: {@code "yyyy-MM-dd HH:mm:ss"}
+             */
             private String dateFormat;
 
+            /**
+             * The time zone ID used for date/time formatting.
+             * Example: {@code "UTC"}, {@code "America/New_York"}
+             */
             private String timeZone;
 
+            /**
+             * The number format pattern used for serializing numeric fields.
+             * Example: {@code "#,##0.00"}
+             */
             private String numberFormat;
 
+            /**
+             * The enum serialization strategy.
+             * Controls whether enums are serialized by name or ordinal.
+             */
             private EnumType enumerated;
 
             /**

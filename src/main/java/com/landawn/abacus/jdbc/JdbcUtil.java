@@ -684,12 +684,10 @@ public final class JdbcUtil {
         Connection conn = null;
 
         try {
-            conn = ds.getConnection();
+            conn = getConnection(ds);
             return getDBProductInfo(conn);
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
         } finally {
-            JdbcUtil.releaseConnection(conn, ds);
+            releaseConnection(conn, ds);
         }
     }
 
@@ -1921,7 +1919,20 @@ public final class JdbcUtil {
                     rs.absolute((int) rowsToSkip + currentRow);
 
                     final int newRow = rs.getRow();
-                    skipped = (newRow > 0) ? newRow - currentRow : (int) rowsToSkip;
+
+                    if (newRow > 0) {
+                        skipped = newRow - currentRow;
+                    } else {
+                        // Cursor is past the last row; determine actual rows skipped
+                        // by moving to the last row to get its position
+                        if (rs.last()) {
+                            final int lastRow = rs.getRow();
+                            skipped = Math.max(lastRow - currentRow, 0);
+                        } else {
+                            // Empty result set
+                            skipped = 0;
+                        }
+                    }
                 } catch (final SQLException e) {
                     logger.warn("Failed to call ResultSet.absolute(), falling back to manual iteration", e);
 
@@ -2601,29 +2612,37 @@ public final class JdbcUtil {
                 final String className = val.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-                    do {
+                    result.add(rs.getTimestamp(columnIndex));
+
+                    while (rs.next()) {
                         result.add(rs.getTimestamp(columnIndex));
-                    } while (rs.next());
+                    }
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        do {
+                        result.add(rs.getTimestamp(columnIndex));
+
+                        while (rs.next()) {
                             result.add(rs.getTimestamp(columnIndex));
-                        } while (rs.next());
+                        }
                     } else {
-                        do {
+                        result.add(rs.getDate(columnIndex));
+
+                        while (rs.next()) {
                             result.add(rs.getDate(columnIndex));
-                        } while (rs.next());
+                        }
                     }
                 } else if (val instanceof java.sql.Date) {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                        do {
+                        result.add(rs.getTimestamp(columnIndex));
+
+                        while (rs.next()) {
                             result.add(rs.getTimestamp(columnIndex));
-                        } while (rs.next());
+                        }
                     } else {
                         result.add(val);
 

@@ -54,12 +54,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *     @CacheResult(liveTime = 3600000, transfer = "kryo")
  *     @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
  *     UserProfile getProfile(@Bind("userId") Long userId);
- *     
- *     // Apply caching to all matching methods at type level
- *     @CacheResult(liveTime = 600000, filter = {"find.*", "get.*"})
- *     public interface ProductDao extends CrudDao<Product, Long> {
- *         // All find* and get* methods will be cached
- *     }
+ * }
+ *
+ * // Apply caching to all matching methods at type level
+ * @CacheResult(liveTime = 600000, filter = {"find.*", "get.*"})
+ * public interface ProductDao extends CrudDao<Product, Long> {
+ *     // All find* and get* methods will be cached
  * }
  * }</pre>
  * 

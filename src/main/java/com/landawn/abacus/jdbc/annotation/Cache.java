@@ -125,19 +125,19 @@ public @interface Cache {
      * 
      * <p>Example custom cache implementation:</p>
      * <pre>{@code
-     * public class MyCustomDaoCache implements DaoCache {
+     * public class MyCustomDaoCache extends Jdbc.DefaultDaoCache {
      *     public MyCustomDaoCache(int capacity, long evictDelay) {
-     *         // Custom initialization
-     *         // Custom initialization
+     *         super(capacity, evictDelay);
      *     }
-     *     
+     *
      *     @Override
-     *     public void put(String key, Object value) {
-     *         // Custom caching logic
-     *         super.put(key, value);
+     *     public Object get(String defaultCacheKey, Object daoProxy, Object[] args,
+     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         // Custom cache retrieval logic
+     *         return super.get(defaultCacheKey, daoProxy, args, methodSignature);
      *     }
      * }
-     * 
+     *
      * // Usage
      * @Cache(impl = MyCustomDaoCache.class)
      * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {

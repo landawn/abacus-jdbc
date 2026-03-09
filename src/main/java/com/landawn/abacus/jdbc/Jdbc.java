@@ -3515,7 +3515,7 @@ public final class Jdbc {
          * <pre>{@code
          * // Converts "FIRST_NAME" to "firstName" for map keys.
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         * N::toCamelCase
+         *     (Function<String, String>) Strings::toCamelCase
          * );
          * }</pre>
          *
@@ -3542,7 +3542,7 @@ public final class Jdbc {
          * <pre>{@code
          * // Converts "FIRST_NAME" to "firstName", using a LinkedHashMap
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
-         *     N::toCamelCase,
+         *     (Function<String, String>) Strings::toCamelCase,
          *     IntFunctions.ofLinkedHashMap()
          * );
          * }</pre>
@@ -3643,7 +3643,7 @@ public final class Jdbc {
          * RowExtractor extractor = RowExtractor.createBy(User.class);
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
          *     extractor,
-         *     N::toCamelCase,
+         *     Strings::toCamelCase,
          *     (size) -> new TreeMap<>()
          * );
          * }</pre>
@@ -5881,7 +5881,7 @@ public final class Jdbc {
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * Type<Integer> type = Type.of(Integer.class);
-             * RowMapper<Integer> mapper = Jdbc.ColumnOne.get(type);
+             * RowMapper<Integer> mapper = Jdbc.Columns.ColumnOne.get(type);
              * Integer value = mapper.apply(resultSet);
              * }</pre>
              *

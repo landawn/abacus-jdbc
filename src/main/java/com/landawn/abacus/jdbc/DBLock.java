@@ -581,14 +581,19 @@ public final class DBLock {
      * }</pre>
      *
      */
-    public void close() {
+    public synchronized void close() {
         if (isClosed) {
             return;
         }
 
         isClosed = true;
 
-        // Release all held locks from the database before cancelling the refresh task
+        // Cancel the scheduled refresh task first to prevent interference during lock release
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
+
+        // Release all held locks from the database
         for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
             try {
                 JdbcUtil.executeUpdate(ds, unlockSQL, entry.getKey(), entry.getValue().code());
@@ -600,10 +605,6 @@ public final class DBLock {
         }
 
         targetCodePool.clear();
-
-        if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
-        }
     }
 
     private void assertNotClosed() {
