@@ -2612,37 +2612,33 @@ public final class JdbcUtil {
                 final String className = val.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className) || "oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-                    result.add(rs.getTimestamp(columnIndex));
 
-                    while (rs.next()) {
+                    do {
                         result.add(rs.getTimestamp(columnIndex));
-                    }
+                    } while (rs.next());
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final ResultSetMetaData metaData = rs.getMetaData();
                     final String metaDataClassName = metaData.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        result.add(rs.getTimestamp(columnIndex));
 
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
-                        result.add(rs.getDate(columnIndex));
 
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getDate(columnIndex));
-                        }
+                        } while (rs.next());
                     }
                 } else if (val instanceof java.sql.Date) {
                     final ResultSetMetaData metaData = rs.getMetaData();
 
                     if ("java.sql.Timestamp".equals(metaData.getColumnClassName(columnIndex))) {
-                        result.add(rs.getTimestamp(columnIndex));
 
-                        while (rs.next()) {
+                        do {
                             result.add(rs.getTimestamp(columnIndex));
-                        }
+                        } while (rs.next());
                     } else {
                         result.add(val);
 
