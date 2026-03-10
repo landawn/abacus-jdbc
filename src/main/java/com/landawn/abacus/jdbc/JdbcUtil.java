@@ -239,7 +239,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * }
  *
  * // Transaction management with automatic rollback
- * SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource);
+ * SqlTransaction transaction = JdbcUtil.beginTransaction(ds);
  * try {
  *     JdbcUtil.executeUpdate(transaction.connection(),
  *         "UPDATE accounts SET balance = balance - ? WHERE id = ?",
@@ -1130,7 +1130,7 @@ public final class JdbcUtil {
      * DataSource dataSource = ...;  // Your configured DataSource
      * Connection connection = null;
      * try {
-     *     connection = JdbcUtil.getConnection(dataSource);
+     *     connection = JdbcUtil.getConnection(ds);
      *     // Perform database operations
      *     try (Statement stmt = connection.createStatement()) {
      *         // ...
@@ -1182,7 +1182,7 @@ public final class JdbcUtil {
      * DataSource dataSource = ...;
      * Connection connection = null;
      * try {
-     *     connection = JdbcUtil.getConnection(dataSource);
+     *     connection = JdbcUtil.getConnection(ds);
      *     // ... perform database work
      * } finally {
      *     // This ensures the connection is always released, even if an error occurs.
@@ -1395,11 +1395,11 @@ public final class JdbcUtil {
      * DataSource dataSource = ...;
      * Connection conn = null;
      * try {
-     *     conn = JdbcUtil.getConnection(dataSource);
+     *     conn = JdbcUtil.getConnection(ds);
      *     // ... perform database operations
      * } finally {
      *     // Correctly releases the connection back to the pool or closes it.
-     *     JdbcUtil.releaseConnection(conn, dataSource);
+     *     JdbcUtil.releaseConnection(conn, ds);
      * }
      * }</pre>
      *
@@ -9425,7 +9425,7 @@ public final class JdbcUtil {
      *     // Execute operations within the existing transaction
      * } else {
      *     // Start a new transaction
-     *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     *     SqlTransaction tran = JdbcUtil.beginTransaction(ds);
      *     // ...
      * }
      * }</pre>
@@ -9478,7 +9478,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Basic transaction usage
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(ds);
      * try {
      *     JdbcUtil.executeUpdate(dataSource,
      *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)",
@@ -9494,7 +9494,7 @@ public final class JdbcUtil {
      * }
      *
      * // Transaction with conditional rollback
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(ds);
      * try {
      *     int updatedRows = JdbcUtil.executeUpdate(dataSource,
      *         "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
@@ -9519,7 +9519,7 @@ public final class JdbcUtil {
      *
      * // Transaction shared across method calls
      * public void processOrder(Order order) {
-     *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     *     SqlTransaction tran = JdbcUtil.beginTransaction(ds);
      *     try {
      *         createOrder(order);   // Shares this transaction
      *         updateInventory(order);   // Shares this transaction
@@ -9538,7 +9538,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param dataSource the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
+     * @param ds the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
      * @return a {@link SqlTransaction} object representing the new transaction that must be committed or rolled back
      * @throws UncheckedSQLException if a database access error occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
@@ -9547,8 +9547,8 @@ public final class JdbcUtil {
      * @see SqlTransaction#rollback()
      * @see SqlTransaction#rollbackIfNotCommitted()
      */
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException {
-        return beginTransaction(dataSource, IsolationLevel.DEFAULT);
+    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws UncheckedSQLException {
+        return beginTransaction(ds, IsolationLevel.DEFAULT);
     }
 
     /**
@@ -9557,7 +9557,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+     * SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED);
      * try {
      *     // Perform database operations with READ_COMMITTED isolation
      *     JdbcUtil.executeUpdate(dataSource,
@@ -9569,14 +9569,14 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param dataSource the DataSource for which to begin the transaction
+     * @param ds the DataSource for which to begin the transaction
      * @param isolationLevel the isolation level for the transaction
      * @return a SqlTransaction object representing the new transaction
      * @throws UncheckedSQLException if a SQL exception occurs while beginning the transaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException {
-        return beginTransaction(dataSource, isolationLevel, false);
+    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws UncheckedSQLException {
+        return beginTransaction(ds, isolationLevel, false);
     }
 
     /**
@@ -9612,7 +9612,7 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param dataSource the DataSource for which to begin the transaction
+     * @param ds the DataSource for which to begin the transaction
      * @param isolationLevel the isolation level for the transaction
      * @param isForUpdateOnly whether this transaction is only for update operations
      * @return a SqlTransaction object representing the transaction
@@ -9620,20 +9620,20 @@ public final class JdbcUtil {
      * @see JdbcUtil#getConnection(javax.sql.DataSource)
      * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
+    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
             throws UncheckedSQLException {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
 
-        SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+        SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran == null) {
             Connection conn = null;
             boolean noException = false;
 
             try { //NOSONAR
-                conn = JdbcUtil.getConnection(dataSource);
-                tran = new SqlTransaction(dataSource, conn, isolationLevel, CreatedBy.JDBC_UTIL, true); //NOSONAR
+                conn = JdbcUtil.getConnection(ds);
+                tran = new SqlTransaction(ds, conn, isolationLevel, CreatedBy.JDBC_UTIL, true); //NOSONAR
                 tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
 
                 noException = true;
@@ -9641,7 +9641,7 @@ public final class JdbcUtil {
                 throw new UncheckedSQLException(e);
             } finally {
                 if (!noException) {
-                    JdbcUtil.releaseConnection(conn, dataSource);
+                    JdbcUtil.releaseConnection(conn, ds);
                 }
             }
 
@@ -9673,19 +9673,19 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param dataSource the DataSource for the transaction
+     * @param ds the DataSource for the transaction
      * @param cmd the callable to execute within the transaction
      * @return the result of the callable execution
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the callable throws an exception
      */
     @Beta
-    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
         try {
@@ -9712,19 +9712,19 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
-     * @param dataSource the DataSource for the transaction
+     * @param ds the DataSource for the transaction
      * @param cmd the function to execute with the transaction's connection
      * @return the result of the function execution
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the function throws an exception
      */
     @Beta
-    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd)
+    public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
         T result = null;
 
         try {
@@ -9752,18 +9752,18 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <E> the type of exception that the runnable may throw
-     * @param dataSource the DataSource for the transaction
+     * @param ds the DataSource for the transaction
      * @param cmd the runnable to execute within the transaction
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the runnable throws an exception
      */
     @Beta
-    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
             cmd.run();
@@ -9788,18 +9788,18 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <E> the type of exception that the consumer may throw
-     * @param dataSource the DataSource for the transaction
+     * @param ds the DataSource for the transaction
      * @param cmd the consumer to execute with the transaction's connection
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the consumer throws an exception
      */
     @Beta
-    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd)
+    public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
         try {
             cmd.accept(tran.connection());
@@ -9826,22 +9826,22 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the callable to execute outside any transaction
      * @return the result of the callable execution
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the callable throws an exception
      */
     @Beta
-    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             doNotUseSpringTransactional(true);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -9853,7 +9853,7 @@ public final class JdbcUtil {
                 doNotUseSpringTransactional(false);
             }
         } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
                 return cmd.call();
@@ -9884,39 +9884,39 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the function to execute outside any transaction
      * @return the result of the function execution
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the function throws an exception
      */
     @Beta
-    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource,
-            final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+    public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd)
+            throws IllegalArgumentException, E {
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             doNotUseSpringTransactional(true);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
-                    return cmd.apply(dataSource);
+                    return cmd.apply(ds);
                 } else {
-                    return tran.callOutsideTransaction(() -> cmd.apply(dataSource));
+                    return tran.callOutsideTransaction(() -> cmd.apply(ds));
                 }
             } finally {
                 doNotUseSpringTransactional(false);
             }
         } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
-                return cmd.apply(dataSource);
+                return cmd.apply(ds);
             } else {
-                return tran.callOutsideTransaction(() -> cmd.apply(dataSource));
+                return tran.callOutsideTransaction(() -> cmd.apply(ds));
             }
         }
     }
@@ -9936,21 +9936,21 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <E> the type of exception that the runnable may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the runnable to execute outside any transaction
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the runnable throws an exception
      */
     @Beta
-    public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+    public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
             throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             doNotUseSpringTransactional(true);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
@@ -9962,7 +9962,7 @@ public final class JdbcUtil {
                 doNotUseSpringTransactional(false);
             }
         } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
                 cmd.run();
@@ -9991,38 +9991,38 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param <E> the type of exception that the consumer may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the consumer to execute outside any transaction
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the consumer throws an exception
      */
     @Beta
-    public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource,
-            final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E {
-        N.checkArgNotNull(dataSource, cs.dataSource);
+    public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
+            throws IllegalArgumentException, E {
+        N.checkArgNotNull(ds, cs.dataSource);
         N.checkArgNotNull(cmd, cs.cmd);
 
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             doNotUseSpringTransactional(true);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             try {
                 if (tran == null) {
-                    cmd.accept(dataSource);
+                    cmd.accept(ds);
                 } else {
-                    tran.runOutsideTransaction(() -> cmd.accept(dataSource));
+                    tran.runOutsideTransaction(() -> cmd.accept(ds));
                 }
             } finally {
                 doNotUseSpringTransactional(false);
             }
         } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(dataSource, CreatedBy.JDBC_UTIL);
+            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
-                cmd.accept(dataSource);
+                cmd.accept(ds);
             } else {
-                tran.runOutsideTransaction(() -> cmd.accept(dataSource));
+                tran.runOutsideTransaction(() -> cmd.accept(ds));
             }
         }
     }
@@ -10032,7 +10032,7 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the callable to execute outside any transaction
      * @return the result of the callable execution
      * @throws IllegalArgumentException if dataSource or cmd is null
@@ -10041,9 +10041,9 @@ public final class JdbcUtil {
      */
     @Deprecated
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd)
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
             throws IllegalArgumentException, E {
-        return callOutsideTransaction(dataSource, cmd);
+        return callOutsideTransaction(ds, cmd);
     }
 
     /**
@@ -10051,7 +10051,7 @@ public final class JdbcUtil {
      *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the function to execute outside any transaction
      * @return the result of the function execution
      * @throws IllegalArgumentException if dataSource or cmd is null
@@ -10060,16 +10060,16 @@ public final class JdbcUtil {
      */
     @Deprecated
     @Beta
-    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource,
+    public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds,
             final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E {
-        return callOutsideTransaction(dataSource, cmd);
+        return callOutsideTransaction(ds, cmd);
     }
 
     /**
      * Executes the given runnable outside any active transaction for the specified DataSource.
      *
      * @param <E> the type of exception that the runnable may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the runnable to execute outside any transaction
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the runnable throws an exception
@@ -10077,16 +10077,16 @@ public final class JdbcUtil {
      */
     @Deprecated
     @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd)
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
             throws IllegalArgumentException, E {
-        runOutsideTransaction(dataSource, cmd);
+        runOutsideTransaction(ds, cmd);
     }
 
     /**
      * Executes the given consumer outside any active transaction for the specified DataSource.
      *
      * @param <E> the type of exception that the consumer may throw
-     * @param dataSource the DataSource to use
+     * @param ds the DataSource to use
      * @param cmd the consumer to execute outside any transaction
      * @throws IllegalArgumentException if dataSource or cmd is null
      * @throws E if the consumer throws an exception
@@ -10094,9 +10094,9 @@ public final class JdbcUtil {
      */
     @Deprecated
     @Beta
-    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource,
-            final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E {
-        runOutsideTransaction(dataSource, cmd);
+    public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
+            throws IllegalArgumentException, E {
+        runOutsideTransaction(ds, cmd);
     }
 
     /**

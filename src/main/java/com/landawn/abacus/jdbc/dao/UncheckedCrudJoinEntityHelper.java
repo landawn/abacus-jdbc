@@ -209,7 +209,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Get user with orders, returns {@code null} if not found
+     * // Get user with orders, returns null if not found
      * User user = userDao.gett(userId, Order.class);
      * if (user != null) {
      *     // Process user with loaded orders

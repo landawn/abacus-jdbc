@@ -1582,8 +1582,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
             return deleteJoinEntities(entity, joinEntityPropNames.get(0));
         } else {
             int result = 0;
-            final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1630,8 +1630,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
             return deleteJoinEntities(entities, joinEntityPropNames.get(0));
         } else {
             int result = 0;
-            final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1776,8 +1776,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
             return deleteJoinEntities(entity, N.firstOrNullIfEmpty(joinEntityPropNames));
         } else {
             int result = 0;
-            final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {
@@ -1890,8 +1890,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
             return deleteJoinEntities(entities, N.firstOrNullIfEmpty(joinEntityPropNames));
         } else {
             int result = 0;
-            final DataSource dataSource = DaoUtil.getDao(this).dataSource();
-            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+            final DataSource ds = DaoUtil.getDao(this).dataSource();
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
             try {
                 for (final String joinEntityPropName : joinEntityPropNames) {

@@ -1907,7 +1907,7 @@ public final class Jdbc {
 
         /**
          * Creates a stateful {@code RowMapper} that maps a row to a reusable {@code DisposableObjArray}.
-         * This is an performance optimization for row processing that avoids creating a new array for
+         * This is a performance optimization for row processing that avoids creating a new array for
          * each row, reducing garbage collection overhead. The underlying array is reused on subsequent calls.
          *
          * <p>

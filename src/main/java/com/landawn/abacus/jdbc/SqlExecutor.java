@@ -69,7 +69,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p><b>Historical Transaction Pattern:</b></p>
  * <pre>{@code
- * final SqlTransaction tran = JdbcUtil.beginTransaction(IsolationLevel.READ_COMMITTED);
+ * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
  *     sqlExecutor.insert(...);
  *     sqlExecutor.update(...);

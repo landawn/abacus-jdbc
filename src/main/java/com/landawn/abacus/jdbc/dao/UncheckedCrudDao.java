@@ -762,7 +762,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId, Arrays.asList("id", "email", "status"));
-     * if (user != {@code null} && "ACTIVE".equals(user.getStatus())) {
+     * if (user != null && "ACTIVE".equals(user.getStatus())) {
      *     sendEmail(user.getEmail());
      * }
      * }</pre>

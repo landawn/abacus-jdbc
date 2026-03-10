@@ -149,7 +149,7 @@ public @interface Query {
      * <p>The SQL can include:</p>
      * <ul>
      *   <li>Named parameters using {@code :paramName} syntax for value binding</li>
-     *   <li>Template variables using {@code {variableName}} syntax when {@link #fragmentContainsNamedParameters()} is {@code true}</li>
+     *   <li>Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList}); set {@link #fragmentContainsNamedParameters()} to {@code true} if the replaced fragments contain named parameters</li>
      *   <li>Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.</li>
      *   <li>Database-specific SQL extensions and functions</li>
      * </ul>
@@ -568,10 +568,10 @@ public @interface Query {
      * 
      * <p>Basic examples:</p>
      * <pre>{@code
-     * // Finding currently active records
+     * // Finding records with dynamic conditions containing named parameters
      * @Query(value = "SELECT * FROM promotions WHERE {whereClause}", fragmentContainsNamedParameters = true)
-     * List<Promotion> findActivePromotions(@SqlFragment("whereClause") String whereClause);
-     * findActivePromotions("start_date <= :sysTime AND end_date >= :sysDate");
+     * List<Promotion> findActivePromotions(@SqlFragment("whereClause") String whereClause, @Bind("minDiscount") int minDiscount);
+     * findActivePromotions("discount >= :minDiscount AND status = 'ACTIVE'", 10);
      * }</pre>
      *
      * @return {@code true} if template variables defined by {@link SqlFragment} or {@link SqlFragmentList} will be replaced with query fragments
