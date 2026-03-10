@@ -1,7 +1,7 @@
 {
   "library": {
     "name": "abacus-jdbc",
-    "version": "4.6.3",
+    "version": "4.6.4",
     "generated_at": "2026-03-09",
     "java_target": "17",
     "source": {
@@ -23967,12 +23967,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException",
+              "signature": "public static String generateSelectSql(final DataSource ds, final String tableName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24034,12 +24034,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateSelectSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws UncheckedSQLException",
+              "signature": "public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24128,12 +24128,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException",
+              "signature": "public static String generateInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24197,12 +24197,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException",
+              "signature": "public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24278,12 +24278,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException",
+              "signature": "public static String generateNamedInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24343,12 +24343,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateNamedInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException",
+              "signature": "public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24424,12 +24424,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException",
+              "signature": "public static String generateUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24494,12 +24494,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateUpdateSql(final DataSource dataSource, final String tableName, final String keyColumnName) throws UncheckedSQLException",
+              "signature": "public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24571,12 +24571,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException",
+              "signature": "public static String generateUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24680,12 +24680,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException",
+              "signature": "public static String generateNamedUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24750,12 +24750,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final String keyColumnName) throws UncheckedSQLException",
+              "signature": "public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24827,12 +24827,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException",
+              "signature": "public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "The data source to connect to the database",
                   "nullability": "unspecified"
@@ -24932,12 +24932,12 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql)",
+              "signature": "@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql)",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "the data source used to resolve database-specific behavior",
                   "nullability": "unspecified"
@@ -24962,12 +24962,12 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql, final String whereClause)",
+              "signature": "@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause)",
               "return_type": "String",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "DataSource",
                   "javadoc": "the data source to connect to the database",
                   "nullability": "unspecified"
@@ -25774,7 +25774,7 @@
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "This method is deprecated because it directly closes the connection, which is often not the desired behavior when using a {@link javax.sql.DataSource} that provides pooled connections. Use {@link #releaseConnection(Connection, javax.sql.DataSource)} instead to correctly handle pooled connections and integration with transaction managers. <p> <b> Recommended Alternative: </b> </p> <pre> {@code DataSource dataSource = ...; Connection conn = null; try { conn = JdbcUtil.getConnection(dataSource); // ... perform database operations } finally { // Correctly releases the connection back to the pool or closes it. JdbcUtil.releaseConnection(conn, dataSource); } } </pre>",
+                "message": "This method is deprecated because it directly closes the connection, which is often not the desired behavior when using a {@link javax.sql.DataSource} that provides pooled connections. Use {@link #releaseConnection(Connection, javax.sql.DataSource)} instead to correctly handle pooled connections and integration with transaction managers. <p> <b> Recommended Alternative: </b> </p> <pre> {@code DataSource dataSource = ...; Connection conn = null; try { conn = JdbcUtil.getConnection(ds); // ... perform database operations } finally { // Correctly releases the connection back to the pool or closes it. JdbcUtil.releaseConnection(conn, ds); } } </pre>",
                 "for_removal": false
               },
               "javadoc_summary": "Closes the specified {@link Connection} .",
@@ -32190,7 +32190,7 @@
               "javadoc_summary": "Checks if there is an active transaction for the given DataSource in the current thread.",
               "contract": [
                 "Checks if there is an active transaction for the given DataSource in the current thread.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); // ..."
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(ds); // ..."
               ],
               "examples": [],
               "see_also": []
@@ -32202,12 +32202,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException",
+              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws UncheckedSQLException",
               "return_type": "SqlTransaction",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}",
                   "nullability": "unspecified"
@@ -32224,7 +32224,7 @@
                 "<p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.",
                 "Always use a try-finally block to ensure the transaction is properly completed even if exceptions occur.",
                 "</p> <p> <b> Spring Integration: </b> </p> <p> If Spring's transaction management is active, JdbcUtil will automatically participate in the Spring transaction instead of creating a new one.",
-                "AND balance >= ?\", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException(\"Insufficient balance\"); } JdbcUtil.executeUpdate(dataSource, \"INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)\", accountId, amount, \"DEBIT\"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error(\"Transaction failed: \" + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, \"INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)\", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>"
+                "AND balance >= ?\", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException(\"Insufficient balance\"); } JdbcUtil.executeUpdate(dataSource, \"INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)\", accountId, amount, \"DEBIT\"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error(\"Transaction failed: \" + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(ds); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, \"INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)\", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -32242,12 +32242,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException",
+              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws UncheckedSQLException",
               "return_type": "SqlTransaction",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource for which to begin the transaction",
                   "nullability": "unspecified"
@@ -32281,12 +32281,12 @@
                 "public",
                 "static"
               ],
-              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException",
+              "signature": "public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException",
               "return_type": "SqlTransaction",
               "type_params": [],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource for which to begin the transaction",
                   "nullability": "unspecified"
@@ -32327,7 +32327,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E",
               "return_type": "T",
               "type_params": [
                 {
@@ -32345,7 +32345,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource for the transaction",
                   "nullability": "unspecified"
@@ -32382,7 +32382,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, E",
               "return_type": "T",
               "type_params": [
                 {
@@ -32400,7 +32400,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource for the transaction",
                   "nullability": "unspecified"
@@ -32437,7 +32437,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E",
               "return_type": "void",
               "type_params": [
                 {
@@ -32449,7 +32449,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource for the transaction",
                   "nullability": "unspecified"
@@ -32486,7 +32486,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, E",
               "return_type": "void",
               "type_params": [
                 {
@@ -32498,7 +32498,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource for the transaction",
                   "nullability": "unspecified"
@@ -32535,7 +32535,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E",
               "return_type": "T",
               "type_params": [
                 {
@@ -32553,7 +32553,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32589,7 +32589,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E",
               "return_type": "T",
               "type_params": [
                 {
@@ -32607,7 +32607,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32643,7 +32643,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E",
               "return_type": "void",
               "type_params": [
                 {
@@ -32655,7 +32655,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32691,7 +32691,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E",
               "return_type": "void",
               "type_params": [
                 {
@@ -32703,7 +32703,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32740,7 +32740,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E",
               "return_type": "T",
               "type_params": [
                 {
@@ -32758,7 +32758,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32797,7 +32797,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E",
               "return_type": "T",
               "type_params": [
                 {
@@ -32815,7 +32815,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32854,7 +32854,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E",
               "return_type": "void",
               "type_params": [
                 {
@@ -32866,7 +32866,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -32905,7 +32905,7 @@
                 "public",
                 "static"
               ],
-              "signature": "@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E",
+              "signature": "@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E",
               "return_type": "void",
               "type_params": [
                 {
@@ -32917,7 +32917,7 @@
               ],
               "params": [
                 {
-                  "name": "dataSource",
+                  "name": "ds",
                   "type": "javax.sql.DataSource",
                   "javadoc": "the DataSource to use",
                   "nullability": "unspecified"
@@ -44488,7 +44488,7 @@
               "throws": [],
               "javadoc_summary": "Specifies inline SQL statement lines to execute.",
               "contract": [
-                "<p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax when {@link #fragmentContainsNamedParameters()} is {@code true} </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.",
+                "<p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentContainsNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.",
                 "</li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query(\"SELECT * FROM users WHERE age > :minAge\") List<User> findByAge(@Bind(\"minAge\") int minAge); // Multiple parameters @Query(\"SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge\") List<User> findByAgeRange(@Bind(\"minAge\") int min, @Bind(\"maxAge\") int max); // Nested property access @Query(\"SELECT * FROM orders WHERE user_id = :user.id AND status = :status\") List<Order> findOrders(@Bind(\"user\") User user, @Bind(\"status\") String status); // IN clause with collection @Query(\"SELECT * FROM users WHERE id IN (:ids)\") List<User> findByIds(@Bind(\"ids\") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query(\"SELECT u.*, COUNT(o.id) as order_count \" + \"FROM users u LEFT JOIN orders o ON u.id = o.user_id \" + \"WHERE u.created_date > :startDate \" + \"GROUP BY u.id HAVING COUNT(o.id) > :minOrders\") List<UserStats> findUserStats(@Bind(\"startDate\") Date startDate, @Bind(\"minOrders\") int minOrders); // Common Table Expression (CTE) @Query(\"WITH recent_orders AS ( \" + \" SELECT user_id, COUNT(*) as order_count \" + \" FROM orders WHERE order_date > :since \" + \" GROUP BY user_id \" + \") \" + \"SELECT u.*, ro.order_count \" + \"FROM users u JOIN recent_orders ro ON u.id = ro.user_id\") List<UserOrderSummary> findActiveUserSummary(@Bind(\"since\") Date since); // Window function @Query(\"SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank \" + \"FROM employees WHERE department = :dept\") List<Employee> rankEmployeesByDepartment(@Bind(\"dept\") String department); } </pre> <p> Note: Either {@code value} or {@link #id()} should be specified, but not both.",
                 "If neither is specified, the framework may attempt to derive the SQL based on the method name and entity mapping."
               ],
@@ -63595,7 +63595,7 @@
               "javadoc_summary": "Retrieves the entity with the specified ID, selecting only the specified properties.",
               "contract": [
                 "Returns the entity directly or {@code null} if not found.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = userDao.gett(userId, Arrays.asList(\"id\", \"email\", \"status\")); if (user != {@code null} && \"ACTIVE\".equals(user.getStatus())) { sendEmail(user.getEmail()); } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = userDao.gett(userId, Arrays.asList(\"id\", \"email\", \"status\")); if (user != null && \"ACTIVE\".equals(user.getStatus())) { sendEmail(user.getEmail()); } } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -66203,7 +66203,7 @@
               "javadoc_summary": "Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.",
               "contract": [
                 "This is a beta API that returns {@code null} if the entity is not found.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders, returns {@code null} if not found User user = userDao.gett(userId, Order.class); if (user != null) { // Process user with loaded orders } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders, returns null if not found User user = userDao.gett(userId, Order.class); if (user != null) { // Process user with loaded orders } } </pre>"
               ],
               "examples": [],
               "see_also": []

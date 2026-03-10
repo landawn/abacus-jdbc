@@ -1806,14 +1806,14 @@ final class DaoImpl {
                 .flatMapArray(Class::getDeclaredFields)
                 .append(StreamEx.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
                 .filter(it -> it.isAnnotationPresent(SqlScript.class))
-                .map(Fn.tap(
+                .onEach(
                         it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
-                                "Field annotated with @SqlScript must be static&final String. but {} is not in Dao class {}.", it, daoInterface)))
-                .map(Fn.tap(it -> ClassUtil.setAccessibleQuietly(it, true)))
+                                "Field annotated with @SqlScript must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
+                .onEach(it -> ClassUtil.setAccessibleQuietly(it, true))
                 .map(it -> Tuple.of(it.getAnnotation(SqlScript.class), it))
                 .map(it -> Tuple.of(Strings.isEmpty(it._1.id()) ? it._2.getName() : it._1.id(), it._2))
-                .map(Fn.tap(it -> N.checkArgument(Strings.isNotEmpty(it._1) && !Strings.containsWhitespace(it._1),
-                        "Sql id {} is empty or contains whitespace characters defined by field in Dao class {}.", it._1, daoInterface)))
+                .onEach(it -> N.checkArgument(Strings.isNotEmpty(it._1) && !Strings.containsWhitespace(it._1),
+                        "Sql id {} is empty or contains whitespace characters defined by field in Dao class {}.", it._1, daoInterface))
                 .distinctBy(it -> it._1, (a, b) -> {
                     throw new IllegalArgumentException(
                             "Two fields annotated with @SqlScript have the same id (or name): " + a + "," + b + " in Dao class: " + daoClassName);
@@ -2165,9 +2165,9 @@ final class DaoImpl {
                 .flatMapArray(Class::getDeclaredFields)
                 .append(StreamEx.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
                 .filter(it -> Jdbc.Handler.class.isAssignableFrom(it.getType()))
-                .map(Fn.tap(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
-                        "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface)))
-                .map(Fn.tap(it -> ClassUtil.setAccessibleQuietly(it, true)))
+                .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()),
+                        "Handler Fields defined in Dao declared classes must be static&final Handler. but {} is not in Dao class {}.", it, daoInterface))
+                .onEach(it -> ClassUtil.setAccessibleQuietly(it, true))
                 .distinctBy(Field::getName, (a, b) -> {
                     throw new IllegalArgumentException("Two Handler fields have the same id (or name): " + a + "," + b + " in Dao class: " + daoClassName);
                 })
@@ -2262,8 +2262,8 @@ final class DaoImpl {
             final boolean fetchColumnByEntityClass = StreamEx.of(method.getAnnotations())
                     .select(FetchColumnByEntityClass.class)
                     .map(FetchColumnByEntityClass::value)
-                    .map(Fn.tap(it -> N.checkArgument(Dataset.class.isAssignableFrom(returnType),
-                            "@FetchColumnByEntityClass is not supported for method: {} because its return type is not Dataset", fullClassMethodName)))
+                    .onEach(it -> N.checkArgument(Dataset.class.isAssignableFrom(returnType),
+                            "@FetchColumnByEntityClass is not supported for method: {} because its return type is not Dataset", fullClassMethodName))
                     .first()
                     .orElse(fetchColumnByEntityClassForDatasetQuery);
 
@@ -6202,8 +6202,8 @@ final class DaoImpl {
                         .map(handlerAnno -> Tuple.of((Jdbc.Handler) (Strings.isNotEmpty(handlerAnno.qualifier())
                                 ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
                                 : HandlerFactory.getOrCreate(handlerAnno.type())), handlerAnno.isForInvokeFromOutsideOfDaoOnly()))
-                        .map(Fn.tap(handler -> N.checkArgNotNull(handler._1,
-                                "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName)))
+                        .onEach(handler -> N.checkArgNotNull(handler._1,
+                                "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .toList();
 
                 if (N.notEmpty(handlerList)) {

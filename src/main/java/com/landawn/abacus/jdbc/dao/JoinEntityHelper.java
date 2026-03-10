@@ -424,13 +424,13 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond) // 
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE)
-                .map(Fn.tap(batchEntities -> {
+                .onEach(batchEntities -> {
                     try {
                         loadJoinEntities(batchEntities, joinEntitiesToLoad);
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     }
-                }))
+                })
                 .flatmap(Fn.identity());
     }
 
@@ -457,7 +457,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
         return DaoUtil.getDao(this)
                 .stream(selectPropNames, cond)
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
-                .map(Fn.tap(batchEntities -> {
+                .onEach(batchEntities -> {
                     try {
                         for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
                             loadJoinEntities(batchEntities, joinEntityClass);
@@ -465,7 +465,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     }
-                }))
+                })
                 .flatmap(Fn.identity());
     }
 
@@ -494,13 +494,13 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
             return DaoUtil.getDao(this)
                     .stream(selectPropNames, cond)
                     .split(JdbcUtil.DEFAULT_BATCH_SIZE) //
-                    .map(Fn.tap(t -> {
+                    .onEach(t -> {
                         try {
                             loadAllJoinEntities(t);
                         } catch (final SQLException e) {
                             throw new UncheckedSQLException(e);
                         }
-                    }))
+                    })
                     .flatmap(Fn.identity());
 
         } else {

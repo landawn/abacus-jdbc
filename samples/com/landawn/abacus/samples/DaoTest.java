@@ -315,7 +315,7 @@ public class DaoTest {
                 .boxed()
                 .parallel()
                 .map(Fn.ff(it -> userDao.gett(it)))
-                .map(Fn.tap(it -> it.setCreateTime(null)))
+                .onEach(it -> it.setCreateTime(null))
                 .sortedBy(User::getId)
                 .toList();
 

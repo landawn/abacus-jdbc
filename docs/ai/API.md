@@ -1,4 +1,4 @@
-# abacus-jdbc API Index (v4.6.3)
+# abacus-jdbc API Index (v4.6.4)
 - Build: unknown
 - Java: 17
 - Generated: 2026-03-09
@@ -5949,12 +5949,12 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `config` (`EntityCodeConfig`) — The configuration for customizing the generated entity class. If {@code null} , default configuration is used
 - **Returns:** The generated entity class as a string containing the complete Java source code
 ##### generateSelectSql(...) -> String
-- **Signature:** `public static String generateSelectSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException`
+- **Signature:** `public static String generateSelectSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table.
 - **Contract:**
   - Column names are properly escaped with backticks if they contain special characters.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the SELECT statement
 - **Returns:** A SELECT SQL statement string with all columns from the table
 - **Throws:**
@@ -5965,10 +5965,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — The database connection to use
   - `tableName` (`String`) — The name of the table for which to generate the SELECT statement
 - **Returns:** A SELECT SQL statement string with all columns from the table
-- **Signature:** `public static String generateSelectSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws UncheckedSQLException`
+- **Signature:** `public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table, excluding certain columns and applying a WHERE clause.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the SELECT statement
   - `excludedColumnNames` (`Collection<String>`) — A collection of column names to exclude from the SELECT statement
   - `whereClause` (`String`) — An optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
@@ -5986,12 +5986,12 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### generateInsertSql(...) -> String
-- **Signature:** `public static String generateInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException`
+- **Signature:** `public static String generateInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table.
 - **Contract:**
   - Column names are properly escaped with backticks if they contain special characters.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the INSERT statement
 - **Returns:** An INSERT SQL statement string with positional parameters for all columns
 - **Throws:**
@@ -6004,10 +6004,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — The database connection to use
   - `tableName` (`String`) — The name of the table for which to generate the INSERT statement
 - **Returns:** An INSERT SQL statement string with positional parameters for all columns
-- **Signature:** `public static String generateInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
+- **Signature:** `public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table, excluding certain columns.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the INSERT statement
   - `excludedColumnNames` (`Collection<String>`) — A collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
 - **Returns:** An INSERT SQL statement string with positional parameters for all included columns
@@ -6022,10 +6022,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** An INSERT SQL statement string with positional parameters for all included columns
 - **See also:** #generateInsertSql(Connection, String), #generateInsertSql(DataSource, String, Collection), #generateNamedInsertSql(Connection, String, Collection)
 ##### generateNamedInsertSql(...) -> String
-- **Signature:** `public static String generateNamedInsertSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException`
+- **Signature:** `public static String generateNamedInsertSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the named INSERT statement
 - **Returns:** An INSERT SQL statement string with named parameters based on camelCase column names
 - **Throws:**
@@ -6036,10 +6036,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — The database connection to use
   - `tableName` (`String`) — The name of the table for which to generate the named INSERT statement
 - **Returns:** An INSERT SQL statement string with named parameters based on camelCase column names
-- **Signature:** `public static String generateNamedInsertSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
+- **Signature:** `public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table, excluding certain columns.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the named INSERT statement
   - `excludedColumnNames` (`Collection<String>`) — A collection of column names to exclude from the INSERT statement. Can be {@code null} or empty to include all columns
 - **Returns:** An INSERT SQL statement string with named parameters for all included columns
@@ -6054,13 +6054,13 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** An INSERT SQL statement string with named parameters for all included columns
 - **See also:** #generateNamedInsertSql(Connection, String), #generateNamedInsertSql(DataSource, String, Collection), #generateInsertSql(Connection, String, Collection)
 ##### generateUpdateSql(...) -> String
-- **Signature:** `public static String generateUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException`
+- **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table.
 - **Contract:**
   - Note: Users should append an appropriate WHERE clause before executing.
   - No WHERE clause - must be added manually.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the UPDATE statement
 - **Returns:** An UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
 - **Throws:**
@@ -6073,10 +6073,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — The database connection to use
   - `tableName` (`String`) — The name of the table for which to generate the UPDATE statement
 - **Returns:** An UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
-- **Signature:** `public static String generateUpdateSql(final DataSource dataSource, final String tableName, final String keyColumnName) throws UncheckedSQLException`
+- **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the UPDATE statement
   - `keyColumnName` (`String`) — The column name to use in the WHERE clause
 - **Returns:** An UPDATE SQL statement string with positional parameters for all columns and a WHERE clause
@@ -6089,10 +6089,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — The name of the table for which to generate the UPDATE statement
   - `keyColumnName` (`String`) — The column name to use in the WHERE clause
 - **Returns:** An UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
-- **Signature:** `public static String generateUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
+- **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table through a data source, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the UPDATE statement
   - `excludedColumnNames` (`Collection<String>`) — A collection of column names to exclude from the SET clause. Can be {@code null} or empty
   - `keyColumnNames` (`Collection<String>`) — A collection of column names to use in the WHERE clause. Can be {@code null} or empty
@@ -6112,13 +6112,13 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** An UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
 - **See also:** #generateUpdateSql(Connection, String, String), #generateUpdateSql(DataSource, String, Collection, Collection, String), #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
 ##### generateNamedUpdateSql(...) -> String
-- **Signature:** `public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName) throws UncheckedSQLException`
+- **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table.
 - **Contract:**
   - Note: Users should append an appropriate WHERE clause before executing.
   - No WHERE clause - must be added manually.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the named UPDATE statement
 - **Returns:** An UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
 - **Throws:**
@@ -6131,10 +6131,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `conn` (`Connection`) — The database connection to use
   - `tableName` (`String`) — The name of the table for which to generate the named UPDATE statement
 - **Returns:** An UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
-- **Signature:** `public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final String keyColumnName) throws UncheckedSQLException`
+- **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the named UPDATE statement
   - `keyColumnName` (`String`) — The column name to use in the WHERE clause
 - **Returns:** An UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
@@ -6147,10 +6147,10 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — The name of the table for which to generate the named UPDATE statement
   - `keyColumnName` (`String`) — The column name to use in the WHERE clause
 - **Returns:** An UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
-- **Signature:** `public static String generateNamedUpdateSql(final DataSource dataSource, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
+- **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table through a data source, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — The data source to connect to the database
+  - `ds` (`DataSource`) — The data source to connect to the database
   - `tableName` (`String`) — The name of the table for which to generate the named UPDATE statement
   - `excludedColumnNames` (`Collection<String>`) — A collection of column names to exclude from the SET clause. Can be {@code null} or empty
   - `keyColumnNames` (`Collection<String>`) — A collection of column names to use in the WHERE clause. Can be {@code null} or empty
@@ -6169,19 +6169,19 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Returns:** An UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
 - **See also:** #generateNamedUpdateSql(Connection, String, String), #generateNamedUpdateSql(DataSource, String, Collection, Collection, String), #generateUpdateSql(Connection, String, Collection, Collection, String)
 ##### convertInsertSqlToUpdateSql(...) -> String
-- **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql)`
+- **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql)`
 - **Summary:** Converts an INSERT SQL statement to an UPDATE SQL statement without a WHERE clause.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — the data source used to resolve database-specific behavior
+  - `ds` (`DataSource`) — the data source used to resolve database-specific behavior
   - `insertSql` (`String`) — the INSERT SQL statement to convert
 - **Returns:** an UPDATE SQL statement derived from the INSERT statement
-- **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource dataSource, final String insertSql, final String whereClause)`
+- **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause)`
 - **Summary:** Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.
 - **Contract:**
   - </p> <ul> <li> Column and value counts must match or conversion fails.
   - </li> <li> The WHERE clause is appended only when {@code whereClause} is non-empty.
 - **Parameters:**
-  - `dataSource` (`DataSource`) — the data source to connect to the database
+  - `ds` (`DataSource`) — the data source to connect to the database
   - `insertSql` (`String`) — the INSERT SQL statement to convert
   - `whereClause` (`String`) — the WHERE clause to append (without the {@code WHERE} keyword). May be null/empty.
 - **Returns:** an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
@@ -7959,41 +7959,41 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **Summary:** Checks if there is an active transaction for the given DataSource in the current thread.
 - **Contract:**
   - Checks if there is an active transaction for the given DataSource in the current thread.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); // ...
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction SqlTransaction tran = JdbcUtil.beginTransaction(ds); // ...
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the DataSource to check for an active transaction
 - **Returns:** {@code true} if there is an active transaction, {@code false} otherwise
 ##### beginTransaction(...) -> SqlTransaction
-- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource) throws UncheckedSQLException`
+- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws UncheckedSQLException`
 - **Summary:** Begins a new database transaction with the default isolation level for the specified DataSource.
 - **Contract:**
   - <p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.
   - Always use a try-finally block to ensure the transaction is properly completed even if exceptions occur.
   - </p> <p> <b> Spring Integration: </b> </p> <p> If Spring's transaction management is active, JdbcUtil will automatically participate in the Spring transaction instead of creating a new one.
-  - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
+  - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); tran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { tran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(ds); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction sendNotification(order); // Shares this transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}
 - **Returns:** a {@link SqlTransaction} object representing the new transaction that must be committed or rolled back
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs while beginning the transaction
 - **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel), #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean), SqlTransaction#commit(), SqlTransaction#rollback(), SqlTransaction#rollbackIfNotCommitted()
-- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel) throws UncheckedSQLException`
+- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws UncheckedSQLException`
 - **Summary:** Begins a new transaction with the specified isolation level for the given DataSource.
 - **Contract:**
   - The transaction must be explicitly committed or rolled back.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource for which to begin the transaction
+  - `ds` (`javax.sql.DataSource`) — the DataSource for which to begin the transaction
   - `isolationLevel` (`IsolationLevel`) — the isolation level for the transaction
 - **Returns:** a SqlTransaction object representing the new transaction
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a SQL exception occurs while beginning the transaction
 - **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
-- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource dataSource, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException`
+- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws UncheckedSQLException`
 - **Summary:** Starts a global transaction which will be shared by all in-line database queries with the same DataSource in the same thread.
 - **Contract:**
   - If a Spring transaction is already active with the specified DataSource, the Connection from the Spring transaction will be used.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource for which to begin the transaction
+  - `ds` (`javax.sql.DataSource`) — the DataSource for which to begin the transaction
   - `isolationLevel` (`IsolationLevel`) — the isolation level for the transaction
   - `isForUpdateOnly` (`boolean`) — whether this transaction is only for update operations
 - **Returns:** a SqlTransaction object representing the transaction
@@ -8001,130 +8001,130 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a SQL exception occurs while beginning the transaction
 - **See also:** JdbcUtil#getConnection(javax.sql.DataSource), JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
 ##### callInTransaction(...) -> T
-- **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given callable within a transaction and returns its result.
 - **Contract:**
   - If the callable completes successfully, the transaction is committed.
   - If an exception occurs, the transaction is rolled back.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource for the transaction
+  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
   - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute within the transaction
 - **Returns:** the result of the callable execution
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the callable throws an exception
-- **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given function within a transaction, providing the transaction's connection.
 - **Contract:**
   - If the function completes successfully, the transaction is committed.
   - If an exception occurs, the transaction is rolled back.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource for the transaction
+  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
   - `cmd` (`Throwables.Function<Connection, T, E>`) — the function to execute with the transaction's connection
 - **Returns:** the result of the function execution
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the function throws an exception
 ##### runInTransaction(...) -> void
-- **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given runnable within a transaction.
 - **Contract:**
   - If the runnable completes successfully, the transaction is committed.
   - If an exception occurs, the transaction is rolled back.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource for the transaction
+  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
   - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute within the transaction
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the runnable throws an exception
-- **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given consumer within a transaction, providing the transaction's connection.
 - **Contract:**
   - If the consumer completes successfully, the transaction is committed.
   - If an exception occurs, the transaction is rolled back.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource for the transaction
+  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
   - `cmd` (`Throwables.Consumer<Connection, E>`) — the consumer to execute with the transaction's connection
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the consumer throws an exception
 ##### callOutsideTransaction(...) -> T
-- **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given callable outside any active transaction for the specified DataSource.
 - **Contract:**
   - If a transaction is active in the current thread, a new connection (not part of the transaction) will be used to execute the callable.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute outside any transaction
 - **Returns:** the result of the callable execution
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the callable throws an exception
-- **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given function outside any active transaction for the specified DataSource.
 - **Contract:**
   - <p> <b> Note: </b> When obtaining a raw {@link Connection} from the DataSource within the function, the caller is responsible for closing the connection to avoid resource leaks.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any transaction
 - **Returns:** the result of the function execution
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the function throws an exception
 ##### runOutsideTransaction(...) -> void
-- **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given runnable outside any active transaction for the specified DataSource.
 - **Contract:**
   - If a transaction is active in the current thread, a new connection (not part of the transaction) will be used to execute the runnable.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any transaction
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the runnable throws an exception
-- **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given consumer outside any active transaction for the specified DataSource.
 - **Contract:**
   - <p> <b> Note: </b> When obtaining a raw {@link Connection} from the DataSource within the consumer, the caller is responsible for closing the connection to avoid resource leaks.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.runOutsideTransaction(dataSource, ds -> { // Use the DataSource for non-transactional operations try (Connection conn = ds.getConnection()) { // Perform operations that should not be part of current transaction } }); } </pre>
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any transaction
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the consumer throws an exception
 ##### callNotInStartedTransaction(...) -> T
-- **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given callable outside any active transaction for the specified DataSource.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute outside any transaction
 - **Returns:** the result of the callable execution
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the callable throws an exception
-- **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given function outside any active transaction for the specified DataSource.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any transaction
 - **Returns:** the result of the function execution
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the function throws an exception
 ##### runNotInStartedTransaction(...) -> void
-- **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given runnable outside any active transaction for the specified DataSource.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any transaction
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
   - `E` — if the runnable throws an exception
-- **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource dataSource, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
+- **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given consumer outside any active transaction for the specified DataSource.
 - **Parameters:**
-  - `dataSource` (`javax.sql.DataSource`) — the DataSource to use
+  - `ds` (`javax.sql.DataSource`) — the DataSource to use
   - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any transaction
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
@@ -11036,7 +11036,7 @@ Defines a generic SQL query operation for a DAO method.
 - **Signature:** `String[] value() default {}`
 - **Summary:** Specifies inline SQL statement lines to execute.
 - **Contract:**
-  - <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax when {@link #fragmentContainsNamedParameters()} is {@code true} </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.
+  - <p> The SQL can include: </p> <ul> <li> Named parameters using {@code :paramName} syntax for value binding </li> <li> Template variables using {@code {variableName}} syntax (defined by {@link SqlFragment} or {@link SqlFragmentList} ); set {@link #fragmentContainsNamedParameters()} to {@code true} if the replaced fragments contain named parameters </li> <li> Standard SQL features like JOINs, subqueries, CTEs (Common Table Expressions), window functions, etc.
   - </li> <li> Database-specific SQL extensions and functions </li> </ul> <p> Named parameter examples: </p> <pre> {@code // Simple parameter binding @Query("SELECT * FROM users WHERE age > :minAge") List<User> findByAge(@Bind("minAge") int minAge); // Multiple parameters @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge") List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max); // Nested property access @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status") List<Order> findOrders(@Bind("user") User user, @Bind("status") String status); // IN clause with collection @Query("SELECT * FROM users WHERE id IN (:ids)") List<User> findByIds(@Bind("ids") List<Long> ids); } </pre> <p> Complex SQL examples: </p> <pre> {@code // JOIN with aggregation @Query("SELECT u.*, COUNT(o.id) as order_count " + "FROM users u LEFT JOIN orders o ON u.id = o.user_id " + "WHERE u.created_date > :startDate " + "GROUP BY u.id HAVING COUNT(o.id) > :minOrders") List<UserStats> findUserStats(@Bind("startDate") Date startDate, @Bind("minOrders") int minOrders); // Common Table Expression (CTE) @Query("WITH recent_orders AS ( " + " SELECT user_id, COUNT(*) as order_count " + " FROM orders WHERE order_date > :since " + " GROUP BY user_id " + ") " + "SELECT u.*, ro.order_count " + "FROM users u JOIN recent_orders ro ON u.id = ro.user_id") List<UserOrderSummary> findActiveUserSummary(@Bind("since") Date since); // Window function @Query("SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank " + "FROM employees WHERE department = :dept") List<Employee> rankEmployeesByDepartment(@Bind("dept") String department); } </pre> <p> Note: Either {@code value} or {@link #id()} should be specified, but not both.
   - If neither is specified, the framework may attempt to derive the SQL based on the method name and entity mapping.
 - **Parameters:**
@@ -15915,7 +15915,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Summary:** Retrieves the entity with the specified ID, selecting only the specified properties.
 - **Contract:**
   - Returns the entity directly or {@code null} if not found.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = userDao.gett(userId, Arrays.asList("id", "email", "status")); if (user != {@code null} && "ACTIVE".equals(user.getStatus())) { sendEmail(user.getEmail()); } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = userDao.gett(userId, Arrays.asList("id", "email", "status")); if (user != null && "ACTIVE".equals(user.getStatus())) { sendEmail(user.getEmail()); } } </pre>
 - **Parameters:**
   - `id` (`ID`) — the entity ID
   - `selectPropNames` (`Collection<String>`) — the properties to select, or {@code null} to select all
@@ -16627,7 +16627,7 @@ The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join e
 - **Summary:** Retrieves an entity by ID and loads the specified join entity class, returning the entity directly.
 - **Contract:**
   - This is a beta API that returns {@code null} if the entity is not found.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders, returns {@code null} if not found User user = userDao.gett(userId, Order.class); if (user != null) { // Process user with loaded orders } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with orders, returns null if not found User user = userDao.gett(userId, Order.class); if (user != null) { // Process user with loaded orders } } </pre>
 - **Parameters:**
   - `id` (`ID`) — the entity ID
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
