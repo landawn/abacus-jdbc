@@ -625,7 +625,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @return an Optional containing the mapped non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see Filters
-     * @see AbstractQuery#queryForSingleNonNull(Class)
+     * @see AbstractQuery#queryForSingleNonNull(Type)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws SQLException;
@@ -699,7 +699,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see Filters
-     * @see AbstractQuery#queryForUniqueNonNull(Class)
+     * @see AbstractQuery#queryForUniqueNonNull(Type)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)

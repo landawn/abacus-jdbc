@@ -133,7 +133,7 @@ public final class Jdbc {
     }
 
     private Jdbc() {
-        // singleton.
+        // utility class - prevent instantiation.
     }
 
     /**
@@ -5325,7 +5325,7 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
-             * @deprecated The default behavior is {@link #getObject(int)} if no specific {@code ColumnGetter} is set for the column.
+             * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific {@code ColumnGetter} is set for the column.
              */
             @Deprecated
             public RowExtractorBuilder getObject(final int columnIndex) {
@@ -5581,7 +5581,7 @@ public final class Jdbc {
      */
     public static final class Columns {
         private Columns() {
-            // singleton for utility class
+            // utility class - prevent instantiation
         }
 
         /**
@@ -5835,7 +5835,7 @@ public final class Jdbc {
             public static final BiParametersSetter<AbstractQuery, Object> SET_OBJECT = (preparedQuery, x) -> preparedQuery.setObject(1, x);
 
             private ColumnOne() {
-                // singleton for utility class
+                // utility class - prevent instantiation
             }
 
             @SuppressWarnings("rawtypes")
@@ -6424,7 +6424,7 @@ public final class Jdbc {
         }
 
         private HandlerFactory() {
-            // singleton.
+            // utility class - prevent instantiation.
         }
     }
 

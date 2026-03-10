@@ -1213,7 +1213,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates the close handler.
+     * Creates a Runnable that releases the given connection back to the DataSource when invoked.
      *
      * @param conn The database Connection to release
      * @param ds The DataSource from which the connection was obtained
