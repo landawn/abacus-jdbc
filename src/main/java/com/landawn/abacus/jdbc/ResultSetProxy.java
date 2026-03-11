@@ -216,11 +216,13 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getBoolean(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public byte getByte(int columnIndex) throws SQLException {
         return delegate.getByte(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public short getShort(int columnIndex) throws SQLException {
         return delegate.getShort(columnIndex);
@@ -242,22 +244,26 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getLong(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public float getFloat(int columnIndex) throws SQLException {
         return delegate.getFloat(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public double getDouble(int columnIndex) throws SQLException {
         return delegate.getDouble(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Deprecated(since = "1.2")
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
         return delegate.getBigDecimal(columnIndex, scale);
     }
 
+    /** {@inheritDoc} */
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
         return delegate.getBytes(columnIndex);
@@ -271,6 +277,7 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getDate(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Time getTime(int columnIndex) throws SQLException {
         return delegate.getTime(columnIndex);
@@ -284,17 +291,20 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getTimestamp(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
         return delegate.getAsciiStream(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Deprecated(since = "1.2")
     @Override
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
         return delegate.getUnicodeStream(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
         return delegate.getBinaryStream(columnIndex);
@@ -308,16 +318,19 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getString(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
         return delegate.getBoolean(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public byte getByte(String columnLabel) throws SQLException {
         return delegate.getByte(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public short getShort(String columnLabel) throws SQLException {
         return delegate.getShort(columnLabel);
@@ -339,22 +352,26 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getLong(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public float getFloat(String columnLabel) throws SQLException {
         return delegate.getFloat(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public double getDouble(String columnLabel) throws SQLException {
         return delegate.getDouble(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Deprecated(since = "1.2")
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         return delegate.getBigDecimal(columnLabel, scale);
     }
 
+    /** {@inheritDoc} */
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
         return delegate.getBytes(columnLabel);
@@ -368,6 +385,7 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getDate(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Time getTime(String columnLabel) throws SQLException {
         return delegate.getTime(columnLabel);
@@ -381,32 +399,38 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getTimestamp(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
         return delegate.getAsciiStream(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Deprecated(since = "1.2")
     @Override
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
         return delegate.getUnicodeStream(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
         return delegate.getBinaryStream(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public SQLWarning getWarnings() throws SQLException {
         return delegate.getWarnings();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void clearWarnings() throws SQLException {
         delegate.clearWarnings();
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getCursorName() throws SQLException {
         return delegate.getCursorName();
@@ -603,11 +627,13 @@ final class ResultSetProxy implements ResultSet {
         return delegate.findColumn(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Reader getCharacterStream(int columnIndex) throws SQLException {
         return delegate.getCharacterStream(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
         return delegate.getCharacterStream(columnLabel);
@@ -629,31 +655,37 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getBigDecimal(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isBeforeFirst() throws SQLException {
         return delegate.isBeforeFirst();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isAfterLast() throws SQLException {
         return delegate.isAfterLast();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isFirst() throws SQLException {
         return delegate.isFirst();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isLast() throws SQLException {
         return delegate.isLast();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void beforeFirst() throws SQLException {
         delegate.beforeFirst();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void afterLast() throws SQLException {
         delegate.afterLast();
@@ -667,6 +699,7 @@ final class ResultSetProxy implements ResultSet {
         return delegate.first();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean last() throws SQLException {
         return delegate.last();
@@ -688,21 +721,25 @@ final class ResultSetProxy implements ResultSet {
         return delegate.absolute(row);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean relative(int rows) throws SQLException {
         return delegate.relative(rows);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean previous() throws SQLException {
         return delegate.previous();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         delegate.setFetchDirection(direction);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getFetchDirection() throws SQLException {
         return delegate.getFetchDirection();
@@ -732,151 +769,181 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getType();
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getConcurrency() throws SQLException {
         return delegate.getConcurrency();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean rowUpdated() throws SQLException {
         return delegate.rowUpdated();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean rowInserted() throws SQLException {
         return delegate.rowInserted();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean rowDeleted() throws SQLException {
         return delegate.rowDeleted();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNull(int columnIndex) throws SQLException {
         delegate.updateNull(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBoolean(int columnIndex, boolean x) throws SQLException {
         delegate.updateBoolean(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateByte(int columnIndex, byte x) throws SQLException {
         delegate.updateByte(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateShort(int columnIndex, short x) throws SQLException {
         delegate.updateShort(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateInt(int columnIndex, int x) throws SQLException {
         delegate.updateInt(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateLong(int columnIndex, long x) throws SQLException {
         delegate.updateLong(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateFloat(int columnIndex, float x) throws SQLException {
         delegate.updateFloat(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateDouble(int columnIndex, double x) throws SQLException {
         delegate.updateDouble(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException {
         delegate.updateBigDecimal(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateString(int columnIndex, String x) throws SQLException {
         delegate.updateString(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBytes(int columnIndex, byte[] x) throws SQLException {
         delegate.updateBytes(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateDate(int columnIndex, Date x) throws SQLException {
         delegate.updateDate(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateTime(int columnIndex, Time x) throws SQLException {
         delegate.updateTime(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException {
         delegate.updateTimestamp(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException {
         delegate.updateAsciiStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException {
         delegate.updateBinaryStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException {
         delegate.updateCharacterStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException {
         delegate.updateObject(columnIndex, x, scaleOrLength);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateObject(int columnIndex, Object x) throws SQLException {
         delegate.updateObject(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNull(String columnLabel) throws SQLException {
         delegate.updateNull(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBoolean(String columnLabel, boolean x) throws SQLException {
         delegate.updateBoolean(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateByte(String columnLabel, byte x) throws SQLException {
         delegate.updateByte(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateShort(String columnLabel, short x) throws SQLException {
         delegate.updateShort(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateInt(String columnLabel, int x) throws SQLException {
         delegate.updateInt(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateLong(String columnLabel, long x) throws SQLException {
         delegate.updateLong(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateFloat(String columnLabel, float x) throws SQLException {
         delegate.updateFloat(columnLabel, x);
