@@ -518,8 +518,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Retrieves an entity by its ID, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
-     * This is a convenience method that returns the entity directly instead of wrapped in Optional.
+     * This is a convenience method that accepts a primitive long ID and returns the entity directly instead of wrapped in Optional.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

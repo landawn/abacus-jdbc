@@ -69,10 +69,10 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * <p>The backing {@code CallableStatement} is closed by default after any execution methods
  * (which will trigger the backing {@code CallableStatement} to be executed, for example,
  * query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/..),
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
  *
  * <p>Generally, don't cache or reuse the instance of this class, unless the {@code 'closeAfterExecution'}
- * flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.</p>
+ * flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</p>
  *
  * <p>The {@code ResultSet} returned by query will always be closed after execution,
  * even if {@code 'closeAfterExecution'} flag is set to {@code false}.</p>

@@ -579,7 +579,6 @@ public final class DBLock {
      *     dbLock.close();
      * }
      * }</pre>
-     *
      */
     public synchronized void close() {
         if (isClosed) {

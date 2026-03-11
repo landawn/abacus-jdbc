@@ -96,7 +96,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Attempting to update an entity is not allowed in this DAO implementation as it's designed
      * to prevent any modifications to existing records. Use insert operations for new records.</p>
      * 
-     * @param entityToUpdate The entity to update (operation will fail)
+     * @param entityToUpdate the entity to update (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -122,8 +122,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * dao.update(user, Arrays.asList("email"));
      * }</pre>
      * 
-     * @param entityToUpdate The entity containing updated values (operation will fail)
-     * @param propNamesToUpdate Collection of property names to update (operation will fail)
+     * @param entityToUpdate the entity containing updated values (operation will fail)
+     * @param propNamesToUpdate collection of property names to update (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -146,9 +146,9 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * dao.update("status", "INACTIVE", 123L);
      * }</pre>
      *
-     * @param propName The name of the property to update (operation will fail)
-     * @param propValue The new value for the property (operation will fail)
-     * @param id The ID of the entity to update (operation will fail)
+     * @param propName the name of the property to update (operation will fail)
+     * @param propValue the new value for the property (operation will fail)
+     * @param id the ID of the entity to update (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -174,8 +174,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * dao.update(updates, 123L);
      * }</pre>
      * 
-     * @param updateProps Map of property names to their new values (operation will fail)
-     * @param id The ID of the entity to update (operation will fail)
+     * @param updateProps map of property names to their new values (operation will fail)
+     * @param id the ID of the entity to update (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -192,7 +192,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch update operations are not allowed. For bulk operations, use batch insert
      * for new records.</p>
      * 
-     * @param entities Collection of entities to update (operation will fail)
+     * @param entities collection of entities to update (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -209,8 +209,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch update operations with custom batch size are not allowed. This DAO maintains
      * data immutability by preventing all forms of updates.</p>
      * 
-     * @param entities Collection of entities to update (operation will fail)
-     * @param batchSize The batch size for the operation (operation will fail)
+     * @param entities collection of entities to update (operation will fail)
+     * @param batchSize the batch size for the operation (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -227,8 +227,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch update of specific properties is not allowed. Consider using a different DAO type
      * if update operations are required for your use case.</p>
      * 
-     * @param entities Collection of entities to update (operation will fail)
-     * @param propNamesToUpdate Properties to update in each entity (operation will fail)
+     * @param entities collection of entities to update (operation will fail)
+     * @param propNamesToUpdate properties to update in each entity (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -245,9 +245,9 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch update with specific properties and custom batch size is not allowed. This DAO type
      * ensures that once data is inserted, it cannot be modified or deleted through this DAO.</p>
      * 
-     * @param entities Collection of entities to update (operation will fail)
-     * @param propNamesToUpdate Properties to update in each entity (operation will fail)
-     * @param batchSize The batch size for the operation (operation will fail)
+     * @param entities collection of entities to update (operation will fail)
+     * @param propNamesToUpdate properties to update in each entity (operation will fail)
+     * @param batchSize the batch size for the operation (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -273,7 +273,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * dao.upsert(user);
      * }</pre>
      * 
-     * @param entity The entity to insert or update (operation will fail)
+     * @param entity the entity to insert or update (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -290,8 +290,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Upsert with unique property names for conflict detection is not allowed. This DAO type
      * prevents all forms of updates, including conditional updates through upsert operations.</p>
      * 
-     * @param entity The entity to insert or update (operation will fail)
-     * @param uniquePropNamesForQuery Property names used to check for existing records (operation will fail)
+     * @param entity the entity to insert or update (operation will fail)
+     * @param uniquePropNamesForQuery property names used to check for existing records (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -308,8 +308,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Conditional upsert operations are not allowed. The update portion of upsert functionality
      * conflicts with the no-update design principle of this DAO type.</p>
      * 
-     * @param entity The entity to insert or update (operation will fail)
-     * @param cond Condition to check for existing records (operation will fail)
+     * @param entity the entity to insert or update (operation will fail)
+     * @param cond condition to check for existing records (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -326,7 +326,7 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch upsert operations are not allowed. For bulk operations, use batch insert for new
      * records exclusively. Existing records cannot be updated through this DAO.</p>
      * 
-     * @param entities Collection of entities to upsert (operation will fail)
+     * @param entities collection of entities to upsert (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -343,8 +343,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch upsert with custom batch size is not allowed. This DAO maintains strict immutability
      * of existing records.</p>
      * 
-     * @param entities Collection of entities to upsert (operation will fail)
-     * @param batchSize The batch size for the operation (operation will fail)
+     * @param entities collection of entities to upsert (operation will fail)
+     * @param batchSize the batch size for the operation (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -361,8 +361,8 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch upsert with unique property specification is not allowed. Use batch insert for
      * adding new records in bulk.</p>
      * 
-     * @param entities Collection of entities to upsert (operation will fail)
-     * @param uniquePropNamesForQuery Property names for conflict detection (operation will fail)
+     * @param entities collection of entities to upsert (operation will fail)
+     * @param uniquePropNamesForQuery property names for conflict detection (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -379,9 +379,9 @@ public interface UncheckedNoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD exten
      * <p>Batch upsert with unique properties and custom batch size is not allowed. This DAO type
      * is designed for scenarios where data integrity requires preventing all updates.</p>
      * 
-     * @param entities Collection of entities to upsert (operation will fail)
-     * @param uniquePropNamesForQuery Property names for conflict detection (operation will fail)
-     * @param batchSize The batch size for the operation (operation will fail)
+     * @param entities collection of entities to upsert (operation will fail)
+     * @param uniquePropNamesForQuery property names for conflict detection (operation will fail)
+     * @param batchSize the batch size for the operation (operation will fail)
      * @return Never returns normally
      * @throws UnsupportedOperationException Always thrown as batch upsert operations are not supported
      * @deprecated This operation is not supported and will always throw an exception

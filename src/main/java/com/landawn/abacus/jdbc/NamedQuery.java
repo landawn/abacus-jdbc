@@ -58,10 +58,10 @@ import com.landawn.abacus.util.N;
  * <p>The backing {@code PreparedStatement} is closed by default
  * after any execution methods (which will trigger the backing {@code PreparedStatement} to be executed,
  * for example: query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...),
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  *
  * <p>Generally, don't cache or reuse the instance of this class,
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)}.
+ * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  *
  * <p>The {@code ResultSet} returned by query will always be closed after execution, even if {@code 'closeAfterExecution'} flag is set to {@code false}.
  *

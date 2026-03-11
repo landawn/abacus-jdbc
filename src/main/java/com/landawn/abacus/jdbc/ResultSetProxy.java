@@ -882,61 +882,73 @@ final class ResultSetProxy implements ResultSet {
         delegate.updateFloat(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateDouble(String columnLabel, double x) throws SQLException {
         delegate.updateDouble(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException {
         delegate.updateBigDecimal(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateString(String columnLabel, String x) throws SQLException {
         delegate.updateString(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBytes(String columnLabel, byte[] x) throws SQLException {
         delegate.updateBytes(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateDate(String columnLabel, Date x) throws SQLException {
         delegate.updateDate(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateTime(String columnLabel, Time x) throws SQLException {
         delegate.updateTime(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException {
         delegate.updateTimestamp(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException {
         delegate.updateAsciiStream(columnLabel, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException {
         delegate.updateBinaryStream(columnLabel, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException {
         delegate.updateCharacterStream(columnLabel, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException {
         delegate.updateObject(columnLabel, x, scaleOrLength);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateObject(String columnLabel, Object x) throws SQLException {
         delegate.updateObject(columnLabel, x);
@@ -966,21 +978,25 @@ final class ResultSetProxy implements ResultSet {
         delegate.deleteRow();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void refreshRow() throws SQLException {
         delegate.refreshRow();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void cancelRowUpdates() throws SQLException {
         delegate.cancelRowUpdates();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void moveToInsertRow() throws SQLException {
         delegate.moveToInsertRow();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void moveToCurrentRow() throws SQLException {
         delegate.moveToCurrentRow();
@@ -994,11 +1010,13 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getStatement();
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
         return delegate.getObject(columnIndex, map);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Ref getRef(int columnIndex) throws SQLException {
         return delegate.getRef(columnIndex);
@@ -1020,136 +1038,163 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getClob(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Array getArray(int columnIndex) throws SQLException {
         return delegate.getArray(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
         return delegate.getObject(columnLabel, map);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Ref getRef(String columnLabel) throws SQLException {
         return delegate.getRef(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
         return delegate.getBlob(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
         return delegate.getClob(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Array getArray(String columnLabel) throws SQLException {
         return delegate.getArray(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Date getDate(int columnIndex, Calendar cal) throws SQLException {
         return delegate.getDate(columnIndex, cal);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
         return delegate.getDate(columnLabel, cal);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Time getTime(int columnIndex, Calendar cal) throws SQLException {
         return delegate.getTime(columnIndex, cal);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Time getTime(String columnLabel, Calendar cal) throws SQLException {
         return delegate.getTime(columnLabel, cal);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
         return delegate.getTimestamp(columnIndex, cal);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
         return delegate.getTimestamp(columnLabel, cal);
     }
 
+    /** {@inheritDoc} */
     @Override
     public URL getURL(int columnIndex) throws SQLException {
         return delegate.getURL(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public URL getURL(String columnLabel) throws SQLException {
         return delegate.getURL(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateRef(int columnIndex, Ref x) throws SQLException {
         delegate.updateRef(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateRef(String columnLabel, Ref x) throws SQLException {
         delegate.updateRef(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBlob(int columnIndex, Blob x) throws SQLException {
         delegate.updateBlob(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBlob(String columnLabel, Blob x) throws SQLException {
         delegate.updateBlob(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateClob(int columnIndex, Clob x) throws SQLException {
         delegate.updateClob(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateClob(String columnLabel, Clob x) throws SQLException {
         delegate.updateClob(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateArray(int columnIndex, Array x) throws SQLException {
         delegate.updateArray(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateArray(String columnLabel, Array x) throws SQLException {
         delegate.updateArray(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public RowId getRowId(int columnIndex) throws SQLException {
         return delegate.getRowId(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public RowId getRowId(String columnLabel) throws SQLException {
         return delegate.getRowId(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateRowId(int columnIndex, RowId x) throws SQLException {
         delegate.updateRowId(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateRowId(String columnLabel, RowId x) throws SQLException {
         delegate.updateRowId(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int getHoldability() throws SQLException {
         return delegate.getHoldability();
@@ -1163,211 +1208,253 @@ final class ResultSetProxy implements ResultSet {
         return delegate.isClosed();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNString(int columnIndex, String nString) throws SQLException {
         delegate.updateNString(columnIndex, nString);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNString(String columnLabel, String nString) throws SQLException {
         delegate.updateNString(columnLabel, nString);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
         delegate.updateNClob(columnIndex, nClob);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
         delegate.updateNClob(columnLabel, nClob);
     }
 
+    /** {@inheritDoc} */
     @Override
     public NClob getNClob(int columnIndex) throws SQLException {
         return delegate.getNClob(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
         return delegate.getNClob(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public SQLXML getSQLXML(int columnIndex) throws SQLException {
         return delegate.getSQLXML(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public SQLXML getSQLXML(String columnLabel) throws SQLException {
         return delegate.getSQLXML(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
         delegate.updateSQLXML(columnIndex, xmlObject);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
         delegate.updateSQLXML(columnLabel, xmlObject);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getNString(int columnIndex) throws SQLException {
         return delegate.getNString(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public String getNString(String columnLabel) throws SQLException {
         return delegate.getNString(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Reader getNCharacterStream(int columnIndex) throws SQLException {
         return delegate.getNCharacterStream(columnIndex);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Reader getNCharacterStream(String columnLabel) throws SQLException {
         return delegate.getNCharacterStream(columnLabel);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
         delegate.updateNCharacterStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
         delegate.updateNCharacterStream(columnLabel, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
         delegate.updateAsciiStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
         delegate.updateBinaryStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
         delegate.updateCharacterStream(columnIndex, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
         delegate.updateAsciiStream(columnLabel, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
         delegate.updateBinaryStream(columnLabel, x, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
         delegate.updateCharacterStream(columnLabel, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
         delegate.updateBlob(columnIndex, inputStream, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
         delegate.updateBlob(columnLabel, inputStream, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
         delegate.updateClob(columnIndex, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
         delegate.updateClob(columnLabel, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
         delegate.updateNClob(columnIndex, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
         delegate.updateNClob(columnLabel, reader, length);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
         delegate.updateNCharacterStream(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
         delegate.updateNCharacterStream(columnLabel, reader);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
         delegate.updateAsciiStream(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
         delegate.updateBinaryStream(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
         delegate.updateCharacterStream(columnIndex, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
         delegate.updateAsciiStream(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
         delegate.updateBinaryStream(columnLabel, x);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
         delegate.updateCharacterStream(columnLabel, reader);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
         delegate.updateBlob(columnIndex, inputStream);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
         delegate.updateBlob(columnLabel, inputStream);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateClob(int columnIndex, Reader reader) throws SQLException {
         delegate.updateClob(columnIndex, reader);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateClob(String columnLabel, Reader reader) throws SQLException {
         delegate.updateClob(columnLabel, reader);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNClob(int columnIndex, Reader reader) throws SQLException {
         delegate.updateNClob(columnIndex, reader);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void updateNClob(String columnLabel, Reader reader) throws SQLException {
         delegate.updateNClob(columnLabel, reader);
