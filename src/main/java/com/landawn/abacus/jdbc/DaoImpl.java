@@ -187,7 +187,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li><b>Result Caching:</b> Method-level caching with {@code @CacheResult} and {@code @RefreshCache}</li>
  *   <li><b>Batch Operations:</b> Support for batch inserts, updates, and deletes</li>
  *   <li><b>Stored Procedures:</b> Execution of database stored procedures with OUT parameters</li>
- *   <li><b>SQL SqlFragments:</b> Reusable SQL snippets through {@code @SqlFragment} and {@code @SqlFragmentList}</li>
+ *   <li><b>SQL Fragments:</b> Reusable SQL snippets through {@code @SqlFragment} and {@code @SqlFragmentList}</li>
  * </ul>
  *
  * <p><b>Design Pattern:</b></p>
@@ -220,7 +220,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 final class DaoImpl {
 
     private DaoImpl() {
-        // singleton for utility class.
+        // utility class - prevent instantiation.
     }
 
     private static final Set<String> SUPPORTED_TRANSFER_FOR_CACHE = N.asSet("none", "kryo", "json");

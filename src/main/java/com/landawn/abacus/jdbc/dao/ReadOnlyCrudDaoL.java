@@ -19,26 +19,21 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A read-only CRUD (Create, Read, Update, Delete) Data Access Object interface specifically
- * designed for entities with {@code Long} type primary keys. This interface combines
- * {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDaoL} to provide a complete read-only
- * DAO implementation for entities using Long identifiers.
+ * Read-only CRUD DAO for entities with {@code Long} primary keys.
+ * This interface combines {@link ReadOnlyCrudDao} and {@link NoUpdateCrudDaoL} to provide
+ * a complete read-only DAO with convenient primitive {@code long} ID support.
  *
- * <p>This interface provides convenience methods that accept primitive {@code long} values
- * for ID parameters, making it more convenient than using {@code Long} objects while
- * enforcing complete read-only access to the database.</p>
- *
- * <p>All mutation operations (insert, update, delete) inherited from the parent interfaces
- * will throw {@link UnsupportedOperationException}, while read operations remain functional.
+ * <p>All mutation operations (insert, update, delete, upsert) inherited from the parent interfaces
+ * throw {@link UnsupportedOperationException}, while read operations remain fully functional.
  * This is ideal for:</p>
  * <ul>
- *   <li>Read-only database connections with Long ID entities</li>
+ *   <li>Read-only database connections with {@code Long} ID entities</li>
  *   <li>Reporting systems that query numeric ID-based tables</li>
  *   <li>Data warehouses where modification is strictly prohibited</li>
- *   <li>Public APIs that provide read-only access to Long ID entities</li>
+ *   <li>Public APIs that provide read-only access to {@code Long} ID entities</li>
  * </ul>
  *
- * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -69,8 +64,9 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyCrudDao
  * @see NoUpdateCrudDaoL
  * @see CrudDaoL

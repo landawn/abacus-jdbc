@@ -322,8 +322,6 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null}.
-     * This is typically used for BLOB data.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -343,14 +341,13 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
      * This is a convenience method that accepts a primitive long ID.
-     * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", 123L, BigDecimal.class);
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the type of the property value to retrieve
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -373,7 +370,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Optional<String> nickname = userDao.queryForSingleNonNull("nickname", 123L, String.class);
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the type of the property value to retrieve
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -389,7 +386,6 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
     /**
      * Queries for a single non-null value using a custom row mapper.
      * This is a convenience method that accepts a primitive long ID.
-     * This allows for complex transformations of the result.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -400,10 +396,10 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * );
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the type of the property value to retrieve
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @param rowMapper the custom mapper to transform the result
+     * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped non-null value if found, otherwise empty
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -425,7 +421,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Nullable<String> uniqueCode = userDao.queryForUniqueResult("code", 123L, String.class);
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the type of the property value to retrieve
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -450,7 +446,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * Optional<Integer> level = userDao.queryForUniqueNonNull("level", 123L, Integer.class);
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the type of the property value to retrieve
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param targetValueType the class of the value type to convert to
@@ -478,10 +474,10 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * );
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the type of the property value to retrieve
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
-     * @param rowMapper the custom mapper to transform the result
+     * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs

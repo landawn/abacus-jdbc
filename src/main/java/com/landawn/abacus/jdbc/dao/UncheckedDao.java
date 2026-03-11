@@ -837,7 +837,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the non-null mapped value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleNonNull(Class)
+     * @see #queryForSingleNonNull(String, Condition, Class)
      */
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -911,7 +911,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @return an Optional containing the unique non-null mapped value, or empty if no match found
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueNonNull(Class)
+     * @see #queryForUniqueNonNull(String, Condition, Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)

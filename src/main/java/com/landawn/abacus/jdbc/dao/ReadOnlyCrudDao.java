@@ -22,11 +22,11 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A completely read-only CRUD Data Access Object interface that prevents all data modification operations.
+ * Completely read-only CRUD DAO that prevents all data modification operations.
  * This interface extends both {@link ReadOnlyDao} and {@link NoUpdateCrudDao}, providing the most
  * restrictive DAO implementation where only read operations are permitted.
  *
- * <p>All insert, update, delete, and upsert operations will throw {@link UnsupportedOperationException}.
+ * <p>All insert, update, delete, and upsert operations throw {@link UnsupportedOperationException}.
  * This interface is ideal for:</p>
  * <ul>
  *   <li>Read-only database connections</li>
@@ -37,18 +37,18 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p><b>Supported Read Operations:</b></p>
  * <ul>
- *   <li>{@code get(ID)} / {@code gett(ID)} - Retrieve entity by ID (returns Optional or null)</li>
+ *   <li>{@code get(ID)} / {@code gett(ID)} - Retrieve entity by ID (returns {@code Optional} or {@code null})</li>
  *   <li>{@code list(Condition)} - Query multiple records matching a condition</li>
  *   <li>{@code findFirst(Condition)} - Find the first record matching a condition</li>
- *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws exception if multiple found)</li>
+ *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws if multiple found)</li>
  *   <li>{@code count(Condition)} - Count records matching a condition</li>
  *   <li>{@code exists(Condition)} - Check if any records match a condition</li>
  *   <li>{@code queryForBoolean/Int/Long/String(propName, ID)} - Query single column value by ID</li>
  *   <li>{@code queryForSingleResult(propName, ID, Class)} - Query single property value by ID</li>
- *   <li>{@code prepareQuery(String)} - Prepare SELECT queries for execution</li>
+ *   <li>{@code prepareQuery(String)} - Prepare {@code SELECT} queries for execution</li>
  * </ul>
  *
- * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -98,9 +98,10 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <ID> the ID type of the entity
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <ID> the type of the entity's primary key
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyDao
  * @see NoUpdateCrudDao
  * @see com.landawn.abacus.query.Filters
@@ -111,13 +112,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
         extends ReadOnlyDao<T, SB, TD>, NoUpdateCrudDao<T, ID, SB, TD> {
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToInsert the entity to insert (ignored)
+     * @param entityToInsert the entity to insert
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -126,14 +126,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entityToInsert the entity to insert (ignored)
-     * @param propNamesToInsert the property names to include in the INSERT statement (ignored)
+     * @param entityToInsert the entity to insert
+     * @param propNamesToInsert the property names to include in the {@code INSERT} statement
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -142,14 +141,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSql the named parameter SQL insert statement (ignored)
-     * @param entityToSave the entity whose properties will be bound to the named parameters (ignored)
+     * @param namedInsertSql the named parameter SQL insert statement
+     * @param entityToSave the entity whose properties are bound to the named parameters
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -158,13 +156,12 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entities the collection of entities to insert (ignored)
+     * @param entities the collection of entities to insert
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -173,14 +170,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entities the collection of entities to insert (ignored)
-     * @param batchSize the number of entities to process in each batch (ignored)
+     * @param entities the collection of entities to insert
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -189,14 +185,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entities the collection of entities to insert (ignored)
-     * @param propNamesToInsert the property names to include in the INSERT statement (ignored)
+     * @param entities the collection of entities to insert
+     * @param propNamesToInsert the property names to include in the {@code INSERT} statement
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -205,15 +200,14 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entities the collection of entities to insert (ignored)
-     * @param propNamesToInsert the property names to include in the INSERT statement (ignored)
-     * @param batchSize the number of entities to process in each batch (ignored)
+     * @param entities the collection of entities to insert
+     * @param propNamesToInsert the property names to include in the {@code INSERT} statement
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -223,14 +217,13 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSql the named parameter SQL insert statement (ignored)
-     * @param entities the collection of entities whose properties will be bound to the named parameters (ignored)
+     * @param namedInsertSql the named parameter SQL insert statement
+     * @param entities the collection of entities whose properties are bound to the named parameters
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override
@@ -239,15 +232,14 @@ public interface ReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends ReadOn
     }
 
     /**
-     * This operation is not supported in read-only mode.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param namedInsertSql the named parameter SQL insert statement (ignored)
-     * @param entities the collection of entities whose properties will be bound to the named parameters (ignored)
-     * @param batchSize the number of entities to process in each batch (ignored)
+     * @param namedInsertSql the named parameter SQL insert statement
+     * @param entities the collection of entities whose properties are bound to the named parameters
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as insert operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always, since inserts are not permitted in read-only mode
+     * @deprecated Unsupported in {@code ReadOnlyCrudDao}. All modifications are prohibited.
      */
     @Deprecated
     @Override

@@ -18,14 +18,13 @@ package com.landawn.abacus.jdbc.dao;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A read-only interface for handling join entity operations with CRUD DAOs that use
- * {@code Long} type primary keys. This interface combines {@link ReadOnlyCrudJoinEntityHelper}
- * and {@link CrudJoinEntityHelperL} to provide read-only access to join entity operations
- * specifically for entities with Long identifiers.
+ * Read-only helper for join entity operations in CRUD DAOs with {@code Long} primary keys.
+ * This interface combines {@link ReadOnlyCrudJoinEntityHelper} and {@link CrudJoinEntityHelperL}
+ * to provide read-only access to join entity operations for entities with {@code Long} identifiers.
  *
  * <p>This interface enforces read-only behavior by inheriting from {@link ReadOnlyCrudJoinEntityHelper},
  * which overrides all mutation operations to throw {@link UnsupportedOperationException}.
- * Only read operations for join entities are available through this interface.</p>
+ * Only read and load operations for join entities are available.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -49,18 +48,14 @@ import com.landawn.abacus.query.SqlBuilder;
  * User user = userDao.gett(123L);
  * userDao.loadJoinEntities(user, Role.class);   // Works fine
  *
- * // Delete operations are blocked
- * try {
- *     userDao.deleteJoinEntities(user, Role.class);
- *     // Will throw UnsupportedOperationException
- * } catch (UnsupportedOperationException e) {
- *     // Expected - this is a read-only interface
- * }
+ * // Delete operations throw UnsupportedOperationException
+ * userDao.deleteJoinEntities(user, Role.class);   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the DAO implementation type with Long ID (self-referencing for method chaining)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type with {@code Long} ID (self-referencing generic for fluent method chaining)
  * @see ReadOnlyCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see CrudDaoL

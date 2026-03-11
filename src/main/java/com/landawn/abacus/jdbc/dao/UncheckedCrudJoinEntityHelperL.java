@@ -56,9 +56,9 @@ import com.landawn.abacus.util.u.Optional;
  * allowing for cleaner code without explicit exception handling. Methods may also throw
  * {@link DuplicateResultException} when multiple records are found for a unique query.</p>
  *
- * @param <T> The entity type that this helper manages
+ * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> The self-referential type parameter for the DAO, extending {@link UncheckedCrudDaoL}
+ * @param <TD> the self-referential type parameter for the DAO, extending {@link UncheckedCrudDaoL}
  * @see UncheckedCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see UncheckedCrudDaoL
@@ -84,11 +84,11 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
+     * @param id the primary key value of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
-     * @return An {@link Optional} containing the entity with loaded join entities, or empty if not found
+     * @return an {@link Optional} containing the entity with loaded join entities, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -112,12 +112,12 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * Optional<User> userOnly = userDao.get(123L, false);
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
+     * @param id the primary key value of the entity to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return An {@link Optional} containing the entity, or empty if not found
+     * @return an {@link Optional} containing the entity, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -140,13 +140,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      *     Order.class);
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
-     * @param selectPropNames The properties (columns) to select from the main entity. 
+     * @param id the primary key value of the entity to retrieve
+     * @param selectPropNames the properties (columns) to select from the main entity.
      *                        If {@code null}, all properties are selected
-     * @param joinEntitiesToLoad The class of the join entities to load
-     * @return An {@link Optional} containing the entity with selected properties and loaded join entities
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return an {@link Optional} containing the entity with selected properties and loaded join entities
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -170,13 +170,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      *     Arrays.asList(Order.class, Address.class, PaymentMethod.class));
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
-     * @param selectPropNames The properties (columns) to select from the main entity.
+     * @param id the primary key value of the entity to retrieve
+     * @param selectPropNames the properties (columns) to select from the main entity.
      *                        If {@code null}, all properties are selected
-     * @param joinEntitiesToLoad Collection of join entity classes to load
-     * @return An {@link Optional} containing the entity with selected properties and loaded join entities
+     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @return an {@link Optional} containing the entity with selected properties and loaded join entities
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -204,14 +204,14 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      *     false);   // Don't load join entities
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
-     * @param selectPropNames The properties (columns) to select from the main entity.
+     * @param id the primary key value of the entity to retrieve
+     * @param selectPropNames the properties (columns) to select from the main entity.
      *                        If {@code null}, all properties are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return An {@link Optional} containing the entity with selected properties
+     * @return an {@link Optional} containing the entity with selected properties
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -235,11 +235,11 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
-     * @param joinEntitiesToLoad The class of the join entities to load
-     * @return The entity with loaded join entities, or {@code null} if not found
+     * @param id the primary key value of the entity to retrieve
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the entity with loaded join entities, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -270,11 +270,11 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * User userOnly = userDao.gett(123L, false);
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
-     * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
-     * @return The entity, or {@code null} if not found
+     * @param id the primary key value of the entity to retrieve
+     * @param includeAllJoinEntities if {@code true}, loads all mapped join entities
+     * @return the entity, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -304,13 +304,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
+     * @param id the primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad The class of the join entities to load
-     * @return The entity with selected properties and loaded join entities, or {@code null} if not found
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -345,13 +345,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * }
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
+     * @param id the primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param joinEntitiesToLoad Collection of join entity classes to load
-     * @return The entity with selected properties and loaded join entities, or {@code null} if not found
+     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta
@@ -391,13 +391,13 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      *     false);   // No join entities
      * }</pre>
      *
-     * @param id The primary key value of the entity to retrieve
+     * @param id the primary key value of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                       If {@code null}, all properties of the main entity are selected
-     * @param includeAllJoinEntities If {@code true}, loads all mapped join entities
-     * @return The entity with selected properties, or {@code null} if not found
+     * @param includeAllJoinEntities if {@code true}, loads all mapped join entities
+     * @return the entity with selected properties, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws UncheckedSQLException If any SQL error occurs during the operation
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     @Beta

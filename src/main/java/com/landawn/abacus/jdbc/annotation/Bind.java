@@ -30,7 +30,6 @@ import java.lang.annotation.Target;
  * <ul>
  *   <li>Simple types (String, Integer, Date, etc.)</li>
  *   <li>Entity objects (properties are accessible via dot notation)</li>
- *   <li>Collections (for use with {@link BindList})</li>
  *   <li>Complex nested objects</li>
  * </ul>
  * 
@@ -107,13 +106,6 @@ public @interface Bind {
      * List<Order> findOrders(@Bind("customer") Customer customer, @Bind("orderStatus") String status);
      * }</pre>
      * 
-     * <p>Best practices:</p>
-     * <ul>
-     *   <li>Use descriptive parameter names for clarity</li>
-     *   <li>Be consistent with naming conventions</li>
-     *   <li>Consider using explicit names for better refactoring support</li>
-     * </ul>
-     *
      * @return the parameter name, or empty string if using the actual parameter name
      */
     String value() default "";

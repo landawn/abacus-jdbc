@@ -24,9 +24,9 @@ import com.landawn.abacus.query.SqlBuilder;
 import com.landawn.abacus.query.condition.Condition;
 
 /**
- * A CRUD Data Access Object interface that disables update and delete operations while allowing read and insert operations.
+ * CRUD DAO that disables update and delete operations while permitting read and insert operations.
  * This interface extends both {@link NoUpdateDao} and {@link CrudDao}, effectively creating a DAO that can only
- * read existing records and insert new ones, but cannot modify or delete existing records.
+ * read existing records and insert new ones, but cannot modify or remove existing records.
  *
  * <p>This pattern is particularly useful for:</p>
  * <ul>
@@ -36,7 +36,7 @@ import com.landawn.abacus.query.condition.Condition;
  *   <li>Enforcing data integrity by preventing updates at the DAO level</li>
  * </ul>
  *
- * <p>All update, upsert, and delete operations will throw {@link UnsupportedOperationException}.
+ * <p>All update, upsert, and delete operations throw {@link UnsupportedOperationException}.
  * Read operations (find, exists, query) and insert operations remain functional.</p>
  *
  * <p><b>Supported Operations:</b></p>
@@ -45,10 +45,10 @@ import com.landawn.abacus.query.condition.Condition;
  *   <li><b>Query Operations:</b> {@code list(Condition)}, {@code findFirst(Condition)}, {@code findOnlyOne(Condition)}</li>
  *   <li><b>Aggregate Operations:</b> {@code count(Condition)}, {@code exists(Condition)}</li>
  *   <li><b>Insert Operations:</b> {@code insert(entity)}, {@code batchInsert(entities)}</li>
- *   <li><b>Query Preparation:</b> {@code prepareQuery} and {@code prepareNamedQuery} for SELECT and INSERT</li>
+ *   <li><b>Query Preparation:</b> {@code prepareQuery} and {@code prepareNamedQuery} for {@code SELECT} and {@code INSERT}</li>
  * </ul>
  *
- * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -103,9 +103,10 @@ import com.landawn.abacus.query.condition.Condition;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <ID> the ID type of the entity
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <ID> the type of the entity's primary key
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see NoUpdateDao
  * @see CrudDao
  * @see com.landawn.abacus.query.Filters
@@ -116,13 +117,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
         extends NoUpdateDao<T, SB, TD>, CrudDao<T, ID, SB, TD> {
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entityToUpdate the entity with updated values
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -131,14 +131,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entityToUpdate the entity containing the values to update
-     * @param propNamesToUpdate the property names to update. If {@code null} or empty, all properties will be updated
+     * @param propNamesToUpdate the property names to update; if {@code null} or empty, all properties would be updated
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -147,15 +146,14 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
      * @param id the entity ID to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Override
     @Deprecated
@@ -164,14 +162,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param updateProps a map of property names to their new values
      * @param id the entity ID to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -180,13 +177,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -195,15 +191,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to update
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -212,14 +206,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -228,16 +221,14 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -247,13 +238,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity to upsert
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Deprecated
     @Override
@@ -262,14 +252,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity to insert or update
-     * @param cond the condition to check if the entity exists
+     * @param cond the condition to check whether the entity already exists
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Deprecated
     @Override
@@ -278,14 +267,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the property names that uniquely identify the entity
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Deprecated
     @Override
@@ -294,13 +282,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to upsert
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Override
     @Deprecated
@@ -309,15 +296,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to upsert
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Override
     @Deprecated
@@ -326,14 +311,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Override
     @Deprecated
@@ -342,16 +326,14 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as upserts are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch upserts are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Upserts are not allowed.
      */
     @Override
     @Deprecated
@@ -361,13 +343,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param entity the entity to delete (must have ID populated)
+     * @param entity the entity to delete (must have its ID populated)
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override
@@ -376,13 +357,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param id the entity ID to delete
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override
@@ -391,13 +371,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to delete
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override
@@ -406,15 +385,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param entities the collection of entities to delete
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
+     * @param batchSize the number of entities to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override
@@ -423,13 +400,12 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param ids the collection of IDs to delete
+     * @param ids the collection of entity IDs to delete
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override
@@ -438,14 +414,13 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param ids the collection of IDs to delete
-     * @param batchSize the number of IDs to process in each batch
+     * @param ids the collection of entity IDs to delete
+     * @param batchSize the number of IDs to process per batch
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since batch deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDao}. Deletes are not allowed.
      */
     @Deprecated
     @Override

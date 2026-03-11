@@ -21,27 +21,25 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A CRUD Data Access Object interface for entities with {@code Long} type primary keys
- * that disables update and delete operations while allowing read and insert operations. This interface extends both
- * {@link NoUpdateCrudDao} and {@link CrudDaoL}, providing read and insert operations
- * while blocking update and delete functionality.
+ * CRUD DAO for entities with {@code Long} primary keys that disables update and delete operations.
+ * This interface extends both {@link NoUpdateCrudDao} and {@link CrudDaoL}, providing
+ * read and insert operations while blocking update and delete functionality.
  *
  * <p>This interface combines the convenience of primitive {@code long} ID support from
  * {@link CrudDaoL} with the safety guarantees of {@link NoUpdateCrudDao}, making it ideal
  * for append-only data stores with numeric identifiers.</p>
  *
- * <p>This interface is useful when you want to create a DAO that can read and insert
- * records but cannot modify or delete existing records. All update and delete methods
- * throw {@link UnsupportedOperationException}. This is particularly beneficial for:</p>
+ * <p>All update and delete methods throw {@link UnsupportedOperationException}.
+ * This is particularly beneficial for:</p>
  * <ul>
  *   <li>Audit trail systems where historical records must be immutable</li>
- *   <li>Event sourcing patterns with Long ID events</li>
+ *   <li>Event sourcing patterns with {@code Long} ID events</li>
  *   <li>Log aggregation systems that only append new entries</li>
  *   <li>Transaction records that should never be modified once created</li>
  *   <li>Time-series data where updates would compromise data integrity</li>
  * </ul>
  *
- * <p>This interface is marked as {@code @Beta}, indicating it may be subject to
+ * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -81,8 +79,9 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see NoUpdateCrudDao
  * @see CrudDaoL
  * @see com.landawn.abacus.query.Filters
@@ -93,15 +92,14 @@ public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateC
         extends NoUpdateCrudDao<T, Long, SB, TD>, CrudDaoL<T, SB, TD> {
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
-     * @param id the primitive long ID of the entity to update
+     * @param id the primitive {@code long} ID of the entity to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDaoL}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -110,14 +108,13 @@ public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateC
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
      * @param updateProps a map of property names to their new values
-     * @param id the primitive long ID of the entity to update
+     * @param id the primitive {@code long} ID of the entity to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as updates are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDaoL}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -126,13 +123,12 @@ public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateC
     }
 
     /**
-     * This operation is not supported in no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
      *
-     * @param id the primitive long ID of the entity to delete
+     * @param id the primitive {@code long} ID of the entity to delete
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as deletes are not supported
-     * @deprecated This operation is not supported in no-update DAO
+     * @throws UnsupportedOperationException always, since deletes are not permitted
+     * @deprecated Unsupported in {@code NoUpdateCrudDaoL}. Deletes are not allowed.
      */
     @Deprecated
     @Override

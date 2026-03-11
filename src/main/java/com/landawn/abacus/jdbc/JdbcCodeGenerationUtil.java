@@ -93,21 +93,20 @@ import lombok.experimental.Accessors;
 public final class JdbcCodeGenerationUtil {
 
     /**
-     * Default name of class for field/prop names.
-     * This constant is typically used when generating static field name constants.
+     * Default name of the inner class for static field/property name constants.
+     * Used when generating entity classes that include a nested class with string constants for field names.
      */
     public static final String S = "s";
 
     /**
-     * Default name of class for function field/prop names.
-     * This constant is typically used when generating functional field name constants.
+     * Default name of the inner class for functional field/property name constants.
+     * Used when generating entity classes that include a nested class with functional-style field references.
      */
     public static final String SF = "sf";
 
     /**
-     * Default name of inner class for field names inside an entity class.
-     * This inner class is used to hold string constants representing field names,
-     * providing type-safe field references.
+     * Default name of the inner class for typed field accessor constants inside a generated entity class.
+     * This inner class holds typed accessor constants providing compile-time safe field references.
      */
     public static final String X = "x";
 
@@ -192,7 +191,7 @@ public final class JdbcCodeGenerationUtil {
             "short", "Integer", "int", "Long", "long", "Float", "float", "Double", "double"));
 
     private JdbcCodeGenerationUtil() {
-        // singleton.
+        // utility class - prevent instantiation.
     }
 
     /**

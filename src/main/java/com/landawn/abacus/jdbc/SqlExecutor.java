@@ -96,7 +96,7 @@ package com.landawn.abacus.jdbc;
 // Archive for history. Replaced by PreparedQuery and Dao.
 final class SqlExecutor {
     private SqlExecutor() throws IllegalArgumentException {
-        // no use.
+        // archived class - prevent instantiation.
     }
     //
     //    /** The Constant logger. */

@@ -104,7 +104,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return the generated ID
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UnsupportedOperationException if the operation is not supported (default behavior)
-     * @deprecated This operation is deprecated as ID generation should typically be handled by the database
+     * @deprecated ID generation should typically be handled by the database or application layer directly
      */
     @Deprecated
     @NonDBOperation
@@ -615,7 +615,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the non-null mapped value, or empty if no entity found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleNonNull(Class)
+     * @see #queryForSingleNonNull(String, Object, Class)
      */
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -690,7 +690,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return an Optional containing the unique non-null mapped value, or empty if no entity found
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueNonNull(Class)
+     * @see #queryForUniqueNonNull(String, Object, Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)

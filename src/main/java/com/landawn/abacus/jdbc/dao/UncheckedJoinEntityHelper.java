@@ -83,7 +83,7 @@ import com.landawn.abacus.util.stream.Stream;
  * userDao.loadJoinEntities(user, UserProfile.class);
  * }</pre>
  *
- * @param <T> The entity type that this helper manages
+ * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see com.landawn.abacus.query.Filters
@@ -1793,16 +1793,18 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes join entities for multiple property names of a single entity.
-     * Note: Operations executed in multiple threads won't be completed in a single transaction.
-     * 
+     * Deletes join entities for multiple property names of a single entity using a custom executor.
+     * Note: Operations executed in multiple threads will not be completed in a single transaction.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * ExecutorService executor = Executors.newFixedThreadPool(4);
      * User user = userDao.gett(userId);
-     * // Delete multiple related entities
+     * // Delete multiple related entities in parallel
      * int deleted = userDao.deleteJoinEntities(
      *     user,
-     *     Arrays.asList("orders", "reviews", "wishlistItems")
+     *     Arrays.asList("orders", "reviews", "wishlistItems"),
+     *     executor
      * );
      * }</pre>
      *
@@ -1811,7 +1813,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Beta
     @Deprecated
@@ -1960,7 +1962,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Beta
     @Deprecated
@@ -2043,7 +2045,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Beta
     @Deprecated
@@ -2121,7 +2123,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when it's executed in multiple threads
+     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
      */
     @Beta
     @Deprecated

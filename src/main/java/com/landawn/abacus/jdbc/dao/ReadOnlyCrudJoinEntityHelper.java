@@ -18,14 +18,14 @@ package com.landawn.abacus.jdbc.dao;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A read-only interface for handling join entity operations with CRUD DAOs.
+ * Read-only helper for join entity operations in CRUD DAOs.
  * This interface combines {@link ReadOnlyJoinEntityHelper} and {@link CrudJoinEntityHelper}
  * to provide read-only access to join entity operations for CRUD-based DAOs.
  *
  * <p>This interface is designed for scenarios where you need to read join entity
- * relationships (such as many-to-many relationships) but should not be able to
- * modify them. All delete operations for join entities are disabled and will
- * throw {@link UnsupportedOperationException}.</p>
+ * relationships (such as many-to-many associations) but should not be able to
+ * modify them. All delete operations for join entities are disabled and throw
+ * {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -47,19 +47,15 @@ import com.landawn.abacus.query.SqlBuilder;
  * User user = userDao.gett(1L);
  * userDao.loadJoinEntities(user, "orders");
  *
- * // All delete operations are blocked
- * try {
- *     userDao.deleteJoinEntities(user, Order.class);
- *     // Will throw UnsupportedOperationException
- * } catch (UnsupportedOperationException e) {
- *     // Expected - this is a read-only interface
- * }
+ * // All delete operations throw UnsupportedOperationException
+ * userDao.deleteJoinEntities(user, Order.class);   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <ID> the ID type of the entity
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the DAO implementation type (self-referencing for method chaining)
+ * @param <ID> the type of the entity's primary key
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see ReadOnlyJoinEntityHelper
  * @see CrudJoinEntityHelper
  * @see CrudDao
