@@ -29,6 +29,9 @@ import com.landawn.abacus.TestBase;
 @Tag("2025")
 public class ResultSetProxyTest extends TestBase {
 
+    // TODO: The remaining ResultSetProxy methods are direct ResultSet pass-through wrappers. Add driver-backed integration
+    // tests when a stable fixture is available, because validating the full java.sql.ResultSet contract with mocks is brittle.
+
     // Test wrap() static method
 
     @Test

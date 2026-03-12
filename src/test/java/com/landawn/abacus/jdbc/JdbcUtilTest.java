@@ -65,6 +65,9 @@ import com.landawn.abacus.util.stream.Stream;
 
 public class JdbcUtilTest extends TestBase {
 
+    // TODO: The remaining JdbcUtil overload matrix includes close/skip helpers and large-result query adapters whose
+    // behavior is mostly exercised through shared internals. Add focused fixture-based tests for any uncovered branches.
+
     private DataSource mockDataSource;
     private Connection mockConnection;
     private PreparedStatement mockPreparedStatement;

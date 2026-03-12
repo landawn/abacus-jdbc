@@ -13,40 +13,40 @@ import com.landawn.abacus.TestBase;
 public class FetchDirectionTest extends TestBase {
 
     @Test
-    public void testForwardFetchDirection() {
+    public void testIntValue() {
         assertEquals(ResultSet.FETCH_FORWARD, FetchDirection.FORWARD.intValue());
         assertEquals(ResultSet.FETCH_FORWARD, FetchDirection.FORWARD.intValue);
     }
 
     @Test
-    public void testReverseFetchDirection() {
+    public void testIntValue_Reverse() {
         assertEquals(ResultSet.FETCH_REVERSE, FetchDirection.REVERSE.intValue());
         assertEquals(ResultSet.FETCH_REVERSE, FetchDirection.REVERSE.intValue);
     }
 
     @Test
-    public void testUnknownFetchDirection() {
+    public void testIntValue_Unknown() {
         assertEquals(ResultSet.FETCH_UNKNOWN, FetchDirection.UNKNOWN.intValue());
         assertEquals(ResultSet.FETCH_UNKNOWN, FetchDirection.UNKNOWN.intValue);
     }
 
     @Test
-    public void testValueOfForward() {
+    public void testValueOf() {
         assertEquals(FetchDirection.FORWARD, FetchDirection.valueOf(ResultSet.FETCH_FORWARD));
     }
 
     @Test
-    public void testValueOfReverse() {
+    public void testValueOf_Reverse() {
         assertEquals(FetchDirection.REVERSE, FetchDirection.valueOf(ResultSet.FETCH_REVERSE));
     }
 
     @Test
-    public void testValueOfUnknown() {
+    public void testValueOf_Unknown() {
         assertEquals(FetchDirection.UNKNOWN, FetchDirection.valueOf(ResultSet.FETCH_UNKNOWN));
     }
 
     @Test
-    public void testValueOfInvalidValue() {
+    public void testValueOf_InvalidValue() {
         assertThrows(IllegalArgumentException.class, () -> FetchDirection.valueOf(999));
         assertThrows(IllegalArgumentException.class, () -> FetchDirection.valueOf(-999));
         assertThrows(IllegalArgumentException.class, () -> FetchDirection.valueOf(123));

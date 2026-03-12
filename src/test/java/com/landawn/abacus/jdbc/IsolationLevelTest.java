@@ -13,67 +13,67 @@ import com.landawn.abacus.TestBase;
 public class IsolationLevelTest extends TestBase {
 
     @Test
-    public void testDefaultIsolationLevel() {
+    public void testIntValue() {
         assertEquals(-1, IsolationLevel.DEFAULT.intValue());
     }
 
     @Test
-    public void testNoneIsolationLevel() {
+    public void testIntValue_None() {
         assertEquals(Connection.TRANSACTION_NONE, IsolationLevel.NONE.intValue());
     }
 
     @Test
-    public void testReadUncommittedIsolationLevel() {
+    public void testIntValue_ReadUncommitted() {
         assertEquals(Connection.TRANSACTION_READ_UNCOMMITTED, IsolationLevel.READ_UNCOMMITTED.intValue());
     }
 
     @Test
-    public void testReadCommittedIsolationLevel() {
+    public void testIntValue_ReadCommitted() {
         assertEquals(Connection.TRANSACTION_READ_COMMITTED, IsolationLevel.READ_COMMITTED.intValue());
     }
 
     @Test
-    public void testRepeatableReadIsolationLevel() {
+    public void testIntValue_RepeatableRead() {
         assertEquals(Connection.TRANSACTION_REPEATABLE_READ, IsolationLevel.REPEATABLE_READ.intValue());
     }
 
     @Test
-    public void testSerializableIsolationLevel() {
+    public void testIntValue_Serializable() {
         assertEquals(Connection.TRANSACTION_SERIALIZABLE, IsolationLevel.SERIALIZABLE.intValue());
     }
 
     @Test
-    public void testValueOfDefault() {
+    public void testValueOf() {
         assertEquals(IsolationLevel.DEFAULT, IsolationLevel.valueOf(-1));
     }
 
     @Test
-    public void testValueOfNone() {
+    public void testValueOf_None() {
         assertEquals(IsolationLevel.NONE, IsolationLevel.valueOf(Connection.TRANSACTION_NONE));
     }
 
     @Test
-    public void testValueOfReadUncommitted() {
+    public void testValueOf_ReadUncommitted() {
         assertEquals(IsolationLevel.READ_UNCOMMITTED, IsolationLevel.valueOf(Connection.TRANSACTION_READ_UNCOMMITTED));
     }
 
     @Test
-    public void testValueOfReadCommitted() {
+    public void testValueOf_ReadCommitted() {
         assertEquals(IsolationLevel.READ_COMMITTED, IsolationLevel.valueOf(Connection.TRANSACTION_READ_COMMITTED));
     }
 
     @Test
-    public void testValueOfRepeatableRead() {
+    public void testValueOf_RepeatableRead() {
         assertEquals(IsolationLevel.REPEATABLE_READ, IsolationLevel.valueOf(Connection.TRANSACTION_REPEATABLE_READ));
     }
 
     @Test
-    public void testValueOfSerializable() {
+    public void testValueOf_Serializable() {
         assertEquals(IsolationLevel.SERIALIZABLE, IsolationLevel.valueOf(Connection.TRANSACTION_SERIALIZABLE));
     }
 
     @Test
-    public void testValueOfInvalidValue() {
+    public void testValueOf_InvalidValue() {
         assertThrows(IllegalArgumentException.class, () -> IsolationLevel.valueOf(999));
         assertThrows(IllegalArgumentException.class, () -> IsolationLevel.valueOf(-999));
     }

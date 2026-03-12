@@ -17,6 +17,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,11 +30,138 @@ import com.landawn.abacus.TestBase;
 @Tag("2025")
 public class TransactionTest extends TestBase {
 
+    private static final class StubTransaction implements Transaction {
+        private final String id;
+        private final IsolationLevel isolationLevel;
+        private Status status;
+
+        private boolean commitCalled;
+        private boolean rollbackCalled;
+        private boolean rollbackIfNotCommittedCalled;
+
+        StubTransaction(final String id, final IsolationLevel isolationLevel, final Status status) {
+            this.id = id;
+            this.isolationLevel = isolationLevel;
+            this.status = status;
+        }
+
+        @Override
+        public String id() {
+            return id;
+        }
+
+        @Override
+        public IsolationLevel isolationLevel() {
+            return isolationLevel;
+        }
+
+        @Override
+        public Status status() {
+            return status;
+        }
+
+        @Override
+        public boolean isActive() {
+            return status == Status.ACTIVE;
+        }
+
+        @Override
+        public void commit() {
+            commitCalled = true;
+            status = Status.COMMITTED;
+        }
+
+        @Override
+        public void rollback() {
+            rollbackCalled = true;
+            status = Status.ROLLED_BACK;
+        }
+
+        @Override
+        public void rollbackIfNotCommitted() {
+            rollbackIfNotCommittedCalled = true;
+            if (status != Status.COMMITTED) {
+                status = Status.ROLLED_BACK;
+            }
+        }
+    }
+
+    @Test
+    public void testId() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.ACTIVE);
+
+        assertEquals("txn-1", transaction.id());
+    }
+
+    @Test
+    public void testIsolationLevel() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.SERIALIZABLE, Transaction.Status.ACTIVE);
+
+        assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+    }
+
+    @Test
+    public void testStatus() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.MARKED_ROLLBACK);
+
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+    }
+
+    @Test
+    public void testIsActive() {
+        assertTrue(new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.ACTIVE).isActive());
+    }
+
+    @Test
+    public void testIsActive_InactiveStatus() {
+        assertFalse(new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.COMMITTED).isActive());
+    }
+
+    @Test
+    public void testCommit() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.ACTIVE);
+
+        transaction.commit();
+
+        assertTrue(transaction.commitCalled);
+        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+    }
+
+    @Test
+    public void testRollback() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.ACTIVE);
+
+        transaction.rollback();
+
+        assertTrue(transaction.rollbackCalled);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+    }
+
+    @Test
+    public void testRollbackIfNotCommitted() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.ACTIVE);
+
+        transaction.rollbackIfNotCommitted();
+
+        assertTrue(transaction.rollbackIfNotCommittedCalled);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+    }
+
+    @Test
+    public void testRollbackIfNotCommitted_CommittedTransaction() {
+        final StubTransaction transaction = new StubTransaction("txn-1", IsolationLevel.READ_COMMITTED, Transaction.Status.COMMITTED);
+
+        transaction.rollbackIfNotCommitted();
+
+        assertTrue(transaction.rollbackIfNotCommittedCalled);
+        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+    }
+
     // Tests for Transaction.Status enum
 
     @Test
     public void testStatusValues() {
-        Transaction.Status[] values = Transaction.Status.values();
+        final Transaction.Status[] values = Transaction.Status.values();
         assertNotNull(values);
         assertEquals(6, values.length);
     }
@@ -101,7 +229,7 @@ public class TransactionTest extends TestBase {
 
     @Test
     public void testStatusRoundTripName() {
-        for (Transaction.Status status : Transaction.Status.values()) {
+        for (final Transaction.Status status : Transaction.Status.values()) {
             assertEquals(status, Transaction.Status.valueOf(status.name()));
         }
     }
@@ -110,7 +238,7 @@ public class TransactionTest extends TestBase {
 
     @Test
     public void testActionValues() {
-        Transaction.Action[] values = Transaction.Action.values();
+        final Transaction.Action[] values = Transaction.Action.values();
         assertNotNull(values);
         assertEquals(2, values.length);
     }
@@ -165,7 +293,7 @@ public class TransactionTest extends TestBase {
 
     @Test
     public void testActionRoundTripName() {
-        for (Transaction.Action action : Transaction.Action.values()) {
+        for (final Transaction.Action action : Transaction.Action.values()) {
             assertEquals(action, Transaction.Action.valueOf(action.name()));
         }
     }

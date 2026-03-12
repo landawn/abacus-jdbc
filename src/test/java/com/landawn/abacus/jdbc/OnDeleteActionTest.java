@@ -32,44 +32,44 @@ public class OnDeleteActionTest extends TestBase {
 
     // Test value() method for each enum constant
     @Test
-    public void testValueNoAction() {
+    public void testValue() {
         assertEquals(0, OnDeleteAction.NO_ACTION.value());
     }
 
     @Test
-    public void testValueSetNull() {
+    public void testValue_SetNull() {
         assertEquals(1, OnDeleteAction.SET_NULL.value());
     }
 
     @Test
-    public void testValueCascade() {
+    public void testValue_Cascade() {
         assertEquals(2, OnDeleteAction.CASCADE.value());
     }
 
     // Test get(String) method - case insensitive
     @Test
-    public void testGetNoAction() {
+    public void testGet() {
         assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.get("noAction"));
         assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.get("NOACTION"));
         assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.get("NoAction"));
     }
 
     @Test
-    public void testGetSetNull() {
+    public void testGet_SetNull() {
         assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.get("setNull"));
         assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.get("SETNULL"));
         assertEquals(OnDeleteAction.SET_NULL, OnDeleteAction.get("SetNull"));
     }
 
     @Test
-    public void testGetCascade() {
+    public void testGet_Cascade() {
         assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("cascade"));
         assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("CASCADE"));
         assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("Cascade"));
     }
 
     @Test
-    public void testGetInvalid() {
+    public void testGet_InvalidValue() {
         assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get("invalid"));
         assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get(""));
         assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get("delete"));

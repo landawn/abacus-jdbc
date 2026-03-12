@@ -31,7 +31,7 @@ public class DBVersionTest extends TestBase {
 
     // Test isMySQL() method
     @Test
-    public void testIsMySQLForMySQLVersions() {
+    public void testIsMySQL() {
         assertTrue(DBVersion.MySQL_5_5.isMySQL());
         assertTrue(DBVersion.MySQL_5_6.isMySQL());
         assertTrue(DBVersion.MySQL_5_7.isMySQL());
@@ -46,7 +46,7 @@ public class DBVersionTest extends TestBase {
     }
 
     @Test
-    public void testIsMySQLForNonMySQLVersions() {
+    public void testIsMySQL_NonMySQLVersions() {
         assertFalse(DBVersion.H2.isMySQL());
         assertFalse(DBVersion.HSQLDB.isMySQL());
         assertFalse(DBVersion.MariaDB.isMySQL());
@@ -61,7 +61,7 @@ public class DBVersionTest extends TestBase {
 
     // Test isPostgreSQL() method
     @Test
-    public void testIsPostgreSQLForPostgreSQLVersions() {
+    public void testIsPostgreSQL() {
         assertTrue(DBVersion.PostgreSQL_9_2.isPostgreSQL());
         assertTrue(DBVersion.PostgreSQL_9_3.isPostgreSQL());
         assertTrue(DBVersion.PostgreSQL_9_4.isPostgreSQL());
@@ -74,7 +74,7 @@ public class DBVersionTest extends TestBase {
     }
 
     @Test
-    public void testIsPostgreSQLForNonPostgreSQLVersions() {
+    public void testIsPostgreSQL_NonPostgreSQLVersions() {
         assertFalse(DBVersion.H2.isPostgreSQL());
         assertFalse(DBVersion.HSQLDB.isPostgreSQL());
         assertFalse(DBVersion.MySQL_5_7.isPostgreSQL());

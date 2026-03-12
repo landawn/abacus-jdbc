@@ -27,6 +27,9 @@ import com.landawn.abacus.TestBase;
 @Tag("2025")
 public class JoinInfoTest extends TestBase {
 
+    // TODO: The remaining JoinInfo SQL-plan builders depend on large internal metadata graphs. Add focused fixture-based
+    // tests when stable join-metadata builders are available so the placement stays in JoinInfoTest.
+
     // Test static sql builder function map
 
     @Test

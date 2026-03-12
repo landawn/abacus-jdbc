@@ -53,6 +53,9 @@ import com.landawn.abacus.util.ImmutableList;
 
 public class NamedQueryTest extends TestBase {
 
+    // TODO: The remaining NamedQuery setter overload matrix mirrors AbstractQuery parameter binding behavior. Add
+    // targeted tests only when a stable statement fixture is needed beyond the representative coverage already here.
+
     @Mock
     private PreparedStatement mockPreparedStatement;
 
