@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -676,6 +677,7 @@ public class JdbcUtilsTest extends TestBase {
 
         // Execute
         Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = JdbcUtils.createParamSetter(columnGetter);
+        assertNotNull(setter);
         setter.accept(preparedQuery, mockResultSet);
 
         // Verify

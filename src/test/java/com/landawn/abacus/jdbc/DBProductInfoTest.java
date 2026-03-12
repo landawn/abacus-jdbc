@@ -26,7 +26,7 @@ public class DBProductInfoTest extends TestBase {
     }
 
     @Test
-    public void testNoArgsConstructor() {
+    public void testNullValues() {
         DBProductInfo dbInfo = new DBProductInfo(null, null, null);
 
         assertNull(dbInfo.productName());
@@ -56,22 +56,42 @@ public class DBProductInfoTest extends TestBase {
     }
 
     @Test
-    public void testToString() {
-        DBProductInfo dbInfo = new DBProductInfo("H2", "2.1.214", DBVersion.H2);
-        String toString = dbInfo.toString();
+    public void testEqualsDetectsDifferentComponents() {
+        DBProductInfo mysqlInfo = new DBProductInfo("MySQL", "8.0.33", DBVersion.MySQL_8);
 
-        assertNotNull(toString);
-        assertTrue(toString.contains("H2"));
-        assertTrue(toString.contains("2.1.214"));
-        assertTrue(toString.contains("H2"));
+        assertNotEquals(mysqlInfo, new DBProductInfo("PostgreSQL", "8.0.33", DBVersion.MySQL_8));
+        assertNotEquals(mysqlInfo, new DBProductInfo("MySQL", "8.0.34", DBVersion.MySQL_8));
+        assertNotEquals(mysqlInfo, new DBProductInfo("MySQL", "8.0.33", DBVersion.MySQL_9));
+        assertNotEquals(null, mysqlInfo);
+        assertEquals(mysqlInfo, mysqlInfo);
     }
 
     @Test
-    public void testNullValues() {
-        DBProductInfo dbInfo = new DBProductInfo(null, null, null);
+    public void testToString() {
+        DBProductInfo dbInfo = new DBProductInfo("MySQL", "8.0.33", DBVersion.MySQL_8);
+        String toString = dbInfo.toString();
 
-        assertNull(dbInfo.productName());
-        assertNull(dbInfo.productVersion());
-        assertNull(dbInfo.version());
+        assertNotNull(toString);
+        assertTrue(toString.contains("MySQL"));
+        assertTrue(toString.contains("8.0.33"));
+        assertTrue(toString.contains("MySQL_8"));
+    }
+
+    @Test
+    public void testVariousDatabaseTypes() {
+        DBProductInfo mysqlInfo = new DBProductInfo("MySQL", "5.7.42", DBVersion.MySQL_5_7);
+        assertEquals("MySQL", mysqlInfo.productName());
+        assertEquals("5.7.42", mysqlInfo.productVersion());
+        assertEquals(DBVersion.MySQL_5_7, mysqlInfo.version());
+
+        DBProductInfo oracleInfo = new DBProductInfo("Oracle", "19.3.0", DBVersion.Oracle);
+        assertEquals("Oracle", oracleInfo.productName());
+        assertEquals("19.3.0", oracleInfo.productVersion());
+        assertEquals(DBVersion.Oracle, oracleInfo.version());
+
+        DBProductInfo sqlServerInfo = new DBProductInfo("Microsoft SQL Server", "2019", DBVersion.SQLServer);
+        assertEquals("Microsoft SQL Server", sqlServerInfo.productName());
+        assertEquals("2019", sqlServerInfo.productVersion());
+        assertEquals(DBVersion.SQLServer, sqlServerInfo.version());
     }
 }

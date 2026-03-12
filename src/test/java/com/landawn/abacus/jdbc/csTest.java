@@ -24,12 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for cs class (constants container).
- * Tests all public static final fields.
- */
 @Tag("2025")
-public class cs2025Test extends TestBase {
+public class csTest extends TestBase {
 
     // Test all constant fields exist and have expected values
 
@@ -241,11 +237,6 @@ public class cs2025Test extends TestBase {
 
     @Test
     public void testParametersSetterConstant() {
-        assertEquals("parametersSetter", cs.parametersSetter);
-    }
-
-    @Test
-    public void testParamsSetterConstant() {
         assertEquals("parametersSetter", cs.parametersSetter);
     }
 
@@ -493,7 +484,6 @@ public class cs2025Test extends TestBase {
         assertNotNull(cs.orElseAction);
         assertNotNull(cs.parameterNames);
         assertNotNull(cs.parameters);
-        assertNotNull(cs.parametersSetter);
         assertNotNull(cs.parametersSetter);
         assertNotNull(cs.propNamesToRefresh);
         assertNotNull(cs.qualifier);

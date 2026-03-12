@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -141,14 +142,14 @@ public class JdbcTest extends TestBase {
     @Test
     public void testParametersSetterDoNothing() throws SQLException {
         Jdbc.ParametersSetter<Object> setter = Jdbc.ParametersSetter.DO_NOTHING;
-        setter.accept(mockPreparedStatement); // Should do nothing
+        assertDoesNotThrow(() -> setter.accept(mockPreparedStatement));
         verifyNoInteractions(mockPreparedStatement);
     }
 
     @Test
     public void testParametersSetterAccept() throws SQLException {
         Jdbc.ParametersSetter<PreparedStatement> setter = ps -> ps.setString(1, "test");
-        setter.accept(mockPreparedStatement);
+        assertDoesNotThrow(() -> setter.accept(mockPreparedStatement));
         verify(mockPreparedStatement).setString(1, "test");
     }
 
@@ -156,14 +157,14 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiParametersSetterDoNothing() throws SQLException {
         Jdbc.BiParametersSetter<Object, Object> setter = Jdbc.BiParametersSetter.DO_NOTHING;
-        setter.accept(mockPreparedStatement, "param");
+        assertDoesNotThrow(() -> setter.accept(mockPreparedStatement, "param"));
         verifyNoInteractions(mockPreparedStatement);
     }
 
     @Test
     public void testBiParametersSetterAccept() throws SQLException {
         Jdbc.BiParametersSetter<PreparedStatement, String> setter = (ps, param) -> ps.setString(1, param);
-        setter.accept(mockPreparedStatement, "test");
+        assertDoesNotThrow(() -> setter.accept(mockPreparedStatement, "test"));
         verify(mockPreparedStatement).setString(1, "test");
     }
 
@@ -171,9 +172,10 @@ public class JdbcTest extends TestBase {
     public void testBiParametersSetterCreateForArray() throws SQLException {
         List<String> fields = Arrays.asList("name", "age");
         Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.createForArray(fields, TestEntity.class);
+        assertNotNull(setter);
 
         Object[] params = new Object[] { "John", 25 };
-        setter.accept(mockPreparedStatement, params);
+        assertDoesNotThrow(() -> setter.accept(mockPreparedStatement, params));
 
         verify(mockPreparedStatement, times(1)).setString(anyInt(), any());
         verify(mockPreparedStatement, times(1)).setInt(anyInt(), anyInt());

@@ -26,13 +26,9 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for OnDeleteAction enum.
- * Tests all public methods including value(), get(String), and inherited enum methods.
- */
 @Tag("2025")
 @SuppressWarnings("deprecation")
-public class OnDeleteAction2025Test extends TestBase {
+public class OnDeleteActionTest extends TestBase {
 
     // Test value() method for each enum constant
     @Test

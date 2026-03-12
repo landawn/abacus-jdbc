@@ -26,13 +26,9 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for OP enum.
- * Tests all public methods including inherited enum methods.
- */
 @Tag("2025")
 @SuppressWarnings("deprecation")
-public class OP2025Test extends TestBase {
+public class OPTest extends TestBase {
 
     // Test values() method
     @Test

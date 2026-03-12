@@ -26,12 +26,8 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for Transaction interface and its nested enums.
- * Tests all public methods including Status and Action enums.
- */
 @Tag("2025")
-public class Transaction2025Test extends TestBase {
+public class TransactionTest extends TestBase {
 
     // Tests for Transaction.Status enum
 
@@ -91,12 +87,6 @@ public class Transaction2025Test extends TestBase {
         assertTrue(Transaction.Status.ACTIVE.compareTo(Transaction.Status.COMMITTED) < 0);
         assertTrue(Transaction.Status.FAILED_ROLLBACK.compareTo(Transaction.Status.ACTIVE) > 0);
         assertEquals(0, Transaction.Status.COMMITTED.compareTo(Transaction.Status.COMMITTED));
-    }
-
-    @Test
-    public void testStatusEquals() {
-        assertEquals(Transaction.Status.ACTIVE, Transaction.Status.valueOf("ACTIVE"));
-        assertEquals(Transaction.Status.COMMITTED, Transaction.Status.valueOf("COMMITTED"));
     }
 
     @Test
@@ -171,12 +161,6 @@ public class Transaction2025Test extends TestBase {
         assertTrue(Transaction.Action.COMMIT.compareTo(Transaction.Action.ROLLBACK) < 0);
         assertTrue(Transaction.Action.ROLLBACK.compareTo(Transaction.Action.COMMIT) > 0);
         assertEquals(0, Transaction.Action.COMMIT.compareTo(Transaction.Action.COMMIT));
-    }
-
-    @Test
-    public void testActionEquals() {
-        assertEquals(Transaction.Action.COMMIT, Transaction.Action.valueOf("COMMIT"));
-        assertEquals(Transaction.Action.ROLLBACK, Transaction.Action.valueOf("ROLLBACK"));
     }
 
     @Test

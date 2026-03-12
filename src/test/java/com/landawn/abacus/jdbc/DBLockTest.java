@@ -24,13 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for DBLock class.
- * Tests public constants and static fields.
- * Note: Full functional testing requires a database connection.
- */
 @Tag("2025")
-public class DBLock2025Test extends TestBase {
+public class DBLockTest extends TestBase {
 
     // Test public constants
 

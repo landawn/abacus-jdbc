@@ -1806,9 +1806,8 @@ final class DaoImpl {
                 .flatMapArray(Class::getDeclaredFields)
                 .append(StreamEx.of(allInterfaces).flatMapArray(Class::getDeclaredClasses).flatMapArray(Class::getDeclaredFields))
                 .filter(it -> it.isAnnotationPresent(SqlScript.class))
-                .onEach(
-                        it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
-                                "Field annotated with @SqlScript must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
+                .onEach(it -> N.checkArgument(Modifier.isStatic(it.getModifiers()) && Modifier.isFinal(it.getModifiers()) && String.class.equals(it.getType()),
+                        "Field annotated with @SqlScript must be static&final String. but {} is not in Dao class {}.", it, daoInterface))
                 .onEach(it -> ClassUtil.setAccessibleQuietly(it, true))
                 .map(it -> Tuple.of(it.getAnnotation(SqlScript.class), it))
                 .map(it -> Tuple.of(Strings.isEmpty(it._1.id()) ? it._2.getName() : it._1.id(), it._2))

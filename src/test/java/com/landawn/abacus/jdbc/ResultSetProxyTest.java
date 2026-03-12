@@ -17,39 +17,44 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.sql.ResultSet;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for JdbcUtils class.
- * Tests public static methods and utility functionality.
- * Note: Full functional testing requires a database connection.
- */
 @Tag("2025")
-public class JdbcUtils2025Test extends TestBase {
+public class ResultSetProxyTest extends TestBase {
 
-    // Test class exists and can be loaded
+    // Test wrap() static method
+
+    @Test
+    public void testWrapNull() {
+        ResultSetProxy result = ResultSetProxy.wrap(null);
+        assertNull(result);
+    }
+
+    // Test that ResultSetProxy implements ResultSet
+
+    @Test
+    public void testImplementsResultSet() {
+        // Verify ResultSetProxy implements ResultSet
+        assertTrue(ResultSet.class.isAssignableFrom(ResultSetProxy.class));
+    }
+
+    // Test class metadata
 
     @Test
     public void testClassExists() {
-        assertNotNull(JdbcUtils.class);
+        assertNotNull(ResultSetProxy.class);
     }
 
-    // Test class is final
     @Test
     public void testClassIsFinal() {
-        // JdbcUtils is a utility class with static methods
-        assertNotNull(JdbcUtils.class.getDeclaredMethods());
-    }
-
-    // Test that JdbcUtils has public static methods
-    @Test
-    public void testHasPublicMethods() {
-        java.lang.reflect.Method[] methods = JdbcUtils.class.getDeclaredMethods();
-        assertNotNull(methods);
-        // JdbcUtils should have several public methods for import/export
+        assertTrue(java.lang.reflect.Modifier.isFinal(ResultSetProxy.class.getModifiers()));
     }
 }

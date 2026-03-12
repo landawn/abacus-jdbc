@@ -16,6 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Tag;
@@ -23,25 +24,14 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for JoinInfo class.
- * Tests public static methods and constants.
- * Note: Full functional testing requires entity classes with @JoinedBy annotations.
- */
 @Tag("2025")
-public class JoinInfo2025Test extends TestBase {
+public class JoinInfoTest extends TestBase {
 
     // Test static sql builder function map
 
     @Test
-    public void testSqlBuilderFuncMapNotNull() {
+    public void testSqlBuilderFuncMapInitialized() {
         assertNotNull(JoinInfo.sqlBuilderFuncMap);
-    }
-
-    @Test
-    public void testSqlBuilderFuncMapNotEmpty() {
-        assertNotNull(JoinInfo.sqlBuilderFuncMap);
-        // The map should contain entries for PSC, PAC, PLC
-        // We just verify it's not empty as the internals may vary
+        assertFalse(JoinInfo.sqlBuilderFuncMap.isEmpty());
     }
 }

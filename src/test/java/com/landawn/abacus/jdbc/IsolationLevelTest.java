@@ -111,6 +111,52 @@ public class IsolationLevelTest extends TestBase {
         assertEquals(5, IsolationLevel.SERIALIZABLE.ordinal());
     }
 
+    @Test
+    public void testEnumValueOf() {
+        assertEquals(IsolationLevel.DEFAULT, IsolationLevel.valueOf("DEFAULT"));
+        assertEquals(IsolationLevel.NONE, IsolationLevel.valueOf("NONE"));
+        assertEquals(IsolationLevel.READ_UNCOMMITTED, IsolationLevel.valueOf("READ_UNCOMMITTED"));
+        assertEquals(IsolationLevel.READ_COMMITTED, IsolationLevel.valueOf("READ_COMMITTED"));
+        assertEquals(IsolationLevel.REPEATABLE_READ, IsolationLevel.valueOf("REPEATABLE_READ"));
+        assertEquals(IsolationLevel.SERIALIZABLE, IsolationLevel.valueOf("SERIALIZABLE"));
+    }
+
+    @Test
+    public void testEnumToString() {
+        assertEquals("DEFAULT", IsolationLevel.DEFAULT.toString());
+        assertEquals("NONE", IsolationLevel.NONE.toString());
+        assertEquals("READ_UNCOMMITTED", IsolationLevel.READ_UNCOMMITTED.toString());
+        assertEquals("READ_COMMITTED", IsolationLevel.READ_COMMITTED.toString());
+        assertEquals("REPEATABLE_READ", IsolationLevel.REPEATABLE_READ.toString());
+        assertEquals("SERIALIZABLE", IsolationLevel.SERIALIZABLE.toString());
+    }
+
+    @Test
+    public void testEnumCompareTo() {
+        assertTrue(IsolationLevel.DEFAULT.compareTo(IsolationLevel.NONE) < 0);
+        assertTrue(IsolationLevel.SERIALIZABLE.compareTo(IsolationLevel.DEFAULT) > 0);
+        assertEquals(0, IsolationLevel.READ_COMMITTED.compareTo(IsolationLevel.READ_COMMITTED));
+    }
+
+    @Test
+    public void testDeclaringClass() {
+        assertEquals(IsolationLevel.class, IsolationLevel.DEFAULT.getDeclaringClass());
+    }
+
+    @Test
+    public void testRoundTripIntValue() {
+        for (IsolationLevel level : IsolationLevel.values()) {
+            assertEquals(level, IsolationLevel.valueOf(level.intValue()));
+        }
+    }
+
+    @Test
+    public void testRoundTripName() {
+        for (IsolationLevel level : IsolationLevel.values()) {
+            assertEquals(level, IsolationLevel.valueOf(level.name()));
+        }
+    }
+
     private boolean contains(IsolationLevel[] values, IsolationLevel level) {
         for (IsolationLevel value : values) {
             if (value == level) {

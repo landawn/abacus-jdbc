@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -263,14 +264,13 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testReleaseConnection() {
-        // Should not throw exception
-        JdbcUtil.releaseConnection(mockConnection, mockDataSource);
-        JdbcUtil.releaseConnection(null, mockDataSource);
+        assertDoesNotThrow(() -> JdbcUtil.releaseConnection(mockConnection, mockDataSource));
+        assertDoesNotThrow(() -> JdbcUtil.releaseConnection(null, mockDataSource));
     }
 
     @Test
     public void testCloseResultSet() throws SQLException {
-        JdbcUtil.close(mockResultSet);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockResultSet));
         verify(mockResultSet).close();
     }
 
@@ -278,7 +278,7 @@ public class JdbcUtilTest extends TestBase {
     public void testCloseResultSetWithStatement() throws SQLException {
         when(mockResultSet.getStatement()).thenReturn(mockStatement);
 
-        JdbcUtil.close(mockResultSet, true);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockResultSet, true));
 
         verify(mockResultSet).close();
         verify(mockStatement).close();
@@ -289,7 +289,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockResultSet.getStatement()).thenReturn(mockStatement);
         when(mockStatement.getConnection()).thenReturn(mockConnection);
 
-        JdbcUtil.close(mockResultSet, true, true);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockResultSet, true, true));
 
         verify(mockResultSet).close();
         verify(mockStatement).close();
@@ -298,33 +298,33 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testCloseStatement() throws SQLException {
-        JdbcUtil.close(mockStatement);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockStatement));
         verify(mockStatement).close();
     }
 
     @Test
     public void testCloseConnection() throws SQLException {
-        JdbcUtil.close(mockConnection);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockConnection));
         verify(mockConnection).close();
     }
 
     @Test
     public void testCloseResultSetAndStatement() throws SQLException {
-        JdbcUtil.close(mockResultSet, mockStatement);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockResultSet, mockStatement));
         verify(mockResultSet).close();
         verify(mockStatement).close();
     }
 
     @Test
     public void testCloseStatementAndConnection() throws SQLException {
-        JdbcUtil.close(mockStatement, mockConnection);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockStatement, mockConnection));
         verify(mockStatement).close();
         verify(mockConnection).close();
     }
 
     @Test
     public void testCloseAll() throws SQLException {
-        JdbcUtil.close(mockResultSet, mockStatement, mockConnection);
+        assertDoesNotThrow(() -> JdbcUtil.close(mockResultSet, mockStatement, mockConnection));
         verify(mockResultSet).close();
         verify(mockStatement).close();
         verify(mockConnection).close();
@@ -332,15 +332,14 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testCloseQuietly() throws SQLException {
-        // Should not throw exception even if close fails
         doThrow(new SQLException()).when(mockResultSet).close();
-        JdbcUtil.closeQuietly(mockResultSet);
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet));
     }
 
     @Test
     public void testCloseQuietlyWithStatement() throws SQLException {
         when(mockResultSet.getStatement()).thenReturn(mockStatement);
-        JdbcUtil.closeQuietly(mockResultSet, true);
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, true));
     }
 
     @Test
@@ -349,8 +348,7 @@ public class JdbcUtilTest extends TestBase {
         doThrow(new SQLException()).when(mockStatement).close();
         doThrow(new SQLException()).when(mockConnection).close();
 
-        // Should not throw exception
-        JdbcUtil.closeQuietly(mockResultSet, mockStatement, mockConnection);
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, mockStatement, mockConnection));
     }
 
     @Test

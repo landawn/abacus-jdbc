@@ -92,6 +92,32 @@ public class FetchDirectionTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> FetchDirection.valueOf("INVALID"));
     }
 
+    @Test
+    public void testEnumCompareTo() {
+        assertTrue(FetchDirection.FORWARD.compareTo(FetchDirection.REVERSE) < 0);
+        assertTrue(FetchDirection.UNKNOWN.compareTo(FetchDirection.FORWARD) > 0);
+        assertEquals(0, FetchDirection.REVERSE.compareTo(FetchDirection.REVERSE));
+    }
+
+    @Test
+    public void testDeclaringClass() {
+        assertEquals(FetchDirection.class, FetchDirection.FORWARD.getDeclaringClass());
+    }
+
+    @Test
+    public void testRoundTripIntValue() {
+        for (FetchDirection direction : FetchDirection.values()) {
+            assertEquals(direction, FetchDirection.valueOf(direction.intValue()));
+        }
+    }
+
+    @Test
+    public void testRoundTripName() {
+        for (FetchDirection direction : FetchDirection.values()) {
+            assertEquals(direction, FetchDirection.valueOf(direction.name()));
+        }
+    }
+
     private boolean contains(FetchDirection[] values, FetchDirection direction) {
         for (FetchDirection value : values) {
             if (value == direction) {

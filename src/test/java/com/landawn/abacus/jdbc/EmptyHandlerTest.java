@@ -25,13 +25,9 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.dao.Dao;
 
-/**
- * Comprehensive unit tests for EmptyHandler class.
- * Tests the constructor and that it properly implements Jdbc.Handler interface.
- */
 @Tag("2025")
 @SuppressWarnings("rawtypes")
-public class EmptyHandler2025Test extends TestBase {
+public class EmptyHandlerTest extends TestBase {
 
     // Test constructor
     @Test

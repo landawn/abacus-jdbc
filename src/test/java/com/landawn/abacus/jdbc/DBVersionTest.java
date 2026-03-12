@@ -26,12 +26,8 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
-/**
- * Comprehensive unit tests for DBVersion enum.
- * Tests all public methods including isMySQL(), isPostgreSQL(), and inherited enum methods.
- */
 @Tag("2025")
-public class DBVersion2025Test extends TestBase {
+public class DBVersionTest extends TestBase {
 
     // Test isMySQL() method
     @Test

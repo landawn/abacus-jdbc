@@ -1177,11 +1177,12 @@ public class NamedQueryTest extends TestBase {
         when(mockParsedSql.parameterCount()).thenReturn(3);
         namedQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
 
-        namedQuery.setInt("id", 123);
+        NamedQuery result = namedQuery.setInt("id", 123);
 
         // Both frequency of "id" should be set
         verify(mockPreparedStatement).setInt(1, 123);
         verify(mockPreparedStatement).setInt(2, 123);
+        assertSame(namedQuery, result);
     }
 
     @Test
