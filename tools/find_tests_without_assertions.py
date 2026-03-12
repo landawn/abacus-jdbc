@@ -7,12 +7,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-TEST_ANNOTATION = "@Test"
+TEST_ANNOTATION_RE = re.compile(r"^[ \t]*@Test\b", re.MULTILINE)
 METHOD_SIGNATURE_RE = re.compile(
     r"(?:public|protected|private)?\s*(?:static\s+)?(?:final\s+)?(?:synchronized\s+)?(?:<[^>]+>\s+)?void\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(",
     re.MULTILINE,
 )
 ASSERTION_RE = re.compile(r"\bassert[A-Z][A-Za-z0-9_]*\s*\(")
+ASSERTION_NAME_RE = re.compile(r"\b(?:Assertions\.)?(assert[A-Z][A-Za-z0-9_]*)\s*\(")
+TRY_RE = re.compile(r"\btry\s*\{")
+CATCH_RE = re.compile(r"\bcatch\s*\(")
+CLASS_LITERAL_NOT_NULL_RE = re.compile(r"\b(?:Assertions\.)?assertNotNull\s*\(\s*[A-Za-z_][A-Za-z0-9_$.]*\.class\s*\)")
+MOCKITO_VERIFY_RE = re.compile(r"\bverify(?:NoInteractions|NoMoreInteractions)?\s*\(")
+WEAK_ASSERTIONS = {"assertDoesNotThrow", "assertNotNull"}
 
 
 @dataclass
@@ -21,6 +27,10 @@ class TestMethod:
     method_name: str
     line_number: int
     body: str
+
+
+def strip_comments(code: str) -> str:
+    return re.sub(r"/\*.*?\*/|//[^\n]*", "", code, flags=re.DOTALL)
 
 
 def find_matching_brace(source: str, start_index: int) -> int:
@@ -98,13 +108,15 @@ def extract_test_methods(java_file: Path) -> list[TestMethod]:
     search_from = 0
 
     while True:
-        annotation_index = source.find(TEST_ANNOTATION, search_from)
-        if annotation_index == -1:
+        annotation_match = TEST_ANNOTATION_RE.search(source, search_from)
+        if not annotation_match:
             break
+
+        annotation_index = annotation_match.start()
 
         signature_match = METHOD_SIGNATURE_RE.search(source, annotation_index)
         if not signature_match:
-            search_from = annotation_index + len(TEST_ANNOTATION)
+            search_from = annotation_match.end()
             continue
 
         method_name = signature_match.group(1)
@@ -134,24 +146,53 @@ def main() -> int:
 
     root = Path(args.root)
     missing: list[TestMethod] = []
+    weak_only: list[TestMethod] = []
+    with_try_catch: list[TestMethod] = []
     methods: list[TestMethod] = []
 
     for java_file in discover_test_files(root):
         methods.extend(extract_test_methods(java_file))
 
     for method in methods:
-        if not ASSERTION_RE.search(method.body):
+        body = strip_comments(method.body)
+        assertion_names = ASSERTION_NAME_RE.findall(body)
+
+        if not assertion_names:
             missing.append(method)
+            continue
+
+        if TRY_RE.search(body) and CATCH_RE.search(body):
+            with_try_catch.append(method)
+
+        if set(assertion_names).issubset(WEAK_ASSERTIONS) and not MOCKITO_VERIFY_RE.search(body):
+            weak_only.append(method)
+            continue
+
+        if CLASS_LITERAL_NOT_NULL_RE.search(body):
+            weak_only.append(method)
 
     print(f"Scanned {len(methods)} @Test methods across {len(discover_test_files(root))} files.\n")
 
-    if not missing:
-        print("All scanned tests contain at least one JUnit assertion call.")
+    if not missing and not weak_only and not with_try_catch:
+        print("All scanned tests contain assertions, avoid weak-only patterns, and do not use try/catch in test bodies.")
         return 0
 
-    print(f"Found {len(missing)} tests without JUnit assertions.\n")
-    for method in missing:
-        print(f"{method.file.as_posix()}:{method.line_number}::{method.method_name}")
+    if missing:
+        print(f"Found {len(missing)} tests without JUnit assertions.\n")
+        for method in missing:
+            print(f"{method.file.as_posix()}:{method.line_number}::{method.method_name}")
+        print()
+
+    if weak_only:
+        print(f"Found {len(weak_only)} tests with only weak assertions (for example only assertNotNull/assertDoesNotThrow).\n")
+        for method in weak_only:
+            print(f"{method.file.as_posix()}:{method.line_number}::{method.method_name}")
+        print()
+
+    if with_try_catch:
+        print(f"Found {len(with_try_catch)} tests with try/catch blocks.\n")
+        for method in with_try_catch:
+            print(f"{method.file.as_posix()}:{method.line_number}::{method.method_name}")
 
     return 1
 

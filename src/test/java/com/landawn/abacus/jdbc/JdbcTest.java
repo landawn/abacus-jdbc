@@ -198,14 +198,14 @@ public class JdbcTest extends TestBase {
     @Test
     public void testTriParametersSetterDoNothing() throws SQLException {
         Jdbc.TriParametersSetter<Object, Object> setter = Jdbc.TriParametersSetter.DO_NOTHING;
-        setter.accept(mockParsedSql, mockPreparedStatement, "param");
+        assertDoesNotThrow(() -> setter.accept(mockParsedSql, mockPreparedStatement, "param"));
         verifyNoInteractions(mockPreparedStatement);
     }
 
     @Test
     public void testTriParametersSetterAccept() throws SQLException {
         Jdbc.TriParametersSetter<PreparedStatement, String> setter = (parsedSql, ps, param) -> ps.setString(1, param);
-        setter.accept(mockParsedSql, mockPreparedStatement, "test");
+        assertDoesNotThrow(() -> setter.accept(mockParsedSql, mockPreparedStatement, "test"));
         verify(mockPreparedStatement).setString(1, "test");
     }
 
@@ -892,7 +892,7 @@ public class JdbcTest extends TestBase {
     // RowConsumer Tests
     @Test
     public void testRowConsumerDoNothing() throws SQLException {
-        Jdbc.RowConsumer.DO_NOTHING.accept(mockResultSet);
+        assertDoesNotThrow(() -> Jdbc.RowConsumer.DO_NOTHING.accept(mockResultSet));
         verifyNoInteractions(mockResultSet);
     }
 
@@ -970,7 +970,7 @@ public class JdbcTest extends TestBase {
     // BiRowConsumer Tests
     @Test
     public void testBiRowConsumerDoNothing() throws SQLException {
-        Jdbc.BiRowConsumer.DO_NOTHING.accept(mockResultSet, Arrays.asList("col1"));
+        assertDoesNotThrow(() -> Jdbc.BiRowConsumer.DO_NOTHING.accept(mockResultSet, Arrays.asList("col1")));
         verifyNoInteractions(mockResultSet);
     }
 
@@ -1390,9 +1390,10 @@ public class JdbcTest extends TestBase {
         ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
-        // Should not throw exceptions
-        handler.beforeInvoke(new Object(), new Object[0], methodSignature);
-        handler.afterInvoke("result", new Object(), new Object[0], methodSignature);
+        assertDoesNotThrow(() -> {
+            handler.beforeInvoke(new Object(), new Object[0], methodSignature);
+            handler.afterInvoke("result", new Object(), new Object[0], methodSignature);
+        });
     }
 
     // HandlerFactory Tests
@@ -1822,20 +1823,27 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testBiRowMapperAllBuilderMethods() throws SQLException {
-        // Setup mock for BiRowMapper builder test
         when(mockResultSet.getBoolean(1)).thenReturn(false);
-        when(mockResultSet.getByte(1)).thenReturn((byte) 20);
-        when(mockResultSet.getShort(1)).thenReturn((short) 200);
-        when(mockResultSet.getFloat(1)).thenReturn(2.5f);
-        when(mockResultSet.getDouble(1)).thenReturn(3.14);
-        when(mockResultSet.getBigDecimal(1)).thenReturn(new BigDecimal("456.78"));
-        when(mockResultSet.getDate(1)).thenReturn(new Date(System.currentTimeMillis()));
-        when(mockResultSet.getTime(1)).thenReturn(new Time(System.currentTimeMillis()));
-        when(mockResultSet.getTimestamp(1)).thenReturn(new Timestamp(System.currentTimeMillis()));
+        when(mockResultSet.getByte(2)).thenReturn((byte) 20);
+        when(mockResultSet.getShort(3)).thenReturn((short) 200);
+        when(mockResultSet.getInt(4)).thenReturn(400);
+        when(mockResultSet.getLong(5)).thenReturn(500L);
+        when(mockResultSet.getFloat(6)).thenReturn(2.5f);
+        when(mockResultSet.getDouble(7)).thenReturn(3.14);
+        when(mockResultSet.getBigDecimal(8)).thenReturn(new BigDecimal("456.78"));
+        when(mockResultSet.getString(9)).thenReturn("builder");
+        Date date = new Date(System.currentTimeMillis());
+        Time time = new Time(System.currentTimeMillis());
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        when(mockResultSet.getDate(10)).thenReturn(date);
+        when(mockResultSet.getTime(11)).thenReturn(time);
+        when(mockResultSet.getTimestamp(12)).thenReturn(timestamp);
+        when(mockResultSet.getObject(13)).thenReturn("object");
+        when(mockResultSet.getString(14)).thenReturn("typed");
 
         Jdbc.BiRowMapper.BiRowMapperBuilder builder = Jdbc.BiRowMapper.builder();
 
-        builder.getBoolean("active")
+        Jdbc.BiRowMapper<Object[]> mapper = builder.getBoolean("active")
                 .getByte("byteVal")
                 .getShort("shortVal")
                 .getInt("intVal")
@@ -1848,9 +1856,26 @@ public class JdbcTest extends TestBase {
                 .getTime("time")
                 .getTimestamp("timestamp")
                 .getObject("object")
-                .getObject("typed", String.class);
+                .getObject("typed", String.class)
+                .to(Object[].class);
 
-        // Would need to test the actual build results with appropriate column labels
+        Object[] result = mapper.apply(mockResultSet, Arrays.asList("active", "byteVal", "shortVal", "intVal", "longVal", "floatVal", "doubleVal", "decimal",
+                "name", "date", "time", "timestamp", "object", "typed"));
+
+        assertEquals(false, result[0]);
+        assertEquals((byte) 20, result[1]);
+        assertEquals((short) 200, result[2]);
+        assertEquals(400, result[3]);
+        assertEquals(500L, result[4]);
+        assertEquals(2.5f, result[5]);
+        assertEquals(3.14, result[6]);
+        assertEquals(new BigDecimal("456.78"), result[7]);
+        assertEquals("builder", result[8]);
+        assertEquals(date, result[9]);
+        assertEquals(time, result[10]);
+        assertEquals(timestamp, result[11]);
+        assertEquals("object", result[12]);
+        assertEquals("typed", result[13]);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -3065,6 +3066,7 @@ public class PreparedQueryTest extends TestBase {
         query.close();
         query.close(); // Should not throw
 
+        assertTrue(query.isClosed);
         verify(mockStmt, times(1)).close();
     }
 
@@ -3110,7 +3112,9 @@ public class PreparedQueryTest extends TestBase {
         //    assertThrows(IllegalStateException.class, () -> query.list());
 
         // no check in set parameters.
-        query.setString(1, "test");
+        assertDoesNotThrow(() -> query.setString(1, "test"));
+        assertTrue(query.isClosed);
+        verify(mockStmt).setString(1, "test");
     }
 
     @Test
@@ -3133,6 +3137,7 @@ public class PreparedQueryTest extends TestBase {
 
         query.close();
 
+        assertTrue(query.isClosed);
         verify(mockStmt).setFetchDirection(ResultSet.FETCH_FORWARD);
         verify(mockStmt, times(2)).setFetchSize(anyInt()); // Once for set, once for reset
         verify(mockStmt, times(2)).setMaxFieldSize(anyInt());

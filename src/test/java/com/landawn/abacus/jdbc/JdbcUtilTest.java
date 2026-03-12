@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -32,7 +33,9 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.sql.DataSource;
 
@@ -43,7 +46,6 @@ import org.junit.jupiter.api.Test;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Transient;
-import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
 import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
@@ -163,14 +165,7 @@ public class JdbcUtilTest extends TestBase {
         String user = "sa";
         String password = "";
 
-        // This test requires HikariCP in classpath
-        try {
-            DataSource ds = JdbcUtil.createHikariDataSource(url, user, password);
-            assertNotNull(ds);
-        } catch (RuntimeException e) {
-            // HikariCP might not be available in test environment
-            assertTrue(e.getMessage().contains("HikariConfig") || e.getCause() instanceof ClassNotFoundException);
-        }
+        assertDataSourceCreation("com.zaxxer.hikari.HikariDataSource", () -> JdbcUtil.createHikariDataSource(url, user, password));
     }
 
     @Test
@@ -181,13 +176,7 @@ public class JdbcUtilTest extends TestBase {
         int minIdle = 5;
         int maxPoolSize = 20;
 
-        try {
-            DataSource ds = JdbcUtil.createHikariDataSource(url, user, password, minIdle, maxPoolSize);
-            assertNotNull(ds);
-        } catch (RuntimeException e) {
-            // HikariCP might not be available in test environment
-            assertTrue(e.getMessage().contains("HikariConfig") || e.getCause() instanceof ClassNotFoundException);
-        }
+        assertDataSourceCreation("com.zaxxer.hikari.HikariDataSource", () -> JdbcUtil.createHikariDataSource(url, user, password, minIdle, maxPoolSize));
     }
 
     @Test
@@ -196,13 +185,7 @@ public class JdbcUtilTest extends TestBase {
         String user = "sa";
         String password = "";
 
-        try {
-            DataSource ds = JdbcUtil.createC3p0DataSource(url, user, password);
-            assertNotNull(ds);
-        } catch (RuntimeException e) {
-            // C3P0 might not be available in test environment
-            assertTrue(e.getMessage().contains("ComboPooledDataSource") || e.getCause() instanceof ClassNotFoundException);
-        }
+        assertDataSourceCreation("com.mchange.v2.c3p0.ComboPooledDataSource", () -> JdbcUtil.createC3p0DataSource(url, user, password));
     }
 
     @Test
@@ -213,13 +196,8 @@ public class JdbcUtilTest extends TestBase {
         int minPoolSize = 3;
         int maxPoolSize = 15;
 
-        try {
-            DataSource ds = JdbcUtil.createC3p0DataSource(url, user, password, minPoolSize, maxPoolSize);
-            assertNotNull(ds);
-        } catch (RuntimeException e) {
-            // C3P0 might not be available in test environment
-            assertTrue(e.getMessage().contains("ComboPooledDataSource") || e.getCause() instanceof ClassNotFoundException);
-        }
+        assertDataSourceCreation("com.mchange.v2.c3p0.ComboPooledDataSource",
+                () -> JdbcUtil.createC3p0DataSource(url, user, password, minPoolSize, maxPoolSize));
     }
 
     @Test
@@ -228,14 +206,7 @@ public class JdbcUtilTest extends TestBase {
         String user = "sa";
         String password = "";
 
-        try {
-            Connection conn = JdbcUtil.createConnection(url, user, password);
-            assertNotNull(conn);
-            conn.close();
-        } catch (Exception e) {
-            // H2 driver might not be available
-            assertTrue(e instanceof UncheckedSQLException || e instanceof IllegalArgumentException);
-        }
+        assertConnectionCreation(() -> JdbcUtil.createConnection(url, user, password));
     }
 
     @Test
@@ -245,14 +216,7 @@ public class JdbcUtilTest extends TestBase {
         String user = "sa";
         String password = "";
 
-        try {
-            Connection conn = JdbcUtil.createConnection(driverClass, url, user, password);
-            assertNotNull(conn);
-            conn.close();
-        } catch (Exception e) {
-            // H2 driver might not be available
-            assertTrue(e instanceof UncheckedSQLException || e instanceof IllegalArgumentException);
-        }
+        assertConnectionCreation(() -> JdbcUtil.createConnection(driverClass, url, user, password));
     }
 
     @Test
@@ -1090,19 +1054,19 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testTurnOffSqlLogGlobally() {
         JdbcUtil.turnOffSqlLogGlobally();
-        // After this, SQL logging should be disabled globally
+        assertFalse(JdbcUtil.isSqlLogAllowed);
     }
 
     @Test
     public void testTurnOffSqlPerfLogGlobally() {
         JdbcUtil.turnOffSqlPerfLogGlobally();
-        // After this, SQL performance logging should be disabled globally
+        assertFalse(JdbcUtil.isSqlPerfLogAllowed);
     }
 
     @Test
     public void testTurnOffDaoMethodPerfLogGlobally() {
         JdbcUtil.turnOffDaoMethodPerfLogGlobally();
-        // After this, DAO method performance logging should be disabled globally
+        assertFalse(JdbcUtil.isDaoMethodPerfLogAllowed);
     }
 
     @Test
@@ -1255,16 +1219,21 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testRunInTransaction() throws SQLException {
+        final boolean[] executed = { false };
         JdbcUtil.runInTransaction(mockDataSource, () -> {
-            // Transaction code
+            executed[0] = true;
         });
+        assertTrue(executed[0]);
     }
 
     @Test
     public void testRunInTransactionWithConnection() throws SQLException {
+        final boolean[] executed = { false };
         JdbcUtil.runInTransaction(mockDataSource, conn -> {
             assertNotNull(conn);
+            executed[0] = true;
         });
+        assertTrue(executed[0]);
     }
 
     @Test
@@ -1284,23 +1253,30 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testRunNotInStartedTransaction() throws SQLException {
+        final boolean[] executed = { false };
         JdbcUtil.runNotInStartedTransaction(mockDataSource, () -> {
-            // Non-transactional code
+            executed[0] = true;
         });
+        assertTrue(executed[0]);
     }
 
     @Test
     public void testRunNotInStartedTransactionWithDataSource() throws SQLException {
+        final boolean[] executed = { false };
         JdbcUtil.runNotInStartedTransaction(mockDataSource, ds -> {
             assertNotNull(ds);
+            executed[0] = true;
         });
+        assertTrue(executed[0]);
     }
 
     @Test
     public void testRunWithoutUsingSpringTransaction() {
+        final boolean[] executed = { false };
         JdbcUtil.runWithoutUsingSpringTransaction(() -> {
-            // Code without Spring transaction
+            executed[0] = true;
         });
+        assertTrue(executed[0]);
     }
 
     @Test
@@ -1431,7 +1407,8 @@ public class JdbcUtilTest extends TestBase {
 
         RowMapper<Long> extractor = rs -> rs.getLong(1);
         JdbcUtil.setIdExtractorForDao(TestDao.class, extractor);
-        // Extractor is set internally
+        assertTrue(getIdExtractorPool().containsKey(TestDao.class));
+        getIdExtractorPool().remove(TestDao.class);
     }
 
     @Test
@@ -1441,7 +1418,8 @@ public class JdbcUtilTest extends TestBase {
 
         BiRowMapper<Long> extractor = (rs, labels) -> rs.getLong(1);
         JdbcUtil.setIdExtractorForDao(TestDao.class, extractor);
-        // Extractor is set internally
+        assertTrue(extractor == getIdExtractorPool().get(TestDao.class));
+        getIdExtractorPool().remove(TestDao.class);
     }
 
     //    @Test
@@ -1504,7 +1482,57 @@ public class JdbcUtilTest extends TestBase {
     public void testCloseDaoCacheOnCurrentThread() {
         JdbcUtil.openDaoCacheOnCurrentThread();
         JdbcUtil.closeDaoCacheOnCurrentThread();
-        // Cache is removed from thread local
+        assertNull(JdbcUtil.localThreadCache_TL.get());
+    }
+
+    private void assertDataSourceCreation(final String expectedClassName, final Supplier<DataSource> supplier) {
+        final DataSource dataSource = assertDoesNotThrow(supplier::get);
+        assertNotNull(dataSource);
+        assertEquals(expectedClassName, dataSource.getClass().getName());
+
+        final Connection connection = assertDoesNotThrow(() -> dataSource.getConnection());
+
+        try {
+            assertFalse(connection.isClosed());
+            assertEquals("H2", connection.getMetaData().getDatabaseProductName());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            JdbcUtil.close(connection);
+            closeIfPossible(dataSource);
+        }
+    }
+
+    private void assertConnectionCreation(final Supplier<Connection> supplier) {
+        final Connection connection = assertDoesNotThrow(supplier::get);
+        assertNotNull(connection);
+
+        try {
+            assertFalse(connection.isClosed());
+            assertEquals("H2", connection.getMetaData().getDatabaseProductName());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            JdbcUtil.close(connection);
+        }
+    }
+
+    private void closeIfPossible(final Object candidate) {
+        if (candidate instanceof AutoCloseable) {
+            final AutoCloseable closeable = (AutoCloseable) candidate;
+            assertDoesNotThrow(() -> closeable.close());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Class<? extends com.landawn.abacus.jdbc.dao.Dao>, BiRowMapper<?>> getIdExtractorPool() {
+        try {
+            final Field field = JdbcUtil.class.getDeclaredField("idExtractorPool");
+            field.setAccessible(true);
+            return (Map<Class<? extends com.landawn.abacus.jdbc.dao.Dao>, BiRowMapper<?>>) field.get(null);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Test entity class for various tests

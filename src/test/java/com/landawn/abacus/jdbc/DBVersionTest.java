@@ -142,12 +142,6 @@ public class DBVersionTest extends TestBase {
     }
 
     @Test
-    public void testEquals() {
-        assertEquals(DBVersion.H2, DBVersion.valueOf("H2"));
-        assertEquals(DBVersion.MySQL_8, DBVersion.valueOf("MySQL_8"));
-    }
-
-    @Test
     public void testHashCode() {
         assertEquals(DBVersion.H2.hashCode(), DBVersion.valueOf("H2").hashCode());
     }
@@ -163,37 +157,5 @@ public class DBVersionTest extends TestBase {
         for (DBVersion version : DBVersion.values()) {
             assertEquals(version, DBVersion.valueOf(version.name()));
         }
-    }
-
-    // Test all enum constants exist
-    @Test
-    public void testAllEnumConstantsExist() {
-        assertNotNull(DBVersion.H2);
-        assertNotNull(DBVersion.HSQLDB);
-        assertNotNull(DBVersion.MySQL_5_5);
-        assertNotNull(DBVersion.MySQL_5_6);
-        assertNotNull(DBVersion.MySQL_5_7);
-        assertNotNull(DBVersion.MySQL_5_8);
-        assertNotNull(DBVersion.MySQL_5_9);
-        assertNotNull(DBVersion.MySQL_6);
-        assertNotNull(DBVersion.MySQL_7);
-        assertNotNull(DBVersion.MySQL_8);
-        assertNotNull(DBVersion.MySQL_9);
-        assertNotNull(DBVersion.MySQL_10);
-        assertNotNull(DBVersion.MySQL_OTHERS);
-        assertNotNull(DBVersion.MariaDB);
-        assertNotNull(DBVersion.PostgreSQL_9_2);
-        assertNotNull(DBVersion.PostgreSQL_9_3);
-        assertNotNull(DBVersion.PostgreSQL_9_4);
-        assertNotNull(DBVersion.PostgreSQL_9_5);
-        assertNotNull(DBVersion.PostgreSQL_9_6);
-        assertNotNull(DBVersion.PostgreSQL_10);
-        assertNotNull(DBVersion.PostgreSQL_11);
-        assertNotNull(DBVersion.PostgreSQL_12);
-        assertNotNull(DBVersion.PostgreSQL_OTHERS);
-        assertNotNull(DBVersion.Oracle);
-        assertNotNull(DBVersion.DB2);
-        assertNotNull(DBVersion.SQLServer);
-        assertNotNull(DBVersion.OTHERS);
     }
 }

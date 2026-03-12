@@ -41,18 +41,6 @@ public class DBLockTest extends TestBase {
         assertNotNull(DBLock.UNLOCKED);
     }
 
-    @Test
-    public void testDefaultLockLiveTimeConstant() {
-        assertEquals(3 * 60 * 1000, DBLock.DEFAULT_LOCK_LIVE_TIME);
-        assertEquals(180000, DBLock.DEFAULT_LOCK_LIVE_TIME);
-    }
-
-    @Test
-    public void testDefaultTimeoutConstant() {
-        assertEquals(3 * 1000, DBLock.DEFAULT_TIMEOUT);
-        assertEquals(3000, DBLock.DEFAULT_TIMEOUT);
-    }
-
     // Test scheduled executor is properly initialized
     @Test
     public void testScheduledExecutorNotNull() {

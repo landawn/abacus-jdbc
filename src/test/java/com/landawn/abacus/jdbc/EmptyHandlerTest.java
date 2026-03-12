@@ -16,25 +16,19 @@
 
 package com.landawn.abacus.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.jdbc.dao.Dao;
 
 @Tag("2025")
 @SuppressWarnings("rawtypes")
 public class EmptyHandlerTest extends TestBase {
-
-    // Test constructor
-    @Test
-    public void testConstructor() {
-        EmptyHandler handler = new EmptyHandler();
-        assertNotNull(handler);
-    }
 
     // Test that it implements Jdbc.Handler
     @Test
@@ -43,28 +37,21 @@ public class EmptyHandlerTest extends TestBase {
         assertTrue(handler instanceof Jdbc.Handler);
     }
 
-    // Test type compatibility with Jdbc.Handler<Dao>
-    @Test
-    public void testHandlerTypeCompatibility() {
-        Jdbc.Handler<Dao> handler = new EmptyHandler();
-        assertNotNull(handler);
-    }
-
     // Test multiple instances
     @Test
     public void testMultipleInstances() {
         EmptyHandler handler1 = new EmptyHandler();
         EmptyHandler handler2 = new EmptyHandler();
-        assertNotNull(handler1);
-        assertNotNull(handler2);
+        assertNotSame(handler1, handler2);
+        assertSame(EmptyHandler.class, handler1.getClass());
+        assertSame(EmptyHandler.class, handler2.getClass());
     }
 
     // Test getClass()
     @Test
     public void testGetClass() {
         EmptyHandler handler = new EmptyHandler();
-        assertNotNull(handler.getClass());
-        assertTrue(handler.getClass().getName().contains("EmptyHandler"));
+        assertSame(EmptyHandler.class, handler.getClass());
     }
 
     // Test toString() inherited from Object
@@ -72,16 +59,15 @@ public class EmptyHandlerTest extends TestBase {
     public void testToString() {
         EmptyHandler handler = new EmptyHandler();
         String str = handler.toString();
-        assertNotNull(str);
+        assertTrue(str.startsWith(EmptyHandler.class.getName() + "@"));
     }
 
     // Test hashCode() inherited from Object
     @Test
     public void testHashCode() {
         EmptyHandler handler = new EmptyHandler();
-        // hashCode should return a consistent value
         int hashCode1 = handler.hashCode();
         int hashCode2 = handler.hashCode();
-        assertTrue(hashCode1 == hashCode2);
+        assertEquals(hashCode1, hashCode2);
     }
 }

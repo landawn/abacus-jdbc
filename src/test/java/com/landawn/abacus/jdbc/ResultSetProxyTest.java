@@ -16,7 +16,6 @@
 
 package com.landawn.abacus.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,13 +43,6 @@ public class ResultSetProxyTest extends TestBase {
     public void testImplementsResultSet() {
         // Verify ResultSetProxy implements ResultSet
         assertTrue(ResultSet.class.isAssignableFrom(ResultSetProxy.class));
-    }
-
-    // Test class metadata
-
-    @Test
-    public void testClassExists() {
-        assertNotNull(ResultSetProxy.class);
     }
 
     @Test

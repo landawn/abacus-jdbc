@@ -106,16 +106,6 @@ public class TransactionTest extends TestBase {
         }
     }
 
-    @Test
-    public void testStatusAllEnumConstantsExist() {
-        assertNotNull(Transaction.Status.ACTIVE);
-        assertNotNull(Transaction.Status.MARKED_ROLLBACK);
-        assertNotNull(Transaction.Status.COMMITTED);
-        assertNotNull(Transaction.Status.FAILED_COMMIT);
-        assertNotNull(Transaction.Status.ROLLED_BACK);
-        assertNotNull(Transaction.Status.FAILED_ROLLBACK);
-    }
-
     // Tests for Transaction.Action enum
 
     @Test
@@ -178,11 +168,5 @@ public class TransactionTest extends TestBase {
         for (Transaction.Action action : Transaction.Action.values()) {
             assertEquals(action, Transaction.Action.valueOf(action.name()));
         }
-    }
-
-    @Test
-    public void testActionAllEnumConstantsExist() {
-        assertNotNull(Transaction.Action.COMMIT);
-        assertNotNull(Transaction.Action.ROLLBACK);
     }
 }

@@ -119,12 +119,6 @@ public class OnDeleteActionTest extends TestBase {
     }
 
     @Test
-    public void testEquals() {
-        assertEquals(OnDeleteAction.NO_ACTION, OnDeleteAction.valueOf("NO_ACTION"));
-        assertEquals(OnDeleteAction.CASCADE, OnDeleteAction.get("cascade"));
-    }
-
-    @Test
     public void testHashCode() {
         assertEquals(OnDeleteAction.NO_ACTION.hashCode(), OnDeleteAction.valueOf("NO_ACTION").hashCode());
     }

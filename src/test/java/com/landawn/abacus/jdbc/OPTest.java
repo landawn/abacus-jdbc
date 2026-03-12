@@ -122,14 +122,6 @@ public class OPTest extends TestBase {
         assertEquals(0, OP.list.compareTo(OP.list));
     }
 
-    // Test equals() method
-    @Test
-    public void testEquals() {
-        assertEquals(OP.exists, OP.valueOf("exists"));
-        assertEquals(OP.list, OP.valueOf("list"));
-        assertEquals(OP.DEFAULT, OP.valueOf("DEFAULT"));
-    }
-
     // Test hashCode() method
     @Test
     public void testHashCode() {
@@ -150,25 +142,5 @@ public class OPTest extends TestBase {
         for (OP op : OP.values()) {
             assertEquals(op, OP.valueOf(op.name()));
         }
-    }
-
-    // Test all enum constants exist
-    @Test
-    public void testAllEnumConstantsExist() {
-        assertNotNull(OP.exists);
-        assertNotNull(OP.findOnlyOne);
-        assertNotNull(OP.findFirst);
-        assertNotNull(OP.list);
-        assertNotNull(OP.query);
-        assertNotNull(OP.stream);
-        assertNotNull(OP.queryForSingle);
-        assertNotNull(OP.queryForUnique);
-        assertNotNull(OP.listAll);
-        assertNotNull(OP.queryAll);
-        assertNotNull(OP.streamAll);
-        assertNotNull(OP.executeAndGetOutParameters);
-        assertNotNull(OP.update);
-        assertNotNull(OP.largeUpdate);
-        assertNotNull(OP.DEFAULT);
     }
 }
