@@ -63,6 +63,8 @@ import java.lang.annotation.Target;
  * }
  * }</pre>
  *
+ * @see Query
+ * @see MergedById
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.METHOD })

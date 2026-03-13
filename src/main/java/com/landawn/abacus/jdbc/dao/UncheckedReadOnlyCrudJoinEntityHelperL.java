@@ -58,7 +58,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * // dao.deleteJoinEntities(...);   // throws UnsupportedOperationException
  * }</pre>
  *
- * @param <T> The entity type that this helper manages
+ * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedReadOnlyJoinEntityHelper

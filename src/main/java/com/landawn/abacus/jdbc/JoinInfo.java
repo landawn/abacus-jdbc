@@ -741,7 +741,9 @@ public final class JoinInfo {
     }
 
     /**
-     * @param sbc the SqlBuilder class to use for generating SQL
+     * Retrieves the SQL plan for single-entity select operations.
+     *
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the SQL builder function and parameter setter
      * @deprecated Use {@link #getSelectSqlPlan(Class)}.
      */
@@ -788,7 +790,9 @@ public final class JoinInfo {
     }
 
     /**
-     * @param sbc the SqlBuilder class to use for generating SQL
+     * Retrieves the SQL plan for batch select operations.
+     *
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch SQL builder function and parameter setter
      * @deprecated Use {@link #getBatchSelectSqlPlan(Class)}.
      */
@@ -843,7 +847,9 @@ public final class JoinInfo {
     }
 
     /**
-     * @param sbc the SqlBuilder class to use for generating SQL
+     * Retrieves the SQL plan for delete operations.
+     *
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the delete SQL, condition SQL, and parameter setter
      * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
      */
@@ -890,7 +896,9 @@ public final class JoinInfo {
     }
 
     /**
-     * @param sbc the SqlBuilder class to use for generating SQL
+     * Retrieves the SQL plan for batch delete operations.
+     *
+     * @param sbc the SQL builder class type (PSC, PAC, or PLC)
      * @return a tuple containing the batch delete SQL builder functions and parameter setter
      * @deprecated Use {@link #getBatchDeleteSqlPlan(Class)}.
      */

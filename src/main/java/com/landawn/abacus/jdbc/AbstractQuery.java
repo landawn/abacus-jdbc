@@ -4850,8 +4850,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the first non-null value from the result set as the specified type.
-     * <br />
-     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
+     *
+     * <p>If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4880,8 +4880,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the first non-null value from the result set using a custom Type handler.
-     * <br />
-     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
+     *
+     * <p>If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4980,9 +4980,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the unique non-null result value as the specified type.
-     * <br />
-     * If more than one row is found, a DuplicateResultException is thrown.
-     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
+     *
+     * <p>If more than one row is found, a DuplicateResultException is thrown.
+     * If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5011,9 +5011,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the unique non-null result value using a custom Type handler.
-     * <br />
-     * If more than one row is found, a DuplicateResultException is thrown.
-     * If the value encountered in the first row/column is null, a NullPointerException is thrown.
+     *
+     * <p>If more than one row is found, a DuplicateResultException is thrown.
+     * If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5052,6 +5052,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
+     * Extracts a single row from the given {@code ResultSet} and maps it to an instance of the specified type.
      *
      * @param <T> the type of entity to extract from the result set
      * @param rs the ResultSet to extract data from
@@ -7386,9 +7387,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Streams the rows in the first ResultSet, filtering with BiRowFilter and mapping with BiRowMapper.
      * Both filter and mapper receive ResultSet and column labels for maximum flexibility.
-     * <p>
-     * Note: The opened {@code Connection} and {@code Statement} will be held till {@code @TerminalOp} or {@code @TerminalOpTriggered} stream operation is called.
-     * </p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

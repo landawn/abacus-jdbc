@@ -167,7 +167,7 @@ public enum IsolationLevel {
     /**
      * Constructs an IsolationLevel with the specified integer value.
      *
-     * @param intValue The JDBC constant value for this isolation level
+     * @param intValue the JDBC constant value for this isolation level
      */
     IsolationLevel(final int intValue) {
         this.intValue = intValue;

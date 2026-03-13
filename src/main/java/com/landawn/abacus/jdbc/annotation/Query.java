@@ -135,7 +135,6 @@ import com.landawn.abacus.util.RegExUtil;
  * @see OP
  * @see OutParameter
  * @see OutParameterList
- * @see <a href="https://stackoverflow.com/questions/1820908/how-to-turn-off-the-eclipse-code-formatter-for-certain-sections-of-java-code">How to turn off the Eclipse code formatter for certain sections of Java code?</a>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

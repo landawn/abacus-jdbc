@@ -20,7 +20,7 @@ import java.util.List;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;
-import com.landawn.abacus.util.stream.Stream.StreamEx;
+import com.landawn.abacus.util.stream.Stream;
 
 public class Maven {
 
@@ -28,7 +28,7 @@ public class Maven {
         N.println(new File(".").getAbsolutePath());
 
         final String sourceVersion = "0.0.1-SNAPSHOT";
-        final String targetVersion = StreamEx.ofLines(new File("./pom.xml"))
+        final String targetVersion = Stream.ofLines(new File("./pom.xml"))
                 .filter(line -> line.indexOf("<version>") > 0 && line.indexOf("</version>") > 0)
                 .first()
                 .map(line -> Strings.substringsBetween(line, "<version>", "</version>").get(0))
@@ -46,15 +46,15 @@ public class Maven {
 
         IOUtil.copyToDirectory(sourceDir, targetDir);
 
-        StreamEx.listFiles(new File("./target/"))
+        Stream.listFiles(new File("./target/"))
                 .filter(f -> f.getName().startsWith("abacus-jdbc") && f.getName().endsWith(".jar"))
                 .peek(f -> N.println(f.getName()))
                 .forEach(f -> IOUtil.copyToDirectory(f, targetDir));
 
-        StreamEx.listFiles(targetDir) //
+        Stream.listFiles(targetDir) //
                 .forEach(file -> IOUtil.renameTo(file, file.getName().replace(sourceVersion, targetVersion)));
 
-        StreamEx.listFiles(targetDir)
+        Stream.listFiles(targetDir)
                 .filter(file -> file.getName().endsWith(".pom") || file.getName().endsWith(".xml") || file.getName().endsWith(".txt"))
                 .forEach(file -> {
                     final List<String> lines = IOUtil.readAllLines(file);

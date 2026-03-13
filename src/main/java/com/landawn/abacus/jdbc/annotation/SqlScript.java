@@ -73,6 +73,7 @@ import java.lang.annotation.Target;
  * }</pre>
  *
  * @see Query
+ * @see SqlSource
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)

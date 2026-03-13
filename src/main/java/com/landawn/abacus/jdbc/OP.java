@@ -16,7 +16,7 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Enum representing various database operations that can be performed through AbstractQuery.
+ * Enum representing various database operations that can be performed through {@link AbstractQuery}.
  * These operations define how query results are retrieved and processed in the Abacus JDBC framework.
  * 
  * <p>The OP enum is typically used to specify the operation type in query annotations or method calls,
@@ -36,10 +36,10 @@ package com.landawn.abacus.jdbc;
 public enum OP {
     /**
      * Checks whether any records exist that match the query criteria.
-     * Returns a boolean indicating the existence of matching records.
-     * 
+     * Returns a {@code boolean} indicating the existence of matching records.
+     *
      * <p>This operation is optimized for existence checks and typically translates to
-     * a query with LIMIT 1 or uses EXISTS clause internally for better performance.</p>
+     * a query with {@code LIMIT 1} or uses {@code EXISTS} clause internally for better performance.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -70,7 +70,7 @@ public enum OP {
 
     /**
      * Retrieves the first record from the query results.
-     * Returns an Optional that is empty if no records are found.
+     * Returns an {@code Optional} that is empty if no records are found.
      * 
      * <p>This operation is useful when you want at most one result but don't require
      * exactly one. The query typically includes an ORDER BY clause to ensure
@@ -85,8 +85,8 @@ public enum OP {
     findFirst,
 
     /**
-     * Retrieves all matching records as a List.
-     * Returns an empty list if no records are found.
+     * Retrieves all matching records as a {@code List}.
+     * Returns an empty {@code List} if no records are found.
      * 
      * <p>This is the most common operation for queries that return multiple records.
      * All results are loaded into memory at once, so use with caution for large result sets.</p>
@@ -109,13 +109,13 @@ public enum OP {
      * Dataset queryUsersByAge(int age);
      * }</pre>
      *
-     * @deprecated generally it's unnecessary to specify the {@code "op = OP.query"} in {@code @Query}.
+     * @deprecated Generally it is unnecessary to specify {@code "op = OP.query"} in {@code @Query}.
      */
     @Deprecated
     query,
 
     /**
-     * Returns query results as a Stream for lazy evaluation and processing.
+     * Returns query results as a {@code Stream} for lazy evaluation and processing.
      * Useful for handling large result sets without loading all data into memory.
      *
      * <p>The stream should be properly closed after use, preferably in a try-with-resources block.
@@ -127,7 +127,7 @@ public enum OP {
      * Stream<User> streamAllUsers();
      * }</pre>
      *
-     * @deprecated generally it's unnecessary to specify the {@code "op = OP.stream"} in {@code @Query}.
+     * @deprecated Generally it is unnecessary to specify {@code "op = OP.stream"} in {@code @Query}.
      */
     @Deprecated
     stream,
@@ -174,58 +174,52 @@ public enum OP {
     queryForUnique,
 
     /**
-     * Retrieves all ResultSets from a stored procedure call as Lists.
-     * Each ResultSet is converted to a List of the specified type.
+     * Retrieves all {@code ResultSet}s from a stored procedure call as {@code List}s.
+     * Each {@code ResultSet} is converted to a {@code List} of the specified type.
      *
      * <p>This operation is primarily used with {@code @Query} annotation for stored procedures
      * that return multiple result sets. Each result set is processed and returned
-     * in a collection.</p>
+     * in a collection via {@code listAll/listAllAndGetOutParameters}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call getUsersAndOrders(?)}", op = OP.listAll, isProcedure = true)
      * Tuple2<List<User>, List<Order>> getUsersAndOrders(long userId);
      * }</pre>
-     *
-     * <p>This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSets}
-     * returned from the executed procedure by {@code listAll/listAllAndGetOutParameters}.</p>
      */
     listAll,
 
     /**
-     * Retrieves all ResultSets from a stored procedure call as Datasets.
-     * Each ResultSet is converted to a Dataset for flexible data manipulation.
+     * Retrieves all {@code ResultSet}s from a stored procedure call as {@code Dataset}s.
+     * Each {@code ResultSet} is converted to a {@code Dataset} for flexible data manipulation.
      *
-     * <p>Similar to listAll but returns Dataset objects which provide more
-     * flexibility for data processing and transformation compared to typed Lists.</p>
+     * <p>Similar to {@link #listAll} but returns {@code Dataset} objects which provide more
+     * flexibility for data processing and transformation compared to typed {@code List}s.
+     * This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSet}s
+     * returned from the executed procedure via {@code queryAll/queryAllAndGetOutParameters}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call getComplexReport(?, ?)}", op = OP.queryAll, isProcedure = true)
      * List<Dataset> getComplexReport(Date startDate, Date endDate);
      * }</pre>
-     *
-     * <p>This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSets}
-     * returned from the executed procedure by {@code queryAll/queryAllAndGetOutParameters}.</p>
      */
     queryAll,
 
     /**
-     * Retrieves all ResultSets from a stored procedure call as Streams.
+     * Retrieves all {@code ResultSet}s from a stored procedure call as {@code Stream}s.
      * Enables lazy processing of multiple result sets with minimal memory usage.
      *
      * <p>This operation is ideal for stored procedures that return large result sets
      * where you want to process data in a streaming fashion rather than loading
-     * everything into memory at once.</p>
+     * everything into memory at once. It is primarily used with {@code @Query} annotation
+     * to retrieve all the {@code ResultSet}s returned from the executed procedure via {@code streamAll}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call streamLargeDatasets()}", op = OP.streamAll, isProcedure = true)
      * Tuple2<Stream<User>, Stream<Transaction>> streamLargeDatasets();
      * }</pre>
-     *
-     * <p>This operation is primarily used with {@code @Query} annotation to retrieve all the {@code ResultSets}
-     * returned from the executed procedure by {@code streamAll}.</p>
      */
     streamAll,
 
@@ -251,7 +245,7 @@ public enum OP {
 
     /**
      * Executes an UPDATE, INSERT, or DELETE statement and returns the number of affected rows.
-     * Returns an int representing the row count.
+     * Returns an {@code int} representing the row count.
      * 
      * <p>This is the standard operation for DML (Data Manipulation Language) statements
      * that modify data in the database. The return value indicates how many rows were affected.</p>
@@ -269,7 +263,7 @@ public enum OP {
 
     /**
      * Executes an UPDATE, INSERT, or DELETE statement that may affect a large number of rows.
-     * Returns a long representing the row count for compatibility with large datasets.
+     * Returns a {@code long} representing the row count for compatibility with large datasets.
      * 
      * <p>Use this operation when the number of affected rows might exceed the range of int.
      * This is particularly relevant for bulk operations on large tables.</p>
@@ -289,8 +283,8 @@ public enum OP {
      * based on the SQL statement type and method signature.
      * 
      * <p>When DEFAULT is used, the framework analyzes the SQL statement and method return type
-     * to select the most appropriate operation. For example, SELECT statements default to list
-     * or query operations, while UPDATE/INSERT/DELETE statements default to update operations.</p>
+     * to select the most appropriate operation. For example, SELECT statements default to {@link #list}
+     * or {@link #query} operations, while UPDATE/INSERT/DELETE statements default to {@link #update} operations.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

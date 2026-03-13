@@ -67,7 +67,9 @@ import com.landawn.abacus.annotation.Beta;
  *     void updateLastAccessTime(long orderId);   // Won't refresh cache
  * }
  * }</pre>
- * 
+ *
+ * @see Cache
+ * @see CacheResult
  */
 @Beta
 @Retention(RetentionPolicy.RUNTIME)

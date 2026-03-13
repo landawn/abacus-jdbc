@@ -332,7 +332,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalBoolean containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws SQLException;
@@ -351,7 +350,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalChar containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForChar()
      */
     OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException;
@@ -370,7 +368,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalByte containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForByte()
      */
     OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException;
@@ -389,7 +386,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalShort containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForShort()
      */
     OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException;
@@ -408,7 +404,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalInt containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForInt()
      */
     OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException;
@@ -427,7 +422,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalLong containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForLong()
      */
     OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException;
@@ -446,7 +440,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalFloat containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForFloat()
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException;
@@ -465,7 +458,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return an OptionalDouble containing the value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForDouble()
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException;
@@ -484,7 +476,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the String value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException;
@@ -503,7 +494,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the Date value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException;
@@ -522,7 +512,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the Time value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException;
@@ -541,7 +530,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
@@ -561,7 +549,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param id the entity ID
      * @return a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException;
@@ -582,7 +569,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForSingleResult(Class)
      */
     <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
@@ -603,7 +589,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param targetValueType the class of the value type to convert to
      * @return an Optional containing the non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
@@ -624,8 +609,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param rowMapper the custom mapper to transform the result
      * @return an Optional containing the mapped non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
-     * @see Filters
-     * @see AbstractQuery#queryForSingleNonNull(Type)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws SQLException;
@@ -649,7 +633,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForUniqueResult(Class)
      */
     <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
@@ -674,7 +657,6 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @return an Optional containing the unique non-null value if found, otherwise empty
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see Filters
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
@@ -698,8 +680,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @return an Optional containing the mapped unique non-null value if found, otherwise empty
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see Filters
-     * @see AbstractQuery#queryForUniqueNonNull(Type)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)

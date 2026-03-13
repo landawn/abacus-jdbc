@@ -1338,7 +1338,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped value
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleNonNull(Type)
+     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -1419,7 +1419,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the unique mapped value
      * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueNonNull(Type)
+     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
