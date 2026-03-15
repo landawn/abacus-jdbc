@@ -1,8 +1,40 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+
 import com.landawn.abacus.TestBase;
 
 public class UncheckedNoUpdateCrudDaoTest extends TestBase {
 
-    // TODO: Generated-style DAO contract with abstract/default API methods. Exercise via concrete DAO implementations and JdbcUtil/DaoImpl integration tests instead of artificial direct stubs.
+    @Test
+    public void testIsInterface() {
+        assertTrue(UncheckedNoUpdateCrudDao.class.isInterface());
+    }
+
+    @Test
+    public void testExtendsUncheckedNoUpdateDao() {
+        assertTrue(UncheckedNoUpdateDao.class.isAssignableFrom(UncheckedNoUpdateCrudDao.class));
+    }
+
+    @Test
+    public void testExtendsNoUpdateCrudDao() {
+        assertTrue(NoUpdateCrudDao.class.isAssignableFrom(UncheckedNoUpdateCrudDao.class));
+    }
+
+    @Test
+    public void testExtendsUncheckedCrudDao() {
+        assertTrue(UncheckedCrudDao.class.isAssignableFrom(UncheckedNoUpdateCrudDao.class));
+    }
+
+    @Test
+    public void testTypeParameterCount() {
+        assertEquals(4, UncheckedNoUpdateCrudDao.class.getTypeParameters().length);
+    }
+
+    @Test
+    public void testHasDeclaredMethods() {
+        assertTrue(UncheckedNoUpdateCrudDao.class.getDeclaredMethods().length > 0);
+    }
 }

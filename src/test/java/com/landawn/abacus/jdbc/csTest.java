@@ -436,6 +436,11 @@ public class csTest extends TestBase {
     }
 
     @Test
+    public void testNamedInsertSqlConstant() {
+        assertEquals("namedInsertSql", cs.namedInsertSql);
+    }
+
+    @Test
     public void testJoinEntityPropNameConstant() {
         assertEquals("joinEntityPropName", cs.joinEntityPropName);
     }

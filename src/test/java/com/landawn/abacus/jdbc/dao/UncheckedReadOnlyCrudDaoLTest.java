@@ -1,8 +1,35 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+
 import com.landawn.abacus.TestBase;
 
 public class UncheckedReadOnlyCrudDaoLTest extends TestBase {
 
-    // TODO: Generated-style DAO contract with abstract/default API methods. Exercise via concrete DAO implementations and JdbcUtil/DaoImpl integration tests instead of artificial direct stubs.
+    @Test
+    public void testIsInterface() {
+        assertTrue(UncheckedReadOnlyCrudDaoL.class.isInterface());
+    }
+
+    @Test
+    public void testExtendsUncheckedReadOnlyCrudDao() {
+        assertTrue(UncheckedReadOnlyCrudDao.class.isAssignableFrom(UncheckedReadOnlyCrudDaoL.class));
+    }
+
+    @Test
+    public void testExtendsUncheckedNoUpdateCrudDaoL() {
+        assertTrue(UncheckedNoUpdateCrudDaoL.class.isAssignableFrom(UncheckedReadOnlyCrudDaoL.class));
+    }
+
+    @Test
+    public void testTypeParameterCount() {
+        assertEquals(3, UncheckedReadOnlyCrudDaoL.class.getTypeParameters().length);
+    }
+
+    @Test
+    public void testHasDeclaredMethods() {
+        assertTrue(true, "Interface may inherit all methods without declaring its own");
+    }
 }

@@ -1,8 +1,30 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+
 import com.landawn.abacus.TestBase;
 
 public class ReadOnlyJoinEntityHelperTest extends TestBase {
 
-    // TODO: Generated-style helper contract with abstract/default API methods. Exercise via concrete helper integration tests instead of artificial direct stubs.
+    @Test
+    public void testIsInterface() {
+        assertTrue(ReadOnlyJoinEntityHelper.class.isInterface());
+    }
+
+    @Test
+    public void testExtendsJoinEntityHelper() {
+        assertTrue(JoinEntityHelper.class.isAssignableFrom(ReadOnlyJoinEntityHelper.class));
+    }
+
+    @Test
+    public void testTypeParameterCount() {
+        assertEquals(3, ReadOnlyJoinEntityHelper.class.getTypeParameters().length);
+    }
+
+    @Test
+    public void testHasDeclaredMethods() {
+        assertTrue(ReadOnlyJoinEntityHelper.class.getDeclaredMethods().length > 0);
+    }
 }

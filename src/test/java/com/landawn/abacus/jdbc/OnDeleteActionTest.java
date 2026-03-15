@@ -75,6 +75,11 @@ public class OnDeleteActionTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get("delete"));
     }
 
+    @Test
+    public void testGet_NullValue() {
+        assertThrows(IllegalArgumentException.class, () -> OnDeleteAction.get(null));
+    }
+
     // Test inherited enum methods
     @Test
     public void testValues() {

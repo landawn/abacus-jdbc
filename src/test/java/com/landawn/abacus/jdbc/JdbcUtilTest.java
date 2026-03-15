@@ -1623,6 +1623,57 @@ public class JdbcUtilTest extends TestBase {
         }
     }
 
+    // Tests for public constants
+    @Test
+    public void testDefaultBatchSize() {
+        assertEquals(200, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testDefaultFetchSizeForBigResult() {
+        assertEquals(1000, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    }
+
+    @Test
+    public void testDefaultFetchSizeForStream() {
+        assertEquals(100, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_STREAM);
+    }
+
+    @Test
+    public void testDefaultCacheCapacity() {
+        assertEquals(1000, JdbcUtil.DEFAULT_CACHE_CAPACITY);
+    }
+
+    @Test
+    public void testDefaultCacheEvictDelay() {
+        assertEquals(3 * 1000, JdbcUtil.DEFAULT_CACHE_EVICT_DELAY);
+    }
+
+    @Test
+    public void testDefaultCacheLiveTime() {
+        assertEquals(30 * 60 * 1000, JdbcUtil.DEFAULT_CACHE_LIVE_TIME);
+    }
+
+    @Test
+    public void testDefaultMaxSqlLogLength() {
+        assertEquals(1024, JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH);
+    }
+
+    @Test
+    public void testDefaultMinExecutionTimeForSqlPerfLog() {
+        assertEquals(1000L, JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG);
+    }
+
+    @Test
+    public void testDefaultMinExecutionTimeForDaoMethodPerfLog() {
+        assertEquals(3000L, JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG);
+    }
+
+    @Test
+    public void testDefaultCacheMaxIdleTime() {
+        assertEquals(3 * 60 * 1000, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME);
+    }
+
     @SuppressWarnings("unchecked")
     private Map<Class<? extends com.landawn.abacus.jdbc.dao.Dao>, BiRowMapper<?>> getIdExtractorPool() {
         try {
