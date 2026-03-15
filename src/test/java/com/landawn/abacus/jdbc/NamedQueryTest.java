@@ -253,7 +253,7 @@ public class NamedQueryTest extends TestBase {
 
         NamedQuery result = namedQuery.setInt(paramName, value);
 
-        verify(mockPreparedStatement).setInt(1, (int) 'A');
+        verify(mockPreparedStatement).setInt(1, 'A');
         assertSame(namedQuery, result);
     }
 
@@ -264,7 +264,7 @@ public class NamedQueryTest extends TestBase {
 
         NamedQuery result = namedQuery.setInt(paramName, value);
 
-        verify(mockPreparedStatement).setInt(1, (int) 'B');
+        verify(mockPreparedStatement).setInt(1, 'B');
         assertSame(namedQuery, result);
     }
 

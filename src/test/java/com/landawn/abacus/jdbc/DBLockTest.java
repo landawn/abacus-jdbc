@@ -17,6 +17,8 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,9 +31,9 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 
 import javax.sql.DataSource;
@@ -146,10 +148,13 @@ public class DBLockTest extends TestBase {
         assertNotNull(DBLock.UNLOCKED);
     }
 
-    // Test scheduled executor is properly initialized
+    // Test scheduled executor is properly initialized and usable
     @Test
     public void testScheduledExecutorNotNull() {
         assertNotNull(DBLock.scheduledExecutor);
+        assertInstanceOf(ScheduledExecutorService.class, DBLock.scheduledExecutor);
+        // The shared executor should not be shut down during normal operation
+        assertFalse(DBLock.scheduledExecutor.isShutdown(), "scheduledExecutor should not be shut down");
     }
 
     // Test constant values are appropriate

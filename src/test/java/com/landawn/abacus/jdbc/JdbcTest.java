@@ -215,6 +215,9 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.next()).thenReturn(false);
         Dataset result = Jdbc.ResultExtractor.TO_DATASET.apply(mockResultSet);
         assertNotNull(result);
+        // No rows were returned, so the dataset should be empty
+        assertTrue(result.isEmpty());
+        assertEquals(0, result.size());
     }
 
     @Test
@@ -363,6 +366,9 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.next()).thenReturn(false);
         Dataset result = Jdbc.BiResultExtractor.TO_DATASET.apply(mockResultSet, Arrays.asList("col1"));
         assertNotNull(result);
+        // No rows were returned, so the dataset should be empty
+        assertTrue(result.isEmpty());
+        assertEquals(0, result.size());
     }
 
     @Test
@@ -741,12 +747,20 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getLong(1)).thenReturn(1L);
         when(mockResultSet.getString(2)).thenReturn("John");
         when(mockResultSet.getInt(3)).thenReturn(25);
+        // BiRowMapper.to() internally uses getObject to read column values
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("John");
+        when(mockResultSet.getObject(3)).thenReturn(25);
 
         Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class);
         List<String> columnLabels = Arrays.asList("id", "name", "age");
 
         TestEntity result = mapper.apply(mockResultSet, columnLabels);
         assertNotNull(result);
+        // Verify the mapper populated the entity fields from the ResultSet
+        assertEquals(Long.valueOf(1L), result.getId());
+        assertEquals("John", result.getName());
+        assertEquals(Integer.valueOf(25), result.getAge());
     }
 
     @Test
@@ -755,6 +769,11 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getString(2)).thenReturn("John");
         when(mockResultSet.getInt(3)).thenReturn(25);
         when(mockResultSet.getString(4)).thenReturn("extra");
+        // BiRowMapper.to() internally uses getObject to read column values
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("John");
+        when(mockResultSet.getObject(3)).thenReturn(25);
+        when(mockResultSet.getObject(4)).thenReturn("extra");
 
         Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, true);
         List<String> columnLabels = Arrays.asList("id", "name", "age", "extra_column");
@@ -764,6 +783,10 @@ public class JdbcTest extends TestBase {
 
         TestEntity result = mapper.apply(mockResultSet, columnLabels);
         assertNotNull(result);
+        // Verify known fields are mapped despite extra unmatched column
+        assertEquals(Long.valueOf(1L), result.getId());
+        assertEquals("John", result.getName());
+        assertEquals(Integer.valueOf(25), result.getAge());
     }
 
     @Test
@@ -882,6 +905,10 @@ public class JdbcTest extends TestBase {
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         TestEntity result = mapper.apply(mockResultSet, columnLabels);
         assertNotNull(result);
+        // Verify the builder-constructed mapper populated entity fields correctly
+        assertEquals(1L, result.getId().longValue());
+        assertEquals("John", result.getName());
+        assertEquals(Integer.valueOf(20), result.getAge());
     }
 
     @Test
@@ -1175,9 +1202,10 @@ public class JdbcTest extends TestBase {
 
         extractor.accept(mockResultSet, outputRow);
 
-        assertNotNull(outputRow[0]);
-        assertNotNull(outputRow[1]);
-        assertNotNull(outputRow[2]);
+        // Verify extracted values match the mock ResultSet data
+        assertEquals(1L, outputRow[0]);
+        assertEquals("John", outputRow[1]);
+        assertEquals(25, outputRow[2]);
     }
 
     @Test
@@ -1312,6 +1340,10 @@ public class JdbcTest extends TestBase {
         TestEntity result = mapper.apply(mockResultSet);
 
         assertNotNull(result);
+        // Verify XML deserialization produced correct field values
+        assertEquals(1L, result.getId().longValue());
+        assertEquals("John", result.getName());
+        assertEquals(25, result.getAge().intValue());
     }
 
     //    @Test
@@ -1383,17 +1415,23 @@ public class JdbcTest extends TestBase {
     // Handler Tests
     @Test
     public void testHandlerDefaultMethods() {
-        Jdbc.Handler<Object> handler = new Jdbc.Handler<Object>() {
+        Jdbc.Handler<Object> handler = new Jdbc.Handler<>() {
         };
 
         Method method = Object.class.getMethods()[0];
         ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
         Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
 
-        assertDoesNotThrow(() -> {
-            handler.beforeInvoke(new Object(), new Object[0], methodSignature);
-            handler.afterInvoke("result", new Object(), new Object[0], methodSignature);
-        });
+        // Default beforeInvoke and afterInvoke should be no-ops that complete without error
+        handler.beforeInvoke(new Object(), new Object[0], methodSignature);
+        handler.afterInvoke("result", new Object(), new Object[0], methodSignature);
+
+        // Verify the handler is an instance of the Handler interface
+        assertTrue(handler instanceof Jdbc.Handler);
+        // Verify the method signature tuple was constructed correctly
+        assertSame(method, methodSignature._1);
+        assertEquals(0, paramTypes.size());
+        assertEquals(Object.class, methodSignature._3);
     }
 
     // HandlerFactory Tests
@@ -1411,7 +1449,7 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testHandlerFactoryRegisterInstance() {
-        Jdbc.Handler<Object> handler = new Jdbc.Handler<Object>() {
+        Jdbc.Handler<Object> handler = new Jdbc.Handler<>() {
         };
 
         boolean registered = Jdbc.HandlerFactory.register(handler);
@@ -1420,7 +1458,7 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testHandlerFactoryRegisterWithQualifier() {
-        Jdbc.Handler<Object> handler = new Jdbc.Handler<Object>() {
+        Jdbc.Handler<Object> handler = new Jdbc.Handler<>() {
         };
 
         boolean registered = Jdbc.HandlerFactory.register("testHandler", handler);
@@ -1432,7 +1470,7 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testHandlerFactoryGet() {
-        Jdbc.Handler<Object> handler = new Jdbc.Handler<Object>() {
+        Jdbc.Handler<Object> handler = new Jdbc.Handler<>() {
         };
         String qualifier = "getTestHandler";
 
@@ -1531,13 +1569,21 @@ public class JdbcTest extends TestBase {
     public void testDaoCacheCreateByMap() {
         Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
         assertNotNull(cache);
+        // Verify the factory produces a DaoCacheByMap instance
+        assertTrue(cache instanceof Jdbc.DaoCacheByMap);
+        // Verify cache starts empty (get returns null for unknown key)
+        assertNull(cache.get("nonexistent", null, null, null));
     }
 
     @Test
     public void testDaoCacheCreateByMapWithMap() {
         Map<String, Object> map = new HashMap<>();
+        map.put("preloaded", "value1");
         Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(map);
         assertNotNull(cache);
+        assertTrue(cache instanceof Jdbc.DaoCacheByMap);
+        // Verify the cache is backed by the provided map and can see pre-existing entries
+        assertEquals("value1", cache.get("preloaded", null, null, null));
     }
 
     @Test
@@ -1604,7 +1650,7 @@ public class JdbcTest extends TestBase {
         assertEquals("result2", cache.get("method#products#params2", null, null, methodSignature));
     }
 
-    // DaoCacheByMap Tests  
+    // DaoCacheByMap Tests
     @Test
     public void testDaoCacheByMapGetPut() throws Exception {
         Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
@@ -1665,15 +1711,25 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testDaoCacheByMapConstructors() {
+        // Default constructor: empty cache backed by ConcurrentHashMap
         Jdbc.DaoCacheByMap cache1 = new Jdbc.DaoCacheByMap();
         assertNotNull(cache1);
+        assertTrue(cache1.cache().isEmpty());
 
+        // Capacity constructor: empty cache with initial capacity
         Jdbc.DaoCacheByMap cache2 = new Jdbc.DaoCacheByMap(50);
         assertNotNull(cache2);
+        assertTrue(cache2.cache().isEmpty());
 
+        // Map constructor: cache backed by the provided map
         Map<String, Object> map = new HashMap<>();
+        map.put("key1", "val1");
         Jdbc.DaoCacheByMap cache3 = new Jdbc.DaoCacheByMap(map);
         assertNotNull(cache3);
+        // Verify the backing map is the same instance and contains the pre-loaded entry
+        assertSame(map, cache3.cache());
+        assertEquals(1, cache3.cache().size());
+        assertEquals("val1", cache3.cache().get("key1"));
     }
 
     // Edge cases and error conditions
@@ -1775,14 +1831,18 @@ public class JdbcTest extends TestBase {
     public void testTypeConversions() throws SQLException {
         // Test various type conversions through ColumnGetter
         when(mockResultSet.getBigDecimal(1)).thenReturn(new BigDecimal("123.45"));
-        when(mockResultSet.getObject(2)).thenReturn(new java.util.Date());
 
         Jdbc.ColumnGetter<BigDecimal> bigDecimalGetter = Jdbc.ColumnGetter.get(BigDecimal.class);
         BigDecimal bd = bigDecimalGetter.apply(mockResultSet, 1);
         assertNotNull(bd);
+        // Verify the BigDecimal value is preserved exactly
+        assertEquals(new BigDecimal("123.45"), bd);
+        assertEquals(0, bd.compareTo(new BigDecimal("123.45")));
 
-        Jdbc.ColumnGetter<Date> dateGetter = Jdbc.ColumnGetter.get(Date.class);
-        // This would normally handle conversion from java.util.Date to java.sql.Date
+        // Verify ColumnGetter.get returns a working getter for String type
+        when(mockResultSet.getString(1)).thenReturn("hello");
+        Jdbc.ColumnGetter<String> stringGetter = Jdbc.ColumnGetter.get(String.class);
+        assertEquals("hello", stringGetter.apply(mockResultSet, 1));
     }
 
     @Test

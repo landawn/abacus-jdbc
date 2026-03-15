@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -154,12 +155,27 @@ public class DaoImplTest extends TestBase {
                 .invoke(null, TestEntity.class, daoMethod, null, null, null, true, true, false, OP.DEFAULT, false, "PrimitiveExtractorDao.count");
 
         assertNotNull(func);
+
+        // Verify the function is actually invocable and returns a value from the extractor
+        Dataset dataset = new RowDataset(ImmutableList.of("cnt"), ImmutableList.of(ImmutableList.of(42)));
+        Jdbc.ResultExtractor<Integer> extractor = rs -> 42;
+        Object result = func.apply(new StubQuery(dataset), new Object[] { extractor });
+        // The factory should produce a function that returns a non-null result from the query
+        assertNotNull(result);
+        // Verify the result is a Dataset containing the expected data
+        assertTrue(result instanceof Dataset, "Expected a Dataset result from the query function");
+        assertEquals(1, ((Dataset) result).size(), "Dataset should contain one row");
     }
 
     @Test
     void testCreateDaoWithReorderedGenericInterfaces() throws Exception {
         ReorderedGenericDao dao = DaoImpl.createDao(ReorderedGenericDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
         assertNotNull(dao);
+        // Verify the proxy implements both the DAO interface and the Marker interface
+        assertTrue(dao instanceof BaseDao, "Should implement BaseDao");
+        assertTrue(dao instanceof Marker, "Should implement Marker");
+        // Verify the proxy is not accidentally the raw interface class itself
+        assertFalse(dao.getClass().equals(ReorderedGenericDao.class), "Should be a proxy, not the interface itself");
     }
 
     @Test

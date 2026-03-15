@@ -256,7 +256,7 @@ Requirements:
 	Rules:
 	- Any test method with no assertions (i.e. it only invokes code but never verifies output) 
 	  must be updated to assert the expected outcome
-	- Use org.junit.jupiter.api.Assertions (JUnit 5) — e.g. assertEquals, assertNotNull, 
+	- Use org.junit.jupiter.api.Assertions (JUnit 6) — e.g. assertEquals, assertNotNull, 
 	  assertTrue, assertThrows, assertDoesNotThrow
 	- Assertions must verify meaningful behavior: return values, state changes, thrown exceptions, 
 	  or side effects — not trivially assert (true) or (obj != null) without reason

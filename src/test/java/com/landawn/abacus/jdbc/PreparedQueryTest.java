@@ -1837,10 +1837,17 @@ public class PreparedQueryTest extends TestBase {
         });
 
         assertNotNull(results);
+        // execute() returns false (unstubbed), getUpdateCount()=0 triggers getMoreResults()=true,
+        // yielding one result set; then getUpdateCount()=-1 terminates iteration
+        assertEquals(1, results.size());
+        // mockResultSet.next() is not stubbed so returns false — extractor sees 0 rows
+        assertEquals(0, results.get(0));
     }
 
     @Test
     public void testQueryAllResultSetsWithBiExtractor() throws SQLException {
+        // Stub execute() to return true so the first result set is produced
+        when(mockStmt.execute()).thenReturn(true);
         when(mockStmt.getMoreResults()).thenReturn(false);
         when(mockStmt.getUpdateCount()).thenReturn(-1);
 
@@ -1851,6 +1858,11 @@ public class PreparedQueryTest extends TestBase {
         });
 
         assertNotNull(results);
+        // execute() returns true, yielding one result set; getMoreResults()=false terminates
+        assertEquals(1, results.size());
+        // Metadata stub has columnCount=1, so labels list has 1 entry
+        assertEquals(1, results.get(0).get("columnCount"));
+        assertTrue(results.get(0).containsKey("columnCount"));
     }
 
     @Test
