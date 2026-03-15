@@ -6445,7 +6445,25 @@ public final class JdbcUtil {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
-                return resultSetHolder.getAndSet(null);
+                final ResultSet rs = resultSetHolder.getAndSet(null);
+
+                //    should keep or drop the current ResultSet? probably drop, why do we need to keep the current result?
+                //    #: 3
+                //    File: JdbcUtil.java
+                //    Line: 6442
+                //    Bug: iterateAllResultSets never called getMoreResults() after
+                //    consuming
+                //      a ResultSet, silently dropping all but the first result set from
+                //      stored procedures
+                //    Severity: High
+
+                //    try {
+                //        isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
+                //    } catch (final SQLException e) {
+                //        throw new UncheckedSQLException(e);
+                //    }
+
+                return rs;
             }
 
             private boolean isClosed = false;
@@ -6837,7 +6855,17 @@ public final class JdbcUtil {
             }
         });
 
-        sqlTypeGetterMap.put(Types.REAL, sqlTypeGetterMap.get(Types.DOUBLE));
+        sqlTypeGetterMap.put(Types.REAL, new OutParameterGetter() {
+            @Override
+            public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
+                return stmt.getFloat(outParameterIndex);
+            }
+
+            @Override
+            public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
+                return stmt.getFloat(outParameterName);
+            }
+        });
 
         sqlTypeGetterMap.put(Types.DECIMAL, new OutParameterGetter() {
             @Override
@@ -7065,10 +7093,8 @@ public final class JdbcUtil {
         Connection conn = null;
 
         try {
-            conn = ds.getConnection();
+            conn = getConnection(ds);
             return doesTableExist(conn, tableName);
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
         } finally {
             releaseConnection(conn, ds);
         }

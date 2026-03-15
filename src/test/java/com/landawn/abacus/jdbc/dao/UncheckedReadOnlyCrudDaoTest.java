@@ -13,8 +13,7 @@ import com.landawn.abacus.query.SqlBuilder;
 
 public class UncheckedReadOnlyCrudDaoTest extends TestBase {
 
-    private interface DummyUncheckedReadOnlyCrudDao
-            extends UncheckedReadOnlyCrudDao<Object, String, SqlBuilder.PSC, DummyUncheckedReadOnlyCrudDao> {
+    private interface DummyUncheckedReadOnlyCrudDao extends UncheckedReadOnlyCrudDao<Object, String, SqlBuilder.PSC, DummyUncheckedReadOnlyCrudDao> {
     }
 
     private final DummyUncheckedReadOnlyCrudDao dao = createDefaultMethodProxy(DummyUncheckedReadOnlyCrudDao.class);

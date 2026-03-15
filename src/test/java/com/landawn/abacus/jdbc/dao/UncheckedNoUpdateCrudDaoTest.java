@@ -15,8 +15,7 @@ import com.landawn.abacus.query.condition.Condition;
 
 public class UncheckedNoUpdateCrudDaoTest extends TestBase {
 
-    private interface DummyUncheckedNoUpdateCrudDao
-            extends UncheckedNoUpdateCrudDao<Object, String, SqlBuilder.PSC, DummyUncheckedNoUpdateCrudDao> {
+    private interface DummyUncheckedNoUpdateCrudDao extends UncheckedNoUpdateCrudDao<Object, String, SqlBuilder.PSC, DummyUncheckedNoUpdateCrudDao> {
     }
 
     private final DummyUncheckedNoUpdateCrudDao dao = createDefaultMethodProxy(DummyUncheckedNoUpdateCrudDao.class);

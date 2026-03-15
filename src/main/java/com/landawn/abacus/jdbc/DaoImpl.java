@@ -2402,7 +2402,7 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
-                                return 0;
+                                return null;
                             }
 
                             final ParsedSql namedInsertSql = isNoId || N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)))
@@ -2441,7 +2441,7 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
-                                return 0;
+                                return null;
                             }
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToSave).build().query();
@@ -2476,7 +2476,7 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
-                                return 0;
+                                return null;
                             }
 
                             if (entities.size() <= batchSize) {
@@ -6533,7 +6533,7 @@ final class DaoImpl {
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
                 final OP op, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect, final boolean isInsert,
                 final boolean isProcedure, final boolean fragmentContainsNamedParameters) {
-            this.sql = N.checkArgNotBlank(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
+            this.sql = N.checkArgNotBlank(sql != null && sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, "sql");
             this.parsedSql = parsedSql == null ? ParsedSql.parse(this.sql) : parsedSql;
             this.queryTimeout = queryTimeout;
             this.fetchSize = fetchSize;
