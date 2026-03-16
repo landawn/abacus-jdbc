@@ -1,7 +1,7 @@
 # abacus-jdbc API Index (v4.6.4)
 - Build: unknown
 - Java: 17
-- Generated: 2026-03-09
+- Generated: 2026-03-15
 
 ## Packages
 - com.landawn.abacus.jdbc
@@ -1580,7 +1580,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException`
 - **Summary:** Executes the query and returns the first non-null value from the result set as the specified type.
 - **Contract:**
-  - <br/> If the value encountered in the first row/column is null, a NullPointerException is thrown.
+  - <p> If the value encountered in the first row/column is null, a NullPointerException is thrown.
 - **Parameters:**
   - `targetValueType` (`Class<? extends V>`) — the class of the desired result type
 - **Returns:** An {@code Optional} containing the non-null value if present, otherwise empty
@@ -1592,7 +1592,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException`
 - **Summary:** Executes the query and returns the first non-null value from the result set using a custom Type handler.
 - **Contract:**
-  - <br/> If the value encountered in the first row/column is null, a NullPointerException is thrown.
+  - <p> If the value encountered in the first row/column is null, a NullPointerException is thrown.
 - **Parameters:**
   - `targetValueType` (`Type<? extends V>`) — the Type handler for converting the result
 - **Returns:** An {@code Optional} containing the non-null value if present, otherwise empty
@@ -1631,7 +1631,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException`
 - **Summary:** Executes the query and returns the unique non-null result value as the specified type.
 - **Contract:**
-  - <br/> If more than one row is found, a DuplicateResultException is thrown.
+  - <p> If more than one row is found, a DuplicateResultException is thrown.
   - If the value encountered in the first row/column is null, a NullPointerException is thrown.
   - // Throws exception if multiple sessions exist for the token } </pre>
 - **Parameters:**
@@ -1646,7 +1646,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException`
 - **Summary:** Executes the query and returns the unique non-null result value using a custom Type handler.
 - **Contract:**
-  - <br/> If more than one row is found, a DuplicateResultException is thrown.
+  - <p> If more than one row is found, a DuplicateResultException is thrown.
   - If the value encountered in the first row/column is null, a NullPointerException is thrown.
 - **Parameters:**
   - `targetValueType` (`Type<? extends V>`) — the Type handler for converting the result
@@ -2257,7 +2257,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Signature:** `@SuppressWarnings("resource") @LazyEvaluation public <T> Stream<T> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException`
 - **Summary:** Streams the rows in the first ResultSet, filtering with BiRowFilter and mapping with BiRowMapper.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Advanced streaming with column-aware filtering and mapping try (Stream<Report> stream = preparedQuery.stream( (rs, labels) -> labels.contains("published") && rs.getBoolean("published"), (rs, labels) -> { Report report = new Report(); report.setId(rs.getLong("id")); // Only set optional fields if they exist if (labels.contains("author")) { report.setAuthor(rs.getString("author")); } return report; } )) { stream.forEach(report -> publishReport(report)); } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Advanced streaming with column-aware filtering and mapping try (Stream<Report> stream = preparedQuery.stream( (rs, labels) -> labels.contains("published") && rs.getBoolean("published"), (rs, labels) -> { Report report = new Report(); report.setId(rs.getLong("id")); // Only set optional fields if they exist if (labels.contains("author")) { report.setAuthor(rs.getString("author")); } return report; } )) { stream.forEach(report -> publishReport(report)); } } </pre>
 - **Parameters:**
   - `rowFilter` (`Jdbc.BiRowFilter`) — the BiRowFilter to test each row. Must not be {@code null} .
   - `rowMapper` (`Jdbc.BiRowMapper<? extends T>`) — the BiRowMapper for filtered rows. Must not be {@code null} .
@@ -5589,7 +5589,7 @@ Represents an output parameter for a stored procedure call.
 
 #### Public Instance Methods
 ##### <init>(...) -> void
-- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * @param parameterIndex the 1-based index of the parameter. * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. */ public static OutParam of(int parameterIndex, int sqlType) { final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the results of output parameters from a stored procedure execution. * It provides methods to retrieve parameter values by their 1-based index or name. * * <p><b>Usage Examples:</b></p> * <pre>{@code * // After calling a stored procedure with output parameters * OutParamResult result = callableQuery.call(outParams); * * // Retrieve by index * int id = result.getOutParamValue(1); * * // Retrieve by name * String name = result.getOutParamValue("result_name"); * }</pre> * * @see OutParam */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * @return a map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return outParamValues; } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * @return a list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return outParams; } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Calling method: " + sig._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * It can be used for logging results, result transformation, or resource cleanup. * * @param result the value returned by the method. If the method's return type is void, this will be {@code null}. * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. * * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from * the Spring application context if available. The factory also provides convenience methods * to create handlers from lambda expressions.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Create a handler with before/after actions * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result) * ); * * // Register and retrieve a handler by class * HandlerFactory.register(myHandler); * Handler<?> h = HandlerFactory.get(MyHandler.class); * }</pre> * * @see Handler */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Throwable e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; handlerPool.put(qualifier, result); } } catch (final Exception e) { // Bean not found in Spring context, return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); } catch (final Exception e) { // Bean not found in Spring context by class } if (result == null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } catch (final Exception e) { // Bean not found in Spring context by qualifier } } if (result != null) { handlerPool.put(qualifier, result); } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { result = N.newInstance(handlerClass); if (result != null) { register(result); } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // singleton. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> * * <p>Two built-in implementations are provided:</p> * <ul> * <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li> * <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li> * </ul> * * @see DefaultDaoCache * @see DaoCacheByMap */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@code LocalCache}. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. */ static DaoCache createByMap(Map<String, Object> map) { N.checkArgNotNull(map, "map"); return new DaoCacheByMap(map); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. * * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all * entries associated with the affected table. If the table name cannot be determined from the cache key, * the entire cache is cleared.</p> * * @see DaoCache#create(int, long) */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableAdapter<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableAdapter<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries associated with that table. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly * invalidated by a data modification operation or manual clearing. * * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p> * * @see DaoCache#createByMap() * @see DaoCache#createByMap(Map) */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. */ DaoCacheByMap { N.checkArgNotNull(cache, "cache"); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName)); } } } }`
+- **Signature:** `class OutParam { /** * The 1-based index of the parameter in the stored procedure call. */ private int parameterIndex; /** * The name of the parameter. This is optional and used for named parameter calls. */ private String parameterName; /** * The SQL type of the parameter, as defined in {@code java.sql.Types}. */ private int sqlType; /** * The database-specific type name. This is generally used for user-defined or complex types. */ private String typeName; /** * The number of digits to the right of the decimal point, for {@code DECIMAL} or {@code NUMERIC} types. */ private int scale; /** * A factory method to create an {@code OutParam} with the specified index and SQL type. * * @param parameterIndex the 1-based index of the parameter. * @param sqlType the SQL type from {@code java.sql.Types}. * @return a new {@code OutParam} instance. */ public static OutParam of(int parameterIndex, int sqlType) { final OutParam outParam = new OutParam(); outParam.setParameterIndex(parameterIndex); outParam.setSqlType(sqlType); return outParam; } } /** * A container for the results of output parameters from a stored procedure execution. * It provides methods to retrieve parameter values by their 1-based index or name. * * <p><b>Usage Examples:</b></p> * <pre>{@code * // After calling a stored procedure with output parameters * OutParamResult result = callableQuery.call(outParams); * * // Retrieve by index * int id = result.getOutParamValue(1); * * // Retrieve by name * String name = result.getOutParamValue("result_name"); * }</pre> * * @see OutParam */ @EqualsAndHashCode @ToString public static final class OutParamResult { private final List<OutParam> outParams; private final Map<Object, Object> outParamValues; /** * Constructs an {@code OutParamResult} with the specified output parameters and their values. * * @param outParams the list of {@code OutParam} definitions. * @param outParamValues a map of output parameter values, keyed by index or name. */ OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) { this.outParams = outParams; this.outParamValues = outParamValues; } /** * Retrieves the value of an output parameter by its 1-based index. * * @param <T> expected parameter value type * @param parameterIndex the 1-based index of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final int parameterIndex) { return (T) outParamValues.get(parameterIndex); } /** * Retrieves the value of an output parameter by its name. * * @param <T> expected parameter value type * @param parameterName the name of the parameter. * @return the parameter value, cast to type {@code T}. May be {@code null}. */ public <T> T getOutParamValue(final String parameterName) { return (T) outParamValues.get(parameterName); } /** * Returns a map containing all output parameter values. The keys of the map are * either the parameter index ({@code Integer}) or name ({@code String}). * * @return a map of all output parameter values. */ public Map<Object, Object> getOutParamValues() { return outParamValues; } /** * Returns the list of {@link OutParam} definitions that were used to register the output parameters. * * @return a list of {@code OutParam} objects. */ public List<OutParam> getOutParams() { return outParams; } } /** * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called. * * <p><b>Usage Examples:</b></p> * <pre>{@code * Handler<UserDao> loggingHandler = new Handler<>() { * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Calling method: " + sig._1.getName()); * } * public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) { * System.out.println("Method returned: " + result); * } * }; * }</pre> * * @param <P> DAO proxy type */ @Beta public interface Handler<P> { /** * This method is invoked before the actual DAO method is called. It can be used for * logging, argument validation, security checks, or transaction management. * * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void beforeInvoke(final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } /** * This method is invoked after the DAO method completes, whether successfully or with an exception. * It can be used for logging results, result transformation, or resource cleanup. * * @param result the value returned by the method. If the method's return type is void, this will be {@code null}. * @param proxy the proxy instance on which the method was invoked. * @param args the arguments passed to the method. * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type. */ @SuppressWarnings("unused") default void afterInvoke(final Object result, final P proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { // empty action. } } /** * A factory for creating and managing {@link Handler} instances. It provides a central registry * for handlers and supports integration with the Spring Framework's application context. * * <p>Handlers can be registered manually via {@link #register(Handler)} or retrieved from * the Spring application context if available. The factory also provides convenience methods * to create handlers from lambda expressions.</p> * * <p><b>Usage Examples:</b></p> * <pre>{@code * // Create a handler with before/after actions * Handler<UserDao> handler = HandlerFactory.create( * (proxy, args, sig) -> System.out.println("Before: " + sig._1.getName()), * (result, proxy, args, sig) -> System.out.println("After: " + result) * ); * * // Register and retrieve a handler by class * HandlerFactory.register(myHandler); * Handler<?> h = HandlerFactory.get(MyHandler.class); * }</pre> * * @see Handler */ public static final class HandlerFactory { @SuppressWarnings("rawtypes") static final Handler EMPTY = new Handler() { // Do nothing. }; private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>(); private static final SpringApplicationContext springAppContext; static { handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY); handlerPool.put(ClassUtil.getClassName(EMPTY.getClass()), EMPTY); SpringApplicationContext tmp = null; try { tmp = new SpringApplicationContext(); } catch (final Throwable e) { // ignore. } springAppContext = tmp; } /** * Registers a handler by creating a new instance of the specified handler class. * The handler is registered using its canonical class name as the qualifier. * * @param handlerClass the handler class to instantiate and register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { N.checkArgNotNull(handlerClass, cs.handlerClass); return register(N.newInstance(handlerClass)); } /** * Registers a handler instance. The handler is registered using its canonical class name as the qualifier. * * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists. * @throws IllegalArgumentException if {@code handler} is {@code null}. */ public static boolean register(final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotNull(handler, cs.handler); return register(ClassUtil.getCanonicalClassName(handler.getClass()), handler); } /** * Registers a handler instance with a specific qualifier string. * * @param qualifier the unique identifier for the handler. * @param handler the handler instance to register. * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists. * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}. */ public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException { N.checkArgNotEmpty(qualifier, cs.qualifier); N.checkArgNotNull(handler, cs.handler); return handlerPool.putIfAbsent(qualifier, handler) == null; } /** * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found, * it attempts to retrieve it from the Spring application context if available. * * @param qualifier the unique identifier for the handler. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code qualifier} is empty. */ public static Handler<?> get(final String qualifier) { //NOSONAR N.checkArgNotEmpty(qualifier, cs.qualifier); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; handlerPool.put(qualifier, result); } } catch (final Exception e) { // Bean not found in Spring context, return null } } return result; } /** * Retrieves a handler by its class. It first checks the internal registry using the class's * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring * application context. * * @param handlerClass the class of the handler to retrieve. * @return the handler instance, or {@code null} if not found. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); final String qualifier = ClassUtil.getCanonicalClassName(handlerClass); Handler<?> result = handlerPool.get(qualifier); if (result == null && springAppContext != null) { try { result = springAppContext.getBean(handlerClass); } catch (final Exception e) { // Bean not found in Spring context by class } if (result == null) { try { final Object bean = springAppContext.getBean(qualifier); if (bean instanceof Handler) { result = (Handler<?>) bean; } } catch (final Exception e) { // Bean not found in Spring context by qualifier } } if (result != null) { handlerPool.put(qualifier, result); } } return result; } /** * Retrieves a handler by its class. If the handler is not found in the registry or Spring context, * a new instance is created, registered, and returned. * * @param handlerClass the class of the handler to retrieve or create. * @return the existing or newly created handler instance. * @throws IllegalArgumentException if {@code handlerClass} is {@code null}. */ public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR N.checkArgNotNull(handlerClass, cs.handlerClass); Handler<?> result = get(handlerClass); if (result == null) { result = N.newInstance(handlerClass); if (result != null) { register(result); } } return result; } /** * Creates a {@code Handler} with a custom action to be executed before method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param beforeInvokeAction the action to perform before the method is called. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code beforeInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with a custom action to be executed after method invocation. * * @param <T> proxy type * @param <E> exception type that action can throw * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } /** * Creates a {@code Handler} with custom actions to be executed both before and after method invocation. * * @param <T> proxy type * @param <E> exception type that actions can throw * @param beforeInvokeAction the action to perform before the method is called. * @param afterInvokeAction the action to perform after the method returns. * @return a new {@code Handler} instance. * @throws IllegalArgumentException if either action is {@code null}. */ public static <T, E extends RuntimeException> Handler<T> create( final Throwables.TriConsumer<T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> beforeInvokeAction, final Throwables.QuadConsumer<Object, T, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, E> afterInvokeAction) throws IllegalArgumentException { N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction); N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction); return new Handler<>() { @Override public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { beforeInvokeAction.accept(targetObject, args, methodSignature); } @Override public void afterInvoke(final Object result, final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { afterInvokeAction.accept(result, targetObject, args, methodSignature); } }; } private HandlerFactory() { // utility class - prevent instantiation. } } /** * An interface for caching the results of DAO method calls. Implementations can provide * various caching strategies (e.g., in-memory, distributed) to improve application performance. * * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p> * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p> * * <p>Two built-in implementations are provided:</p> * <ul> * <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li> * <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li> * </ul> * * @see DefaultDaoCache * @see DaoCacheByMap */ public interface DaoCache { /** * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@code LocalCache}. * * @param capacity the maximum number of entries in the cache. * @param evictDelay the interval in milliseconds for the eviction scheduler to run. * @return a new {@code DaoCache} instance. */ static DaoCache create(final int capacity, final long evictDelay) { return new DefaultDaoCache(capacity, evictDelay); } /** * Creates a {@code DaoCache} backed by a {@code java.util.concurrent.ConcurrentHashMap}. This cache does not * perform automatic eviction. * * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}. */ static DaoCache createByMap() { return new DaoCacheByMap(); } /** * Creates a {@code DaoCache} backed by the provided {@code Map}. This allows for using custom * map implementations (e.g., {@code ConcurrentHashMap}) for caching. * * @param map the map to use for caching. * @return a new {@code DaoCache} instance backed by the provided map. */ static DaoCache createByMap(Map<String, Object> map) { N.checkArgNotNull(map, "map"); return new DaoCacheByMap(map); } /** * Retrieves a cached result. The implementation can use the provided parameters to customize * the cache key generation if needed. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters). * @param daoProxy the DAO proxy instance on which the method was called. * @param args the arguments passed to the method. * @param methodSignature a tuple containing method metadata. * @return the cached result, or {@code null} if not found. */ Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with default time-to-live (TTL) settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Caches a result with custom time-to-live (TTL) and idle time settings. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key. * @param result the method result to cache. * @param liveTime the maximum time in milliseconds the entry should live in the cache. * @param maxIdleTime the maximum time in milliseconds the entry can remain idle before being evicted. * @param daoProxy the DAO proxy instance. * @param args the method arguments. * @param methodSignature a tuple containing method metadata. * @return {@code true} if the result was cached successfully. */ boolean put(String defaultCacheKey, Object result, final long liveTime, final long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); /** * Updates the cache after a data modification operation (e.g., insert, update, delete). This method * is responsible for invalidating or clearing cache entries that may be affected by the operation. * * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments.</p> * * @param defaultCacheKey the default cache key from the modification method. * @param result the result of the modification operation (e.g., number of rows affected). * @param daoProxy the DAO proxy instance. * @param args the arguments of the modification method. * @param methodSignature a tuple containing method metadata. */ void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature); } /** * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching * with support for time-to-live (TTL) and idle time-based eviction. * * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all * entries associated with the affected table. If the table name cannot be determined from the cache key, * the entire cache is cleared.</p> * * @see DaoCache#create(int, long) */ public static final class DefaultDaoCache implements DaoCache { private final KeyedObjectPool<String, PoolableAdapter<Object>> pool; /** * Creates a {@code DefaultDaoCache} with a specified capacity and eviction delay. * * @param capacity the maximum number of entries the cache can hold. * @param evictDelay the interval in milliseconds for the background eviction thread. */ public DefaultDaoCache(final int capacity, final long evictDelay) { pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final PoolableAdapter<Object> w = pool.get(defaultCacheKey); return w == null ? null : w.value(); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME)); } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { N.checkArgNotNull(defaultCacheKey, "Key cannot be null"); return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime)); } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all cache entries associated with that table. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { pool.clear(); } else { pool.keySet().stream().filter(k -> Strings.containsIgnoreCase(k, updatedTableName)).toList().forEach(pool::remove); } } } /** * A simple implementation of {@link DaoCache} backed by a {@code Map} (defaults to * {@code ConcurrentHashMap}). Unlike {@link DefaultDaoCache}, this implementation does not * support automatic eviction or TTL-based expiration. Entries remain in the cache until explicitly * invalidated by a data modification operation or manual clearing. * * <p>This is suitable for lightweight caching scenarios or testing where time-based eviction is not required.</p> * * @see DaoCache#createByMap() * @see DaoCache#createByMap(Map) */ record DaoCacheByMap(Map<String, Object> cache) implements DaoCache { /** * Creates a {@code DaoCacheByMap} with a new {@code ConcurrentHashMap}. */ public DaoCacheByMap() { this(new ConcurrentHashMap<>()); } /** * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity. * * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}. */ public DaoCacheByMap(final int capacity) { this(new ConcurrentHashMap<>(capacity)); } /** * Creates a {@code DaoCacheByMap} backed by a provided map instance. * * @param cache the map to be used for caching. */ DaoCacheByMap { N.checkArgNotNull(cache, "cache"); } @Override @SuppressWarnings("unused") public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { return cache.get(defaultCacheKey); } @Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } @Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { if (result == null) { return false; } cache.put(defaultCacheKey, result); return true; } /** * Implements cache invalidation. If the table name can be determined from the cache key, * it removes all entries whose keys contain that table name. Otherwise, it clears the entire cache. * No action is taken for update operations that affect zero rows. */ @Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) { final Method method = methodSignature._1; if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) { if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) { return; } } final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SPLITOR); if (Strings.isEmpty(updatedTableName)) { cache.clear(); } else { cache.entrySet().removeIf(e -> Strings.containsIgnoreCase(e.getKey(), updatedTableName)); } } } }`
 - **Parameters:**
   - (none)
 
@@ -6227,7 +6227,7 @@ Configuration for JSON and XML serialization/deserialization settings.
   - (none)
 
 ### Class JdbcUtil (com.landawn.abacus.jdbc.JdbcUtil)
-A comprehensive, production-ready utility class providing enterprise-grade JDBC operations with advanced database access patterns, transaction management, and performance optimization features.
+Utility class providing high-level JDBC operations with automatic resource management, transaction support, and connection pooling integration.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -6623,7 +6623,7 @@ A comprehensive, production-ready utility class providing enterprise-grade JDBC 
 - **See also:** com.landawn.abacus.annotation.Column, com.landawn.abacus.util.NamingPolicy
 ##### prepareQuery(...) -> PreparedQuery
 - **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException`
-- **Summary:** Prepares a SQL query for execution, returning a {@link PreparedQuery} object that can be reused multiple times with different parameters( {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@code #closeAfterExecution(false)} ).
+- **Summary:** Prepares a SQL query for execution, returning a {@link PreparedQuery} object that can be reused multiple times with different parameters ( {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link PreparedQuery#closeAfterExecution(boolean)} ).
 - **Contract:**
   - This is more efficient than creating new prepared statements for each execution, especially when the same query is executed repeatedly with different parameters.
   - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
@@ -9209,8 +9209,9 @@ Manages join relationships between entities in JDBC operations.
 - **See also:** SqlBuilder.PSC, SqlBuilder.PAC, SqlBuilder.PLC
 ##### getSelectSqlBuilderAndParamSetter(...) -> Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
 - **Signature:** `@Deprecated public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> getSelectSqlBuilderAndParamSetter( final Class<? extends SqlBuilder> sbc)`
+- **Summary:** Retrieves the SQL plan for single-entity select operations.
 - **Parameters:**
-  - `sbc` (`Class<? extends SqlBuilder>`) — the SqlBuilder class to use for generating SQL
+  - `sbc` (`Class<? extends SqlBuilder>`) — the SQL builder class type (PSC, PAC, or PLC)
 - **Returns:** a tuple containing the SQL builder function and parameter setter
 ##### getBatchSelectSqlPlan(...) -> Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
 - **Signature:** `public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlPlan( //NOSONAR final Class<? extends SqlBuilder> sbc)`
@@ -9221,8 +9222,9 @@ Manages join relationships between entities in JDBC operations.
 - **See also:** SqlBuilder.PSC, SqlBuilder.PAC, SqlBuilder.PLC
 ##### getBatchSelectSqlBuilderAndParamSetter(...) -> Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
 - **Signature:** `@Deprecated public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchSelectSqlBuilderAndParamSetter( //NOSONAR final Class<? extends SqlBuilder> sbc)`
+- **Summary:** Retrieves the SQL plan for batch select operations.
 - **Parameters:**
-  - `sbc` (`Class<? extends SqlBuilder>`) — the SqlBuilder class to use for generating SQL
+  - `sbc` (`Class<? extends SqlBuilder>`) — the SQL builder class type (PSC, PAC, or PLC)
 - **Returns:** a tuple containing the batch SQL builder function and parameter setter
 ##### getDeleteSqlPlan(...) -> Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
 - **Signature:** `public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlPlan(final Class<? extends SqlBuilder> sbc)`
@@ -9235,8 +9237,9 @@ Manages join relationships between entities in JDBC operations.
 - **See also:** SqlBuilder.PSC, SqlBuilder.PAC, SqlBuilder.PLC
 ##### getDeleteSqlAndParamSetter(...) -> Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>
 - **Signature:** `@Deprecated public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> getDeleteSqlAndParamSetter(final Class<? extends SqlBuilder> sbc)`
+- **Summary:** Retrieves the SQL plan for delete operations.
 - **Parameters:**
-  - `sbc` (`Class<? extends SqlBuilder>`) — the SqlBuilder class to use for generating SQL
+  - `sbc` (`Class<? extends SqlBuilder>`) — the SQL builder class type (PSC, PAC, or PLC)
 - **Returns:** a tuple containing the delete SQL, condition SQL, and parameter setter
 ##### getBatchDeleteSqlPlan(...) -> Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
 - **Signature:** `public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlPlan( //NOSONAR final Class<? extends SqlBuilder> sbc)`
@@ -9247,8 +9250,9 @@ Manages join relationships between entities in JDBC operations.
 - **See also:** SqlBuilder.PSC, SqlBuilder.PAC, SqlBuilder.PLC
 ##### getBatchDeleteSqlBuilderAndParamSetter(...) -> Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>
 - **Signature:** `@Deprecated public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> getBatchDeleteSqlBuilderAndParamSetter( //NOSONAR final Class<? extends SqlBuilder> sbc)`
+- **Summary:** Retrieves the SQL plan for batch delete operations.
 - **Parameters:**
-  - `sbc` (`Class<? extends SqlBuilder>`) — the SqlBuilder class to use for generating SQL
+  - `sbc` (`Class<? extends SqlBuilder>`) — the SQL builder class type (PSC, PAC, or PLC)
 - **Returns:** a tuple containing the batch delete SQL builder functions and parameter setter
 ##### setJoinPropEntities(...) -> void
 - **Signature:** `public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities)`
@@ -10123,7 +10127,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **See also:** #setParameters(Object), #addBatchParameters(Collection), #addBatch()
 
 ### Enum OP (com.landawn.abacus.jdbc.OP)
-Enum representing various database operations that can be performed through AbstractQuery.
+Enum representing various database operations that can be performed through {@link AbstractQuery} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11452,7 +11456,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalBoolean containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForBoolean()
+- **See also:** AbstractQuery#queryForBoolean()
 ##### queryForChar(...) -> OptionalChar
 - **Signature:** `OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a char value from a single property of the entity with the specified ID.
@@ -11464,7 +11468,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalChar containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForChar()
+- **See also:** AbstractQuery#queryForChar()
 ##### queryForByte(...) -> OptionalByte
 - **Signature:** `OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a byte value from a single property of the entity with the specified ID.
@@ -11476,7 +11480,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalByte containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForByte()
+- **See also:** AbstractQuery#queryForByte()
 ##### queryForShort(...) -> OptionalShort
 - **Signature:** `OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a short value from a single property of the entity with the specified ID.
@@ -11488,7 +11492,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalShort containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForShort()
+- **See also:** AbstractQuery#queryForShort()
 ##### queryForInt(...) -> OptionalInt
 - **Signature:** `OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for an integer value from a single property of the entity with the specified ID.
@@ -11500,7 +11504,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalInt containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForInt()
+- **See also:** AbstractQuery#queryForInt()
 ##### queryForLong(...) -> OptionalLong
 - **Signature:** `OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a long value from a single property of the entity with the specified ID.
@@ -11512,7 +11516,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalLong containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForLong()
+- **See also:** AbstractQuery#queryForLong()
 ##### queryForFloat(...) -> OptionalFloat
 - **Signature:** `OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a float value from a single property of the entity with the specified ID.
@@ -11524,7 +11528,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalFloat containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForFloat()
+- **See also:** AbstractQuery#queryForFloat()
 ##### queryForDouble(...) -> OptionalDouble
 - **Signature:** `OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a double value from a single property of the entity with the specified ID.
@@ -11536,7 +11540,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an OptionalDouble containing the value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForDouble()
+- **See also:** AbstractQuery#queryForDouble()
 ##### queryForString(...) -> Nullable<String>
 - **Signature:** `Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a String value from a single property of the entity with the specified ID.
@@ -11548,7 +11552,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the String value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForString()
+- **See also:** AbstractQuery#queryForString()
 ##### queryForDate(...) -> Nullable<java.sql.Date>
 - **Signature:** `Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a Date value from a single property of the entity with the specified ID.
@@ -11560,7 +11564,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the Date value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForDate()
+- **See also:** AbstractQuery#queryForDate()
 ##### queryForTime(...) -> Nullable<java.sql.Time>
 - **Signature:** `Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a Time value from a single property of the entity with the specified ID.
@@ -11572,7 +11576,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the Time value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForTime()
+- **See also:** AbstractQuery#queryForTime()
 ##### queryForTimestamp(...) -> Nullable<java.sql.Timestamp>
 - **Signature:** `Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a Timestamp value from a single property of the entity with the specified ID.
@@ -11584,7 +11588,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the Timestamp value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForTimestamp()
+- **See also:** AbstractQuery#queryForTimestamp()
 ##### queryForBytes(...) -> Nullable<byte\[\]>
 - **Signature:** `Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException`
 - **Summary:** Queries for a byte array value from a single property of the entity with the specified ID.
@@ -11596,7 +11600,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForBytes()
+- **See also:** AbstractQuery#queryForBytes()
 ##### queryForSingleResult(...) -> Nullable<V>
 - **Signature:** `<V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single value of the specified type from a property of the entity with the specified ID.
@@ -11607,7 +11611,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForSingleResult(Class)
+- **See also:** AbstractQuery#queryForSingleResult(Class)
 ##### queryForSingleNonNull(...) -> Optional<V>
 - **Signature:** `<V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single non-null value of the specified type from a property of the entity.
@@ -11620,7 +11624,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an Optional containing the non-null value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForSingleNonNull(Class)
+- **See also:** AbstractQuery#queryForSingleNonNull(Class)
 - **Signature:** `@Beta <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws SQLException`
 - **Summary:** Queries for a single non-null value using a custom row mapper.
 - **Parameters:**
@@ -11630,7 +11634,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** an Optional containing the mapped non-null value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForSingleNonNull(Class)
+- **See also:** AbstractQuery#queryForSingleNonNull(Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
 - **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single result of the specified type.
@@ -11645,7 +11649,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForUniqueResult(Class)
+- **See also:** AbstractQuery#queryForUniqueResult(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
 - **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result of the specified type.
@@ -11661,7 +11665,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForUniqueNonNull(Class)
+- **See also:** AbstractQuery#queryForUniqueNonNull(Class)
 - **Signature:** `@Beta <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result using a custom row mapper.
 - **Contract:**
@@ -11674,7 +11678,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** Filters, AbstractQuery#queryForUniqueNonNull(Class)
+- **See also:** AbstractQuery#queryForUniqueNonNull(Class)
 ##### get(...) -> Optional<T>
 - **Signature:** `default Optional<T> get(final ID id) throws DuplicateResultException, SQLException`
 - **Summary:** Retrieves an entity by its ID.
@@ -13361,7 +13365,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** Optional containing the mapped value
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleNonNull(Type)
+- **See also:** AbstractQuery#queryForSingleNonNull(Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
 - **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single value, throwing if multiple rows found.
@@ -13401,7 +13405,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one row matches
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueNonNull(Type)
+- **See also:** AbstractQuery#queryForUniqueNonNull(Class)
 ##### query(...) -> Dataset
 - **Signature:** `Dataset query(final Condition cond) throws SQLException`
 - **Summary:** Executes a query and returns the results as a Dataset.
@@ -14567,7 +14571,7 @@ Interface for handling join entities in database operations.
   - `java.sql.SQLException` — if a database access error occurs
 
 ### Interface NoUpdateCrudDao (com.landawn.abacus.jdbc.dao.NoUpdateCrudDao)
-A CRUD Data Access Object interface that disables update and delete operations while allowing read and insert operations.
+CRUD DAO that disables update and delete operations while permitting read and insert operations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -14581,178 +14585,178 @@ A CRUD Data Access Object interface that disables update and delete operations w
 #### Public Instance Methods
 ##### update(...) -> int
 - **Signature:** `@Deprecated @Override default int update(final T entityToUpdate) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entityToUpdate` (`T`) — the entity with updated values
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Deprecated @Override default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entityToUpdate` (`T`) — the entity containing the values to update
-  - `propNamesToUpdate` (`Collection<String>`) — the property names to update. If {@code null} or empty, all properties will be updated
+  - `propNamesToUpdate` (`Collection<String>`) — the property names to update; if {@code null} or empty, all properties would be updated
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Override @Deprecated default int update(final String propName, final Object propValue, final ID id) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `propName` (`String`) — the property name to update
   - `propValue` (`Object`) — the new value for the property
   - `id` (`ID`) — the entity ID to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Deprecated @Override default int update(final Map<String, Object> updateProps, final ID id) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `updateProps` (`Map<String, Object>`) — a map of property names to their new values
   - `id` (`ID`) — the entity ID to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 ##### batchUpdate(...) -> int
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch updates are not permitted
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to update
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch updates are not permitted
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to update
   - `propNamesToUpdate` (`Collection<String>`) — the property names to update for all entities
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch updates are not permitted
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to update
   - `propNamesToUpdate` (`Collection<String>`) — the property names to update for all entities
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch updates are not permitted
 ##### upsert(...) -> T
 - **Signature:** `@Deprecated @Override default T upsert(final T entity) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity to upsert
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since upserts are not permitted
 - **Signature:** `@Deprecated @Override default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
-  - `cond` (`Condition`) — the condition to check if the entity exists
+  - `cond` (`Condition`) — the condition to check whether the entity already exists
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since upserts are not permitted
 - **Signature:** `@Deprecated @Override default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
   - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify the entity
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since upserts are not permitted
 ##### batchUpsert(...) -> List<T>
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch upserts are not permitted
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch upserts are not permitted
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
   - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify each entity
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch upserts are not permitted
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to upsert
   - `uniquePropNamesForQuery` (`List<String>`) — the property names that uniquely identify each entity
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upserts are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch upserts are not permitted
 ##### delete(...) -> int
 - **Signature:** `@Deprecated @Override default int delete(final T entity) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity to delete (must have ID populated)
+  - `entity` (`T`) — the entity to delete (must have its ID populated)
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since deletes are not permitted
 ##### deleteById(...) -> int
 - **Signature:** `@Deprecated @Override default int deleteById(final ID id) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `id` (`ID`) — the entity ID to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since deletes are not permitted
 ##### batchDelete(...) -> int
 - **Signature:** `@Deprecated @Override default int batchDelete(final Collection<? extends T> entities) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch deletes are not permitted
 - **Signature:** `@Deprecated @Override default int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entities` (`Collection<? extends T>`) — the collection of entities to delete
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch deletes are not permitted
 ##### batchDeleteByIds(...) -> int
 - **Signature:** `@Deprecated @Override default int batchDeleteByIds(final Collection<? extends ID> ids) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `ids` (`Collection<? extends ID>`) — the collection of IDs to delete
+  - `ids` (`Collection<? extends ID>`) — the collection of entity IDs to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch deletes are not permitted
 - **Signature:** `@Deprecated @Override default int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `ids` (`Collection<? extends ID>`) — the collection of IDs to delete
-  - `batchSize` (`int`) — the number of IDs to process in each batch
+  - `ids` (`Collection<? extends ID>`) — the collection of entity IDs to delete
+  - `batchSize` (`int`) — the number of IDs to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch deletes are not permitted
 
 ### Interface NoUpdateCrudDaoL (com.landawn.abacus.jdbc.dao.NoUpdateCrudDaoL)
-A CRUD Data Access Object interface for entities with {@code Long} type primary keys that disables update and delete operations while allowing read and insert operations.
+CRUD DAO for entities with {@code Long} primary keys that disables update and delete operations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -14766,33 +14770,33 @@ A CRUD Data Access Object interface for entities with {@code Long} type primary 
 #### Public Instance Methods
 ##### update(...) -> int
 - **Signature:** `@Deprecated @Override default int update(final String propName, final Object propValue, final long id) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `propName` (`String`) — the property name to update
   - `propValue` (`Object`) — the new value for the property
-  - `id` (`long`) — the primitive long ID of the entity to update
+  - `id` (`long`) — the primitive {@code long} ID of the entity to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Deprecated @Override default int update(final Map<String, Object> updateProps, final long id) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `updateProps` (`Map<String, Object>`) — a map of property names to their new values
-  - `id` (`long`) — the primitive long ID of the entity to update
+  - `id` (`long`) — the primitive {@code long} ID of the entity to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as updates are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 ##### deleteById(...) -> int
 - **Signature:** `@Deprecated @Override default int deleteById(final long id) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `id` (`long`) — the primitive long ID of the entity to delete
+  - `id` (`long`) — the primitive {@code long} ID of the entity to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as deletes are not supported
+  - `java.lang.UnsupportedOperationException` — always, since deletes are not permitted
 
 ### Interface NoUpdateDao (com.landawn.abacus.jdbc.dao.NoUpdateDao)
-This interface extends the base Dao interface but disables update and delete operations while allowing read and insert operations to ensure data integrity in scenarios where modifications to existing records should be prevented.
+DAO that disables update and delete operations while allowing read and insert operations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -14806,260 +14810,250 @@ This interface extends the base Dao interface but disables update and delete ope
 #### Public Instance Methods
 ##### prepareQuery(...) -> PreparedQuery
 - **Signature:** `@Beta @NonDBOperation @Override default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a SQL query for execution.
-- **Contract:**
-  - <p> The query string should be a valid SQL SELECT or INSERT statement.
+- **Summary:** Prepares a SQL query for execution, restricted to {@code SELECT} and {@code INSERT} statements.
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be SELECT or INSERT)
-- **Returns:** a PreparedQuery object for executing the query
+  - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
+- **Returns:** a {@link PreparedQuery} object for executing the query
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a SQL query with support for auto-generated keys retrieval.
 - **Contract:**
-  - <p> When {@code generateKeys} is {@code true} , the prepared statement will be configured to return auto-generated keys which can be retrieved after executing an INSERT.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", true) .setString(1, "John Doe") .setString(2, "john@example.com") .insert() .orElse(null); if (generated != null) { long generatedId = generated.getLong(1); } } </pre>
+  - <p> When {@code generateKeys} is {@code true} , the prepared statement is configured to return auto-generated keys after executing an {@code INSERT} .
+  - </p> <p> <b> Usage Example: </b> </p> <pre> {@code Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", true) .setString(1, "John Doe") .setString(2, "john@example.com") .insert() .orElse(null); if (generated != null) { long generatedId = generated.getLong(1); } } </pre>
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be SELECT or INSERT)
+  - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
   - `generateKeys` (`boolean`) — {@code true} to enable retrieval of auto-generated keys
-- **Returns:** a PreparedQuery object configured for key generation if applicable
+- **Returns:** a {@link PreparedQuery} configured for key generation if applicable
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a SQL query with specific column indexes for auto-generated key retrieval.
 - **Contract:**
-  - This method allows precise control over which auto-generated columns should be returned after an INSERT operation by specifying their column indexes.
-  - This is useful when your table has multiple auto-generated columns and you only need specific ones.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Retrieve only the first and third auto-generated columns Row generated = dao.prepareQuery("INSERT INTO orders (customer_id, total) VALUES (?, ?)", new int\[\] {1, 3}) .setLong(1, customerId) .setBigDecimal(2, orderTotal) .insert() .orElse(null); if (generated != null) { long firstColumn = generated.getLong(1); BigDecimal thirdColumn = generated.getBigDecimal(2); } } </pre>
+  - <p> This is useful when your table has multiple auto-generated columns and you only need specific ones.
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be SELECT or INSERT)
-  - `returnColumnIndexes` (`int[]`) — an array of column indexes indicating the columns that should be returned from the inserted row
-- **Returns:** a PreparedQuery object configured for specific column retrieval
+  - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
+  - `returnColumnIndexes` (`int[]`) — 1-based column indexes indicating which auto-generated columns should be returned from the inserted row
+- **Returns:** a {@link PreparedQuery} configured for specific column retrieval
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a SQL query with specific column names for auto-generated key retrieval.
 - **Contract:**
-  - This method provides the most readable way to specify which auto-generated columns should be returned after an INSERT operation by using column names instead of indexes.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", new String\[\] {"id", "created_timestamp"}) .setString(1, "Jane Doe") .setString(2, "jane@example.com") .insert() .orElse(null); if (generated != null) { long id = generated.getLong("id"); Timestamp created = generated.getTimestamp("created_timestamp"); } } </pre>
+  - This is the most readable approach for specifying which auto-generated columns should be returned after an {@code INSERT} operation.
+  - </p> <p> <b> Usage Example: </b> </p> <pre> {@code Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", new String\[\] {"id", "created_timestamp"}) .setString(1, "Jane Doe") .setString(2, "jane@example.com") .insert() .orElse(null); if (generated != null) { long id = generated.getLong("id"); Timestamp created = generated.getTimestamp("created_timestamp"); } } </pre>
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be SELECT or INSERT)
-  - `returnColumnNames` (`String[]`) — an array of column names indicating the columns that should be returned from the inserted row
-- **Returns:** a PreparedQuery object configured for named column retrieval
+  - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
+  - `returnColumnNames` (`String[]`) — an array of column names indicating which auto-generated columns should be returned from the inserted row
+- **Returns:** a {@link PreparedQuery} configured for named column retrieval
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Deprecated @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `query` (`String`) — the SQL query string
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — custom statement creator function
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as custom statement creation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since custom statement creation is not permitted
 ##### prepareQueryForLargeResult(...) -> PreparedQuery
 - **Signature:** `@Beta @NonDBOperation @Override default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a SQL query optimized for large result sets.
+- **Summary:** Prepares a SQL query optimized for large result sets, restricted to {@code SELECT} and {@code INSERT} statements.
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be SELECT or INSERT)
-- **Returns:** a PreparedQuery object configured for large result sets
+  - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
+- **Returns:** a {@link PreparedQuery} configured for large result sets
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 ##### prepareNamedQuery(...) -> NamedQuery
 - **Signature:** `@NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a named parameter SQL query for execution.
-- **Contract:**
-  - <p> Named parameters can appear multiple times in the query and will all be set to the same value when the parameter is bound.
+- **Summary:** Prepares a named parameter SQL query, restricted to {@code SELECT} and {@code INSERT} statements.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be SELECT or INSERT)
-- **Returns:** a NamedQuery object for executing the query with named parameters
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be {@code SELECT} or {@code INSERT} )
+- **Returns:** a {@link NamedQuery} for executing the query with named parameters
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a named parameter SQL query with support for auto-generated keys retrieval.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be SELECT or INSERT)
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be {@code SELECT} or {@code INSERT} )
   - `generateKeys` (`boolean`) — {@code true} to enable retrieval of auto-generated keys
-- **Returns:** a NamedQuery object configured for key generation if applicable
+- **Returns:** a {@link NamedQuery} configured for key generation if applicable
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a named parameter SQL query with specific column indexes for auto-generated key retrieval.
-- **Contract:**
-  - This method combines named parameters with precise control over which auto-generated columns should be returned by their index positions.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be SELECT or INSERT)
-  - `returnColumnIndexes` (`int[]`) — an array of column indexes for generated key retrieval
-- **Returns:** a NamedQuery object configured for specific column retrieval
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be {@code SELECT} or {@code INSERT} )
+  - `returnColumnIndexes` (`int[]`) — 1-based column indexes for generated key retrieval
+- **Returns:** a {@link NamedQuery} configured for specific column retrieval
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a named parameter SQL query with specific column names for auto-generated key retrieval.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be SELECT or INSERT)
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be {@code SELECT} or {@code INSERT} )
   - `returnColumnNames` (`String[]`) — an array of column names for generated key retrieval
-- **Returns:** a NamedQuery object configured for named column retrieval
+- **Returns:** a {@link NamedQuery} configured for named column retrieval
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`String`) — the SQL query string with named parameters
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — custom statement creator function
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as custom statement creation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since custom statement creation is not permitted
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a named query using a pre-parsed SQL object.
+- **Summary:** Prepares a named query using a pre-parsed {@link ParsedSql} object, restricted to {@code SELECT} and {@code INSERT} statements.
 - **Contract:**
-  - This method is useful when you have already parsed a named query and want to avoid the overhead of parsing it again.
+  - Useful when you have already parsed a named query and want to avoid the overhead of parsing it again.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent SELECT or INSERT)
-- **Returns:** a NamedQuery object for executing the parsed query
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent {@code SELECT} or {@code INSERT} )
+- **Returns:** a {@link NamedQuery} for executing the parsed query
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a parsed named query with support for auto-generated keys retrieval.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent SELECT or INSERT)
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent {@code SELECT} or {@code INSERT} )
   - `generateKeys` (`boolean`) — {@code true} to enable retrieval of auto-generated keys
-- **Returns:** a NamedQuery object configured for key generation if applicable
+- **Returns:** a {@link NamedQuery} configured for key generation if applicable
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a parsed named query with specific column indexes for auto-generated key retrieval.
-- **Contract:**
-  - This method combines pre-parsed SQL efficiency with precise control over which auto-generated columns should be returned.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent SELECT or INSERT)
-  - `returnColumnIndexes` (`int[]`) — an array of column indexes for generated key retrieval
-- **Returns:** a NamedQuery object configured for specific column retrieval
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent {@code SELECT} or {@code INSERT} )
+  - `returnColumnIndexes` (`int[]`) — 1-based column indexes for generated key retrieval
+- **Returns:** a {@link NamedQuery} configured for specific column retrieval
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException`
 - **Summary:** Prepares a parsed named query with specific column names for auto-generated key retrieval.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent SELECT or INSERT)
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent {@code SELECT} or {@code INSERT} )
   - `returnColumnNames` (`String[]`) — an array of column names for generated key retrieval
-- **Returns:** a NamedQuery object configured for named column retrieval
+- **Returns:** a {@link NamedQuery} configured for named column retrieval
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object
   - `stmtCreator` (`Throwables.BiFunction<Connection, String, PreparedStatement, SQLException>`) — custom statement creator function
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as custom statement creation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since custom statement creation is not permitted
 ##### prepareNamedQueryForLargeResult(...) -> NamedQuery
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a named parameter SQL query optimized for large result sets.
+- **Summary:** Prepares a named parameter SQL query optimized for large result sets, restricted to {@code SELECT} and {@code INSERT} statements.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be SELECT or INSERT)
-- **Returns:** a NamedQuery object configured for large result sets
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be {@code SELECT} or {@code INSERT} )
+- **Returns:** a {@link NamedQuery} configured for large result sets
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 - **Signature:** `@Beta @NonDBOperation @Override default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a parsed named query optimized for large result sets.
+- **Summary:** Prepares a parsed named query optimized for large result sets, restricted to {@code SELECT} and {@code INSERT} statements.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent SELECT or INSERT)
-- **Returns:** a NamedQuery object configured for large result sets
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent {@code SELECT} or {@code INSERT} )
+- **Returns:** a {@link NamedQuery} configured for large result sets
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT or INSERT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} or {@code INSERT} statement
 ##### prepareCallableQuery(...) -> CallableQuery
 - **Signature:** `@Deprecated @NonDBOperation @Override default CallableQuery prepareCallableQuery(final String query) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `query` (`String`) — the stored procedure call string
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as callable query operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since callable queries are not permitted
 - **Signature:** `@Deprecated @NonDBOperation @Override default CallableQuery prepareCallableQuery(final String query, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `query` (`String`) — the stored procedure call string
-  - `stmtCreator` (`Throwables.BiFunction<Connection, String, CallableStatement, SQLException>`) — custom statement creator function
+  - `stmtCreator` (`Throwables.BiFunction<Connection, String, CallableStatement, SQLException>`) — custom callable statement creator function
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as callable query operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since callable queries are not permitted
 ##### update(...) -> int
 - **Signature:** `@Override @Deprecated default int update(final String propName, final Object propValue, final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `propName` (`String`) — the name of the property to update
   - `propValue` (`Object`) — the new value for the property
   - `cond` (`Condition`) — the condition to identify records to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as update operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Deprecated @Override default int update(final Map<String, Object> updateProps, final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `updateProps` (`Map<String, Object>`) — a map of property names to their new values
   - `cond` (`Condition`) — the condition to identify records to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as update operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Deprecated @Override default int update(final T entity, final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity containing values to update
   - `cond` (`Condition`) — the condition to identify records to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as update operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 - **Signature:** `@Deprecated @Override default int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity containing values to update
   - `propNamesToUpdate` (`Collection<String>`) — collection of property names to update from the entity
   - `cond` (`Condition`) — the condition to identify records to update
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as update operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since updates are not permitted
 ##### upsert(...) -> T
 - **Signature:** `@Deprecated @Override default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity to be upserted
   - `uniquePropNamesForQuery` (`List<String>`) — the list of property names to determine uniqueness
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upsert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since upserts are not permitted
 - **Signature:** `@Deprecated @Override default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entity` (`T`) — the entity to be upserted
-  - `cond` (`Condition`) — the condition to check if the record exists
+  - `cond` (`Condition`) — the condition to check whether the record exists
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as upsert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since upserts are not permitted
 ##### delete(...) -> int
 - **Signature:** `@Deprecated @Override default int delete(final Condition cond) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in no-update DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `cond` (`Condition`) — the condition to identify records to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as delete operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since deletes are not permitted
 
 ### Interface ReadOnlyCrudDao (com.landawn.abacus.jdbc.dao.ReadOnlyCrudDao)
-A completely read-only CRUD Data Access Object interface that prevents all data modification operations.
+Completely read-only CRUD DAO that prevents all data modification operations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -15073,81 +15067,81 @@ A completely read-only CRUD Data Access Object interface that prevents all data 
 #### Public Instance Methods
 ##### insert(...) -> ID
 - **Signature:** `@Deprecated @Override default ID insert(final T entityToInsert) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entityToInsert` (`T`) — the entity to insert (ignored)
+  - `entityToInsert` (`T`) — the entity to insert
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entityToInsert` (`T`) — the entity to insert (ignored)
-  - `propNamesToInsert` (`Collection<String>`) — the property names to include in the INSERT statement (ignored)
+  - `entityToInsert` (`T`) — the entity to insert
+  - `propNamesToInsert` (`Collection<String>`) — the property names to include in the {@code INSERT} statement
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default ID insert(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `namedInsertSql` (`String`) — the named parameter SQL insert statement (ignored)
-  - `entityToSave` (`T`) — the entity whose properties will be bound to the named parameters (ignored)
+  - `namedInsertSql` (`String`) — the named parameter SQL insert statement
+  - `entityToSave` (`T`) — the entity whose properties are bound to the named parameters
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 ##### batchInsert(...) -> List<ID>
 - **Signature:** `@Deprecated @Override default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — the collection of entities to insert (ignored)
+  - `entities` (`Collection<? extends T>`) — the collection of entities to insert
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — the collection of entities to insert (ignored)
-  - `batchSize` (`int`) — the number of entities to process in each batch (ignored)
+  - `entities` (`Collection<? extends T>`) — the collection of entities to insert
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — the collection of entities to insert (ignored)
-  - `propNamesToInsert` (`Collection<String>`) — the property names to include in the INSERT statement (ignored)
+  - `entities` (`Collection<? extends T>`) — the collection of entities to insert
+  - `propNamesToInsert` (`Collection<String>`) — the property names to include in the {@code INSERT} statement
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — the collection of entities to insert (ignored)
-  - `propNamesToInsert` (`Collection<String>`) — the property names to include in the INSERT statement (ignored)
-  - `batchSize` (`int`) — the number of entities to process in each batch (ignored)
+  - `entities` (`Collection<? extends T>`) — the collection of entities to insert
+  - `propNamesToInsert` (`Collection<String>`) — the property names to include in the {@code INSERT} statement
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `namedInsertSql` (`String`) — the named parameter SQL insert statement (ignored)
-  - `entities` (`Collection<? extends T>`) — the collection of entities whose properties will be bound to the named parameters (ignored)
+  - `namedInsertSql` (`String`) — the named parameter SQL insert statement
+  - `entities` (`Collection<? extends T>`) — the collection of entities whose properties are bound to the named parameters
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `namedInsertSql` (`String`) — the named parameter SQL insert statement (ignored)
-  - `entities` (`Collection<? extends T>`) — the collection of entities whose properties will be bound to the named parameters (ignored)
-  - `batchSize` (`int`) — the number of entities to process in each batch (ignored)
+  - `namedInsertSql` (`String`) — the named parameter SQL insert statement
+  - `entities` (`Collection<? extends T>`) — the collection of entities whose properties are bound to the named parameters
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as insert operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since inserts are not permitted in read-only mode
 
 ### Interface ReadOnlyCrudDaoL (com.landawn.abacus.jdbc.dao.ReadOnlyCrudDaoL)
-A read-only CRUD (Create, Read, Update, Delete) Data Access Object interface specifically designed for entities with {@code Long} type primary keys.
+Read-only CRUD DAO for entities with {@code Long} primary keys.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -15162,7 +15156,7 @@ A read-only CRUD (Create, Read, Update, Delete) Data Access Object interface spe
 - (none)
 
 ### Interface ReadOnlyCrudJoinEntityHelper (com.landawn.abacus.jdbc.dao.ReadOnlyCrudJoinEntityHelper)
-A read-only interface for handling join entity operations with CRUD DAOs.
+Read-only helper for join entity operations in CRUD DAOs.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -15177,7 +15171,7 @@ A read-only interface for handling join entity operations with CRUD DAOs.
 - (none)
 
 ### Interface ReadOnlyCrudJoinEntityHelperL (com.landawn.abacus.jdbc.dao.ReadOnlyCrudJoinEntityHelperL)
-A read-only interface for handling join entity operations with CRUD DAOs that use {@code Long} type primary keys.
+Read-only helper for join entity operations in CRUD DAOs with {@code Long} primary keys.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -15192,7 +15186,7 @@ A read-only interface for handling join entity operations with CRUD DAOs that us
 - (none)
 
 ### Interface ReadOnlyDao (com.landawn.abacus.jdbc.dao.ReadOnlyDao)
-A strictly read-only Data Access Object interface that only allows SELECT queries.
+Strictly read-only DAO that permits only {@code SELECT} queries.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -15206,202 +15200,198 @@ A strictly read-only Data Access Object interface that only allows SELECT querie
 #### Public Instance Methods
 ##### prepareQuery(...) -> PreparedQuery
 - **Signature:** `@NonDBOperation @Override default PreparedQuery prepareQuery(final String query) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a SQL query for execution.
-- **Contract:**
-  - <p> The query string must be a valid SQL SELECT statement.
+- **Summary:** Prepares a SQL query for execution, restricted to {@code SELECT} statements only.
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be a SELECT statement)
-- **Returns:** a PreparedQuery object for executing the query
+  - `query` (`String`) — the SQL query string to prepare (must be a {@code SELECT} statement)
+- **Returns:** a {@link PreparedQuery} for executing the query
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} statement
 - **Signature:** `@Deprecated @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `query` (`String`) — the SQL query string
   - `generateKeys` (`boolean`) — {@code true} to retrieve auto-generated keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@Deprecated @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `query` (`String`) — the SQL query string
   - `returnColumnIndexes` (`int[]`) — an array of column indexes for returned keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@Deprecated @NonDBOperation @Override default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `query` (`String`) — the SQL query string
   - `returnColumnNames` (`String[]`) — an array of column names for returned keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 ##### prepareQueryForLargeResult(...) -> PreparedQuery
 - **Signature:** `@NonDBOperation @Override default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a SQL query optimized for large result sets.
+- **Summary:** Prepares a SQL query optimized for large result sets, restricted to {@code SELECT} statements only.
 - **Parameters:**
-  - `query` (`String`) — the SQL query string to prepare (must be a SELECT statement)
-- **Returns:** a PreparedQuery object configured for large result sets
+  - `query` (`String`) — the SQL query string to prepare (must be a {@code SELECT} statement)
+- **Returns:** a {@link PreparedQuery} configured for large result sets
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} statement
 ##### prepareNamedQuery(...) -> NamedQuery
 - **Signature:** `@NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a named parameter SQL query for execution.
-- **Contract:**
-  - <p> Named parameters can appear multiple times in the query and will all be set to the same value when the parameter is bound.
+- **Summary:** Prepares a named parameter SQL query, restricted to {@code SELECT} statements only.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be a SELECT statement)
-- **Returns:** a NamedQuery object for executing the query with named parameters
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be a {@code SELECT} statement)
+- **Returns:** a {@link NamedQuery} for executing the query with named parameters
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} statement
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`String`) — the SQL query string with named parameters
   - `generateKeys` (`boolean`) — {@code true} to retrieve auto-generated keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`String`) — the SQL query string with named parameters
   - `returnColumnIndexes` (`int[]`) — an array of column indexes for returned keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`String`) — the SQL query string with named parameters
   - `returnColumnNames` (`String[]`) — an array of column names for returned keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a named query using a pre-parsed SQL object.
+- **Summary:** Prepares a named query using a pre-parsed {@link ParsedSql} object, restricted to {@code SELECT} statements only.
 - **Contract:**
-  - This method is useful when you have already parsed a named query and want to avoid the overhead of parsing it again.
+  - Useful when you have already parsed a named query and want to avoid the overhead of parsing it again.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent a SELECT statement)
-- **Returns:** a NamedQuery object for executing the parsed query
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent a {@code SELECT} statement)
+- **Returns:** a {@link NamedQuery} for executing the parsed query
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} statement
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`ParsedSql`) — the parsed SQL query with named parameters
   - `generateKeys` (`boolean`) — {@code true} to retrieve auto-generated keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`ParsedSql`) — the parsed SQL query with named parameters
   - `returnColumnIndexes` (`int[]`) — an array of column indexes for returned keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 - **Signature:** `@Deprecated @NonDBOperation @Override default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedQuery` (`ParsedSql`) — the parsed SQL query with named parameters
   - `returnColumnNames` (`String[]`) — an array of column names for returned keys
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as key generation operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since key generation is not applicable in read-only mode
 ##### prepareNamedQueryForLargeResult(...) -> NamedQuery
 - **Signature:** `@NonDBOperation @Override default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a named parameter SQL query optimized for large result sets.
+- **Summary:** Prepares a named parameter SQL query optimized for large result sets, restricted to {@code SELECT} statements only.
 - **Parameters:**
-  - `namedQuery` (`String`) — the SQL query string with named parameters (must be a SELECT statement)
-- **Returns:** a NamedQuery object configured for large result sets
+  - `namedQuery` (`String`) — the SQL query string with named parameters (must be a {@code SELECT} statement)
+- **Returns:** a {@link NamedQuery} configured for large result sets
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the specified query is not a SELECT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} statement
 - **Signature:** `@NonDBOperation @Override default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException`
-- **Summary:** Prepares a parsed named query optimized for large result sets.
+- **Summary:** Prepares a parsed named query optimized for large result sets, restricted to {@code SELECT} statements only.
 - **Parameters:**
-  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent a SELECT statement)
-- **Returns:** a NamedQuery object configured for large result sets
+  - `namedQuery` (`ParsedSql`) — the pre-parsed SQL query object (must represent a {@code SELECT} statement)
+- **Returns:** a {@link NamedQuery} configured for large result sets
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-  - `java.lang.UnsupportedOperationException` — if the query is not a SELECT statement
+  - `java.lang.UnsupportedOperationException` — if the query is not a {@code SELECT} statement
 ##### save(...) -> void
 - **Signature:** `@Deprecated @Override default void save(final T entityToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entityToSave` (`T`) — the entity to save
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void save(final T entityToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entityToSave` (`T`) — the entity to save
   - `propNamesToSave` (`Collection<String>`) — collection of property names to save
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void save(final String namedInsertSql, final T entityToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedInsertSql` (`String`) — the named SQL insert statement
   - `entityToSave` (`T`) — the entity to save
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since saves are not permitted in read-only mode
 ##### batchSave(...) -> void
 - **Signature:** `@Deprecated @Override default void batchSave(final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entitiesToSave` (`Collection<? extends T>`) — collection of entities to save
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void batchSave(final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entitiesToSave` (`Collection<? extends T>`) — collection of entities to save
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entitiesToSave` (`Collection<? extends T>`) — collection of entities to save
   - `propNamesToSave` (`Collection<String>`) — collection of property names to save
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void batchSave(final Collection<? extends T> entitiesToSave, final Collection<String> propNamesToSave, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `entitiesToSave` (`Collection<? extends T>`) — collection of entities to save
   - `propNamesToSave` (`Collection<String>`) — collection of property names to save
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedInsertSql` (`String`) — the named SQL insert statement
   - `entitiesToSave` (`Collection<? extends T>`) — collection of entities to save
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch saves are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default void batchSave(final String namedInsertSql, final Collection<? extends T> entitiesToSave, final int batchSize) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only DAO.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
   - `namedInsertSql` (`String`) — the named SQL insert statement
   - `entitiesToSave` (`Collection<? extends T>`) — collection of entities to save
-  - `batchSize` (`int`) — the number of entities to process in each batch. The operation will split large collections into chunks of this size for optimal performance.
+  - `batchSize` (`int`) — the number of entities to process per batch
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as save operations are not supported
+  - `java.lang.UnsupportedOperationException` — always, since batch saves are not permitted in read-only mode
 
 ### Interface ReadOnlyJoinEntityHelper (com.landawn.abacus.jdbc.dao.ReadOnlyJoinEntityHelper)
-A read-only interface for handling join entity operations in a Data Access Object (DAO) pattern.
+Read-only helper for join entity operations in DAOs.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -15415,136 +15405,136 @@ A read-only interface for handling join entity operations in a Data Access Objec
 #### Public Instance Methods
 ##### deleteJoinEntities(...) -> int
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose join entities should be deleted
+  - `entity` (`T`) — the entity whose join entities would be deleted
   - `joinEntityClass` (`Class<?>`) — the class of the join entity to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose join entities should be deleted
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would be deleted
   - `joinEntityClass` (`Class<?>`) — the class of the join entity to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose join entities should be deleted
+  - `entity` (`T`) — the entity whose join entities would be deleted
   - `joinEntityPropName` (`String`) — the property name of the join entity to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose join entities should be deleted
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would be deleted
   - `joinEntityPropName` (`String`) — the property name of the join entity to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose join entities should be deleted
-  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names of join entities to delete
+  - `entity` (`T`) — the entity whose join entities would be deleted
+  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names identifying the join entities to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose join entities should be deleted
-  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names of join entities to delete
-  - `inParallel` (`boolean`) — if {@code true} , entities are deleted in parallel; if {@code false} , deleted sequentially
+  - `entity` (`T`) — the entity whose join entities would be deleted
+  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names identifying the join entities to delete
+  - `inParallel` (`boolean`) — {@code true} for parallel execution; {@code false} for sequential
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose join entities should be deleted
-  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names of join entities to delete
-  - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
+  - `entity` (`T`) — the entity whose join entities would be deleted
+  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names identifying the join entities to delete
+  - `executor` (`Executor`) — the {@link Executor} for parallel execution
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose join entities should be deleted
-  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names of join entities to delete
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would be deleted
+  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names identifying the join entities to delete
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose join entities should be deleted
-  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names of join entities to delete
-  - `inParallel` (`boolean`) — if {@code true} , entities are deleted in parallel; if {@code false} , deleted sequentially
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would be deleted
+  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names identifying the join entities to delete
+  - `inParallel` (`boolean`) — {@code true} for parallel execution; {@code false} for sequential
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose join entities should be deleted
-  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names of join entities to delete
-  - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would be deleted
+  - `joinEntityPropNames` (`Collection<String>`) — the collection of property names identifying the join entities to delete
+  - `executor` (`Executor`) — the {@link Executor} for parallel execution
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 ##### deleteAllJoinEntities(...) -> int
 - **Signature:** `@Deprecated @Override default int deleteAllJoinEntities(final T entity) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose all join entities should be deleted
+  - `entity` (`T`) — the entity whose join entities would all be deleted
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose all join entities should be deleted
-  - `inParallel` (`boolean`) — if {@code true} , entities are deleted in parallel; if {@code false} , deleted sequentially
+  - `entity` (`T`) — the entity whose join entities would all be deleted
+  - `inParallel` (`boolean`) — {@code true} for parallel execution; {@code false} for sequential
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteAllJoinEntities(final T entity, final Executor executor) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entity` (`T`) — the entity whose all join entities should be deleted
-  - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
+  - `entity` (`T`) — the entity whose join entities would all be deleted
+  - `executor` (`Executor`) — the {@link Executor} for parallel execution
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteAllJoinEntities(final Collection<T> entities) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose all join entities should be deleted
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would all be deleted
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose all join entities should be deleted
-  - `inParallel` (`boolean`) — if {@code true} , entities are deleted in parallel; if {@code false} , deleted sequentially
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would all be deleted
+  - `inParallel` (`boolean`) — {@code true} for parallel execution; {@code false} for sequential
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 - **Signature:** `@Deprecated @Override default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UnsupportedOperationException`
-- **Summary:** This operation is not supported in read-only mode.
+- **Summary:** Unsupported operation that always throws {@link UnsupportedOperationException} .
 - **Parameters:**
-  - `entities` (`Collection<T>`) — the collection of entities whose all join entities should be deleted
-  - `executor` (`Executor`) — the {@code Executor} to use for parallel execution
+  - `entities` (`Collection<T>`) — the collection of entities whose join entities would all be deleted
+  - `executor` (`Executor`) — the {@link Executor} for parallel execution
 - **Returns:** never returns normally
 - **Throws:**
-  - `java.lang.UnsupportedOperationException` — always thrown as this is a read-only interface
+  - `java.lang.UnsupportedOperationException` — always, since deletions are not permitted in read-only mode
 
 ### Interface UncheckedCrudDao (com.landawn.abacus.jdbc.dao.UncheckedCrudDao)
 The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations with unchecked exceptions.
@@ -15838,7 +15828,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Returns:** an Optional containing the non-null mapped value, or empty if no entity found
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleNonNull(Class)
+- **See also:** #queryForSingleNonNull(String, Object, Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
 - **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
@@ -15880,7 +15870,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueNonNull(Class)
+- **See also:** #queryForUniqueNonNull(String, Object, Class)
 ##### get(...) -> Optional<T>
 - **Signature:** `@Override default Optional<T> get(final ID id) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves the entity with the specified ID.
@@ -16392,8 +16382,6 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
 ##### queryForBytes(...) -> Nullable<byte\[\]>
 - **Signature:** `@Override default Nullable<byte[]> queryForBytes(final String singleSelectPropName, final long id) throws UncheckedSQLException`
 - **Summary:** Queries for a byte array value from a single property of the entity with the specified ID.
-- **Contract:**
-  - Returns a Nullable containing the value, which can be {@code null} if the database value is {@code null} .
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
@@ -16427,7 +16415,7 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
-  - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the custom mapper to transform the result
+  - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the function to map the result set row
 - **Returns:** an Optional containing the mapped non-null value if found, otherwise empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
@@ -16465,7 +16453,7 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
-  - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the custom mapper to transform the result
+  - `rowMapper` (`Jdbc.RowMapper<? extends V>`) — the function to map the result set row
 - **Returns:** an Optional containing the mapped unique non-null value if found, otherwise empty
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
@@ -16779,54 +16767,54 @@ A specialized interface for CRUD operations with join entity support, specifical
 - **Contract:**
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Fetch a user and load their orders Optional<User> userWithOrders = userDao.get(123L, Order.class); if (userWithOrders.isPresent()) { User user = userWithOrders.get(); List<Order> orders = user.getOrders(); // Orders are already loaded } } </pre>
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
+  - `id` (`long`) — the primary key value of the entity to retrieve
   - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
-- **Returns:** An {@link Optional} containing the entity with loaded join entities, or empty if not found
+- **Returns:** an {@link Optional} containing the entity with loaded join entities, or empty if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with the option to load all associated join entities.
 - **Contract:**
   - <p> When {@code includeAllJoinEntities} is {@code true} , all mapped relationships will be loaded.
   - This is useful when you need the complete object graph but should be used carefully to avoid performance issues with large datasets.
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
+  - `id` (`long`) — the primary key value of the entity to retrieve
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
-- **Returns:** An {@link Optional} containing the entity, or empty if not found
+- **Returns:** an {@link Optional} containing the entity, or empty if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads the specified join entity.
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
-  - `selectPropNames` (`Collection<String>`) — The properties (columns) to select from the main entity. If {@code null} , all properties are selected
-  - `joinEntitiesToLoad` (`Class<?>`) — The class of the join entities to load
-- **Returns:** An {@link Optional} containing the entity with selected properties and loaded join entities
+  - `id` (`long`) — the primary key value of the entity to retrieve
+  - `selectPropNames` (`Collection<String>`) — the properties (columns) to select from the main entity. If {@code null} , all properties are selected
+  - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
+- **Returns:** an {@link Optional} containing the entity with selected properties and loaded join entities
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads multiple join entity types.
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
-  - `selectPropNames` (`Collection<String>`) — The properties (columns) to select from the main entity. If {@code null} , all properties are selected
-  - `joinEntitiesToLoad` (`Collection<Class<?>>`) — Collection of join entity classes to load
-- **Returns:** An {@link Optional} containing the entity with selected properties and loaded join entities
+  - `id` (`long`) — the primary key value of the entity to retrieve
+  - `selectPropNames` (`Collection<String>`) — the properties (columns) to select from the main entity. If {@code null} , all properties are selected
+  - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
+- **Returns:** an {@link Optional} containing the entity with selected properties and loaded join entities
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and optionally loads all join entities.
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
-  - `selectPropNames` (`Collection<String>`) — The properties (columns) to select from the main entity. If {@code null} , all properties are selected
+  - `id` (`long`) — the primary key value of the entity to retrieve
+  - `selectPropNames` (`Collection<String>`) — the properties (columns) to select from the main entity. If {@code null} , all properties are selected
   - `includeAllJoinEntities` (`boolean`) — if {@code true} , all join entities will be loaded; if {@code false} , no join entities are loaded
-- **Returns:** An {@link Optional} containing the entity with selected properties
+- **Returns:** an {@link Optional} containing the entity with selected properties
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 ##### gett(...) -> T
 - **Signature:** `@Override @Beta default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID and loads the specified join entity class, returning {@code null} if not found.
@@ -16835,63 +16823,63 @@ A specialized interface for CRUD operations with join entity support, specifical
   - It returns {@code null} if the entity is not found.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Get a user with orders loaded User user = userDao.gett(123L, Order.class); if (user != null) { List<Order> orders = user.getOrders(); // Orders are already loaded } } </pre>
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
-  - `joinEntitiesToLoad` (`Class<?>`) — The class of the join entities to load
-- **Returns:** The entity with loaded join entities, or {@code null} if not found
+  - `id` (`long`) — the primary key value of the entity to retrieve
+  - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
+- **Returns:** the entity with loaded join entities, or {@code null} if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with the option to load all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with the option to load all join entities, returning {@code null} if not found.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Get a complete user object graph User fullUser = userDao.gett(123L, true); if (fullUser != null) { // All relationships are loaded } // Get just the user without relationships User userOnly = userDao.gett(123L, false); } </pre>
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
-  - `includeAllJoinEntities` (`boolean`) — If {@code true} , loads all mapped join entities
-- **Returns:** The entity, or {@code null} if not found
+  - `id` (`long`) — the primary key value of the entity to retrieve
+  - `includeAllJoinEntities` (`boolean`) — if {@code true} , loads all mapped join entities
+- **Returns:** the entity, or {@code null} if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads the specified join entity, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with specific properties and loads the specified join entity, returning {@code null} if not found.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Get essential user data with orders User user = userDao.gett(123L, Arrays.asList("id", "name", "email"), Order.class); if (user != null) { // Process user with orders } } </pre>
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
+  - `id` (`long`) — the primary key value of the entity to retrieve
   - `selectPropNames` (`Collection<String>`) — the properties to select from the main entity, excluding join entity properties. If {@code null} , all properties of the main entity are selected
-  - `joinEntitiesToLoad` (`Class<?>`) — The class of the join entities to load
-- **Returns:** The entity with selected properties and loaded join entities, or {@code null} if not found
+  - `joinEntitiesToLoad` (`Class<?>`) — the class of the join entities to load
+- **Returns:** the entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and loads multiple join entity types, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with specific properties and loads multiple join entity types, returning {@code null} if not found.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Get user with specific fields and multiple relationships User user = userDao.gett(123L, Arrays.asList("id", "name", "email", "createdDate"), Arrays.asList(Order.class, Address.class, Preference.class)); if (user != null) { // User has limited fields but all specified relationships are loaded List<Order> orders = user.getOrders(); List<Address> addresses = user.getAddresses(); } } </pre>
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
+  - `id` (`long`) — the primary key value of the entity to retrieve
   - `selectPropNames` (`Collection<String>`) — the properties to select from the main entity, excluding join entity properties. If {@code null} , all properties of the main entity are selected
-  - `joinEntitiesToLoad` (`Collection<Class<?>>`) — Collection of join entity classes to load
-- **Returns:** The entity with selected properties and loaded join entities, or {@code null} if not found
+  - `joinEntitiesToLoad` (`Collection<Class<?>>`) — the collection of join entity classes to load
+- **Returns:** the entity with selected properties and loaded join entities, or {@code null} if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override @Beta default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Retrieves an entity by its ID with specific properties and optionally loads all join entities, returning {@code null} if not found.
 - **Contract:**
   - Retrieves an entity by its ID with specific properties and optionally loads all join entities, returning {@code null} if not found.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Get minimal user data but with all relationships User user = userDao.gett(123L, Arrays.asList("id", "name"), // Only these fields true); // But load all join entities if (user != null) { // Process user with all relationships } // Get complete user data without any relationships User userOnly = userDao.gett(123L, null, // All fields false); // No join entities } </pre>
 - **Parameters:**
-  - `id` (`long`) — The primary key value of the entity to retrieve
+  - `id` (`long`) — the primary key value of the entity to retrieve
   - `selectPropNames` (`Collection<String>`) — the properties to select from the main entity, excluding join entity properties. If {@code null} , all properties of the main entity are selected
-  - `includeAllJoinEntities` (`boolean`) — If {@code true} , loads all mapped join entities
-- **Returns:** The entity with selected properties, or {@code null} if not found
+  - `includeAllJoinEntities` (`boolean`) — if {@code true} , loads all mapped join entities
+- **Returns:** the entity with selected properties, or {@code null} if not found
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found by the specified {@code id}
-  - `com.landawn.abacus.exception.UncheckedSQLException` — If any SQL error occurs during the operation
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 
 ### Interface UncheckedDao (com.landawn.abacus.jdbc.dao.UncheckedDao)
 Interface for an unchecked Data Access Object (DAO) that extends the base DAO interface.
@@ -17310,7 +17298,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Returns:** an Optional containing the non-null mapped value, or empty if no match found
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleNonNull(Class)
+- **See also:** #queryForSingleNonNull(String, Condition, Class)
 ##### queryForUniqueResult(...) -> Nullable<V>
 - **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable} describing the value in the first row/column if it exists.
@@ -17352,7 +17340,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueNonNull(Class)
+- **See also:** #queryForUniqueNonNull(String, Condition, Class)
 ##### query(...) -> Dataset
 - **Signature:** `@Override Dataset query(final Condition cond) throws UncheckedSQLException`
 - **Summary:** Executes a query and returns the results as a Dataset containing all matching records.
@@ -18144,7 +18132,7 @@ The UncheckedJoinEntityHelper interface provides advanced functionality for hand
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Beta @Deprecated @Override default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException`
-- **Summary:** Deletes join entities for multiple property names of a single entity.
+- **Summary:** Deletes join entities for multiple property names of a single entity using a custom executor.
 - **Parameters:**
   - `entity` (`T`) — the entity whose join entities should be deleted
   - `joinEntityPropNames` (`Collection<String>`) — the property names of the join entities to delete
@@ -18252,32 +18240,32 @@ A specialized CRUD DAO interface that disables update and delete operations whil
 - **Signature:** `@Deprecated @Override default int update(final T entityToUpdate) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entityToUpdate` (`T`) — The entity to update (operation will fail)
+  - `entityToUpdate` (`T`) — the entity to update (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
 - **Signature:** `@Deprecated @Override default int update(final T entityToUpdate, final Collection<String> propNamesToUpdate) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entityToUpdate` (`T`) — The entity containing updated values (operation will fail)
-  - `propNamesToUpdate` (`Collection<String>`) — Collection of property names to update (operation will fail)
+  - `entityToUpdate` (`T`) — the entity containing updated values (operation will fail)
+  - `propNamesToUpdate` (`Collection<String>`) — collection of property names to update (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
 - **Signature:** `@Override @Deprecated default int update(final String propName, final Object propValue, final ID id) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `propName` (`String`) — The name of the property to update (operation will fail)
-  - `propValue` (`Object`) — The new value for the property (operation will fail)
-  - `id` (`ID`) — The ID of the entity to update (operation will fail)
+  - `propName` (`String`) — the name of the property to update (operation will fail)
+  - `propValue` (`Object`) — the new value for the property (operation will fail)
+  - `id` (`ID`) — the ID of the entity to update (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
 - **Signature:** `@Deprecated @Override default int update(final Map<String, Object> updateProps, final ID id) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `updateProps` (`Map<String, Object>`) — Map of property names to their new values (operation will fail)
-  - `id` (`ID`) — The ID of the entity to update (operation will fail)
+  - `updateProps` (`Map<String, Object>`) — map of property names to their new values (operation will fail)
+  - `id` (`ID`) — the ID of the entity to update (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
@@ -18285,15 +18273,15 @@ A specialized CRUD DAO interface that disables update and delete operations whil
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to update (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to update (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to update (operation will fail)
-  - `batchSize` (`int`) — The batch size for the operation (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to update (operation will fail)
+  - `batchSize` (`int`) — the batch size for the operation (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
@@ -18302,17 +18290,17 @@ A specialized CRUD DAO interface that disables update and delete operations whil
 - **Contract:**
   - Consider using a different DAO type if update operations are required for your use case.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to update (operation will fail)
-  - `propNamesToUpdate` (`Collection<String>`) — Properties to update in each entity (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to update (operation will fail)
+  - `propNamesToUpdate` (`Collection<String>`) — properties to update in each entity (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
 - **Signature:** `@Deprecated @Override default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to update (operation will fail)
-  - `propNamesToUpdate` (`Collection<String>`) — Properties to update in each entity (operation will fail)
-  - `batchSize` (`int`) — The batch size for the operation (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to update (operation will fail)
+  - `propNamesToUpdate` (`Collection<String>`) — properties to update in each entity (operation will fail)
+  - `batchSize` (`int`) — the batch size for the operation (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as update operations are not supported
@@ -18320,23 +18308,23 @@ A specialized CRUD DAO interface that disables update and delete operations whil
 - **Signature:** `@Deprecated @Override default T upsert(final T entity) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entity` (`T`) — The entity to insert or update (operation will fail)
+  - `entity` (`T`) — the entity to insert or update (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as upsert operations are not supported
 - **Signature:** `@Deprecated @Override default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entity` (`T`) — The entity to insert or update (operation will fail)
-  - `uniquePropNamesForQuery` (`List<String>`) — Property names used to check for existing records (operation will fail)
+  - `entity` (`T`) — the entity to insert or update (operation will fail)
+  - `uniquePropNamesForQuery` (`List<String>`) — property names used to check for existing records (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as upsert operations are not supported
 - **Signature:** `@Deprecated @Override default T upsert(final T entity, final Condition cond) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entity` (`T`) — The entity to insert or update (operation will fail)
-  - `cond` (`Condition`) — Condition to check for existing records (operation will fail)
+  - `entity` (`T`) — the entity to insert or update (operation will fail)
+  - `cond` (`Condition`) — condition to check for existing records (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as upsert operations are not supported
@@ -18344,32 +18332,32 @@ A specialized CRUD DAO interface that disables update and delete operations whil
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to upsert (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to upsert (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as batch upsert operations are not supported
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to upsert (operation will fail)
-  - `batchSize` (`int`) — The batch size for the operation (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to upsert (operation will fail)
+  - `batchSize` (`int`) — the batch size for the operation (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as batch upsert operations are not supported
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to upsert (operation will fail)
-  - `uniquePropNamesForQuery` (`List<String>`) — Property names for conflict detection (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to upsert (operation will fail)
+  - `uniquePropNamesForQuery` (`List<String>`) — property names for conflict detection (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as batch upsert operations are not supported
 - **Signature:** `@Override @Deprecated default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws UnsupportedOperationException`
 - **Summary:** This operation is not supported in a no-update DAO.
 - **Parameters:**
-  - `entities` (`Collection<? extends T>`) — Collection of entities to upsert (operation will fail)
-  - `uniquePropNamesForQuery` (`List<String>`) — Property names for conflict detection (operation will fail)
-  - `batchSize` (`int`) — The batch size for the operation (operation will fail)
+  - `entities` (`Collection<? extends T>`) — collection of entities to upsert (operation will fail)
+  - `uniquePropNamesForQuery` (`List<String>`) — property names for conflict detection (operation will fail)
+  - `batchSize` (`int`) — the batch size for the operation (operation will fail)
 - **Returns:** Never returns normally
 - **Throws:**
   - `java.lang.UnsupportedOperationException` — Always thrown as batch upsert operations are not supported
