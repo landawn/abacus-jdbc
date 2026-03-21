@@ -75,12 +75,12 @@ import com.landawn.abacus.util.Throwables;
  *   </tr>
  *   <tr>
  *     <td>CSV Import</td>
- *     <td>{@code importCSV()}</td>
+ *     <td>{@code importCsv()}</td>
  *     <td>CSV File or Reader to database via DataSource or PreparedStatement</td>
  *   </tr>
  *   <tr>
  *     <td>CSV Export</td>
- *     <td>{@code exportCSV()}</td>
+ *     <td>{@code exportCsv()}</td>
  *     <td>Database query results (via DataSource, Connection, PreparedStatement, or ResultSet) to File or Writer</td>
  *   </tr>
  *   <tr>
@@ -105,7 +105,7 @@ import com.landawn.abacus.util.Throwables;
  *     "INSERT INTO users (name, age, email) VALUES (?, ?, ?)");
  *
  * // Export query results to CSV file
- * long exportedRows = JdbcUtils.exportCSV(dataSource,
+ * long exportedRows = JdbcUtils.exportCsv(dataSource,
  *     "SELECT * FROM users ORDER BY id",
  *     new File("export.csv"));
  *
@@ -1416,7 +1416,7 @@ public final class JdbcUtils {
      * DataSource dataSource = getDataSource();
      * String insertSql = "INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)";
      *
-     * long rowsImported = JdbcUtils.importCSV(csvFile, dataSource, insertSql,
+     * long rowsImported = JdbcUtils.importCsv(csvFile, dataSource, insertSql,
      *     (stmt, row) -> {
      *         stmt.setString(1, row[0]);   // name
      *         stmt.setString(2, row[1]);   // email
@@ -1434,12 +1434,12 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
-    public static long importCSV(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
+    public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
         final Connection conn = targetDataSource.getConnection();
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importCSV(file, stmt, stmtSetter);
+            return importCsv(file, stmt, stmtSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1460,7 +1460,7 @@ public final class JdbcUtils {
      * String insertSql = "INSERT INTO products (sku, name, category, price) VALUES (?, ?, ?, ?)";
      *
      * try {
-     *     long rowsImported = JdbcUtils.importCSV(csvFile, conn, insertSql, 
+     *     long rowsImported = JdbcUtils.importCsv(csvFile, conn, insertSql, 
      *         2000,  // batch size
      *         50,    // 50ms pause between batches
      *         (stmt, row) -> {
@@ -1486,10 +1486,10 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
-    public static long importCSV(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
+    public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importCSV(file, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return importCsv(file, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         }
     }
 
@@ -1508,7 +1508,7 @@ public final class JdbcUtils {
      *     "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)",
      *     Statement.RETURN_GENERATED_KEYS);
      *
-     * long rowsImported = JdbcUtils.importCSV(csvFile, stmt,
+     * long rowsImported = JdbcUtils.importCsv(csvFile, stmt,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setBigDecimal(2, new BigDecimal(row[1]));
@@ -1527,9 +1527,9 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
-    public static long importCSV(final File file, final PreparedStatement stmt,
+    public static long importCsv(final File file, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importCsv(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -1548,7 +1548,7 @@ public final class JdbcUtils {
      *
      * AtomicLong processedRows = new AtomicLong(0);
      *
-     * long totalRows = JdbcUtils.importCSV(csvFile, stmt, 5000, 100,
+     * long totalRows = JdbcUtils.importCsv(csvFile, stmt, 5000, 100,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1]);
@@ -1572,9 +1572,9 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
-    public static long importCSV(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(file, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importCsv(file, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1594,7 +1594,7 @@ public final class JdbcUtils {
      * // Filter to import only users with "ACTIVE" status (assuming status is in column 3)
      * Predicate<String[]> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
      *
-     * long rowsImported = JdbcUtils.importCSV(csvFile, activeUsersFilter, stmt, 1000, 0,
+     * long rowsImported = JdbcUtils.importCsv(csvFile, activeUsersFilter, stmt, 1000, 0,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1]);
@@ -1617,11 +1617,11 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs while reading the file
      * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> long importCSV(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt,
+    public static <E extends Exception> long importCsv(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt,
             final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E {
         try (Reader reader = IOUtil.newFileReader(file)) {
-            return importCSV(reader, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
+            return importCsv(reader, filter, stmt, batchSize, batchIntervalInMillis, stmtSetter);
         }
     }
 
@@ -1640,7 +1640,7 @@ public final class JdbcUtils {
      * DataSource dataSource = getDataSource();
      * String insertSql = "INSERT INTO people (name, age, city) VALUES (?, ?, ?)";
      *
-     * long rowsImported = JdbcUtils.importCSV(reader, dataSource, insertSql,
+     * long rowsImported = JdbcUtils.importCsv(reader, dataSource, insertSql,
      *     (stmt, row) -> {
      *         stmt.setString(1, row[0]);
      *         stmt.setInt(2, Integer.parseInt(row[1]));
@@ -1658,12 +1658,12 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
      */
-    public static long importCSV(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
+    public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
         final Connection conn = targetDataSource.getConnection();
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importCSV(reader, stmt, stmtSetter);
+            return importCsv(reader, stmt, stmtSetter);
         } finally {
             JdbcUtil.releaseConnection(conn, targetDataSource);
         }
@@ -1684,7 +1684,7 @@ public final class JdbcUtils {
      * PreparedStatement stmt = conn.prepareStatement(
      *     "INSERT INTO data (col1, col2, col3) VALUES (?, ?, ?)");
      *
-     * long rowsImported = JdbcUtils.importCSV(reader, stmt,
+     * long rowsImported = JdbcUtils.importCsv(reader, stmt,
      *     (query, row) -> {
      *         query.setString(1, row[0]);
      *         query.setString(2, row[1]);
@@ -1701,9 +1701,9 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
      */
-    public static long importCSV(final Reader reader, final PreparedStatement stmt,
+    public static long importCsv(final Reader reader, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
+        return importCsv(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
     }
 
     /**
@@ -1721,7 +1721,7 @@ public final class JdbcUtils {
      *     "INSERT INTO large_table (id, data, timestamp) VALUES (?, ?, ?)");
      *
      * long startTime = System.currentTimeMillis();
-     * long rowsImported = JdbcUtils.importCSV(reader, stmt, 10000, 200,
+     * long rowsImported = JdbcUtils.importCsv(reader, stmt, 10000, 200,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1]);
@@ -1741,9 +1741,9 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
      */
-    public static long importCSV(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
+    public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        return importCSV(reader, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
+        return importCsv(reader, Fn.alwaysTrue(), stmt, batchSize, batchIntervalInMillis, stmtSetter);
     }
 
     /**
@@ -1782,7 +1782,7 @@ public final class JdbcUtils {
      *     return allowedCountries.contains(row[3]);
      * };
      *
-     * long rowsImported = JdbcUtils.importCSV(reader, complexFilter, stmt, 2000, 0,
+     * long rowsImported = JdbcUtils.importCsv(reader, complexFilter, stmt, 2000, 0,
      *     (query, row) -> {
      *         query.setLong(1, Long.parseLong(row[0]));
      *         query.setString(2, row[1].toLowerCase());   // normalize email
@@ -1806,7 +1806,7 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs while reading from the reader
      * @throws E if the filter throws an exception
      */
-    public static <E extends Exception> long importCSV(final Reader reader, final Throwables.Predicate<? super String[], E> filter,
+    public static <E extends Exception> long importCsv(final Reader reader, final Throwables.Predicate<? super String[], E> filter,
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter)
             throws IllegalArgumentException, SQLException, IOException, E {
@@ -1879,7 +1879,7 @@ public final class JdbcUtils {
      * String query = "SELECT id, name, email, registration_date FROM users WHERE active = true";
      * File outputFile = new File("active_users.csv");
      *
-     * long rowsExported = JdbcUtils.exportCSV(dataSource, query, outputFile);
+     * long rowsExported = JdbcUtils.exportCsv(dataSource, query, outputFile);
      * System.out.println("Exported " + rowsExported + " active users to " + outputFile);
      * }</pre>
      *
@@ -1890,11 +1890,11 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException {
+    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return exportCSV(conn, querySql, output);
+            return exportCsv(conn, querySql, output);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -1917,7 +1917,7 @@ public final class JdbcUtils {
      *     String query = "SELECT * FROM large_table WHERE created_date >= '2023-01-01'";
      *     File outputFile = new File("export_2023.csv");
      *
-     *     long rowsExported = JdbcUtils.exportCSV(conn, query, outputFile);
+     *     long rowsExported = JdbcUtils.exportCsv(conn, query, outputFile);
      *     System.out.println("Successfully exported " + rowsExported + " rows");
      * } finally {
      *     conn.close();
@@ -1931,8 +1931,8 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final Connection conn, final String querySql, final File output) throws SQLException, IOException {
-        return exportCSV(conn, querySql, null, output);
+    public static long exportCsv(final Connection conn, final String querySql, final File output) throws SQLException, IOException {
+        return exportCsv(conn, querySql, null, output);
     }
 
     /**
@@ -1953,7 +1953,7 @@ public final class JdbcUtils {
      * Set<String> columnsToExport = Set.of("id", "name", "department");
      *
      * try {
-     *     long rowsExported = JdbcUtils.exportCSV(conn, query, columnsToExport, outputFile);
+     *     long rowsExported = JdbcUtils.exportCsv(conn, query, columnsToExport, outputFile);
      *     System.out.println("Exported " + rowsExported + " employees (filtered columns)");
      * } finally {
      *     conn.close();
@@ -1968,7 +1968,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output)
+    public static long exportCsv(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output)
             throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySql);
 
@@ -1976,7 +1976,7 @@ public final class JdbcUtils {
 
             setFetchForLargeResult(conn, stmt);
 
-            return exportCSV(stmt, selectColumnNames, output);
+            return exportCsv(stmt, selectColumnNames, output);
         }
     }
 
@@ -1997,7 +1997,7 @@ public final class JdbcUtils {
      * stmt.setString(3, "COMPLETED");
      *
      * File outputFile = new File("completed_orders_2023.csv");
-     * long rowsExported = JdbcUtils.exportCSV(stmt, outputFile);
+     * long rowsExported = JdbcUtils.exportCsv(stmt, outputFile);
      *
      * System.out.println("Exported " + rowsExported + " completed orders for 2023");
      * }</pre>
@@ -2008,8 +2008,8 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final PreparedStatement stmt, final File out) throws SQLException, IOException {
-        return exportCSV(stmt, null, out);
+    public static long exportCsv(final PreparedStatement stmt, final File out) throws SQLException, IOException {
+        return exportCsv(stmt, null, out);
     }
 
     /**
@@ -2030,7 +2030,7 @@ public final class JdbcUtils {
      * Set<String> userColumns = Set.of("id", "name", "email", "country");
      * File outputFile = new File("us_users.csv");
      *
-     * long rowsExported = JdbcUtils.exportCSV(stmt, userColumns, outputFile);
+     * long rowsExported = JdbcUtils.exportCsv(stmt, userColumns, outputFile);
      * System.out.println("Exported " + rowsExported + " US users");
      * }</pre>
      *
@@ -2041,13 +2041,13 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
+    public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
         ResultSet rs = null;
 
         try {
             rs = JdbcUtil.executeQuery(stmt);
 
-            return exportCSV(rs, selectColumnNames, output);
+            return exportCsv(rs, selectColumnNames, output);
         } finally {
             JdbcUtil.closeQuietly(rs);
         }
@@ -2072,7 +2072,7 @@ public final class JdbcUtils {
      * rs.absolute(100);
      *
      * File outputFile = new File("products_from_100.csv");
-     * long rowsExported = JdbcUtils.exportCSV(rs, outputFile);
+     * long rowsExported = JdbcUtils.exportCsv(rs, outputFile);
      *
      * System.out.println("Exported " + rowsExported + " products (skipped first 100)");
      * }</pre>
@@ -2083,8 +2083,8 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final ResultSet rs, final File output) throws SQLException, IOException {
-        return exportCSV(rs, null, output);
+    public static long exportCsv(final ResultSet rs, final File output) throws SQLException, IOException {
+        return exportCsv(rs, null, output);
     }
 
     /**
@@ -2107,7 +2107,7 @@ public final class JdbcUtils {
      * Set<String> exportColumns = Set.of("order_id", "order_date", "customer_name", "total");
      * File outputFile = new File("order_summary.csv");
      *
-     * long rowsExported = JdbcUtils.exportCSV(rs, exportColumns, outputFile);
+     * long rowsExported = JdbcUtils.exportCsv(rs, exportColumns, outputFile);
      * System.out.println("Exported " + rowsExported + " order summaries");
      * }</pre>
      *
@@ -2119,13 +2119,13 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
+    public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException {
         if (!output.exists() && !output.createNewFile()) {
             throw new IOException("Failed to create file: " + output);
         }
 
         try (Writer writer = IOUtil.newFileWriter(output)) {
-            return exportCSV(rs, selectColumnNames, writer);
+            return exportCsv(rs, selectColumnNames, writer);
         }
     }
 
@@ -2147,7 +2147,7 @@ public final class JdbcUtils {
      * Writer writer = new OutputStreamWriter(response.getOutputStream());
      * String query = "SELECT * FROM monthly_report WHERE month = CURRENT_MONTH()";
      *
-     * long rowsExported = JdbcUtils.exportCSV(dataSource, query, writer);
+     * long rowsExported = JdbcUtils.exportCsv(dataSource, query, writer);
      * writer.flush();
      *
      * logger.info("Streamed " + rowsExported + " rows to client");
@@ -2160,11 +2160,11 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing
      */
-    public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException {
+    public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException {
         final Connection conn = sourceDataSource.getConnection();
 
         try {
-            return exportCSV(conn, querySql, output);
+            return exportCsv(conn, querySql, output);
         } finally {
             JdbcUtil.releaseConnection(conn, sourceDataSource);
         }
@@ -2185,7 +2185,7 @@ public final class JdbcUtils {
      * String query = "SELECT id, name, value FROM metrics WHERE date = CURRENT_DATE";
      *
      * try {
-     *     long rowsExported = JdbcUtils.exportCSV(conn, query, stringWriter);
+     *     long rowsExported = JdbcUtils.exportCsv(conn, query, stringWriter);
      *     String csvData = stringWriter.toString();
      *
      *     // Process CSV data (e.g., send via email, store in cache, etc.)
@@ -2203,7 +2203,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing
      */
-    public static long exportCSV(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException {
+    public static long exportCsv(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException {
         final ParsedSql sql = ParsedSql.parse(querySql);
 
         final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -2212,7 +2212,7 @@ public final class JdbcUtils {
             setFetchForLargeResult(conn, stmt);
 
             try (ResultSet rs = JdbcUtil.executeQuery(stmt)) {
-                return exportCSV(rs, output);
+                return exportCsv(rs, output);
             }
         } finally {
             JdbcUtil.closeQuietly(stmt);
@@ -2235,7 +2235,7 @@ public final class JdbcUtils {
      *      GZIPOutputStream gzos = new GZIPOutputStream(fos);
      *      Writer writer = new OutputStreamWriter(gzos, StandardCharsets.UTF_8)) {
      *
-     *     long rowsExported = JdbcUtils.exportCSV(rs, writer);
+     *     long rowsExported = JdbcUtils.exportCsv(rs, writer);
      *     System.out.println("Exported " + rowsExported + " rows to compressed CSV");
      * }
      * }</pre>
@@ -2246,8 +2246,8 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final ResultSet rs, final Writer output) throws SQLException, IOException {
-        return exportCSV(rs, null, output);
+    public static long exportCsv(final ResultSet rs, final Writer output) throws SQLException, IOException {
+        return exportCsv(rs, null, output);
     }
 
     /**
@@ -2270,7 +2270,7 @@ public final class JdbcUtils {
      *
      * try (Writer writer = new FileWriter("users_export.csv")) {
      *     ResultSet rs = stmt.executeQuery("SELECT * FROM users");
-     *     long exported = JdbcUtils.exportCSV(rs, columns, writer);
+     *     long exported = JdbcUtils.exportCsv(rs, columns, writer);
      *     System.out.println("Exported " + exported + " rows");
      * }
      * }</pre>
@@ -2283,7 +2283,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
-    public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output)
+    public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output)
             throws IllegalArgumentException, SQLException, IOException {
         // N.checkArgument(offset >= 0 && count >= 0, "'offset'=%s and 'count'=%s can't be negative");
 

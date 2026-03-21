@@ -455,7 +455,7 @@ CONSTRAINTS
 
 
 
-Read the Eclipse-generated HTML coverage reports located in ./report/coverage/260315/ batch by batch.
+Read the Eclipse-generated HTML coverage reports located in ./report/coverage/260321/ batch by batch.
 Each batch contains 20 HTML files, ordered by highest "Missed Instructions" first (start with the classes that have the most uncovered instructions). For each class report in the batch:
 
   - Identify the lines that are not covered by existing tests.

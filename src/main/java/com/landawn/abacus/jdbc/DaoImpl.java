@@ -1429,7 +1429,7 @@ final class DaoImpl {
 
             if (N.notEmpty(parsedSql.namedParameters()) || parsedSql.parameterCount() == 0) {
                 parsedSql = ParsedSql.parse(query);
-                query = parsedSql.sql();
+                query = parsedSql.originalSql();
             }
         }
 
@@ -1763,7 +1763,7 @@ final class DaoImpl {
                 .flatMapArray(Class::getAnnotations)
                 .select(SqlSource.class)
                 .map(SqlSource::value)
-                .map(SqlMapper::fromFile)
+                .map(SqlMapper::load)
                 .forEach(it -> {
                     for (final String key : it.sqlIds()) {
                         if (newSqlMapper.get(key) != null) {

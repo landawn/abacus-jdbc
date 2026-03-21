@@ -185,12 +185,12 @@
 
 ### 3.9.6
 
-* Refactor `JdbcUtils.exportCSV(...)`.
+* Refactor `JdbcUtils.exportCsv(...)`.
 * Improvements and bug fix.
 
 ### 3.9.5
 
-* Refactor `JdbcUtils.exportCSV(...)`.
+* Refactor `JdbcUtils.exportCsv(...)`.
 * Improvements and bug fix.
 
 ### 3.9.4

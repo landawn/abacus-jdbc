@@ -108,7 +108,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         parameterCount = namedSql.parameterCount();
 
         if (N.size(namedSql.namedParameters()) != parameterCount) {
-            throw new IllegalArgumentException("Invalid named SQL: " + namedSql.sql());
+            throw new IllegalArgumentException("Invalid named SQL: " + namedSql.originalSql());
         }
     }
 
@@ -3991,7 +3991,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
         } else {
             close();
-            throw new IllegalArgumentException("Unsupported named parameter type: " + parameters.getClass() + " for SQL: " + namedSql.sql());
+            throw new IllegalArgumentException("Unsupported named parameter type: " + parameters.getClass() + " for SQL: " + namedSql.originalSql());
         }
 
         return this;
@@ -4257,7 +4257,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
             if (first == null) {
                 if (parameterCount != 1) {
-                    throw new IllegalArgumentException("Unsupported named parameter type: null for SQL: " + namedSql.sql());
+                    throw new IllegalArgumentException("Unsupported named parameter type: null for SQL: " + namedSql.originalSql());
                 }
 
                 stmt.setObject(1, first);
@@ -4363,7 +4363,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         addBatch();
                     }
                 } else {
-                    throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for SQL: " + namedSql.sql());
+                    throw new IllegalArgumentException("Unsupported named parameter type: " + cls + " for SQL: " + namedSql.originalSql());
                 }
             }
 

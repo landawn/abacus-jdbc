@@ -8676,8 +8676,8 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Returns:** the total number of rows successfully inserted
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### importCSV(...) -> long
-- **Signature:** `public static long importCSV(final File file, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+##### importCsv(...) -> long
+- **Signature:** `public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV file to the database using the specified DataSource.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
@@ -8688,7 +8688,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading the file
-- **Signature:** `public static long importCSV(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+- **Signature:** `public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV file to the database using the provided Connection with configurable batch processing.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
@@ -8701,10 +8701,10 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading the file
-- **Signature:** `public static long importCSV(final File file, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+- **Signature:** `public static long importCsv(final File file, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV file to the database using the provided PreparedStatement with default batch settings.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import with custom prepared statement configuration File csvFile = new File("transactions.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS); long rowsImported = JdbcUtils.importCSV(csvFile, stmt, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setBigDecimal(2, new BigDecimal(row\[1\])); query.setString(3, row\[2\]); query.setDate(4, Date.valueOf(row\[3\])); }); // Can retrieve generated keys if needed ResultSet generatedKeys = stmt.getGeneratedKeys(); } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import with custom prepared statement configuration File csvFile = new File("transactions.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS); long rowsImported = JdbcUtils.importCsv(csvFile, stmt, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setBigDecimal(2, new BigDecimal(row\[1\])); query.setString(3, row\[2\]); query.setDate(4, Date.valueOf(row\[3\])); }); // Can retrieve generated keys if needed ResultSet generatedKeys = stmt.getGeneratedKeys(); } </pre>
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
@@ -8713,10 +8713,10 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading the file
-- **Signature:** `public static long importCSV(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+- **Signature:** `public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV file to the database using the provided PreparedStatement with configurable batch processing.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import large dataset with progress tracking File csvFile = new File("large_dataset.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)"); AtomicLong processedRows = new AtomicLong(0); long totalRows = JdbcUtils.importCSV(csvFile, stmt, 5000, 100, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\]); query.setTimestamp(3, Timestamp.valueOf(row\[2\])); long processed = processedRows.incrementAndGet(); if (processed % 10000 == 0) { System.out.println("Processed " + processed + " rows..."); } }); System.out.println("Import completed.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import large dataset with progress tracking File csvFile = new File("large_dataset.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)"); AtomicLong processedRows = new AtomicLong(0); long totalRows = JdbcUtils.importCsv(csvFile, stmt, 5000, 100, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\]); query.setTimestamp(3, Timestamp.valueOf(row\[2\])); long processed = processedRows.incrementAndGet(); if (processed % 10000 == 0) { System.out.println("Processed " + processed + " rows..."); } }); System.out.println("Import completed.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
   - `stmt` (`PreparedStatement`) — the PreparedStatement to be used for the import (will not be closed)
@@ -8727,7 +8727,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading the file
-- **Signature:** `public static <E extends Exception> long importCSV(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E`
+- **Signature:** `public static <E extends Exception> long importCsv(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E`
 - **Summary:** Imports data from a CSV file to the database with row filtering capability.
 - **Parameters:**
   - `file` (`File`) — the CSV file containing the data to be imported
@@ -8741,7 +8741,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading the file
   - `E` — if the filter throws an exception
-- **Signature:** `public static long importCSV(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+- **Signature:** `public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV Reader to the database using the specified DataSource.
 - **Contract:**
   - This method is useful when the CSV data comes from a source other than a file.
@@ -8754,7 +8754,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading from the reader
-- **Signature:** `public static long importCSV(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+- **Signature:** `public static long importCsv(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV Reader to the database using the provided PreparedStatement with default batch settings.
 - **Contract:**
   - The Reader will be wrapped in a BufferedReader for optimal performance if not already buffered.
@@ -8766,7 +8766,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading from the reader
-- **Signature:** `public static long importCSV(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
+- **Signature:** `public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException`
 - **Summary:** Imports data from a CSV Reader to the database using the provided PreparedStatement with configurable batch processing.
 - **Parameters:**
   - `reader` (`Reader`) — the Reader to read the CSV data from
@@ -8778,10 +8778,10 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading from the reader
-- **Signature:** `public static <E extends Exception> long importCSV(final Reader reader, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException, IOException, E`
+- **Signature:** `public static <E extends Exception> long importCsv(final Reader reader, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException, IOException, E`
 - **Summary:** Imports data from a CSV Reader to the database with row filtering capability and configurable batch processing.
 - **Contract:**
-  - <p> This method combines all import features: </p> <ul> <li> Custom data source (Reader) </li> <li> Row filtering before import </li> <li> Configurable batch processing </li> <li> Custom value mapping </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import CSV data with complex filtering and validation Reader reader = new FileReader("user_data.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)"); // Complex filter: valid email, age >= 18, allowed countries Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU"); Predicate<String\[\]> complexFilter = row -> { // Validate email format (simple check) if (!row\[1\].contains("@")) return false; // Check age >= 18 try { if (Integer.parseInt(row\[2\]) < 18) return false; } catch (NumberFormatException e) { return false; } // Check allowed countries return allowedCountries.contains(row\[3\]); }; long rowsImported = JdbcUtils.importCSV(reader, complexFilter, stmt, 2000, 0, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\].toLowerCase()); // normalize email query.setInt(3, Integer.parseInt(row\[2\])); query.setString(4, row\[3\]); }); System.out.println("Imported " + rowsImported + " valid users"); } </pre>
+  - <p> This method combines all import features: </p> <ul> <li> Custom data source (Reader) </li> <li> Row filtering before import </li> <li> Configurable batch processing </li> <li> Custom value mapping </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import CSV data with complex filtering and validation Reader reader = new FileReader("user_data.csv"); PreparedStatement stmt = conn.prepareStatement( "INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)"); // Complex filter: valid email, age >= 18, allowed countries Set<String> allowedCountries = Set.of("US", "CA", "UK", "AU"); Predicate<String\[\]> complexFilter = row -> { // Validate email format (simple check) if (!row\[1\].contains("@")) return false; // Check age >= 18 try { if (Integer.parseInt(row\[2\]) < 18) return false; } catch (NumberFormatException e) { return false; } // Check allowed countries return allowedCountries.contains(row\[3\]); }; long rowsImported = JdbcUtils.importCsv(reader, complexFilter, stmt, 2000, 0, (query, row) -> { query.setLong(1, Long.parseLong(row\[0\])); query.setString(2, row\[1\].toLowerCase()); // normalize email query.setInt(3, Integer.parseInt(row\[2\])); query.setString(4, row\[3\]); }); System.out.println("Imported " + rowsImported + " valid users"); } </pre>
 - **Parameters:**
   - `reader` (`Reader`) — the Reader to read the CSV data from
   - `filter` (`Throwables.Predicate<? super String[], E>`) — a predicate to filter rows; only rows returning {@code true} will be imported
@@ -8795,8 +8795,8 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while reading from the reader
   - `E` — if the filter throws an exception
-##### exportCSV(...) -> long
-- **Signature:** `public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException`
+##### exportCsv(...) -> long
+- **Signature:** `public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException`
 - **Summary:** Exports data from the database to a CSV file using the specified DataSource and SQL query.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the DataSource to obtain database connections from
@@ -8806,7 +8806,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final Connection conn, final String querySql, final File output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final Connection conn, final String querySql, final File output) throws SQLException, IOException`
 - **Summary:** Exports data from the database to a CSV file using the provided Connection and SQL query.
 - **Parameters:**
   - `conn` (`Connection`) — the Connection to the database (will not be closed by this method)
@@ -8816,7 +8816,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException`
 - **Summary:** Exports selected columns from the database to a CSV file using the provided Connection and SQL query.
 - **Contract:**
   - This method allows you to specify which columns from the query result should be included in the CSV.
@@ -8830,7 +8830,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final PreparedStatement stmt, final File out) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final PreparedStatement stmt, final File out) throws SQLException, IOException`
 - **Summary:** Exports data from the database to a CSV file using the provided PreparedStatement.
 - **Contract:**
   - <p> This method is useful when you need to set parameters on the statement before execution or when you want to reuse a prepared statement for multiple exports.
@@ -8841,7 +8841,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException`
 - **Summary:** Exports selected columns from the database to a CSV file using the provided PreparedStatement.
 - **Parameters:**
   - `stmt` (`PreparedStatement`) — the PreparedStatement to execute (will not be closed by this method)
@@ -8851,7 +8851,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final ResultSet rs, final File output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final ResultSet rs, final File output) throws SQLException, IOException`
 - **Summary:** Exports data from a ResultSet to a CSV file.
 - **Contract:**
   - <p> This is the lowest-level export method, useful when you already have a ResultSet from a complex operation or need maximum control over the export process.
@@ -8862,7 +8862,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException`
 - **Summary:** Exports selected columns from a ResultSet to a CSV file.
 - **Contract:**
   - <p> Column names are case-sensitive and must match exactly with the column labels in the ResultSet.
@@ -8875,7 +8875,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing to the file
-- **Signature:** `public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException`
 - **Summary:** Exports data from the database to a CSV Writer using the specified DataSource and SQL query.
 - **Contract:**
   - This method is useful when you need to write CSV data to a custom destination.
@@ -8887,7 +8887,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing
-- **Signature:** `public static long exportCSV(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException`
 - **Summary:** Exports data from the database to a CSV Writer using the provided Connection and SQL query.
 - **Contract:**
   - The Writer should be flushed after this method returns to ensure all data is written.
@@ -8899,7 +8899,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs while writing
-- **Signature:** `public static long exportCSV(final ResultSet rs, final Writer output) throws SQLException, IOException`
+- **Signature:** `public static long exportCsv(final ResultSet rs, final Writer output) throws SQLException, IOException`
 - **Summary:** Exports data from a ResultSet to a CSV Writer.
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet containing the data to be exported
@@ -8908,7 +8908,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
   - `java.io.IOException` — if an I/O error occurs
-- **Signature:** `public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output) throws IllegalArgumentException, SQLException, IOException`
+- **Signature:** `public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output) throws IllegalArgumentException, SQLException, IOException`
 - **Summary:** Exports data from a ResultSet to a CSV file with column selection.
 - **Parameters:**
   - `rs` (`ResultSet`) — the ResultSet containing the data to be exported

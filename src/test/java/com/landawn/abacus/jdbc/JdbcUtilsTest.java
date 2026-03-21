@@ -348,7 +348,7 @@ public class JdbcUtilsTest extends TestBase {
         verify(mockPreparedStatement, times(2)).executeBatch(); // 5 rows with batch size 3
     }
 
-    // Tests for importCSV methods
+    // Tests for importCsv methods
 
     @Test
     public void testImportCSVFromFileWithDataSource() throws SQLException, IOException {
@@ -366,7 +366,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCSV(tempFile, mockDataSource, insertSql, stmtSetter);
+        long result = JdbcUtils.importCsv(tempFile, mockDataSource, insertSql, stmtSetter);
 
         // Verify
         assertEquals(1, result); // 1 data row (header skipped)
@@ -390,7 +390,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCSV(tempFile, filter, mockPreparedStatement, 1, 0, stmtSetter);
+        long result = JdbcUtils.importCsv(tempFile, filter, mockPreparedStatement, 1, 0, stmtSetter);
 
         // Verify
         assertEquals(2, result); // 2 valid rows
@@ -410,14 +410,14 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCSV(reader, mockDataSource, insertSql, stmtSetter);
+        long result = JdbcUtils.importCsv(reader, mockDataSource, insertSql, stmtSetter);
 
         // Verify
         assertEquals(2, result); // 2 data rows
         verify(mockDataSource).getConnection();
     }
 
-    // Tests for exportCSV methods
+    // Tests for exportCsv methods
 
     @Test
     public void testExportCSVToFileWithDataSource() throws SQLException, IOException {
@@ -435,7 +435,7 @@ public class JdbcUtilsTest extends TestBase {
         String querySql = "SELECT * FROM test_table";
 
         // Execute
-        long result = JdbcUtils.exportCSV(mockDataSource, querySql, tempFile);
+        long result = JdbcUtils.exportCsv(mockDataSource, querySql, tempFile);
 
         // Verify
         assertEquals(2, result);
@@ -459,7 +459,7 @@ public class JdbcUtilsTest extends TestBase {
         String querySql = "SELECT * FROM test_table";
 
         // Execute
-        long result = JdbcUtils.exportCSV(mockConnection, querySql, selectColumns, tempFile);
+        long result = JdbcUtils.exportCsv(mockConnection, querySql, selectColumns, tempFile);
 
         // Verify
         assertEquals(1, result);
@@ -478,7 +478,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getString(1)).thenReturn("val2");
 
         // Execute
-        long result = JdbcUtils.exportCSV(mockResultSet, writer);
+        long result = JdbcUtils.exportCsv(mockResultSet, writer);
 
         // Verify
         assertEquals(2, result);
@@ -501,7 +501,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockResultSet.getObject(2)).thenReturn(null);
 
         // Execute
-        long result = JdbcUtils.exportCSV(mockResultSet, writer);
+        long result = JdbcUtils.exportCsv(mockResultSet, writer);
 
         // Verify
         assertEquals(1, result);
@@ -732,7 +732,7 @@ public class JdbcUtilsTest extends TestBase {
 
         // Execute & Verify
         assertThrows(IllegalArgumentException.class, () -> {
-            JdbcUtils.exportCSV(mockResultSet, selectColumns, writer);
+            JdbcUtils.exportCsv(mockResultSet, selectColumns, writer);
         });
     }
 
@@ -769,7 +769,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         // Execute
-        long result = JdbcUtils.importCSV(reader, filter, mockPreparedStatement, 1, 0, stmtSetter);
+        long result = JdbcUtils.importCsv(reader, filter, mockPreparedStatement, 1, 0, stmtSetter);
 
         // Verify
         assertEquals(1, result); // Only 1 row matches filter

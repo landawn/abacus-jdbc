@@ -398,7 +398,7 @@ public class DaoTest {
     }
 
     @Test
-    public void test_exportCSV() throws Exception {
+    public void test_exportCsv() throws Exception {
         final List<User> users = IntStream.range(1, 30)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
@@ -408,7 +408,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement("select * from user1");
              ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(rs, IOUtil.newOutputStreamWriter(System.out));
+            JdbcUtils.exportCsv(rs, IOUtil.newOutputStreamWriter(System.out));
         }
 
         N.println(IOUtil.LINE_SEPARATOR_UNIX);
@@ -417,7 +417,7 @@ public class DaoTest {
         try (Connection conn = JdbcTest.dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement("select * from user1");
              ResultSet rs = stmt.executeQuery()) {
-            JdbcUtils.exportCSV(rs, JdbcUtil.getColumnLabelList(rs), IOUtil.newOutputStreamWriter(System.out));
+            JdbcUtils.exportCsv(rs, JdbcUtil.getColumnLabelList(rs), IOUtil.newOutputStreamWriter(System.out));
         }
 
         userDao.batchDelete(users);

@@ -474,7 +474,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
-        if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
+        if (!(DaoUtil.isSelectQuery(namedQuery.originalSql()) || DaoUtil.isInsertQuery(namedQuery.originalSql()))) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
         }
 
@@ -506,7 +506,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
-        if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
+        if (!(DaoUtil.isSelectQuery(namedQuery.originalSql()) || DaoUtil.isInsertQuery(namedQuery.originalSql()))) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
         }
 
@@ -539,7 +539,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final boolean generateKeys) throws SQLException, UnsupportedOperationException {
-        if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
+        if (!(DaoUtil.isSelectQuery(namedQuery.originalSql()) || DaoUtil.isInsertQuery(namedQuery.originalSql()))) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
         }
 
@@ -572,7 +572,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException, UnsupportedOperationException {
-        if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
+        if (!(DaoUtil.isSelectQuery(namedQuery.originalSql()) || DaoUtil.isInsertQuery(namedQuery.originalSql()))) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
         }
 
@@ -606,7 +606,7 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException, UnsupportedOperationException {
-        if (!(DaoUtil.isSelectQuery(namedQuery.sql()) || DaoUtil.isInsertQuery(namedQuery.sql()))) {
+        if (!(DaoUtil.isSelectQuery(namedQuery.originalSql()) || DaoUtil.isInsertQuery(namedQuery.originalSql()))) {
             throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in NoUpdateDao");
         }
 

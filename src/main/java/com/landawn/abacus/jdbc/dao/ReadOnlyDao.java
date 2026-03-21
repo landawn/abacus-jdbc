@@ -335,7 +335,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQuery(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
-        if (!DaoUtil.isSelectQuery(namedQuery.sql())) {
+        if (!DaoUtil.isSelectQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
         }
 
@@ -371,7 +371,7 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     @NonDBOperation
     @Override
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedQuery) throws SQLException, UnsupportedOperationException {
-        if (!DaoUtil.isSelectQuery(namedQuery.sql())) {
+        if (!DaoUtil.isSelectQuery(namedQuery.originalSql())) {
             throw new UnsupportedOperationException("Only SELECT queries are supported in ReadOnlyDao");
         }
 

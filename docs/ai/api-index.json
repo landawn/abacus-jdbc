@@ -35764,13 +35764,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final File file, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -35815,13 +35815,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -35878,13 +35878,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final File file, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final File file, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -35919,19 +35919,19 @@
               ],
               "javadoc_summary": "Imports data from a CSV file to the database using the provided PreparedStatement with default batch settings.",
               "contract": [
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import with custom prepared statement configuration File csvFile = new File(\"transactions.csv\"); PreparedStatement stmt = conn.prepareStatement( \"INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)\", Statement.RETURN_GENERATED_KEYS); long rowsImported = JdbcUtils.importCSV(csvFile, stmt, (query, row) -> { query.setLong(1, Long.parseLong(row[0])); query.setBigDecimal(2, new BigDecimal(row[1])); query.setString(3, row[2]); query.setDate(4, Date.valueOf(row[3])); }); // Can retrieve generated keys if needed ResultSet generatedKeys = stmt.getGeneratedKeys(); } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import with custom prepared statement configuration File csvFile = new File(\"transactions.csv\"); PreparedStatement stmt = conn.prepareStatement( \"INSERT INTO transactions (account_id, amount, type, date) VALUES (?, ?, ?, ?)\", Statement.RETURN_GENERATED_KEYS); long rowsImported = JdbcUtils.importCsv(csvFile, stmt, (query, row) -> { query.setLong(1, Long.parseLong(row[0])); query.setBigDecimal(2, new BigDecimal(row[1])); query.setString(3, row[2]); query.setDate(4, Date.valueOf(row[3])); }); // Can retrieve generated keys if needed ResultSet generatedKeys = stmt.getGeneratedKeys(); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -35978,19 +35978,19 @@
               ],
               "javadoc_summary": "Imports data from a CSV file to the database using the provided PreparedStatement with configurable batch processing.",
               "contract": [
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import large dataset with progress tracking File csvFile = new File(\"large_dataset.csv\"); PreparedStatement stmt = conn.prepareStatement( \"INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)\"); AtomicLong processedRows = new AtomicLong(0); long totalRows = JdbcUtils.importCSV(csvFile, stmt, 5000, 100, (query, row) -> { query.setLong(1, Long.parseLong(row[0])); query.setString(2, row[1]); query.setTimestamp(3, Timestamp.valueOf(row[2])); long processed = processedRows.incrementAndGet(); if (processed % 10000 == 0) { System.out.println(\"Processed \" + processed + \" rows...\"); } }); System.out.println(\"Import completed."
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import large dataset with progress tracking File csvFile = new File(\"large_dataset.csv\"); PreparedStatement stmt = conn.prepareStatement( \"INSERT INTO records (id, data, timestamp) VALUES (?, ?, ?)\"); AtomicLong processedRows = new AtomicLong(0); long totalRows = JdbcUtils.importCsv(csvFile, stmt, 5000, 100, (query, row) -> { query.setLong(1, Long.parseLong(row[0])); query.setString(2, row[1]); query.setTimestamp(3, Timestamp.valueOf(row[2])); long processed = processedRows.incrementAndGet(); if (processed % 10000 == 0) { System.out.println(\"Processed \" + processed + \" rows...\"); } }); System.out.println(\"Import completed."
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static <E extends Exception> long importCSV(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E",
+              "signature": "public static <E extends Exception> long importCsv(final File file, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException, E",
               "return_type": "long",
               "type_params": [
                 {
@@ -36058,13 +36058,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36111,13 +36111,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36158,13 +36158,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long importCSV(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
+              "signature": "public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36215,13 +36215,13 @@
               "see_also": []
             },
             {
-              "name": "importCSV",
+              "name": "importCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static <E extends Exception> long importCSV(final Reader reader, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException, IOException, E",
+              "signature": "public static <E extends Exception> long importCsv(final Reader reader, final Throwables.Predicate<? super String[], E> filter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws IllegalArgumentException, SQLException, IOException, E",
               "return_type": "long",
               "type_params": [
                 {
@@ -36289,19 +36289,19 @@
               ],
               "javadoc_summary": "Imports data from a CSV Reader to the database with row filtering capability and configurable batch processing.",
               "contract": [
-                "<p> This method combines all import features: </p> <ul> <li> Custom data source (Reader) </li> <li> Row filtering before import </li> <li> Configurable batch processing </li> <li> Custom value mapping </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import CSV data with complex filtering and validation Reader reader = new FileReader(\"user_data.csv\"); PreparedStatement stmt = conn.prepareStatement( \"INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)\"); // Complex filter: valid email, age >= 18, allowed countries Set<String> allowedCountries = Set.of(\"US\", \"CA\", \"UK\", \"AU\"); Predicate<String[]> complexFilter = row -> { // Validate email format (simple check) if (!row[1].contains(\"@\")) return false; // Check age >= 18 try { if (Integer.parseInt(row[2]) < 18) return false; } catch (NumberFormatException e) { return false; } // Check allowed countries return allowedCountries.contains(row[3]); }; long rowsImported = JdbcUtils.importCSV(reader, complexFilter, stmt, 2000, 0, (query, row) -> { query.setLong(1, Long.parseLong(row[0])); query.setString(2, row[1].toLowerCase()); // normalize email query.setInt(3, Integer.parseInt(row[2])); query.setString(4, row[3]); }); System.out.println(\"Imported \" + rowsImported + \" valid users\"); } </pre>"
+                "<p> This method combines all import features: </p> <ul> <li> Custom data source (Reader) </li> <li> Row filtering before import </li> <li> Configurable batch processing </li> <li> Custom value mapping </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code // Import CSV data with complex filtering and validation Reader reader = new FileReader(\"user_data.csv\"); PreparedStatement stmt = conn.prepareStatement( \"INSERT INTO users (id, email, age, country) VALUES (?, ?, ?, ?)\"); // Complex filter: valid email, age >= 18, allowed countries Set<String> allowedCountries = Set.of(\"US\", \"CA\", \"UK\", \"AU\"); Predicate<String[]> complexFilter = row -> { // Validate email format (simple check) if (!row[1].contains(\"@\")) return false; // Check age >= 18 try { if (Integer.parseInt(row[2]) < 18) return false; } catch (NumberFormatException e) { return false; } // Check allowed countries return allowedCountries.contains(row[3]); }; long rowsImported = JdbcUtils.importCsv(reader, complexFilter, stmt, 2000, 0, (query, row) -> { query.setLong(1, Long.parseLong(row[0])); query.setString(2, row[1].toLowerCase()); // normalize email query.setInt(3, Integer.parseInt(row[2])); query.setString(4, row[3]); }); System.out.println(\"Imported \" + rowsImported + \" valid users\"); } </pre>"
               ],
               "examples": [],
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36340,13 +36340,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final Connection conn, final String querySql, final File output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final Connection conn, final String querySql, final File output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36385,13 +36385,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final Connection conn, final String querySql, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36439,13 +36439,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final PreparedStatement stmt, final File out) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final PreparedStatement stmt, final File out) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36480,13 +36480,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final PreparedStatement stmt, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36525,13 +36525,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final ResultSet rs, final File output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final ResultSet rs, final File output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36566,13 +36566,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final File output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36614,13 +36614,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36661,13 +36661,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final Connection conn, final String querySql, final Writer output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36708,13 +36708,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final ResultSet rs, final Writer output) throws SQLException, IOException",
+              "signature": "public static long exportCsv(final ResultSet rs, final Writer output) throws SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [
@@ -36747,13 +36747,13 @@
               "see_also": []
             },
             {
-              "name": "exportCSV",
+              "name": "exportCsv",
               "kind": "static",
               "modifiers": [
                 "public",
                 "static"
               ],
-              "signature": "public static long exportCSV(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output) throws IllegalArgumentException, SQLException, IOException",
+              "signature": "public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output) throws IllegalArgumentException, SQLException, IOException",
               "return_type": "long",
               "type_params": [],
               "params": [

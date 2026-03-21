@@ -76,7 +76,7 @@ public class NamedQueryTest extends TestBase {
         when(mockPreparedStatement.getConnection()).thenReturn(mockConnection);
         when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1", "param2"));
         when(mockParsedSql.parameterCount()).thenReturn(2);
-        when(mockParsedSql.sql()).thenReturn("SELECT * FROM table WHERE col1 = :param1 AND col2 = :param2");
+        when(mockParsedSql.originalSql()).thenReturn("SELECT * FROM table WHERE col1 = :param1 AND col2 = :param2");
 
         namedQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
     }
