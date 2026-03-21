@@ -9411,27 +9411,59 @@ public final class JdbcUtil {
 
     /**
      * Executes the given callable within a transaction and returns its result.
-     * If the callable completes successfully, the transaction is committed.
-     * If an exception occurs, the transaction is rolled back.
+     * The transaction is committed if the callable completes normally; it is rolled back
+     * if the callable throws any exception.
+     *
+     * <p>This is a convenience alternative to the {@code beginTransaction} / {@code commit} /
+     * {@code rollbackIfNotCommitted} pattern. It uses the {@link IsolationLevel#DEFAULT} isolation
+     * level (i.e., the database's own default).</p>
+     *
+     * <p><b>Nested calls:</b> If a transaction for {@code ds} is already active on the current
+     * thread when this method is invoked, the callable participates in that existing transaction
+     * (the reference count is incremented). The underlying {@code Connection} is not actually
+     * committed until the outermost transaction scope closes.</p>
+     *
+     * <p><b>Spring integration:</b> When Spring's transaction management is active, this method
+     * automatically participates in an existing Spring-managed transaction rather than creating a
+     * new one, in the same way as {@link #beginTransaction(javax.sql.DataSource)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String result = JdbcUtil.callInTransaction(dataSource, () -> {
-     *     // Perform database operations
+     * // Simple transactional operation returning a value
+     * long newOrderId = JdbcUtil.callInTransaction(dataSource, () -> {
      *     JdbcUtil.executeUpdate(dataSource,
-     *         "INSERT INTO audit_log (event, timestamp) VALUES (?, ?)",
-     *         "USER_LOGIN", System.currentTimeMillis());
-     *     return "Success";
+     *         "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
+     *         quantity, productId);
+     *     return JdbcUtil.prepareQuery(dataSource,
+     *         "INSERT INTO orders (customer_id, total) VALUES (?, ?)")
+     *         .setLong(1, customerId)
+     *         .setBigDecimal(2, total)
+     *         .insert();
      * });
+     *
+     * // Nested call — participates in the outer transaction
+     * SqlTransaction outer = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     JdbcUtil.callInTransaction(dataSource, () -> {
+     *         // Runs inside 'outer'; no new connection is created
+     *         orderDao.save(order);
+     *         return order.getId();
+     *     });
+     *     outer.commit();
+     * } finally {
+     *     outer.rollbackIfNotCommitted();
+     * }
      * }</pre>
      *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param ds the DataSource for the transaction
-     * @param cmd the callable to execute within the transaction
-     * @return the result of the callable execution
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the callable throws an exception
+     * @param ds the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+     * @param cmd the callable to execute within the transaction, must not be {@code null}
+     * @return the result returned by {@code cmd}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+     * @see #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
+     * @see #beginTransaction(javax.sql.DataSource)
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
@@ -9453,24 +9485,46 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given function within a transaction, providing the transaction's connection.
-     * If the function completes successfully, the transaction is committed.
-     * If an exception occurs, the transaction is rolled back.
+     * Executes the given function within a transaction, passing the transaction's {@link Connection}
+     * as an argument, and returns its result.
+     * The transaction is committed if the function completes normally; it is rolled back if the
+     * function throws any exception.
+     *
+     * <p>Use this overload when the callable logic needs direct access to the {@link Connection}
+     * (e.g., to create {@link java.sql.PreparedStatement}s manually or call APIs that require a
+     * {@link Connection} parameter). The supplied connection is the same one used by the enclosing
+     * transaction — do <em>not</em> close it.</p>
+     *
+     * <p><b>Nested calls:</b> If a transaction for {@code ds} is already active on the current
+     * thread, the function participates in that existing transaction. The connection passed to
+     * {@code cmd} is the existing transaction's connection.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Access the raw Connection inside a transaction
      * Dataset result = JdbcUtil.callInTransaction(dataSource, conn -> {
-     *     return JdbcUtil.executeQuery(conn, "SELECT * FROM users WHERE active = ?", true);
+     *     JdbcUtil.executeUpdate(conn,
+     *         "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+     *         amount, fromAccountId);
+     *     JdbcUtil.executeUpdate(conn,
+     *         "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+     *         amount, toAccountId);
+     *     return JdbcUtil.executeQuery(conn,
+     *         "SELECT id, balance FROM accounts WHERE id IN (?, ?)",
+     *         fromAccountId, toAccountId);
      * });
      * }</pre>
      *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
-     * @param ds the DataSource for the transaction
-     * @param cmd the function to execute with the transaction's connection
-     * @return the result of the function execution
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the function throws an exception
+     * @param ds the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+     * @param cmd the function to execute with the transaction's {@link Connection}, must not be {@code null};
+     *            the connection must not be closed by the caller
+     * @return the result returned by {@code cmd}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+     * @see #runInTransaction(javax.sql.DataSource, Throwables.Consumer)
+     * @see #callInTransaction(javax.sql.DataSource, Throwables.Callable)
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd)
@@ -9493,23 +9547,49 @@ public final class JdbcUtil {
 
     /**
      * Executes the given runnable within a transaction.
-     * If the runnable completes successfully, the transaction is committed.
-     * If an exception occurs, the transaction is rolled back.
+     * The transaction is committed if the runnable completes normally; it is rolled back
+     * if the runnable throws any exception.
+     *
+     * <p>This is the void counterpart of
+     * {@link #callInTransaction(javax.sql.DataSource, Throwables.Callable)}. It uses the
+     * {@link IsolationLevel#DEFAULT} isolation level (the database's own default).</p>
+     *
+     * <p><b>Nested calls:</b> If a transaction for {@code ds} is already active on the current
+     * thread, the runnable participates in that existing transaction (the reference count is
+     * incremented). The underlying {@code Connection} is not actually committed until the
+     * outermost transaction scope closes.</p>
+     *
+     * <p><b>Spring integration:</b> When Spring's transaction management is active, this method
+     * automatically participates in an existing Spring-managed transaction.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Atomically insert a user and write an audit record
      * JdbcUtil.runInTransaction(dataSource, () -> {
-     *     // Perform multiple database operations
      *     userDao.insert(user);
      *     auditDao.logUserCreation(user);
      * });
+     *
+     * // Nested call inside an existing transaction
+     * SqlTransaction outer = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     JdbcUtil.runInTransaction(dataSource, () -> {
+     *         // Participates in 'outer'; no new connection is created
+     *         inventoryDao.decrement(productId, quantity);
+     *     });
+     *     outer.commit();
+     * } finally {
+     *     outer.rollbackIfNotCommitted();
+     * }
      * }</pre>
      *
      * @param <E> the type of exception that the runnable may throw
-     * @param ds the DataSource for the transaction
-     * @param cmd the runnable to execute within the transaction
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the runnable throws an exception
+     * @param ds the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+     * @param cmd the runnable to execute within the transaction, must not be {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+     * @see #callInTransaction(javax.sql.DataSource, Throwables.Callable)
+     * @see #beginTransaction(javax.sql.DataSource)
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
@@ -9528,24 +9608,43 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given consumer within a transaction, providing the transaction's connection.
-     * If the consumer completes successfully, the transaction is committed.
-     * If an exception occurs, the transaction is rolled back.
+     * Executes the given consumer within a transaction, passing the transaction's {@link Connection}
+     * as an argument.
+     * The transaction is committed if the consumer completes normally; it is rolled back if the
+     * consumer throws any exception.
+     *
+     * <p>Use this overload when the transactional logic needs direct access to the {@link Connection}
+     * (e.g., to call APIs that require a {@link Connection} parameter). The supplied connection is
+     * the same one used by the enclosing transaction — do <em>not</em> close it.</p>
+     *
+     * <p><b>Nested calls:</b> If a transaction for {@code ds} is already active on the current
+     * thread, the consumer participates in that existing transaction. The connection passed to
+     * {@code cmd} is the existing transaction's connection.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Batch-update using the raw Connection
      * JdbcUtil.runInTransaction(dataSource, conn -> {
-     *     JdbcUtil.executeUpdate(conn,
-     *         "UPDATE users SET active = ? WHERE id = ?",
-     *         false, userId);
+     *     try (PreparedStatement ps = conn.prepareStatement(
+     *             "UPDATE orders SET status = ? WHERE id = ?")) {
+     *         for (Order order : ordersToClose) {
+     *             ps.setString(1, "CLOSED");
+     *             ps.setLong(2, order.getId());
+     *             ps.addBatch();
+     *         }
+     *         ps.executeBatch();
+     *     }
      * });
      * }</pre>
      *
      * @param <E> the type of exception that the consumer may throw
-     * @param ds the DataSource for the transaction
-     * @param cmd the consumer to execute with the transaction's connection
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the consumer throws an exception
+     * @param ds the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+     * @param cmd the consumer to execute with the transaction's {@link Connection}, must not be {@code null};
+     *            the connection must not be closed by the caller
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+     * @see #callInTransaction(javax.sql.DataSource, Throwables.Function)
+     * @see #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd)
@@ -9564,27 +9663,63 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given callable outside any started/active transaction for the specified DataSource.
-     * If a transaction is active in the current thread, a new connection (not part of the transaction)
-     * will be used to execute the callable.
+     * Executes the given callable outside any active transaction bound to {@code ds} on the
+     * current thread, and returns its result.
+     *
+     * <p><b>Behaviour depends on whether a transaction is currently active:</b></p>
+     * <ul>
+     *   <li><b>No active transaction:</b> {@code cmd} is executed immediately with a fresh
+     *       connection from the pool; no transaction is created.</li>
+     *   <li><b>Active transaction:</b> the current transaction is temporarily suspended
+     *       (removed from the thread-local map) for the duration of {@code cmd}. The callable
+     *       therefore runs on a <em>separate</em> connection that is <em>not</em> part of the
+     *       surrounding transaction. When {@code cmd} finishes (normally or exceptionally) the
+     *       original transaction is restored. If another transaction is opened and not closed
+     *       inside {@code cmd}, an {@link IllegalStateException} is thrown.</li>
+     * </ul>
+     *
+     * <p>This is useful for operations that must be committed immediately and independently of
+     * any surrounding transaction — for example, writing an audit log entry or updating a status
+     * flag that should survive even if the outer transaction is later rolled back.</p>
+     *
+     * <p><b>Spring integration:</b> When running inside a Spring-managed transaction context,
+     * Spring's transaction participation is also temporarily disabled for the duration of
+     * {@code cmd}, so the callable does not join any Spring {@code @Transactional} transaction
+     * either.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Inside a transaction, but need to log something immediately
-     * JdbcUtil.callOutsideTransaction(dataSource, () -> {
-     *     // This runs with a separate connection
-     *     auditDao.logImmediately("Operation started");
-     *     return "Logged";
-     * });
+     * // Persist an audit record that must not be rolled back with the main transaction
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     orderDao.save(order);   // part of tran
+     *
+     *     String auditId = JdbcUtil.callOutsideTransaction(dataSource, () -> {
+     *         // Runs on a separate connection; committed independently of 'tran'
+     *         return auditDao.insertAndReturnId("ORDER_CREATED", order.getId());
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
+     *
+     * // No active transaction — runs directly with a fresh connection
+     * String token = JdbcUtil.callOutsideTransaction(dataSource, () ->
+     *     tokenStore.generateAndPersist(userId));
      * }</pre>
      *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param ds the DataSource to use
-     * @param cmd the callable to execute outside any transaction
-     * @return the result of the callable execution
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the callable throws an exception
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, must not be {@code null}
+     * @param cmd the callable to execute outside any active transaction, must not be {@code null}
+     * @return the result returned by {@code cmd}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws IllegalStateException if another transaction is opened but not closed inside {@code cmd}
+     * @throws E if {@code cmd} throws an exception
+     * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
+     * @see SqlTransaction#callOutsideTransaction(Throwables.Callable)
      */
     @Beta
     public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd)
@@ -9618,31 +9753,63 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given function outside any started/active transaction for the specified DataSource.
-     * The function receives the DataSource as a parameter and can use it to create connections
-     * that are not part of any active transaction.
+     * Executes the given function outside any active transaction bound to {@code ds} on the
+     * current thread, passing {@code ds} as an argument, and returns its result.
      *
-     * <p><b>Note:</b> When obtaining a raw {@link Connection} from the DataSource within the function,
-     * the caller is responsible for closing the connection to avoid resource leaks.</p>
+     * <p>This overload is identical in semantics to
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}, except that
+     * the {@link javax.sql.DataSource} is forwarded to the function so that the function body
+     * can obtain its own connections directly from the pool.</p>
+     *
+     * <p><b>Behaviour depends on whether a transaction is currently active:</b></p>
+     * <ul>
+     *   <li><b>No active transaction:</b> {@code cmd.apply(ds)} is called immediately.</li>
+     *   <li><b>Active transaction:</b> the current transaction is temporarily suspended for
+     *       the duration of {@code cmd}. Connections obtained from {@code ds} inside the
+     *       function are <em>not</em> part of the surrounding transaction. The original
+     *       transaction is restored when {@code cmd} finishes.</li>
+     * </ul>
+     *
+     * <p><b>Note:</b> Any {@link Connection} obtained directly from {@code ds} inside
+     * {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid
+     * connection-pool leaks.</p>
+     *
+     * <p><b>Spring integration:</b> Spring's transaction participation is also temporarily
+     * disabled for the duration of {@code cmd}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String result = JdbcUtil.callOutsideTransaction(dataSource, ds -> {
-     *     // Use the DataSource to perform operations outside transaction
-     *     try (Connection conn = ds.getConnection()) {
-     *         // Perform non-transactional operations
-     *         return "Done";
-     *     }
-     * });
+     * // Use the DataSource directly to perform work outside the active transaction
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     orderDao.save(order);   // part of tran
+     *
+     *     String snapshot = JdbcUtil.callOutsideTransaction(dataSource, ds -> {
+     *         // 'ds' here is the same DataSource, but connections it vends are
+     *         // NOT part of 'tran'
+     *         return JdbcUtil.prepareQuery(ds, "SELECT snapshot FROM config WHERE key = ?")
+     *             .setString(1, "ORDER_TEMPLATE")
+     *             .queryForString()
+     *             .orElse(null);
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
      * }</pre>
      *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
-     * @param ds the DataSource to use
-     * @param cmd the function to execute outside any transaction
-     * @return the result of the function execution
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the function throws an exception
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, and which is passed as the argument to {@code cmd}; must not be {@code null}
+     * @param cmd the function to execute outside any active transaction, must not be {@code null}
+     * @return the result returned by {@code cmd}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws IllegalStateException if another transaction is opened but not closed inside {@code cmd}
+     * @throws E if {@code cmd} throws an exception
+     * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
+     * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)
      */
     @Beta
     public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd)
@@ -9676,24 +9843,55 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given runnable outside any started/active transaction for the specified DataSource.
-     * If a transaction is active in the current thread, a new connection (not part of the transaction)
-     * will be used to execute the runnable.
+     * Executes the given runnable outside any active transaction bound to {@code ds} on the
+     * current thread.
+     *
+     * <p>This is the void counterpart of
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}.
+     * The same suspension semantics apply:</p>
+     * <ul>
+     *   <li><b>No active transaction:</b> {@code cmd} is executed immediately with a fresh
+     *       connection from the pool; no transaction is created.</li>
+     *   <li><b>Active transaction:</b> the current transaction is temporarily suspended for the
+     *       duration of {@code cmd}. The runnable runs on a <em>separate</em> connection that is
+     *       <em>not</em> part of the surrounding transaction. The original transaction is restored
+     *       when {@code cmd} finishes (normally or exceptionally).</li>
+     * </ul>
+     *
+     * <p>Typical use cases include writing records that must survive a potential outer rollback
+     * (e.g., error logs, audit events, distributed-lock releases) and refreshing caches or
+     * external systems that should not be deferred until the outer transaction commits.</p>
+     *
+     * <p><b>Spring integration:</b> Spring's transaction participation is also temporarily
+     * disabled for the duration of {@code cmd}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Inside a transaction, but need to perform non-transactional operation
-     * JdbcUtil.runOutsideTransaction(dataSource, () -> {
-     *     // This runs with a separate connection
-     *     cacheDao.refreshCache();
-     * });
+     * // Log an event that should persist even if the enclosing transaction rolls back
+     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+     * try {
+     *     inventoryDao.reserve(itemId, qty);   // part of tran
+     *
+     *     JdbcUtil.runOutsideTransaction(dataSource, () -> {
+     *         // Committed immediately on a separate connection; survives 'tran' rollback
+     *         eventBus.persistEvent("RESERVATION_ATTEMPTED", itemId);
+     *     });
+     *
+     *     tran.commit();
+     * } finally {
+     *     tran.rollbackIfNotCommitted();
+     * }
      * }</pre>
      *
      * @param <E> the type of exception that the runnable may throw
-     * @param ds the DataSource to use
-     * @param cmd the runnable to execute outside any transaction
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the runnable throws an exception
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, must not be {@code null}
+     * @param cmd the runnable to execute outside any active transaction, must not be {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws IllegalStateException if another transaction is opened but not closed inside {@code cmd}
+     * @throws E if {@code cmd} throws an exception
+     * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
+     * @see SqlTransaction#runOutsideTransaction(Throwables.Runnable)
      */
     @Beta
     public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
@@ -9727,28 +9925,50 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given consumer outside any started/active transaction for the specified DataSource.
-     * The consumer receives the DataSource as a parameter and can use it to create connections
-     * that are not part of any active transaction.
+     * Executes the given consumer outside any active transaction bound to {@code ds} on the
+     * current thread, passing {@code ds} as an argument.
      *
-     * <p><b>Note:</b> When obtaining a raw {@link Connection} from the DataSource within the consumer,
-     * the caller is responsible for closing the connection to avoid resource leaks.</p>
+     * <p>This is the void counterpart of
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}.
+     * It is semantically identical to
+     * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}, except that
+     * the {@link javax.sql.DataSource} is forwarded to the consumer so that the consumer body
+     * can obtain its own connections directly from the pool.</p>
+     *
+     * <p><b>Behaviour depends on whether a transaction is currently active:</b></p>
+     * <ul>
+     *   <li><b>No active transaction:</b> {@code cmd.accept(ds)} is called immediately.</li>
+     *   <li><b>Active transaction:</b> the current transaction is temporarily suspended for
+     *       the duration of {@code cmd}. Connections obtained from {@code ds} inside the
+     *       consumer are <em>not</em> part of the surrounding transaction.</li>
+     * </ul>
+     *
+     * <p><b>Note:</b> Any {@link Connection} obtained directly from {@code ds} inside
+     * {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid
+     * connection-pool leaks.</p>
+     *
+     * <p><b>Spring integration:</b> Spring's transaction participation is also temporarily
+     * disabled for the duration of {@code cmd}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // Invalidate a cache entry using a separate connection, outside the active transaction
      * JdbcUtil.runOutsideTransaction(dataSource, ds -> {
-     *     // Use the DataSource for non-transactional operations
-     *     try (Connection conn = ds.getConnection()) {
-     *         // Perform operations that should not be part of current transaction
-     *     }
+     *     JdbcUtil.executeUpdate(ds,
+     *         "DELETE FROM query_cache WHERE entity_type = ? AND entity_id = ?",
+     *         "ORDER", order.getId());
      * });
      * }</pre>
      *
      * @param <E> the type of exception that the consumer may throw
-     * @param ds the DataSource to use
-     * @param cmd the consumer to execute outside any transaction
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the consumer throws an exception
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, and which is passed as the argument to {@code cmd}; must not be {@code null}
+     * @param cmd the consumer to execute outside any active transaction, must not be {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws IllegalStateException if another transaction is opened but not closed inside {@code cmd}
+     * @throws E if {@code cmd} throws an exception
+     * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
+     * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
      */
     @Beta
     public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
@@ -9782,16 +10002,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given callable outside any active transaction for the specified DataSource.
+     * Executes the given callable outside any active transaction for the specified DataSource
+     * and returns its result.
+     *
+     * <p>This method is a direct alias for
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}.
+     * See that method for the full contract and usage guidance.</p>
      *
      * @param <T> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param ds the DataSource to use
-     * @param cmd the callable to execute outside any transaction
-     * @return the result of the callable execution
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the callable throws an exception
-     * @deprecated replaced by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, must not be {@code null}
+     * @param cmd the callable to execute outside any active transaction, must not be {@code null}
+     * @return the result returned by {@code cmd}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception
+     * @deprecated Use {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} instead.
      */
     @Deprecated
     @Beta
@@ -9801,16 +10027,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given function outside any active transaction for the specified DataSource.
+     * Executes the given function outside any active transaction for the specified DataSource,
+     * passing {@code ds} as an argument, and returns its result.
+     *
+     * <p>This method is a direct alias for
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}.
+     * See that method for the full contract and usage guidance.</p>
      *
      * @param <T> the type of the result returned by the function
      * @param <E> the type of exception that the function may throw
-     * @param ds the DataSource to use
-     * @param cmd the function to execute outside any transaction
-     * @return the result of the function execution
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the function throws an exception
-     * @deprecated replaced by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, and which is passed as the argument to {@code cmd}; must not be {@code null}
+     * @param cmd the function to execute outside any active transaction, must not be {@code null}
+     * @return the result returned by {@code cmd}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception
+     * @deprecated Use {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)} instead.
      */
     @Deprecated
     @Beta
@@ -9822,12 +10054,17 @@ public final class JdbcUtil {
     /**
      * Executes the given runnable outside any active transaction for the specified DataSource.
      *
+     * <p>This method is a direct alias for
+     * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}.
+     * See that method for the full contract and usage guidance.</p>
+     *
      * @param <E> the type of exception that the runnable may throw
-     * @param ds the DataSource to use
-     * @param cmd the runnable to execute outside any transaction
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the runnable throws an exception
-     * @deprecated replaced by {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, must not be {@code null}
+     * @param cmd the runnable to execute outside any active transaction, must not be {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception
+     * @deprecated Use {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)} instead.
      */
     @Deprecated
     @Beta
@@ -9837,14 +10074,20 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given consumer outside any active transaction for the specified DataSource.
+     * Executes the given consumer outside any active transaction for the specified DataSource,
+     * passing {@code ds} as an argument.
+     *
+     * <p>This method is a direct alias for
+     * {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)}.
+     * See that method for the full contract and usage guidance.</p>
      *
      * @param <E> the type of exception that the consumer may throw
-     * @param ds the DataSource to use
-     * @param cmd the consumer to execute outside any transaction
-     * @throws IllegalArgumentException if dataSource or cmd is null
-     * @throws E if the consumer throws an exception
-     * @deprecated replaced by {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)}
+     * @param ds the {@link javax.sql.DataSource} whose active transaction (if any) should be
+     *           suspended, and which is passed as the argument to {@code cmd}; must not be {@code null}
+     * @param cmd the consumer to execute outside any active transaction, must not be {@code null}
+     * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}
+     * @throws E if {@code cmd} throws an exception
+     * @deprecated Use {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)} instead.
      */
     @Deprecated
     @Beta
@@ -9854,21 +10097,51 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given runnable without using Spring transaction management.
-     * This temporarily disables Spring transaction integration for the current thread.
-     * Note: The action should not be executed in another thread as the flag is thread-local.
+     * Executes the given runnable with Spring's transaction management temporarily disabled for
+     * the current thread.
+     *
+     * <p>When this library is used inside a Spring application, JDBC connections are normally
+     * obtained via {@code DataSourceUtils.getConnection()}, which participates in any
+     * Spring-managed ({@code @Transactional}) transaction that is active on the calling thread.
+     * This method sets a thread-local flag that prevents that participation for the duration of
+     * {@code sqlAction}, so connections obtained from a {@link javax.sql.DataSource} during
+     * execution come from the pool directly instead of from Spring's transaction synchronization.</p>
+     *
+     * <p><b>Scope:</b> this method only affects Spring's transaction binding. It does <em>not</em>
+     * suspend a transaction that was started via {@link #beginTransaction} or
+     * {@link #runInTransaction}. To escape this library's own transactions, use
+     * {@link #runOutsideTransaction} instead.</p>
+     *
+     * <p><b>No-op when Spring is absent:</b> if Spring's framework classes are not on the
+     * classpath, or if Spring transaction management is already disabled on this thread, the
+     * runnable is executed directly without any flag manipulation.</p>
+     *
+     * <p><b>Thread safety:</b> the flag is stored in a {@link ThreadLocal}. Do <em>not</em>
+     * pass {@code sqlAction} to another thread (e.g., via {@code CompletableFuture} or an
+     * {@link java.util.concurrent.Executor}) — the receiving thread will not inherit the
+     * disabled state.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * JdbcUtil.runWithoutUsingSpringTransaction(() -> {
-     *     // Operations here will not participate in Spring transactions
-     *     jdbcDao.performNonTransactionalOperation();
-     * });
+     * // Inside a Spring @Transactional service method, perform one operation
+     * // that must use its own fresh connection rather than the Spring-managed one
+     * @Transactional
+     * public void processOrder(Order order) {
+     *     orderRepository.save(order);   // uses Spring transaction
+     *
+     *     JdbcUtil.runWithoutUsingSpringTransaction(() -> {
+     *         // Acquires a fresh connection; NOT part of the Spring transaction above
+     *         auditDao.recordImmediately("ORDER_PROCESSING_STARTED", order.getId());
+     *     });
+     * }
      * }</pre>
      *
      * @param <E> the type of exception that the runnable may throw
-     * @param sqlAction the runnable to execute without Spring transaction
-     * @throws E if the runnable throws an exception
+     * @param sqlAction the runnable to execute with Spring transaction participation disabled,
+     *                  must not be {@code null}; must not be dispatched to another thread
+     * @throws E if {@code sqlAction} throws an exception
+     * @see #callWithoutUsingSpringTransaction(Throwables.Callable)
+     * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
     public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
         if (isSpringTransactionalNotUsed()) {
@@ -9885,23 +10158,42 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given callable without using Spring transaction management and returns its result.
-     * This temporarily disables Spring transaction integration for the current thread.
-     * Note: The action should not be executed in another thread as the flag is thread-local.
+     * Executes the given callable with Spring's transaction management temporarily disabled for
+     * the current thread, and returns its result.
+     *
+     * <p>This is the value-returning counterpart of
+     * {@link #runWithoutUsingSpringTransaction(Throwables.Runnable)}.
+     * The same semantics apply — see that method for a full explanation of the Spring-bypass
+     * mechanism, scope, no-op conditions, and thread-safety constraints.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String result = JdbcUtil.callWithoutUsingSpringTransaction(() -> {
-     *     // Operations here will not participate in Spring transactions
-     *     return jdbcDao.queryWithoutTransaction();
-     * });
+     * // Inside a Spring @Transactional method, read committed data that is not yet
+     * // visible in the current transaction (using a separate connection)
+     * @Transactional
+     * public OrderSummary createAndSummarize(Order order) {
+     *     orderRepository.save(order);
+     *
+     *     // Read the pre-existing aggregate using a fresh, non-transactional connection
+     *     BigDecimal runningTotal = JdbcUtil.callWithoutUsingSpringTransaction(() ->
+     *         JdbcUtil.prepareQuery(dataSource,
+     *             "SELECT SUM(total) FROM orders WHERE customer_id = ?")
+     *             .setLong(1, order.getCustomerId())
+     *             .queryForBigDecimal()
+     *             .orElse(BigDecimal.ZERO));
+     *
+     *     return new OrderSummary(order, runningTotal);
+     * }
      * }</pre>
      *
-     * @param <R> the type of result returned by the callable
+     * @param <R> the type of the result returned by the callable
      * @param <E> the type of exception that the callable may throw
-     * @param sqlAction the callable to execute without Spring transaction
-     * @return the result of the callable
-     * @throws E if the callable throws an exception
+     * @param sqlAction the callable to execute with Spring transaction participation disabled,
+     *                  must not be {@code null}; must not be dispatched to another thread
+     * @return the result returned by {@code sqlAction}
+     * @throws E if {@code sqlAction} throws an exception
+     * @see #runWithoutUsingSpringTransaction(Throwables.Runnable)
+     * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      */
     public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<R, E> sqlAction) throws E {
         if (isSpringTransactionalNotUsed()) {
