@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -112,6 +113,27 @@ public class NamedQueryTest extends TestBase {
 
         verify(mockPreparedStatement).setNull(1, sqlType, typeName);
         assertSame(namedQuery, result);
+    }
+
+    @Test
+    public void testConstructor_InvalidParameterCount() {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
+
+        assertThrows(IllegalArgumentException.class, () -> new NamedQuery(mockPreparedStatement, mockParsedSql));
+    }
+
+    @Test
+    public void testSetString_DuplicateParameterName() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1", "param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
+        NamedQuery duplicateParamQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
+
+        NamedQuery result = duplicateParamQuery.setString("param1", "value");
+
+        assertSame(duplicateParamQuery, result);
+        verify(mockPreparedStatement).setString(1, "value");
+        verify(mockPreparedStatement).setString(2, "value");
     }
 
     @Test

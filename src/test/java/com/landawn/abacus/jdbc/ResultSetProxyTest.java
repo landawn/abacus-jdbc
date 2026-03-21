@@ -16,40 +16,65 @@
 
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 
 @Tag("2025")
 public class ResultSetProxyTest extends TestBase {
 
-    // TODO: The remaining ResultSetProxy methods are direct ResultSet pass-through wrappers. Add driver-backed integration
-    // tests when a stable fixture is available, because validating the full java.sql.ResultSet contract with mocks is brittle.
-
-    // Test wrap() static method
-
     @Test
     public void testWrapNull() {
-        ResultSetProxy result = ResultSetProxy.wrap(null);
-        assertNull(result);
-    }
-
-    // Test that ResultSetProxy implements ResultSet
-
-    @Test
-    public void testImplementsResultSet() {
-        // Verify ResultSetProxy implements ResultSet
-        assertTrue(ResultSet.class.isAssignableFrom(ResultSetProxy.class));
+        assertNull(ResultSetProxy.wrap(null));
     }
 
     @Test
-    public void testClassIsFinal() {
-        assertTrue(java.lang.reflect.Modifier.isFinal(ResultSetProxy.class.getModifiers()));
+    public void testWrap_ReturnsProxy() throws SQLException {
+        ResultSet delegate = Mockito.mock(ResultSet.class);
+        when(delegate.unwrap(ResultSet.class)).thenReturn(delegate);
+
+        ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
+
+        assertSame(delegate, proxy.unwrap(ResultSet.class));
+    }
+
+    @Test
+    public void testDelegatesRowAccessMethods() throws SQLException {
+        ResultSet delegate = Mockito.mock(ResultSet.class);
+        when(delegate.next()).thenReturn(true);
+        when(delegate.getString(1)).thenReturn("value");
+
+        ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
+
+        assertTrue(proxy.next());
+        assertEquals("value", proxy.getString(1));
+        verify(delegate).next();
+        verify(delegate).getString(1);
+    }
+
+    @Test
+    public void testCloseAndWrapperChecksDelegate() throws SQLException {
+        ResultSet delegate = Mockito.mock(ResultSet.class);
+        when(delegate.isWrapperFor(ResultSet.class)).thenReturn(true);
+
+        ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
+
+        assertTrue(proxy.isWrapperFor(ResultSet.class));
+        proxy.close();
+
+        verify(delegate).close();
+        verify(delegate).isWrapperFor(ResultSet.class);
     }
 }

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -686,6 +687,19 @@ public class JdbcUtilsTest extends TestBase {
         // Verify
         verify(preparedQuery).setObject(1, "VALUE1");
         verify(preparedQuery).setObject(2, "VALUE2");
+    }
+
+    @Test
+    public void testCreateParamSetter_ZeroColumns() throws SQLException {
+        Jdbc.ColumnGetter<String> columnGetter = (rs, columnIndex) -> rs.getString(columnIndex);
+        PreparedQuery preparedQuery = mock(PreparedQuery.class);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(0);
+
+        Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = JdbcUtils.createParamSetter(columnGetter);
+        assertNotNull(setter);
+        setter.accept(preparedQuery, mockResultSet);
+
+        verifyNoInteractions(preparedQuery);
     }
 
     // Edge case tests

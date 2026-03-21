@@ -163,6 +163,15 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testPrepareQueryForLargeResult_DataSource() throws SQLException {
+        PreparedQuery query = JdbcUtil.prepareQueryForLargeResult(mockDataSource, "SELECT * FROM demo");
+
+        assertNotNull(query);
+        verify(mockPreparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+        verify(mockPreparedStatement).setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT);
+    }
+
+    @Test
     public void testCreateHikariDataSource() {
         String url = "jdbc:h2:mem:test";
         String user = "sa";

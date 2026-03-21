@@ -125,6 +125,25 @@ public class DaoImplTest extends TestBase {
     }
 
     @Test
+    public void testMergedByIdReturnsEmptyOptionalForEmptyDataset() throws Exception {
+        Method daoMethod = MergedDao.class.getMethod("findMerged");
+        Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+        factory.setAccessible(true);
+
+        Dataset dataset = new RowDataset(List.of("id", "name"), List.of(List.of(), List.of()));
+
+        @SuppressWarnings("unchecked")
+        Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> func = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
+                .invoke(null, TestEntity.class, daoMethod, null, List.of("id"), null, true, false, false, OP.DEFAULT, false, "MergedDao.findMergedEmpty");
+
+        Object result = func.apply(new StubQuery(dataset), new Object[0]);
+
+        assertTrue(result instanceof Optional);
+        assertTrue(((Optional<?>) result).isEmpty());
+    }
+
+    @Test
     void testProcedureBindRequiresAllParamsBound() throws Exception {
         Method daoMethod = ProcedureDao.class.getMethod("callProc", String.class, String.class);
         DaoImpl.QueryInfo queryInfo = new DaoImpl.QueryInfo("call test_proc(?, ?)", null, 0, 0, false, 0, OP.DEFAULT, false, false, false, false, true, false);
