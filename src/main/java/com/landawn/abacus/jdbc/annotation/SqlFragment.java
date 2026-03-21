@@ -21,70 +21,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Defines a query template variable for dynamic query construction.
- * This annotation allows parts of query statements to be dynamically replaced at runtime,
- * enabling flexible query construction while maintaining query injection safety for the structure.
- * 
- * <p>The annotation replaces placeholders in query statements that are marked with curly braces {@code {placeholder}}.
- * Unlike {@link Bind} which safely binds parameter values, {@code SqlFragment} performs string substitution
- * in the query template itself, allowing dynamic table names, column names, and query fragments.</p>
- * 
- * <p><strong>Security Warning:</strong> Since this performs direct string substitution in query,
- * use it only with trusted input or properly validated/sanitized values to prevent query injection.
- * Never use user input directly with {@code SqlFragment} without validation.</p>
- * 
- * <p>Common use cases:</p>
- * <ul>
- *   <li>Dynamic table names (e.g., partitioned tables)</li>
- *   <li>Dynamic column names for flexible queries</li>
- *   <li>Conditional query fragments (ORDER BY, WHERE clauses)</li>
- *   <li>Database-specific query syntax variations</li>
- * </ul>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     
- *     // Dynamic table name
- *     @Query("SELECT * FROM {tableName} WHERE id = :id")
- *     User findById(@SqlFragment("tableName") String table, @Bind("id") long id);
- *     
- *     // Dynamic column for ordering
- *     @Query("SELECT * FROM users ORDER BY {orderColumn} {orderDirection}")
- *     List<User> findAllOrdered(
- *         @SqlFragment("orderColumn") String column,
- *         @SqlFragment("orderDirection") String direction
- *     );
- *     
- *     // Custom placeholder syntax
- *     @Query("SELECT * FROM products {where -> WHERE status = 'ACTIVE'} ORDER BY name")
- *     List<Product> findProducts(@SqlFragment("{where -> WHERE status = 'ACTIVE'}") String whereClause);
- *     
- *     // Combining with Bind for safe value binding
- *     @Query("UPDATE {table} SET {column} = :value WHERE id = :id")
- *     int updateDynamic(
- *         @SqlFragment("table") String tableName,
- *         @SqlFragment("column") String columnName,
- *         @Bind("value") Object value,
- *         @Bind("id") long id
- *     );
- *     
- *     // Conditional query fragments
- *     @Query("SELECT * FROM orders {statusFilter} ORDER BY created_date DESC")
- *     List<Order> findOrders(@SqlFragment("statusFilter") String statusFilter);
- *     // Usage: findOrders("WHERE status IN ('PENDING', 'PROCESSING')")
- *     //     or: findOrders("") for all orders
- * }
- * }</pre>
- * 
- * <p>Best practices:</p>
- * <ul>
- *   <li>Always validate template values against a whitelist when possible</li>
- *   <li>Use {@code Bind} for values, {@code SqlFragment} only for query structure</li>
- *   <li>Consider using enums or constants for {@code SqlFragment} values</li>
- *   <li>Document which values are safe for each {@code SqlFragment} parameter</li>
- * </ul>
- * 
+ * Performs SQL template substitution for one query fragment.
+ *
+ * <p>Unlike {@link Bind}, this annotation changes the SQL text itself rather than binding a
+ * JDBC value. Only use it with trusted or validated input such as whitelisted identifiers or
+ * predefined SQL snippets.</p>
+ *
  * @see SqlFragmentList
  * @see Bind
  * @see Query#fragmentContainsNamedParameters()

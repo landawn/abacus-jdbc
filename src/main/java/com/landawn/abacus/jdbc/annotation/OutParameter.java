@@ -24,49 +24,12 @@ import java.sql.CallableStatement;
 import java.sql.Types;
 
 /**
- * Declares an output parameter for stored procedure calls.
- * This annotation is used to register OUT or IN/OUT parameters when calling stored procedures
- * through DAO methods, allowing the retrieval of values returned by the procedure.
- * 
- * <p>Output parameters can be identified either by name or position. When using multiple
- * output parameters, this annotation can be repeated thanks to the {@link Repeatable} meta-annotation.</p>
- * 
- * <p>The registered output parameters are typically returned in a Map where keys are either
- * the parameter names or positions (as strings).</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * public interface EmployeeDao extends CrudDao<Employee, Long> {
+ * Declares an {@code OUT} or {@code INOUT} parameter for a stored-procedure DAO method.
  *
- *     // Single output parameter by position
- *     @Query(value = "{call get_employee_count(?)}", isProcedure = true)
- *     @OutParameter(position = 1, sqlType = Types.INTEGER)
- *     int getEmployeeCount();
+ * <p>Each annotation instance identifies the parameter by name or position and supplies the
+ * JDBC {@link Types SQL type} used when registering it on the underlying
+ * {@link CallableStatement}.</p>
  *
- *     // Multiple output parameters by name
- *     @Query(value = "{call calculate_bonus(:employeeId, :bonus, :tax)}", isProcedure = true)
- *     @OutParameter(name = "bonus", sqlType = Types.DECIMAL)
- *     @OutParameter(name = "tax", sqlType = Types.DECIMAL)
- *     Map<String, Object> calculateBonus(@Bind("employeeId") long employeeId);
- *
- *     // Mixed IN and OUT parameters
- *     @Query(value = "{call update_salary(:employeeId, :increase, :newSalary, :effectiveDate)}", isProcedure = true)
- *     @OutParameter(name = "newSalary", sqlType = Types.DECIMAL)
- *     @OutParameter(name = "effectiveDate", sqlType = Types.DATE)
- *     Map<String, Object> updateSalary(
- *         @Bind("employeeId") long employeeId,
- *         @Bind("increase") BigDecimal increase
- *     );
- *
- *     // Using position-based parameters
- *     @Query(value = "{call sp_get_stats(?, ?, ?, ?)}", isProcedure = true)
- *     @OutParameter(position = 2, sqlType = Types.INTEGER) // total_count
- *     @OutParameter(position = 3, sqlType = Types.DECIMAL) // average_salary
- *     @OutParameter(position = 4, sqlType = Types.VARCHAR) // department_name
- *     Map<String, Object> getDepartmentStats(@Bind("departmentId") long departmentId);
- * }
- * }</pre>
- * 
  * @see Query
  * @see OutParameterList
  * @see CallableStatement#registerOutParameter(String, int)

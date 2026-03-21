@@ -23,51 +23,12 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.OnDeleteAction;
 
 /**
- * Specifies cascading delete behavior for entity relationships.
- * 
- * <p><strong>DEPRECATED:</strong> This annotation is deprecated and will not be implemented.
- * Cascading delete behavior should be defined and enforced at the database level using
- * foreign key constraints with ON DELETE actions. This provides better data integrity,
- * performance, and consistency across all applications accessing the database.</p>
- * 
- * <p>Instead of using this annotation, define foreign key constraints in your database schema:</p>
- * <pre>{@code
- * -- SQL example for cascading delete
- * CREATE TABLE orders (
- *     id BIGINT PRIMARY KEY,
- *     user_id BIGINT NOT NULL,
- *     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
- * );
- * 
- * -- SQL example for restrict delete
- * CREATE TABLE payments (
- *     id BIGINT PRIMARY KEY,
- *     order_id BIGINT NOT NULL,
- *     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT
- * );
- * }</pre>
- * 
- * <p>Database-level constraints provide several advantages:</p>
- * <ul>
- *   <li>Enforced consistently regardless of application layer</li>
- *   <li>Better performance through database optimization</li>
- *   <li>Works with direct SQL queries and other applications</li>
- *   <li>Prevents orphaned records and maintains referential integrity</li>
- * </ul>
- * 
- * <p>If you need application-level cascade behavior, implement it explicitly in your DAO methods:</p>
- * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     default void deleteUserWithRelatedData(Long userId) {
- *         // Explicitly delete related data
- *         deleteUserOrders(userId);
- *         deleteUserProfiles(userId);
- *         deleteById(userId);
- *     }
- * }
- * }</pre>
+ * Deprecated metadata placeholder for delete-cascade behavior.
  *
- * @deprecated This annotation won't be implemented. Define ON DELETE behavior in database schema instead.
+ * <p>This annotation is not implemented by the framework. Define {@code ON DELETE} behavior
+ * in the database schema instead of relying on application-side metadata.</p>
+ *
+ * @deprecated This annotation is not implemented. Define {@code ON DELETE} behavior in the database schema instead.
  * @see OnDeleteAction
  */
 @Retention(RetentionPolicy.RUNTIME)

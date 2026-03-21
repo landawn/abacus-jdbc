@@ -23,32 +23,12 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Enables performance logging for SQL operations and DAO methods.
- * This annotation can be applied at both class and method levels to monitor execution times
- * and log performance metrics when operations exceed specified thresholds.
- * 
- * <p>When applied at the class level, it affects all methods in the class based on the filter criteria.
- * When applied at the method level, it only affects that specific method and ignores any filter settings.</p>
- * 
- * <p>Performance logging helps identify slow queries and operations that may need optimization.
- * The logging includes execution time, SQL statements (truncated based on maxSqlLogLength), and method names.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * // Class-level: Monitor all methods matching the filter
- * @PerfLog(minExecutionTimeForSql = 500, filter = {"find.*", "search.*"})
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     List<User> findByName(String name);
- *     User searchByEmail(String email);
- * }
- * 
- * // Method-level: Monitor specific method with custom thresholds
- * public interface OrderDao extends CrudDao<Order, Long> {
- *     @PerfLog(minExecutionTimeForSql = 100, minExecutionTimeForOperation = 500)
- *     List<Order> findLargeOrdersWithDetails(BigDecimal minAmount);
- * }
- * }</pre>
- * 
+ * Enables SQL and DAO-method performance logging.
+ *
+ * <p>Method-level usage applies only to the annotated method. Type-level usage applies to
+ * methods whose names match {@link #filter()} by case-insensitive containment or by a full
+ * regular-expression match.</p>
+ *
  * @see SqlLogEnabled
  * @see JdbcUtil
  */
@@ -108,24 +88,11 @@ public @interface PerfLog {
     long minExecutionTimeForOperation() default JdbcUtil.DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG; // 3000
 
     /**
-     * Specifies filter patterns for methods when the annotation is applied at the class level.
-     * Only methods whose names match at least one of these patterns will have performance logging enabled.
+     * Specifies the type-level method-name filter.
      *
-     * <p>The patterns support case-insensitive substring matching and regular expressions.
-     * Multiple patterns are combined with OR logic.</p>
-     *
-     * <p>This filter is ignored when the annotation is applied at the method level.</p>
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * @PerfLog(filter = {"find.*", "search.*", ".*Complex.*"})
-     * public interface UserDao {
-     *     User findById(Long id);   // Logged (matches "find.*")
-     *     List<User> searchByName(String name);   // Logged (matches "search.*")
-     *     void updateUser(User user);   // Not logged
-     *     List<User> executeComplexQuery();   // Logged (matches ".*Complex.*")
-     * }
-     * }</pre>
+     * <p>Each entry matches when it is contained in the method name ignoring case, or when
+     * it matches the full method name as a regular expression. This filter is ignored for
+     * method-level usage.</p>
      *
      * @return array of filter patterns (default matches all methods)
      */

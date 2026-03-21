@@ -437,6 +437,10 @@ public final class DBLock {
      */
     public String lock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
         assertNotClosed();
+        N.checkArgNotEmpty(target, "target");
+        N.checkArgPositive(liveTime, "liveTime");
+        N.checkArgNotNegative(timeout, "timeout");
+        N.checkArgNotNegative(retryInterval, "retryInterval");
 
         try {
             if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, DateUtil.currentTimestamp(),
@@ -532,6 +536,8 @@ public final class DBLock {
      */
     public boolean unlock(final String target, final String code) {
         assertNotClosed();
+        N.checkArgNotEmpty(target, "target");
+        N.checkArgNotEmpty(code, "code");
 
         final LockInfo lockInfo = targetCodePool.get(target);
         final boolean shouldRemoveFromLocal = lockInfo != null && Strings.equals(code, lockInfo.code);

@@ -21,53 +21,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Associates a DAO interface with an external SQL mapper XML file.
- * This annotation allows SQL statements to be defined in external XML files rather than
- * inline annotations, promoting better separation of concerns and easier SQL maintenance.
- * 
- * <p>The SQL mapper XML file contains named SQL statements that can be referenced
- * by their IDs in DAO method annotations using {@link Query#id()}, etc.</p>
- * 
- * <p>Benefits of using external SQL mappers:</p>
- * <ul>
- *   <li>Centralized SQL management</li>
- *   <li>Better support for complex, multi-line SQL statements</li>
- *   <li>Easier SQL formatting and syntax highlighting in XML editors</li>
- *   <li>Ability to share SQL statements across multiple DAO methods</li>
- *   <li>Separation of SQL from Java code</li>
- * </ul>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * @SqlSource("sql/UserDao.xml")
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     
- *     @Query(id = "findActiveUsers")
- *     List<User> findActiveUsers();
- *     
- *     @Query(id = "updateLastLogin")
- *     int updateLastLogin(@Bind("userId") long userId, @Bind("loginTime") Date loginTime);
- * }
- * }</pre>
- * 
- * <p>Example SQL mapper XML file (sql/UserDao.xml):</p>
- * <pre>{@code
- * <?xml version="1.0" encoding="UTF-8"?>
- * <sqlMapper>
- *     <sql id="findActiveUsers">
- *         SELECT * FROM users 
- *         WHERE status = 'ACTIVE' 
- *         ORDER BY created_date DESC
- *     </sql>
- *     
- *     <sql id="updateLastLogin">
- *         UPDATE users 
- *         SET last_login = :loginTime 
- *         WHERE id = :userId
- *     </sql>
- * </sqlMapper>
- * }</pre>
- * 
+ * Associates a DAO interface with an external SQL mapper resource.
+ *
+ * <p>The mapped resource provides named SQL definitions that can be referenced from
+ * {@link Query#id()}. Use this when inline SQL becomes too large or when several DAO
+ * methods need to share the same statement text.</p>
+ *
  * @see Query#id()
  * @see SqlScript
  */

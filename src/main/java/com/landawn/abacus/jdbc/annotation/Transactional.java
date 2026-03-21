@@ -24,50 +24,13 @@ import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.Propagation;
 
 /**
- * Declares transaction boundaries for DAO methods.
- * This annotation manages database transactions at the DAO layer, providing control over
- * transaction propagation and isolation levels.
- * 
- * <p><strong>Important:</strong> This annotation is specifically designed for DAO methods.
- * For service layer transaction management in Spring applications, use
- * {@code org.springframework.transaction.annotation.Transactional} instead.</p>
- * 
- * <p>Key features:</p>
- * <ul>
- *   <li>Declarative transaction management without manual begin/commit/rollback</li>
- *   <li>Configurable propagation behavior for nested transactions</li>
- *   <li>Support for different isolation levels</li>
- *   <li>Automatic rollback on exceptions</li>
- * </ul>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     
- *     // Simple transaction with default settings
- *     @Transactional
- *     @Query("UPDATE users SET balance = balance - :amount WHERE id = :id")
- *     void deductBalance(@Bind("id") long userId, @Bind("amount") BigDecimal amount);
- *     
- *     // Transaction with specific isolation level
- *     @Transactional(isolation = IsolationLevel.SERIALIZABLE)
- *     default void transferMoney(long fromId, long toId, BigDecimal amount) {
- *         deductBalance(fromId, amount);
- *         addBalance(toId, amount);
- *     }
- *     
- *     // Requires new transaction
- *     @Transactional(propagation = Propagation.REQUIRES_NEW)
- *     @Query("INSERT INTO audit_log (user_id, action, timestamp) VALUES (:userId, :action, :timestamp)")
- *     void logAudit(@Bind("userId") long userId, @Bind("action") String action, @Bind("timestamp") Date timestamp);
- *     
- *     // Supports existing transaction but doesn't require one
- *     @Transactional(propagation = Propagation.SUPPORTS)
- *     @Query("SELECT * FROM users WHERE id = :id")
- *     User findById(@Bind("id") long id);
- * }
- * }</pre>
- * 
+ * Declares transaction settings for a DAO method managed by the Abacus JDBC proxy.
+ *
+ * <p>The annotation selects a {@link Propagation propagation policy} and an
+ * {@link IsolationLevel isolation level} for the method invocation. It is intended for DAO
+ * methods; for service-layer transaction orchestration, prefer the transaction mechanism of
+ * the surrounding framework.</p>
+ *
  * @see Propagation
  * @see IsolationLevel
  * @see org.springframework.transaction.annotation.Transactional

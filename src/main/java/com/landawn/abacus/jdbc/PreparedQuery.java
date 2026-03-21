@@ -19,63 +19,17 @@ package com.landawn.abacus.jdbc;
 import java.sql.PreparedStatement;
 
 /**
- * A wrapper class for {@link PreparedStatement} that provides a fluent API for executing parameterized SQL queries.
- * This class simplifies the execution of prepared statements by providing convenient methods for parameter binding,
- * result retrieval, and resource management.
- * 
- * <p>The backing {@code PreparedStatement} is closed by default
- * after any execution methods (which will trigger the backing {@code PreparedStatement} to be executed,
- * for example, query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...),
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
+ * Fluent wrapper around a {@link PreparedStatement}.
  *
- * <p><b>Important Notes:</b>
- * <ul>
- *   <li>Generally, don't cache or reuse the instance of this class,
- *       unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.</li>
- *   <li>The {@code ResultSet} returned by query will always be closed after execution, even if {@code 'closeAfterExecution'} flag is set to {@code false}.</li>
- *   <li>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</li>
- * </ul>
+ * <p>{@code PreparedQuery} exposes the generic execution and mapping operations defined by
+ * {@link AbstractQuery} for SQL that already uses positional JDBC parameters. The wrapped
+ * statement is closed after execution unless {@link #closeAfterExecution(boolean)} is used
+ * to keep it open for reuse.</p>
  *
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * // Simple query execution
- * PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?");
- * User user = query.setInt(1, 123)
- *                  .findFirst(User.class)
- *                  .orElse(null);
- * 
- * // Multiple executions with closeAfterExecution(false)
- * PreparedQuery reusableQuery = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE age > ?")
- *                                   .closeAfterExecution(false);
- * List<User> adults = reusableQuery.setInt(1, 18).list(User.class);
- * List<User> seniors = reusableQuery.setInt(1, 65).list(User.class);
- * reusableQuery.close();   // Remember to close manually
- * }</pre>
- * 
- * <p>This class is thread-safe only if the underlying {@code PreparedStatement} is not accessed concurrently
- * from multiple threads. It's recommended to create a new instance for each thread or use proper synchronization.
- *
- * <p>This class extends {@link AbstractQuery} with the following type parameters:
- * <ul>
- *   <li>{@code PreparedStatement} as the statement type - the specific type of JDBC statement used</li>
- *   <li>{@code PreparedQuery} as the self-reference type - enables fluent method chaining</li>
- * </ul>
- *
- * @see com.landawn.abacus.annotation.ReadOnly
- * @see com.landawn.abacus.annotation.ReadOnlyId
- * @see com.landawn.abacus.annotation.NonUpdatable
- * @see com.landawn.abacus.annotation.Transient
- * @see com.landawn.abacus.annotation.Table
- * @see com.landawn.abacus.annotation.Column
  * @see AbstractQuery
  * @see NamedQuery
  * @see CallableQuery
- *
- * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Connection.html">Connection</a>
- * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/Statement.html">Statement</a>
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/PreparedStatement.html">PreparedStatement</a>
- * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/ResultSet.html">ResultSet</a>
- *
  */
 public final class PreparedQuery extends AbstractQuery<PreparedStatement, PreparedQuery> {
 

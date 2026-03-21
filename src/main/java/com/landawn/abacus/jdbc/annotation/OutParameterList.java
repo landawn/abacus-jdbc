@@ -21,37 +21,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Container annotation for multiple {@link OutParameter} annotations on a single method.
- * This annotation is used when a stored procedure or callable statement has multiple output parameters.
- * 
- * <p>This annotation serves as a container for the {@link OutParameter} repeatable annotation,
- * allowing multiple output parameters to be declared for a single DAO method that calls a stored procedure.</p>
- * 
- * <p>You typically don't use this annotation directly. Instead, use multiple {@link OutParameter}
- * annotations, and the compiler will automatically wrap them in this container.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * public interface EmployeeDao extends CrudDao<Employee, Long> {
+ * Container annotation for repeatable {@link OutParameter} declarations.
  *
- *     // Multiple output parameters using repeatable annotation
- *     @Query(value = "{call calculate_salary_info(?, ?, ?, ?)}", isProcedure = true)
- *     @OutParameter(position = 2, sqlType = Types.DECIMAL)
- *     @OutParameter(position = 3, sqlType = Types.DECIMAL)
- *     @OutParameter(position = 4, sqlType = Types.VARCHAR)
- *     Map<String, Object> calculateSalaryInfo(@Bind("employeeId") long employeeId);
+ * <p>You normally do not use this annotation directly; it is synthesized by the compiler
+ * when multiple {@code @OutParameter} annotations are declared on the same method.</p>
  *
- *     // Equivalent using OutParameterList directly (not recommended)
- *     @Query(value = "{call get_employee_stats(?, ?, ?, ?)}", isProcedure = true)
- *     @OutParameterList({
- *         @OutParameter(position = 2, sqlType = Types.DECIMAL),
- *         @OutParameter(position = 3, sqlType = Types.DECIMAL),
- *         @OutParameter(position = 4, sqlType = Types.INTEGER)
- *     })
- *     Map<String, Object> getEmployeeStats(@Bind("employeeId") long employeeId);
- * }
- * }</pre>
- * 
  * @see OutParameter
  * @see Query
  */

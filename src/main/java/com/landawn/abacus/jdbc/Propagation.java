@@ -16,39 +16,11 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Enumeration that represents transaction propagation behaviors.
- * 
- * <p>Transaction propagation defines how methods should behave when called within 
- * the context of an existing transaction. These behaviors determine whether a new 
- * transaction should be created, whether the current transaction should be suspended,
- * or whether the method should participate in the existing transaction.</p>
- * 
- * <p>This enum is commonly used with the {@code @Transactional} annotation to specify
- * how transaction boundaries should be managed for specific methods or classes.</p>
- * 
- * <p>Transaction propagation behaviors from most to least permissive:</p>
- * <ul>
- *   <li>{@link #SUPPORTS} - Works with or without a transaction</li>
- *   <li>{@link #REQUIRED} - Requires a transaction, creates one if needed</li>
- *   <li>{@link #MANDATORY} - Requires an existing transaction</li>
- *   <li>{@link #REQUIRES_NEW} - Always creates a new transaction</li>
- *   <li>{@link #NOT_SUPPORTED} - Never runs in a transaction</li>
- *   <li>{@link #NEVER} - Fails if a transaction exists</li>
- * </ul>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * @Transactional(propagation = Propagation.REQUIRES_NEW)
- * public void auditOperation() {
- *     // This method always runs in its own transaction
- * }
+ * Transaction participation policies used by {@link com.landawn.abacus.jdbc.annotation.Transactional}.
  *
- * @Transactional(propagation = Propagation.MANDATORY)
- * public void criticalOperation() {
- *     // This method requires an existing transaction
- * }
- * }</pre>
- * 
+ * <p>Each constant describes how a DAO method should behave when a transaction already exists:
+ * join it, require it, suspend it, or refuse it.</p>
+ *
  * @see com.landawn.abacus.jdbc.annotation.Transactional
  */
 public enum Propagation {

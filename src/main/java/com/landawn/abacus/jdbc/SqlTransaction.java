@@ -31,25 +31,12 @@ import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 
 /**
- * Represents a SQL transaction that manages database transaction lifecycle and connection state.
- * This class provides transaction management capabilities including commit, rollback, and automatic
- * resource cleanup. It supports nested transactions with reference counting and isolation level management.
- * 
- * <p><b>Important:</b> DO NOT CLOSE the connection manually. It will be automatically closed 
- * after the transaction is committed or rolled back.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED)) {
- *     // Execute database operations
- *     dao.save(entity);
- *     dao.update(anotherEntity);
+ * Default {@link Transaction} implementation backed by a JDBC {@link Connection}.
  *
- *     tran.commit();   // Commit the transaction
- * } // Auto-rollback if not committed
- * }</pre>
- * 
- * 
+ * <p>{@code SqlTransaction} owns the connection for the lifetime of the transaction, tracks
+ * status transitions, and restores connection state when the transaction completes. Do not
+ * close the connection manually while the transaction is active.</p>
+ *
  * @see Transaction
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel)
@@ -698,7 +685,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
         synchronized (_id) { //NOSONAR
-            threadTransactionMap.remove(_id);
+            final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 
             Throwable throwable = null;
 
@@ -708,7 +695,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 throwable = e;
                 throw e;
             } finally {
-                if (threadTransactionMap.put(_id, this) != null) {
+                if (wasRegistered && _status == Status.ACTIVE && threadTransactionMap.putIfAbsent(_id, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
                             "Another transaction is opened but not closed in 'Transaction.runOutsideTransaction'."); //NOSONAR
 
@@ -761,7 +748,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<R, E> cmd) throws E {
         synchronized (_id) { //NOSONAR
-            threadTransactionMap.remove(_id);
+            final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 
             Throwable throwable = null;
 
@@ -771,7 +758,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 throwable = e;
                 throw e;
             } finally {
-                if (threadTransactionMap.put(_id, this) != null) {
+                if (wasRegistered && _status == Status.ACTIVE && threadTransactionMap.putIfAbsent(_id, this) != null) {
                     final IllegalStateException ex = new IllegalStateException(
                             "Another transaction is opened but not closed in 'Transaction.callOutsideTransaction'."); //NOSONAR
 

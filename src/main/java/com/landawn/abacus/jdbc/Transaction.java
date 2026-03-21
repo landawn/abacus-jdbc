@@ -17,23 +17,10 @@ package com.landawn.abacus.jdbc;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
 /**
- * Represents a database transaction that provides methods for managing transactional operations.
- * This interface abstracts the transaction management layer, allowing for consistent transaction
- * handling across different database implementations.
- * 
- * <p>A transaction follows the ACID properties (Atomicity, Consistency, Isolation, Durability)
- * and provides methods to commit or rollback changes made within the transaction scope.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * Transaction txn = JdbcUtil.beginTransaction(dataSource);
- * try {
- *     // Perform database operations
- *     txn.commit();
- * } finally {
- *     txn.rollbackIfNotCommitted();
- * }
- * }</pre>
+ * Minimal contract for a JDBC transaction managed by this library.
+ *
+ * <p>A {@code Transaction} exposes an identifier, the effective {@link IsolationLevel},
+ * lifecycle state, and explicit commit or rollback operations.</p>
  *
  * @see IsolationLevel
  * @see Status

@@ -21,47 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Maps database column prefixes to object field paths for result set mapping.
- * This annotation is used when joining multiple tables and needing to map columns
- * with prefixes to nested objects or specific fields in the result object.
- * 
- * <p>When performing SQL joins, it's common to alias columns with prefixes to avoid
- * naming conflicts. This annotation helps map those prefixed columns to the appropriate
- * fields in your domain objects, including nested objects.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     
- *     @Query("SELECT u.id, u.name, u.email, " +
- *             "d.id AS \"d.id\", d.model AS \"d.model\", d.os AS \"d.os\", " +
- *             "c.id AS \"c.id\", c.phone AS \"c.phone\", c.address AS \"c.address\" " +
- *             "FROM users u " +
- *             "LEFT JOIN devices d ON u.id = d.user_id " +
- *             "LEFT JOIN contacts c ON u.id = c.user_id " +
- *             "WHERE u.id = :id")
- *     @PrefixFieldMapping("d=device, c=contact")
- *     User findUserWithDetails(@Bind("id") long id);
- *     
- *     // Result mapping:
- *     // d.id -> user.device.id
- *     // d.model -> user.device.model
- *     // d.os -> user.device.os
- *     // c.id -> user.contact.id
- *     // c.phone -> user.contact.phone
- *     // c.address -> user.contact.address
- * }
- * 
- * // Domain objects
- * public class User {
- *     private Long id;
- *     private String name;
- *     private String email;
- *     private Device device;  // Nested object
- *     private Contact contact;  // Nested object
- *     // getters/setters
- * }
- * }</pre>
+ * Maps prefixed column aliases to nested target paths during row mapping.
+ *
+ * <p>For example, a mapping such as {@code d=device} lets a column alias like
+ * {@code d.id} populate {@code device.id} on the target object.</p>
  *
  * @see Query
  * @see MergedById

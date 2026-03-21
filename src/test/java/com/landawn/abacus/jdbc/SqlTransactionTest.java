@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -175,6 +177,48 @@ public class SqlTransactionTest extends TestBase {
         final String result = transaction.callOutsideTransaction(() -> "test result");
 
         assertEquals("test result", result);
+    }
+
+    @Test
+    public void testRunOutsideTransactionAfterCommitDoesNotRestoreCompletedTransaction() throws Exception {
+        final Connection connection2 = Mockito.mock(Connection.class);
+        when(connection2.getAutoCommit()).thenReturn(true);
+        when(connection2.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        when(dataSource.getConnection()).thenReturn(connection, connection2);
+
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.commit();
+
+        transaction.runOutsideTransaction(() -> {
+            // no-op
+        });
+
+        final SqlTransaction nextTransaction = assertDoesNotThrow(() -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED));
+
+        assertSame(connection2, nextTransaction.connection());
+        verify(dataSource, times(2)).getConnection();
+
+        nextTransaction.rollbackIfNotCommitted();
+    }
+
+    @Test
+    public void testCallOutsideTransactionAfterRollbackDoesNotRestoreCompletedTransaction() throws Exception {
+        final Connection connection2 = Mockito.mock(Connection.class);
+        when(connection2.getAutoCommit()).thenReturn(true);
+        when(connection2.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        when(dataSource.getConnection()).thenReturn(connection, connection2);
+
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.rollback();
+
+        assertEquals("outside", transaction.callOutsideTransaction(() -> "outside"));
+
+        final SqlTransaction nextTransaction = assertDoesNotThrow(() -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED));
+
+        assertSame(connection2, nextTransaction.connection());
+        verify(dataSource, times(2)).getConnection();
+
+        nextTransaction.rollbackIfNotCommitted();
     }
 
     @Test

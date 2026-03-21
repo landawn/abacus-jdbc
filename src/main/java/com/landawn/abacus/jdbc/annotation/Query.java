@@ -26,106 +26,11 @@ import com.landawn.abacus.jdbc.OP;
 import com.landawn.abacus.util.RegExUtil;
 
 /**
- * Defines a generic SQL query operation for a DAO method.
- * This annotation provides a flexible way to execute any type of SQL statement (SELECT, INSERT, UPDATE, DELETE, or stored procedure calls)
- * with comprehensive configuration options for execution parameters, batching, and result handling.
+ * Declares how a DAO method should execute SQL.
  *
- * <p>Key features:</p>
- * <ul>
- *   <li>Support for all SQL statement types (SELECT, INSERT, UPDATE, DELETE)</li>
- *   <li>Inline SQL using the {@link #value()} attribute</li>
- *   <li>Reference to external SQL using the {@link #id()} attribute</li>
- *   <li>Flexible operation type specification via {@link #op()}</li>
- *   <li>Batch processing capabilities for bulk operations</li>
- *   <li>Query timeout and fetch size configuration</li>
- *   <li>Dynamic SQL with template variables</li>
- *   <li>Automatic timestamp injection</li>
- * </ul>
- *
- * <p>Basic usage examples:</p>
- * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     // SELECT operation
- *     @Query("SELECT * FROM users WHERE status = :status")
- *     List<User> findByStatus(@Bind("status") String status);
- *
- *     // INSERT operation
- *     @Query("INSERT INTO users (name, email) VALUES (:name, :email)")
- *     int insertUser(@Bind("name") String name, @Bind("email") String email);
- *
- *     // UPDATE operation
- *     @Query(value = "UPDATE users SET last_login = :sysTime WHERE id = :id", autoSetSysTimeParam = true)
- *     int updateLastLogin(@Bind("id") Long id);
- *
- *     // DELETE operation
- *     @Query("DELETE FROM users WHERE inactive_since < :date")
- *     int deleteInactiveUsers(@Bind("date") Date date);
- *
- *     // Using external SQL mapper
- *     @Query(id = "complexUserQuery")
- *     List<User> findUsersByComplexCriteria(@Bind("criteria") SearchCriteria criteria);
- * }
- * }</pre>
- *
- * <p>Advanced usage examples:</p>
- * <pre>{@code
- * public interface AdvancedDao {
- *     // Batch operation with custom batch size
- *     @Query(value = "INSERT INTO logs (timestamp, message) VALUES (:timestamp, :message)",
- *            isBatch = true, batchSize = 500)
- *     int[] batchInsertLogs(@Bind("timestamp") List<Date> timestamps,
- *                          @Bind("message") List<String> messages);
- *
- *     // Large result set with custom fetch size
- *     @Query(value = "SELECT * FROM large_table", fetchSize = 1000)
- *     Stream<Record> streamLargeTable();
- *
- *     // Dynamic SQL with template variables
- *     @Query(value = "SELECT * FROM {table} WHERE {column} = :value",
- *            fragmentContainsNamedParameters = true)
- *     List<Map<String, Object>> dynamicQuery(@SqlFragment("table") String table,
- *                                           @SqlFragment("column") String column,
- *                                           @Bind("value") Object value);
- *
- *     // Query with timeout for long-running operations
- *     @Query(value = "SELECT * FROM users u JOIN orders o ON u.id = o.user_id",
- *            queryTimeout = 30)
- *     List<UserWithOrders> findUsersWithOrders();
- *
- *     // Aggregate query with specific operation type
- *     @Query(value = "SELECT COUNT(*) FROM users WHERE active = true",
- *            op = OP.queryForSingle)
- *     long countActiveUsers();
- *
- *     // Existence check
- *     @Query(value = "SELECT 1 FROM users WHERE email = :email LIMIT 1",
- *            op = OP.exists)
- *     boolean emailExists(@Bind("email") String email);
- * }
- * }</pre>
- *
- * <p>Parameter binding:</p>
- * <ul>
- *   <li>Named parameters using {@code :paramName} syntax</li>
- *   <li>Use {@link Bind} annotation to map method parameters to SQL parameters</li>
- *   <li>Entity properties are automatically bound when passing entity objects</li>
- *   <li>Nested property access via dot notation (e.g., {@code :user.email})</li>
- *   <li>Template variables using {@code {variableName}} with {@link SqlFragment} annotation</li>
- * </ul>
- *
- * <p>Return type handling:</p>
- * <p>The framework automatically adapts to the method's return type:</p>
- * <ul>
- *   <li>{@code void} - No return value</li>
- *   <li>{@code int/long} - Number of affected rows (for UPDATE/INSERT/DELETE)</li>
- *   <li>{@code boolean} - For existence checks when using {@code op = OP.exists}</li>
- *   <li>Single object - First result or unique result</li>
- *   <li>{@code Optional<T>} - Empty if no result found</li>
- *   <li>{@code List<T>} - Multiple results</li>
- *   <li>{@code Stream<T>} - Lazy streaming of results</li>
- *   <li>{@code int[]} - Batch operation results</li>
- *   <li>Custom types via {@link Handler} annotation</li>
- * </ul>
+ * <p>This annotation can point to inline SQL or named SQL, choose an {@link OP execution mode},
+ * enable stored-procedure handling, configure batching, and supply runtime hints such as fetch size
+ * or timeout. The method return type still participates in the final execution strategy.</p>
  *
  * @see Bind
  * @see SqlFragment

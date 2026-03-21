@@ -16,21 +16,11 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Enum representing various database operations that can be performed through {@link AbstractQuery}.
- * These operations define how query results are retrieved and processed in the Abacus JDBC framework.
- * 
- * <p>The OP enum is typically used to specify the operation type in query annotations or method calls,
- * allowing the framework to determine the appropriate execution strategy and return type.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * @Query(value = "SELECT * FROM users WHERE age > ?", op = OP.list)
- * List<User> findUsersByAge(int age);
- * 
- * @Query(value = "SELECT COUNT(*) FROM users", op = OP.queryForSingle)
- * int getUserCount();
- * }</pre>
- * 
+ * Execution modes understood by {@link AbstractQuery} and {@link com.landawn.abacus.jdbc.annotation.Query}.
+ *
+ * <p>Each constant selects a particular result-extraction strategy such as existence checks,
+ * single-row retrieval, streaming, or update counts.</p>
+ *
  * @see AbstractQuery
  */
 public enum OP {

@@ -112,6 +112,29 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
+    public void testLockRejectsEmptyTarget() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("", 200L, 50L, 1L));
+    }
+
+    @Test
+    public void testLockRejectsNonPositiveLiveTime() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-live-time", 0L, 50L, 1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-live-time", -1L, 50L, 1L));
+    }
+
+    @Test
+    public void testLockRejectsNegativeTimeoutAndRetryInterval() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-timeout", 200L, -1L, 1L));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.lock("resource-retry", 200L, 50L, -1L));
+    }
+
+    @Test
     public void testUnlock() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 1);
         final String code = fixture.lock.lock("resource-5", 200L, 50L, 1L);
@@ -120,6 +143,14 @@ public class DBLockTest extends TestBase {
 
         assertTrue(unlocked);
         assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    @Test
+    public void testUnlockRejectsInvalidArguments() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.unlock("", "code"));
+        assertThrows(IllegalArgumentException.class, () -> fixture.lock.unlock("resource-5", ""));
     }
 
     @Test

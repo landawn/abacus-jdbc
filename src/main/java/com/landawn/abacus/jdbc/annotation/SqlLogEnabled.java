@@ -23,46 +23,12 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Controls SQL statement logging for DAO methods or classes.
- * This annotation enables or disables logging of SQL statements during execution,
- * which is useful for debugging, monitoring, and development purposes.
- * 
- * <p>When applied at the class level, it affects all methods in the class based on the filter criteria.
- * When applied at the method level, it only affects that specific method and ignores any filter settings.</p>
- * 
- * <p>SQL logging can help with:</p>
- * <ul>
- *   <li>Debugging query construction and parameter binding</li>
- *   <li>Monitoring database interactions in development</li>
- *   <li>Verifying generated SQL statements</li>
- *   <li>Troubleshooting performance issues</li>
- * </ul>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * // Enable logging for entire DAO
- * @SqlLogEnabled
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     List<User> findByStatus(String status);
- * }
- * 
- * // Selective logging at class level
- * @SqlLogEnabled(filter = {"find.*", "search.*"})
- * public interface OrderDao extends CrudDao<Order, Long> {
- *     List<Order> findByCustomer(Long customerId);   // Logged
- *     void updateStatus(Long id, String status);   // Not logged
- * }
- * 
- * // Disable logging for specific method
- * public interface ProductDao extends CrudDao<Product, Long> {
- *     @SqlLogEnabled(false)
- *     List<Product> findSensitiveData();
- *     
- *     @SqlLogEnabled(maxSqlLogLength = 200)
- *     void executeLargeQuery(String query);
- * }
- * }</pre>
- * 
+ * Enables or disables SQL logging for a DAO method or DAO type.
+ *
+ * <p>Method-level usage affects only the annotated method. Type-level usage applies to
+ * methods whose names match {@link #filter()} by case-insensitive containment or by a full
+ * regular-expression match.</p>
+ *
  * @see PerfLog
  * @see JdbcUtil
  */
@@ -122,32 +88,11 @@ public @interface SqlLogEnabled {
     int maxSqlLogLength() default JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH; // 1024
 
     /**
-     * Specifies filter patterns for methods when the annotation is applied at the class level.
-     * Only methods whose names match at least one of these patterns will have SQL logging enabled.
+     * Specifies the type-level method-name filter.
      *
-     * <p>The patterns support case-insensitive substring matching and regular expressions.
-     * Multiple patterns are combined with OR logic.</p>
-     *
-     * <p>This filter is ignored when the annotation is applied at the method level.</p>
-     * 
-     * <p>Common filter patterns:</p>
-     * <ul>
-     *   <li>{@code "find.*"} - Log all finder methods</li>
-     *   <li>{@code ".*ById"} - Log methods ending with "ById"</li>
-     *   <li>{@code "update|delete"} - Log update or delete operations</li>
-     *   <li>{@code "^(?!insert).*"} - Log everything except methods starting with "insert"</li>
-     * </ul>
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * @SqlLogEnabled(filter = {"find.*", "get.*", "search.*"})
-     * public interface UserDao {
-     *     User findById(Long id);   // Logged
-     *     List<User> searchByName(String name);   // Logged
-     *     User getByEmail(String email);   // Logged
-     *     void updatePassword(Long id);   // Not logged
-     * }
-     * }</pre>
+     * <p>Each entry matches when it is contained in the method name ignoring case, or when
+     * it matches the full method name as a regular expression. This filter is ignored for
+     * method-level usage.</p>
      *
      * @return array of filter patterns (default matches all methods)
      */

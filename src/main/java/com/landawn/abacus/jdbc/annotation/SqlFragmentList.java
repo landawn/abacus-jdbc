@@ -22,51 +22,10 @@ import java.lang.annotation.Target;
 import java.util.Collection;
 
 /**
- * Defines a named query template variable from a collection or array parameter.
- * This annotation converts the elements of a collection or array into a comma-separated string
- * that can be used to dynamically construct SQL queries.
- * 
- * <p>Unlike {@link BindList} which binds values as parameters, {@code SqlFragmentList} performs
- * string substitution in the query template. This is useful for dynamic query construction where
- * the structure of the query itself needs to change based on input.</p>
- * 
- * <p><strong>Security Warning:</strong> Since this performs direct string substitution,
- * be extremely careful to validate and sanitize input to prevent query injection attacks.
- * Only use this with trusted input or when dynamic query structure is absolutely necessary.</p>
- * 
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
- *     // Dynamic column selection
- *     @Query("SELECT {columns} FROM users WHERE id = :id")
- *     Map<String, Object> findColumnsById(
- *         @SqlFragmentList("columns") List<String> columns,
- *         @Bind("id") long id
- *     );
- *     
- *     // Usage: dao.findColumnsById(Arrays.asList("id", "name", "email"), 123)
- *     // Generates: SELECT id, name, email FROM users WHERE id = ?
- *     
- *     // Dynamic table names (be very careful with this!)
- *     @Query("SELECT * FROM {tables} WHERE status = :status")
- *     List<Map<String, Object>> findFromTables(
- *         @SqlFragmentList("tables") String[] tables,
- *         @Bind("status") String status
- *     );
- *     
- *     // Usage: dao.findFromTables(new String[] {"users", "admins"}, "active")
- *     // Generates: SELECT * FROM users, admins WHERE status = ?
- * }
- * }</pre>
- * 
- * <p>The annotation can be used with:</p>
- * <ul>
- *   <li>Arrays of any type</li>
- *   <li>{@link Collection} implementations (List, Set, etc.)</li>
- * </ul>
- * 
- * <p>The elements are converted to strings using their {@code toString()} method
- * and joined with commas. Null elements are converted to the string "null".</p>
+ * Joins a collection or array into a comma-separated SQL fragment.
+ *
+ * <p>Unlike {@link BindList}, this annotation performs direct SQL text substitution. Use it only
+ * for trusted tokens such as validated column lists, table names, or other pre-approved fragments.</p>
  *
  * @see SqlFragment
  * @see BindList
