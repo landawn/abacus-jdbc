@@ -161,6 +161,29 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testRollbackIfNotCommitted_NestedMarksRollback() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true);
+
+        transaction.rollbackIfNotCommitted();
+
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        verify(connection, never()).rollback();
+    }
+
+    @Test
+    public void testCommit_MarkedRollback_RollsBackInstead() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false);
+        transaction.rollbackIfNotCommitted();
+
+        transaction.commit();
+
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
+    }
+
+    @Test
     public void testRunOutsideTransaction() throws Exception {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         final boolean[] executed = { false };
@@ -288,6 +311,27 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(2, refCount);
         assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
         verify(connection).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+    }
+
+    @Test
+    public void testIncrementAndGetRef_AfterCommit() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.commit();
+
+        assertThrows(IllegalStateException.class, () -> transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false));
+    }
+
+    @Test
+    public void testDecrementAndGetRef_RestoresOriginalIsolationForDefault() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false);
+
+        final int refCount = transaction.decrementAndGetRef();
+
+        assertEquals(1, refCount);
+        assertEquals(IsolationLevel.DEFAULT, transaction.isolationLevel());
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
     }
 
     @Test

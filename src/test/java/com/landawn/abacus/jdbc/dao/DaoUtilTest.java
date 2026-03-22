@@ -21,8 +21,8 @@ public class DaoUtilTest extends TestBase {
     interface TestCrudJoinDao extends CrudDao<Object, Long, PSC, TestCrudJoinDao>, CrudJoinEntityHelper<Object, Long, PSC, TestCrudJoinDao> {
     }
 
-    interface TestUncheckedCrudJoinDao extends UncheckedCrudDao<Object, Long, PSC, TestUncheckedCrudJoinDao>,
-            UncheckedCrudJoinEntityHelper<Object, Long, PSC, TestUncheckedCrudJoinDao> {
+    interface TestUncheckedCrudJoinDao
+            extends UncheckedCrudDao<Object, Long, PSC, TestUncheckedCrudJoinDao>, UncheckedCrudJoinEntityHelper<Object, Long, PSC, TestUncheckedCrudJoinDao> {
     }
 
     interface TestJoinHelperOnly extends JoinEntityHelper<Object, PSC, TestDao> {

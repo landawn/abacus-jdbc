@@ -19,8 +19,8 @@ import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedJoinEntityHelperTest extends TestBase {
 
-    interface TestUncheckedJoinDao extends UncheckedDao<TestEntity, PSC, TestUncheckedJoinDao>,
-            UncheckedJoinEntityHelper<TestEntity, PSC, TestUncheckedJoinDao> {
+    interface TestUncheckedJoinDao
+            extends UncheckedDao<TestEntity, PSC, TestUncheckedJoinDao>, UncheckedJoinEntityHelper<TestEntity, PSC, TestUncheckedJoinDao> {
     }
 
     static final class TestEntity {

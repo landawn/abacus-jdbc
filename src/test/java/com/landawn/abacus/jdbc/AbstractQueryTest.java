@@ -1,11 +1,16 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
@@ -153,6 +158,20 @@ public class AbstractQueryTest extends TestBase {
         verify(preparedStatement).setInt(1, 42);
     }
 
+    @Test
+    public void testSetInt_WithDefault_NonNull() throws SQLException {
+        TestQuery result = query.setInt(1, Integer.valueOf(7), 0);
+        assertSame(query, result);
+        verify(preparedStatement).setInt(1, 7);
+    }
+
+    @Test
+    public void testSetInt_CharacterWrapper_NonNull() throws SQLException {
+        TestQuery result = query.setInt(1, Character.valueOf('A'));
+        assertSame(query, result);
+        verify(preparedStatement).setInt(1, 'A');
+    }
+
     // Tests for setLong with null wrapper
     @Test
     public void testSetLong_Wrapper_Null() throws SQLException {
@@ -166,6 +185,13 @@ public class AbstractQueryTest extends TestBase {
         TestQuery result = query.setLong(1, (Long) 1000L);
         assertSame(query, result);
         verify(preparedStatement).setLong(1, 1000L);
+    }
+
+    @Test
+    public void testSetLong_WithDefault_NonNull() throws SQLException {
+        TestQuery result = query.setLong(1, Long.valueOf(99L), -1L);
+        assertSame(query, result);
+        verify(preparedStatement).setLong(1, 99L);
     }
 
     // Tests for setFloat with null wrapper
@@ -196,5 +222,44 @@ public class AbstractQueryTest extends TestBase {
         TestQuery result = query.setDouble(1, (Double) 3.14);
         assertSame(query, result);
         verify(preparedStatement).setDouble(1, 3.14);
+    }
+
+    @Test
+    public void testAddBatchParameters_EmptyCollection() throws SQLException {
+        TestQuery result = query.addBatchParameters(List.of());
+
+        assertSame(query, result);
+        verify(preparedStatement, never()).addBatch();
+    }
+
+    @Test
+    public void testAddBatchParameters_IteratorOfScalarValues() throws SQLException {
+        TestQuery result = query.addBatchParameters(List.of(1, 2).iterator());
+
+        assertSame(query, result);
+        verify(preparedStatement).setInt(1, 1);
+        verify(preparedStatement).setInt(1, 2);
+        verify(preparedStatement, times(2)).addBatch();
+    }
+
+    // Custom batch actions bypass the default PreparedStatement.addBatch call.
+    @Test
+    public void testConfigAddBatchAction() throws SQLException {
+        query.configAddBatchAction((it, stmt) -> stmt.setInt(9, 99));
+
+        TestQuery result = query.addBatch();
+
+        assertSame(query, result);
+        verify(preparedStatement).setInt(9, 99);
+        verify(preparedStatement, never()).addBatch();
+    }
+
+    @Test
+    public void testGetFetchSettings() throws SQLException {
+        when(preparedStatement.getFetchSize()).thenReturn(128);
+        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
+
+        assertEquals(128, query.getFetchSize());
+        assertEquals(ResultSet.FETCH_REVERSE, query.getFetchDirection());
     }
 }

@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -98,5 +99,22 @@ public class UncheckedCrudJoinEntityHelperLTest extends TestBase {
         verify(dao, times(2)).loadAllJoinEntities(entity);
         verify(dao).loadJoinEntities(entity, String.class);
         verify(dao).loadJoinEntities(entity, Integer.class);
+    }
+
+    @Test
+    public void testGett_SkipsJoinLoadingForNullResultsOrDisabledFlags() {
+        TestUncheckedCrudJoinDaoL dao = Mockito.mock(TestUncheckedCrudJoinDaoL.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        when(dao.gett(10L)).thenReturn(null);
+        when(dao.gett(11L, List.of("id"))).thenReturn(entity);
+        when(dao.gett(12L, List.of("id"))).thenReturn(entity);
+
+        assertNull(dao.gett(10L, true));
+        assertSame(entity, dao.gett(11L, List.of("id"), false));
+        assertSame(entity, dao.gett(12L, List.of("id"), java.util.List.of()));
+
+        verify(dao, never()).loadAllJoinEntities(entity);
+        verify(dao, never()).loadJoinEntities(eq(entity), eq(String.class));
     }
 }

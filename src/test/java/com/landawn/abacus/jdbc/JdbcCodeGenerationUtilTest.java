@@ -141,10 +141,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_Connection_TableName_Config() throws SQLException {
         setupFullGenerateEntityClassMock();
-        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .className("OrderHistory")
-                .useBoxedType(true)
-                .build();
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("OrderHistory").useBoxedType(true).build();
         String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", config);
         assertNotNull(result);
         assertTrue(result.contains("OrderHistory"));
@@ -154,8 +151,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_Connection_EntityName_Query() throws SQLException {
         setupFullGenerateEntityClassMock();
-        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2");
+        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2");
         assertNotNull(result);
     }
 
@@ -175,9 +171,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         setupFullGenerateEntityClassMock();
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
-        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .className("OrderHist")
-                .build();
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("OrderHist").build();
         String result = JdbcCodeGenerationUtil.generateEntityClass(dataSource, "order_history", config);
         assertNotNull(result);
     }
@@ -188,8 +182,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         setupFullGenerateEntityClassMock();
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
-        String result = JdbcCodeGenerationUtil.generateEntityClass(dataSource, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", null);
+        String result = JdbcCodeGenerationUtil.generateEntityClass(dataSource, "order_history", "SELECT * FROM order_history WHERE 1 > 2", null);
         assertNotNull(result);
     }
 
@@ -198,19 +191,15 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testGenerateEntityClass_DataSource_WrapsSQLException() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateEntityClass(dataSource, "order_history"));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(dataSource, "order_history"));
     }
 
     // Test generateEntityClass with packageName config
     @Test
     public void testGenerateEntityClass_WithPackageName() throws SQLException {
         setupFullGenerateEntityClassMock();
-        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .packageName("com.example.model")
-                .build();
-        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().packageName("com.example.model").build();
+        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("package com.example.model"));
     }
@@ -219,11 +208,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_WithIdField() throws SQLException {
         setupFullGenerateEntityClassMock();
-        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .idField("id")
-                .build();
-        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().idField("id").build();
+        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("@Id"));
     }
@@ -232,11 +218,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_WithReadOnlyFields() throws SQLException {
         setupFullGenerateEntityClassMock();
-        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .readOnlyFields(Arrays.asList("created_at"))
-                .build();
-        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().readOnlyFields(Arrays.asList("created_at")).build();
+        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("@ReadOnly"));
     }
@@ -245,11 +228,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_WithExcludedFields() throws SQLException {
         setupFullGenerateEntityClassMock();
-        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .excludedFields(Arrays.asList("status"))
-                .build();
-        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().excludedFields(Arrays.asList("status")).build();
+        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
     }
 
@@ -261,8 +241,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .generateCopyMethod(true)
                 .className("OrderHistory")
                 .build();
-        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
     }
 
@@ -274,8 +253,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .readOnlyFields(Arrays.asList("id"))
                 .nonUpdatableFields(Arrays.asList("id"))
                 .build();
-        assertThrows(RuntimeException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config));
+        assertThrows(RuntimeException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
     }
 
     // Test generateSelectSql with DataSource (basic overload)

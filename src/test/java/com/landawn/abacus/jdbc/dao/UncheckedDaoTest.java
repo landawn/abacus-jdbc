@@ -53,6 +53,30 @@ public class UncheckedDaoTest extends TestBase {
         }
     }
 
+    public static final class IdentifiedEntity {
+        private Long id;
+        private String name;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    private interface IdentifiedUncheckedDao extends UncheckedDao<IdentifiedEntity, SqlBuilder.PSC, IdentifiedUncheckedDao> {
+    }
+
     @Test
     public void testIsInterface() {
         assertTrue(UncheckedDao.class.isInterface());
@@ -98,10 +122,31 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.exists(condition)).thenReturn(false);
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        when(dao.list(eq("name"), same(condition), Mockito.<Jdbc.RowMapper<String>>any())).thenReturn(List.of("alice"));
+        when(dao.list(eq("name"), same(condition), Mockito.<Jdbc.RowMapper<String>> any())).thenReturn(List.of("alice"));
 
         assertTrue(dao.notExists(condition));
         assertEquals(List.of("alice"), dao.list("name", condition));
+    }
+
+    @Test
+    public void testNotExists_WhenExistsReturnsFalse() {
+        TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.exists(condition)).thenReturn(true);
+
+        assertEquals(false, dao.notExists(condition));
+    }
+
+    @Test
+    public void testList_UnknownProperty_UsesObjectRowMapper() {
+        TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.list(eq(List.of("unknownProp")), same(condition), Mockito.<Jdbc.RowMapper<Object>> any())).thenReturn(List.of("raw"));
+
+        assertEquals(List.of("raw"), dao.list("unknownProp", condition));
     }
 
     @Test
@@ -144,7 +189,7 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
         when(dao.update(anyMap(), same(condition))).thenReturn(2);
-        when(dao.update(same(entity), Mockito.<Collection<String>>any(), same(condition))).thenReturn(3);
+        when(dao.update(same(entity), Mockito.<Collection<String>> any(), same(condition))).thenReturn(3);
 
         assertEquals(2, dao.update("status", "active", condition));
         assertEquals(3, dao.update(entity, condition));
@@ -194,12 +239,34 @@ public class UncheckedDaoTest extends TestBase {
 
         when(updateDao.targetEntityClass()).thenReturn(TestEntity.class);
         when(updateDao.findOnlyOne(updateCondition)).thenReturn(Optional.of(dbEntity));
-        when(updateDao.update(same(dbEntity), Mockito.<Collection<String>>any(), same(updateCondition))).thenReturn(1);
+        when(updateDao.update(same(dbEntity), Mockito.<Collection<String>> any(), same(updateCondition))).thenReturn(1);
 
         TestEntity result = updateDao.upsert(entityToMerge, updateCondition);
 
         assertSame(dbEntity, result);
         assertEquals("new-name", dbEntity.getName());
         assertEquals("active", dbEntity.getStatus());
+    }
+
+    @Test
+    public void testUpsert_Condition_IgnoresIdProperties() {
+        IdentifiedUncheckedDao dao = Mockito.mock(IdentifiedUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Condition condition = Mockito.mock(Condition.class);
+        IdentifiedEntity entityToMerge = new IdentifiedEntity();
+        entityToMerge.setId(99L);
+        entityToMerge.setName("new-name");
+        IdentifiedEntity dbEntity = new IdentifiedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("old-name");
+
+        when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
+        when(dao.targetEntityClass()).thenReturn(IdentifiedEntity.class);
+        when(dao.update(same(dbEntity), Mockito.anyCollection(), same(condition))).thenReturn(1);
+
+        IdentifiedEntity result = dao.upsert(entityToMerge, condition);
+
+        assertSame(dbEntity, result);
+        assertEquals(1L, dbEntity.getId());
+        assertEquals("new-name", dbEntity.getName());
     }
 }

@@ -236,6 +236,42 @@ public class JdbcUtilsTest extends TestBase {
         verify(mockPreparedStatement).setString(1, "value");
     }
 
+    @Test
+    public void testImportDataWithDatasetAndPreparedStatement() throws SQLException {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(0)).thenReturn("value");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final int result = JdbcUtils.importData(mockDataset, mockPreparedStatement);
+
+        assertEquals(1, result);
+        verify(mockPreparedStatement).addBatch();
+        verify(mockPreparedStatement).executeBatch();
+    }
+
+    @Test
+    public void testImportDataWithSelectedColumnsAndPreparedStatementBatchConfig() throws SQLException {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(2);
+        when(mockDataset.get(0)).thenReturn("first", "second");
+        when(mockDataset.getColumnIndex("col1")).thenReturn(0);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
+
+        final int result = JdbcUtils.importData(mockDataset, List.of("col1"), mockPreparedStatement, 1, 0);
+
+        assertEquals(2, result);
+        verify(mockPreparedStatement, times(2)).addBatch();
+        verify(mockPreparedStatement, times(2)).executeBatch();
+    }
+
+    @Test
+    public void testImportDataWithSelectedColumnsRejectsUnknownColumn() {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtils.importData(mockDataset, List.of("missing"), mockPreparedStatement));
+    }
+
     // Tests for importData methods with File
 
     @Test

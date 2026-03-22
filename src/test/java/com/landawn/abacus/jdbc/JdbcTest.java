@@ -457,6 +457,83 @@ public class JdbcTest extends TestBase {
         assertEquals(Arrays.asList("John", "Bob"), result);
     }
 
+    @Test
+    public void testBiResultExtractorToMapWithMergeFunction_DefaultSupplier() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString(1)).thenReturn("A", "A");
+        when(mockResultSet.getInt(2)).thenReturn(10, 20);
+
+        Jdbc.BiResultExtractor<Map<String, Integer>> extractor = Jdbc.BiResultExtractor.toMap((rs, cols) -> rs.getString(1), (rs, cols) -> rs.getInt(2),
+                Integer::sum);
+
+        Map<String, Integer> result = extractor.apply(mockResultSet, Arrays.asList("category", "amount"));
+
+        assertEquals(1, result.size());
+        assertEquals(30, result.get("A"));
+    }
+
+    @Test
+    public void testBiResultExtractorToMapWithCollector_DefaultSupplier() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString(1)).thenReturn("A", "A");
+        when(mockResultSet.getInt(2)).thenReturn(10, 20);
+
+        Jdbc.BiResultExtractor<Map<String, Integer>> extractor = Jdbc.BiResultExtractor.toMap((rs, cols) -> rs.getString(1), (rs, cols) -> rs.getInt(2),
+                Collectors.summingInt(Integer::intValue));
+
+        Map<String, Integer> result = extractor.apply(mockResultSet, Arrays.asList("category", "amount"));
+
+        assertEquals(1, result.size());
+        assertEquals(30, result.get("A"));
+    }
+
+    @Test
+    public void testBiResultExtractorToMapWithCollectorAndSupplier() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString(1)).thenReturn("B", "A");
+        when(mockResultSet.getInt(2)).thenReturn(5, 7);
+
+        Jdbc.BiResultExtractor<LinkedHashMap<String, Integer>> extractor = Jdbc.BiResultExtractor.toMap((rs, cols) -> rs.getString(1),
+                (rs, cols) -> rs.getInt(2), Collectors.summingInt(Integer::intValue), LinkedHashMap::new);
+
+        LinkedHashMap<String, Integer> result = extractor.apply(mockResultSet, Arrays.asList("category", "amount"));
+
+        assertEquals(2, result.size());
+        assertEquals(Arrays.asList("B", "A"), new ArrayList<>(result.keySet()));
+        assertEquals(5, result.get("B"));
+        assertEquals(7, result.get("A"));
+    }
+
+    @Test
+    public void testBiResultExtractorGroupToWithCollector_DefaultSupplier() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString(1)).thenReturn("A", "A");
+        when(mockResultSet.getInt(2)).thenReturn(2, 3);
+
+        Jdbc.BiResultExtractor<Map<String, Integer>> extractor = Jdbc.BiResultExtractor.groupTo((rs, cols) -> rs.getString(1), (rs, cols) -> rs.getInt(2),
+                Collectors.summingInt(Integer::intValue));
+
+        Map<String, Integer> result = extractor.apply(mockResultSet, Arrays.asList("category", "amount"));
+
+        assertEquals(1, result.size());
+        assertEquals(5, result.get("A"));
+    }
+
+    @Test
+    public void testBiResultExtractorToListWithTargetClass() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getLong(1)).thenReturn(1L);
+        when(mockResultSet.getString(2)).thenReturn("John");
+        when(mockResultSet.getInt(3)).thenReturn(25);
+
+        Jdbc.BiResultExtractor<List<TestEntity>> extractor = Jdbc.BiResultExtractor.toList(TestEntity.class);
+
+        List<TestEntity> result = extractor.apply(mockResultSet, Arrays.asList("id", "name", "age"));
+
+        assertEquals(1, result.size());
+        assertEquals("John", result.get(0).getName());
+    }
+
     // RowMapper Tests
     @Test
     public void testRowMapperApply() throws SQLException {

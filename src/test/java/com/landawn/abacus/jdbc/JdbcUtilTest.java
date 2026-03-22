@@ -1952,8 +1952,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testDefaultStmtSetter() throws SQLException {
         Object[] params = { "value1", 42, true };
-        assertDoesNotThrow(() -> JdbcUtil.DEFAULT_STMT_SETTER.accept(
-                JdbcUtil.prepareQuery(mockConnection, "SELECT 1"), params));
+        assertDoesNotThrow(() -> JdbcUtil.DEFAULT_STMT_SETTER.accept(JdbcUtil.prepareQuery(mockConnection, "SELECT 1"), params));
     }
 
     // Test getAllColumnValues with Blob values

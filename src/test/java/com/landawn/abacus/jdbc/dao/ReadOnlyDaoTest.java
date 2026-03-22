@@ -137,4 +137,11 @@ public class ReadOnlyDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.batchSave("insertUser", List.of(new TestEntity())));
         assertThrows(UnsupportedOperationException.class, () -> dao.batchSave("insertUser", List.of(new TestEntity()), 2));
     }
+
+    @Test
+    public void testPrepareCallableQuery_UnsupportedOperation() {
+        TestReadOnlyDao dao = Mockito.mock(TestReadOnlyDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareCallableQuery("{call read_only_proc()}"));
+    }
 }

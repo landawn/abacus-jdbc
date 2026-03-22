@@ -20,10 +20,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -112,6 +114,16 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
+    public void testLock_TimeoutReturnsNull() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 0, 0);
+
+        final String code = fixture.lock.lock("resource-timeout", 200L, 1L, 0L);
+
+        assertNull(code);
+        assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    @Test
     public void testLockRejectsEmptyTarget() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1);
 
@@ -154,6 +166,14 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
+    public void testUnlock_WrapsSQLException() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        when(fixture.connection.prepareStatement(anyString())).thenThrow(new java.sql.SQLException("broken"));
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> fixture.lock.unlock("resource-6", "code"));
+    }
+
+    @Test
     public void testClose() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 1);
         fixture.lock.lock("resource-6");
@@ -163,6 +183,17 @@ public class DBLockTest extends TestBase {
         verify(fixture.scheduledFuture).cancel(true);
         assertEquals(0, targetCodePool(fixture.lock).size());
         assertThrows(IllegalStateException.class, () -> fixture.lock.lock("resource-6"));
+    }
+
+    @Test
+    public void testClose_AlreadyClosed() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        setField(fixture.lock, "isClosed", true);
+
+        fixture.lock.close();
+
+        verify(fixture.scheduledFuture, never()).cancel(true);
+        assertEquals(0, targetCodePool(fixture.lock).size());
     }
 
     // Test public constants

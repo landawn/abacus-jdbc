@@ -115,8 +115,7 @@ public class JoinInfoTest extends TestBase {
 
     @Test
     public void testGetPropJoinInfo_InvalidProperty() {
-        assertThrows(IllegalArgumentException.class,
-                () -> JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "missing"));
+        assertThrows(IllegalArgumentException.class, () -> JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "missing"));
     }
 
     // Test getSelectSqlPlan returns valid plan
@@ -172,12 +171,29 @@ public class JoinInfoTest extends TestBase {
         @JoinedBy("orderId=OrderDetailEntity.orderId, productId=OrderDetailEntity.productId")
         private List<OrderDetailEntity> details;
 
-        public long getOrderId() { return orderId; }
-        public void setOrderId(long orderId) { this.orderId = orderId; }
-        public long getProductId() { return productId; }
-        public void setProductId(long productId) { this.productId = productId; }
-        public List<OrderDetailEntity> getDetails() { return details; }
-        public void setDetails(List<OrderDetailEntity> details) { this.details = details; }
+        public long getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(long orderId) {
+            this.orderId = orderId;
+        }
+
+        public long getProductId() {
+            return productId;
+        }
+
+        public void setProductId(long productId) {
+            this.productId = productId;
+        }
+
+        public List<OrderDetailEntity> getDetails() {
+            return details;
+        }
+
+        public void setDetails(List<OrderDetailEntity> details) {
+            this.details = details;
+        }
     }
 
     public static final class OrderDetailEntity {
@@ -185,12 +201,29 @@ public class JoinInfoTest extends TestBase {
         private long productId;
         private int qty;
 
-        public long getOrderId() { return orderId; }
-        public void setOrderId(long orderId) { this.orderId = orderId; }
-        public long getProductId() { return productId; }
-        public void setProductId(long productId) { this.productId = productId; }
-        public int getQty() { return qty; }
-        public void setQty(int qty) { this.qty = qty; }
+        public long getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(long orderId) {
+            this.orderId = orderId;
+        }
+
+        public long getProductId() {
+            return productId;
+        }
+
+        public void setProductId(long productId) {
+            this.productId = productId;
+        }
+
+        public int getQty() {
+            return qty;
+        }
+
+        public void setQty(int qty) {
+            this.qty = qty;
+        }
     }
 
     @Test
