@@ -1217,6 +1217,198 @@ public class NamedQueryTest extends TestBase {
         });
     }
 
+    // Tests for the index-by-map code path (parameterCount >= MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP = 5)
+    // These exercise the else branch that uses paramNameIndexMap instead of linear scan
+
+    private NamedQuery createManyParamQuery() throws Exception {
+        // 5 parameters triggers index-by-map path
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "b", "c", "d", "e"));
+        when(mockParsedSql.parameterCount()).thenReturn(5);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT * FROM t WHERE a=:a AND b=:b AND c=:c AND d=:d AND e=:e");
+        return new NamedQuery(mockPreparedStatement, mockParsedSql);
+    }
+
+    @Test
+    public void testSetNull_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setNull("a", Types.INTEGER);
+        verify(mockPreparedStatement).setNull(1, Types.INTEGER);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetNullWithTypeName_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setNull("b", Types.STRUCT, "MY_TYPE");
+        verify(mockPreparedStatement).setNull(2, Types.STRUCT, "MY_TYPE");
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetNull_MapPath_NotFound() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        assertThrows(IllegalArgumentException.class, () -> q.setNull("unknown", Types.INTEGER));
+    }
+
+    @Test
+    public void testSetBoolean_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setBoolean("a", true);
+        verify(mockPreparedStatement).setBoolean(1, true);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetBoolean_MapPath_NotFound() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        assertThrows(IllegalArgumentException.class, () -> q.setBoolean("unknown", true));
+    }
+
+    @Test
+    public void testSetByte_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setByte("c", (byte) 7);
+        verify(mockPreparedStatement).setByte(3, (byte) 7);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetByte_MapPath_NotFound() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        assertThrows(IllegalArgumentException.class, () -> q.setByte("unknown", (byte) 1));
+    }
+
+    @Test
+    public void testSetInt_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setInt("d", 42);
+        verify(mockPreparedStatement).setInt(4, 42);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetInt_MapPath_NotFound() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        assertThrows(IllegalArgumentException.class, () -> q.setInt("unknown", 1));
+    }
+
+    @Test
+    public void testSetLong_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setLong("e", 100L);
+        verify(mockPreparedStatement).setLong(5, 100L);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetFloat_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setFloat("a", 1.5f);
+        verify(mockPreparedStatement).setFloat(1, 1.5f);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetDouble_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setDouble("b", 3.14);
+        verify(mockPreparedStatement).setDouble(2, 3.14);
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetString_MapPath() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        NamedQuery result = q.setString("c", "hello");
+        verify(mockPreparedStatement).setString(3, "hello");
+        assertSame(q, result);
+    }
+
+    @Test
+    public void testSetString_MapPath_NotFound() throws Exception {
+        NamedQuery q = createManyParamQuery();
+        assertThrows(IllegalArgumentException.class, () -> q.setString("unknown", "val"));
+    }
+
+    // Test duplicate parameters in index-by-map path (size==2)
+    @Test
+    public void testSetInt_MapPath_DuplicateParam() throws Exception {
+        // 5 total params, "a" appears twice
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "b", "c", "d", "a"));
+        when(mockParsedSql.parameterCount()).thenReturn(5);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT 1");
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        q.setInt("a", 99);
+        verify(mockPreparedStatement).setInt(1, 99);
+        verify(mockPreparedStatement).setInt(5, 99);
+    }
+
+    // Test triple duplicate params in index-by-map path (size==3)
+    @Test
+    public void testSetBoolean_MapPath_TripleDuplicateParam() throws Exception {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "b", "c", "a", "a"));
+        when(mockParsedSql.parameterCount()).thenReturn(5);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT 1");
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        q.setBoolean("a", false);
+        verify(mockPreparedStatement).setBoolean(1, false);
+        verify(mockPreparedStatement).setBoolean(4, false);
+        verify(mockPreparedStatement).setBoolean(5, false);
+    }
+
+    // Test quad duplicate params in index-by-map path (size>=4, uses for loop)
+    @Test
+    public void testSetNull_MapPath_QuadDuplicateParam() throws Exception {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "a", "a", "a", "b"));
+        when(mockParsedSql.parameterCount()).thenReturn(5);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT 1");
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        q.setNull("a", Types.VARCHAR);
+        verify(mockPreparedStatement, times(4)).setNull(anyInt(), eq(Types.VARCHAR));
+    }
+
+    // Test addBatchParameters with null element
+    @Test
+    public void testAddBatchParameters_NullElement() throws Exception {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT :a");
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        List<Object> batch = new ArrayList<>();
+        batch.add(null);
+        q.addBatchParameters(batch.iterator());
+        verify(mockPreparedStatement).setObject(1, null);
+        verify(mockPreparedStatement).addBatch();
+    }
+
+    // Test addBatchParameters with Collection elements
+    @Test
+    public void testAddBatchParameters_CollectionElements() throws Exception {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "b"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT :a, :b");
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        List<Collection<?>> batch = new ArrayList<>();
+        batch.add(Arrays.asList("val1", "val2"));
+        batch.add(Arrays.asList("val3", "val4"));
+        q.addBatchParameters(batch.iterator());
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // Test addBatchParameters with Object[] elements
+    @Test
+    public void testAddBatchParameters_ArrayElements() throws Exception {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "b"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
+        when(mockParsedSql.originalSql()).thenReturn("SELECT :a, :b");
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        List<Object[]> batch = new ArrayList<>();
+        batch.add(new Object[] { "v1", 1 });
+        batch.add(new Object[] { "v2", 2 });
+        q.addBatchParameters(batch.iterator());
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
     // Helper test entity class
     private static class TestEntity {
         private String param1;

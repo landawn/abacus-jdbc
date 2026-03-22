@@ -78,4 +78,123 @@ public class AbstractQueryTest extends TestBase {
 
         assertThrows(IllegalStateException.class, () -> query.closeAfterExecution(false));
     }
+
+    // Tests for setBoolean with defaultValueForNull
+    @Test
+    public void testSetBoolean_WithDefault_Null() throws SQLException {
+        TestQuery result = query.setBoolean(1, (Boolean) null, true);
+        assertSame(query, result);
+        verify(preparedStatement).setBoolean(1, true);
+    }
+
+    @Test
+    public void testSetBoolean_WithDefault_NonNull() throws SQLException {
+        TestQuery result = query.setBoolean(1, Boolean.FALSE, true);
+        assertSame(query, result);
+        verify(preparedStatement).setBoolean(1, false);
+    }
+
+    // Tests for setByte with defaultValueForNull
+    @Test
+    public void testSetByte_Wrapper_Null() throws SQLException {
+        TestQuery result = query.setByte(1, (Byte) null);
+        assertSame(query, result);
+        verify(preparedStatement).setNull(1, Types.TINYINT);
+    }
+
+    @Test
+    public void testSetByte_Wrapper_NonNull() throws SQLException {
+        TestQuery result = query.setByte(1, (Byte) (byte) 5);
+        assertSame(query, result);
+        verify(preparedStatement).setByte(1, (byte) 5);
+    }
+
+    // Tests for setShort with null
+    @Test
+    public void testSetShort_Wrapper_Null() throws SQLException {
+        TestQuery result = query.setShort(1, (Short) null);
+        assertSame(query, result);
+        verify(preparedStatement).setNull(1, Types.SMALLINT);
+    }
+
+    @Test
+    public void testSetShort_Wrapper_NonNull() throws SQLException {
+        TestQuery result = query.setShort(1, (Short) (short) 100);
+        assertSame(query, result);
+        verify(preparedStatement).setShort(1, (short) 100);
+    }
+
+    @Test
+    public void testSetShort_WithDefault_Null() throws SQLException {
+        TestQuery result = query.setShort(1, (Short) null, (short) 0);
+        assertSame(query, result);
+        verify(preparedStatement).setShort(1, (short) 0);
+    }
+
+    @Test
+    public void testSetShort_WithDefault_NonNull() throws SQLException {
+        TestQuery result = query.setShort(1, (Short) (short) 7, (short) 0);
+        assertSame(query, result);
+        verify(preparedStatement).setShort(1, (short) 7);
+    }
+
+    // Tests for setInt with null wrapper
+    @Test
+    public void testSetInt_Wrapper_Null() throws SQLException {
+        TestQuery result = query.setInt(1, (Integer) null);
+        assertSame(query, result);
+        verify(preparedStatement).setNull(1, Types.INTEGER);
+    }
+
+    @Test
+    public void testSetInt_Wrapper_NonNull() throws SQLException {
+        TestQuery result = query.setInt(1, (Integer) 42);
+        assertSame(query, result);
+        verify(preparedStatement).setInt(1, 42);
+    }
+
+    // Tests for setLong with null wrapper
+    @Test
+    public void testSetLong_Wrapper_Null() throws SQLException {
+        TestQuery result = query.setLong(1, (Long) null);
+        assertSame(query, result);
+        verify(preparedStatement).setNull(1, Types.BIGINT);
+    }
+
+    @Test
+    public void testSetLong_Wrapper_NonNull() throws SQLException {
+        TestQuery result = query.setLong(1, (Long) 1000L);
+        assertSame(query, result);
+        verify(preparedStatement).setLong(1, 1000L);
+    }
+
+    // Tests for setFloat with null wrapper
+    @Test
+    public void testSetFloat_Wrapper_Null() throws SQLException {
+        TestQuery result = query.setFloat(1, (Float) null);
+        assertSame(query, result);
+        verify(preparedStatement).setNull(1, Types.FLOAT);
+    }
+
+    @Test
+    public void testSetFloat_Wrapper_NonNull() throws SQLException {
+        TestQuery result = query.setFloat(1, (Float) 1.5f);
+        assertSame(query, result);
+        verify(preparedStatement).setFloat(1, 1.5f);
+    }
+
+    // Tests for setDouble with null wrapper
+    @Test
+    public void testSetDouble_Wrapper_Null() throws SQLException {
+        TestQuery result = query.setDouble(1, (Double) null);
+        assertSame(query, result);
+        verify(preparedStatement).setNull(1, Types.DOUBLE);
+    }
+
+    @Test
+    public void testSetDouble_Wrapper_NonNull() throws SQLException {
+        TestQuery result = query.setDouble(1, (Double) 3.14);
+        assertSame(query, result);
+        verify(preparedStatement).setDouble(1, 3.14);
+    }
 }

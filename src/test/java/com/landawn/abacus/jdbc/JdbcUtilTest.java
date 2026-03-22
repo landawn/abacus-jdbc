@@ -1694,6 +1694,309 @@ public class JdbcUtilTest extends TestBase {
         }
     }
 
+    // Tests for DB version detection - MySQL variants
+    @Test
+    public void testGetDBProductInfo_MySQL55() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("5.5.62");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_5_5, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL56() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("5.6.51");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_5_6, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL57() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("5.7.41");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_5_7, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL58() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("5.8.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_5_8, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL59() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("5.9.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_5_9, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL6() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("6.0.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_6, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL7() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("7.0.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_7, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL9() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.0.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_9, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQL10() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("10.0.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_10, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_MySQLOthers() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("4.0.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.MySQL_OTHERS, info.version());
+    }
+
+    // Tests for DB version detection - PostgreSQL variants
+    @Test
+    public void testGetDBProductInfo_PostgreSQL92() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.2.24");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_9_2, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_PostgreSQL93() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.3.25");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_9_3, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_PostgreSQL94() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.4.26");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_9_4, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_PostgreSQL95() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("9.5.25");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_9_5, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_PostgreSQL10() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("10.23");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_10, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_PostgreSQL11() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("11.21");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_11, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_PostgreSQLOthers() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("7.4.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.PostgreSQL_OTHERS, info.version());
+    }
+
+    // Tests for DB version detection - other vendors
+    @Test
+    public void testGetDBProductInfo_HSQLDB() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("HSQL Database Engine");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("2.7.1");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.HSQLDB, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_Oracle() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("Oracle");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("19c");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.Oracle, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_DB2() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("DB2/LINUXX8664");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("11.5");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.DB2, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_SQLServer() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("Microsoft SQL SERVER");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("15.00");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.SQLServer, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_Others() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("SomeUnknownDB");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("1.0");
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+        assertEquals(DBVersion.OTHERS, info.version());
+    }
+
+    // Test closeQuietly with statement+connection flag and exception getting statement
+    @Test
+    public void testCloseQuietlyWithStatementAndConnection_StatementSQLException() throws SQLException {
+        doThrow(new SQLException("getStatement failed")).when(mockResultSet).getStatement();
+        // Should not throw even when getStatement() fails
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, true, true));
+    }
+
+    // Test closeQuietly(rs, stmt, conn) convenience method
+    @Test
+    public void testCloseQuietlyStatement() throws SQLException {
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockStatement));
+        verify(mockStatement).close();
+    }
+
+    @Test
+    public void testCloseQuietlyConnection() throws SQLException {
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockConnection));
+        verify(mockConnection).close();
+    }
+
+    // Test callNotInStartedTransaction when inside a transaction - runs outside the transaction
+    @Test
+    public void testCallNotInStartedTransaction_WhileInTransaction() throws SQLException {
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
+        try {
+            // The call should execute outside the active transaction
+            String result = JdbcUtil.callNotInStartedTransaction(mockDataSource, () -> "outsideResult");
+            assertEquals("outsideResult", result);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    @Test
+    public void testCallNotInStartedTransactionWithDS_WhileInTransaction() throws SQLException {
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
+        try {
+            String result = JdbcUtil.callNotInStartedTransaction(mockDataSource, ds -> {
+                assertNotNull(ds);
+                return "dsResult";
+            });
+            assertEquals("dsResult", result);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    @Test
+    public void testRunNotInStartedTransaction_WhileInTransaction() throws SQLException {
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
+        try {
+            boolean[] ran = { false };
+            JdbcUtil.runNotInStartedTransaction(mockDataSource, () -> ran[0] = true);
+            assertTrue(ran[0]);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    @Test
+    public void testRunNotInStartedTransactionWithDS_WhileInTransaction() throws SQLException {
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
+        try {
+            boolean[] ran = { false };
+            JdbcUtil.runNotInStartedTransaction(mockDataSource, ds -> {
+                assertNotNull(ds);
+                ran[0] = true;
+            });
+            assertTrue(ran[0]);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // Test DEFAULT_STMT_SETTER handles array of parameters
+    @Test
+    public void testDefaultStmtSetter() throws SQLException {
+        Object[] params = { "value1", 42, true };
+        assertDoesNotThrow(() -> JdbcUtil.DEFAULT_STMT_SETTER.accept(
+                JdbcUtil.prepareQuery(mockConnection, "SELECT 1"), params));
+    }
+
+    // Test getAllColumnValues with Blob values
+    @Test
+    public void testGetAllColumnValues_BlobColumn() throws SQLException {
+        byte[] data = "blobdata".getBytes();
+        Blob blob1 = mock(Blob.class);
+        Blob blob2 = mock(Blob.class);
+        when(blob1.length()).thenReturn((long) data.length);
+        when(blob1.getBytes(1, data.length)).thenReturn(data);
+        when(blob2.length()).thenReturn((long) data.length);
+        when(blob2.getBytes(1, data.length)).thenReturn(data);
+
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getObject(1)).thenReturn(blob1);
+        when(mockResultSet.getBlob(1)).thenReturn(blob2);
+
+        List<?> values = JdbcUtil.getAllColumnValues(mockResultSet, 1);
+        assertEquals(2, values.size());
+    }
+
+    // Test prepareQuery with Connection overloads
+    @Test
+    public void testPrepareQuery_WithConnection() throws SQLException {
+        PreparedQuery query = JdbcUtil.prepareQuery(mockConnection, "SELECT 1");
+        assertNotNull(query);
+        query.close();
+    }
+
+    @Test
+    public void testPrepareNamedQuery_WithConnection() throws SQLException {
+        NamedQuery query = JdbcUtil.prepareNamedQuery(mockConnection, "SELECT * FROM t WHERE id = :id");
+        assertNotNull(query);
+        query.close();
+    }
+
+    @Test
+    public void testPrepareCallableQuery_WithConnection() throws SQLException {
+        CallableQuery query = JdbcUtil.prepareCallableQuery(mockConnection, "{call proc(?)}");
+        assertNotNull(query);
+        query.close();
+    }
+
     // Test entity class for various tests
     public static class TestEntity {
         private Long id;

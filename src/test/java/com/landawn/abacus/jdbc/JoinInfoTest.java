@@ -17,9 +17,12 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +34,9 @@ import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.query.SqlBuilder.PSC;
+import com.landawn.abacus.util.Tuple.Tuple2;
+import com.landawn.abacus.util.function.BiFunction;
+import com.landawn.abacus.util.function.Function;
 
 @Tag("2025")
 public class JoinInfoTest extends TestBase {
@@ -111,5 +117,104 @@ public class JoinInfoTest extends TestBase {
     public void testGetPropJoinInfo_InvalidProperty() {
         assertThrows(IllegalArgumentException.class,
                 () -> JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "missing"));
+    }
+
+    // Test getSelectSqlPlan returns valid plan
+    @Test
+    public void testGetSelectSqlPlan() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        assertNotNull(plan);
+        // SQL should contain the referenced table
+        String sql = plan._1.apply(null);
+        assertNotNull(sql);
+    }
+
+    // Test getSelectSqlPlan with columns
+    @Test
+    public void testGetSelectSqlPlan_WithColumns() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        String sql = plan._1.apply(Arrays.asList("id", "userId"));
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
+
+    // Test getBatchSelectSqlPlan returns valid plan
+    @Test
+    public void testGetBatchSelectSqlPlan() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> batchPlan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        assertNotNull(batchPlan);
+        String sql = batchPlan._1.apply(null, 3);
+        assertNotNull(sql);
+    }
+
+    // Test PAC SqlBuilder also works
+    @Test
+    public void testGetSelectSqlPlan_PACBuilder() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(com.landawn.abacus.query.SqlBuilder.PAC.class);
+        assertNotNull(plan);
+        String sql = plan._1.apply(null);
+        assertNotNull(sql);
+    }
+
+    // Entity with 2-column join (exercises srcPropInfos.length == 2 code path)
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface OrderItemDao extends Dao<OrderItemEntity, PSC, OrderItemDao> {
+    }
+
+    public static final class OrderItemEntity {
+        private long orderId;
+        private long productId;
+
+        @JoinedBy("orderId=OrderDetailEntity.orderId, productId=OrderDetailEntity.productId")
+        private List<OrderDetailEntity> details;
+
+        public long getOrderId() { return orderId; }
+        public void setOrderId(long orderId) { this.orderId = orderId; }
+        public long getProductId() { return productId; }
+        public void setProductId(long productId) { this.productId = productId; }
+        public List<OrderDetailEntity> getDetails() { return details; }
+        public void setDetails(List<OrderDetailEntity> details) { this.details = details; }
+    }
+
+    public static final class OrderDetailEntity {
+        private long orderId;
+        private long productId;
+        private int qty;
+
+        public long getOrderId() { return orderId; }
+        public void setOrderId(long orderId) { this.orderId = orderId; }
+        public long getProductId() { return productId; }
+        public void setProductId(long productId) { this.productId = productId; }
+        public int getQty() { return qty; }
+        public void setQty(int qty) { this.qty = qty; }
+    }
+
+    @Test
+    public void testJoinInfo_TwoColumnJoin() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item", "details");
+        assertNotNull(joinInfo);
+        assertEquals("details", joinInfo.joinPropInfo.name);
+    }
+
+    @Test
+    public void testGetSelectSqlPlan_TwoColumnJoin() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item", "details");
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        assertNotNull(plan);
+        String sql = plan._1.apply(null);
+        assertNotNull(sql);
+    }
+
+    @Test
+    public void testGetBatchSelectSqlPlan_TwoColumnJoin() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item", "details");
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        assertNotNull(plan);
+        String sql = plan._1.apply(null, 2);
+        assertNotNull(sql);
     }
 }
