@@ -62,12 +62,12 @@ import org.springframework.context.ApplicationContext;
  *
  * @see org.springframework.context.ApplicationContext
  */
-final class SpringApplicationContext {
+public final class SpringApplicationContext {
 
     @Autowired // NOSONAR
     private ApplicationContext appContext;
 
-    SpringApplicationContext() {
+    public SpringApplicationContext() {
     }
 
     /**

@@ -164,6 +164,10 @@ public class JoinInfoTest extends TestBase {
     interface OrderItemDao extends Dao<OrderItemEntity, PSC, OrderItemDao> {
     }
 
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface UserRoleUserDao extends Dao<UserRoleUserEntity, PSC, UserRoleUserDao> {
+    }
+
     public static final class OrderItemEntity {
         private long orderId;
         private long productId;
@@ -249,5 +253,93 @@ public class JoinInfoTest extends TestBase {
         assertNotNull(plan);
         String sql = plan._1.apply(null, 2);
         assertNotNull(sql);
+    }
+
+    @Test
+    public void testJoinInfo_ManyToManyJoin() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+
+        assertNotNull(joinInfo);
+        assertTrue(joinInfo.isManyToManyJoin());
+        assertEquals("roles", joinInfo.joinPropInfo.name);
+        assertEquals(RoleLookupEntity.class, joinInfo.referencedEntityClass);
+    }
+
+    @Test
+    public void testGetBatchSelectSqlPlan_ManyToManyJoin() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+        Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+
+        assertNotNull(plan);
+
+        String sql = plan._1.apply(List.of("roleId"), 2);
+
+        assertNotNull(sql);
+        assertTrue(sql.contains("JOIN"));
+    }
+}
+
+final class UserRoleUserEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public List<RoleLookupEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(final List<RoleLookupEntity> roles) {
+        this.roles = roles;
+    }
+}
+
+final class RoleLookupEntity {
+    private long roleId;
+    private String name;
+
+    public long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(final long roleId) {
+        this.roleId = roleId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(final String name) {
+        this.name = name;
+    }
+}
+
+final class UserRoleLink {
+    private long userId;
+    private long roleId;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(final long roleId) {
+        this.roleId = roleId;
     }
 }

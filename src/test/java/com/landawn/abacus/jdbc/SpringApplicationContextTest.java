@@ -2,10 +2,12 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,12 @@ public class SpringApplicationContextTest extends TestBase {
     @Test
     public void testGetBean_NullApplicationContext() {
         assertNull(target.getBean("beanName"));
+    }
+
+    @Test
+    public void testTypeAndConstructorArePublic() throws NoSuchMethodException {
+        assertTrue(Modifier.isPublic(SpringApplicationContext.class.getModifiers()));
+        assertTrue(Modifier.isPublic(SpringApplicationContext.class.getDeclaredConstructor().getModifiers()));
     }
 
     // Verifies typed bean lookup delegates to the injected ApplicationContext.

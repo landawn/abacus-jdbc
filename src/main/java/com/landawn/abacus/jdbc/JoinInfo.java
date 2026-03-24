@@ -315,9 +315,11 @@ public final class JoinInfo {
 
             final Class<?> middleEntityClass = tmpMiddleEntityClass;
             final ParserUtil.BeanInfo middleEntityInfo = ParserUtil.getBeanInfo(middleEntityClass);
+            final String leftMiddlePropName = left[1].substring(dotIndexInLeft1 + 1);
+            final String rightMiddlePropName = right[0].substring(right[0].indexOf('.') + 1);
 
-            final PropInfo leftMiddlePropInfo = middleEntityInfo.getPropInfo(left[1]);
-            final PropInfo rightMiddlePropInfo = middleEntityInfo.getPropInfo(right[0]);
+            final PropInfo leftMiddlePropInfo = middleEntityInfo.getPropInfo(leftMiddlePropName);
+            final PropInfo rightMiddlePropInfo = middleEntityInfo.getPropInfo(rightMiddlePropName);
 
             if (leftMiddlePropInfo == null) {
                 throw new IllegalArgumentException("Invalid JoinedBy value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
