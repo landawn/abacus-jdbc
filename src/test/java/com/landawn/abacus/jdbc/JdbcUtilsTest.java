@@ -553,10 +553,15 @@ public class JdbcUtilsTest extends TestBase {
         // Setup
         DataSource targetDataSource = mock(DataSource.class);
         Connection targetConnection = mock(Connection.class);
+        DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
 
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(targetPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -568,7 +573,7 @@ public class JdbcUtilsTest extends TestBase {
         // Verify
         assertEquals(1, result);
         verify(mockDataSource, times(2)).getConnection();
-        verify(targetDataSource).getConnection();
+        verify(targetDataSource, times(2)).getConnection();
     }
 
     @Test
@@ -576,10 +581,15 @@ public class JdbcUtilsTest extends TestBase {
         // Setup
         DataSource targetDataSource = mock(DataSource.class);
         Connection targetConnection = mock(Connection.class);
+        DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
 
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(targetPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -593,14 +603,50 @@ public class JdbcUtilsTest extends TestBase {
     }
 
     @Test
+    public void testCopyBetweenDataSourcesUsesTargetDialectForGeneratedInsertSql() throws SQLException {
+        final DataSource targetDataSource = mock(DataSource.class);
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final ResultSet targetResultSet = mock(ResultSet.class);
+        final ResultSetMetaData targetResultSetMetaData = mock(ResultSetMetaData.class);
+
+        when(targetDataSource.getConnection()).thenReturn(targetConnection);
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(targetPreparedStatement.executeQuery()).thenReturn(targetResultSet);
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+        when(targetResultSet.getMetaData()).thenReturn(targetResultSetMetaData);
+        when(targetResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(targetResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+
+        final long result = JdbcUtils.copy(mockDataSource, targetDataSource, "source_table", "target_table");
+
+        assertEquals(1, result);
+        verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
+        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(`created-date`) VALUES (?)");
+    }
+
+    @Test
     public void testCopyWithSelectedColumns() throws SQLException {
         // Setup
         DataSource targetDataSource = mock(DataSource.class);
         Connection targetConnection = mock(Connection.class);
+        DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
         Collection<String> selectColumns = Arrays.asList("col1", "col2");
 
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
@@ -612,6 +658,28 @@ public class JdbcUtilsTest extends TestBase {
 
         // Verify
         assertEquals(1, result);
+    }
+
+    @Test
+    public void testCopyWithSelectedColumnsUsesDialectSpecificQuoting() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final Collection<String> selectColumns = List.of("created-date");
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = JdbcUtils.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumns);
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement("SELECT `created-date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
     }
 
     @Test
@@ -669,9 +737,14 @@ public class JdbcUtilsTest extends TestBase {
     public void testCopyBetweenConnections() throws SQLException {
         // Setup
         Connection targetConnection = mock(Connection.class);
+        DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
 
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(targetPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true, true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -682,6 +755,36 @@ public class JdbcUtilsTest extends TestBase {
 
         // Verify
         assertEquals(2, result);
+    }
+
+    @Test
+    public void testCopyBetweenConnectionsUsesTargetDialectForGeneratedInsertSql() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final ResultSet targetResultSet = mock(ResultSet.class);
+        final ResultSetMetaData targetResultSetMetaData = mock(ResultSetMetaData.class);
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(targetPreparedStatement.executeQuery()).thenReturn(targetResultSet);
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+        when(targetResultSet.getMetaData()).thenReturn(targetResultSetMetaData);
+        when(targetResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(targetResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+
+        final long result = JdbcUtils.copy(mockConnection, targetConnection, "source_table", "target_table");
+
+        assertEquals(1, result);
+        verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
+        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(`created-date`) VALUES (?)");
     }
 
     @Test

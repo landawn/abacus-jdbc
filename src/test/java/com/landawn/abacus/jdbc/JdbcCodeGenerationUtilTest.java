@@ -84,6 +84,52 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateSelectSql_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "order-history");
+
+        assertEquals("SELECT id, created_at FROM `order-history`", sql);
+    }
+
+    @Test
+    public void testGenerateInsertSql_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
+
+        final String sql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order-history");
+
+        assertEquals("INSERT INTO `order-history`(id, created_at) VALUES (?, ?)", sql);
+    }
+
+    @Test
     public void testGenerateSelectSql_DataSourceWrapsSQLException() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
@@ -135,6 +181,42 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history");
         assertNotNull(result);
         assertTrue(result.contains("OrderHistory") || result.contains("class "));
+    }
+
+    @Test
+    public void testGenerateEntityClass_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        when(metaData.getPrimaryKeys(null, null, "order-history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnName(1)).thenReturn("id");
+        when(rsMetaData.getColumnName(2)).thenReturn("created_at");
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
+        when(rsMetaData.getColumnType(1)).thenReturn(Types.BIGINT);
+        when(rsMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(rsMetaData.getColumnClassName(1)).thenReturn("java.lang.Long");
+        when(rsMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "order-history");
+
+        assertNotNull(result);
+        assertTrue(result.contains("OrderHistory"));
     }
 
     // Test generateEntityClass(Connection, tableName, EntityCodeConfig) overload

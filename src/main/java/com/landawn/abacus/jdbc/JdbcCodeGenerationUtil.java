@@ -235,7 +235,11 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
-        return generateEntityClass(ds, tableName, createQueryByTableName(tableName), config);
+        try (Connection conn = ds.getConnection()) {
+            return generateEntityClass(conn, tableName, createQueryByTableName(conn, tableName), config);
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
     }
 
     /**
@@ -328,7 +332,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
-        return generateEntityClass(conn, tableName, createQueryByTableName(tableName), config);
+        return generateEntityClass(conn, tableName, createQueryByTableName(conn, tableName), config);
     }
 
     /**
@@ -803,8 +807,12 @@ public final class JdbcCodeGenerationUtil {
         }
     }
 
-    private static String createQueryByTableName(final String tableName) {
-        return "SELECT * FROM " + tableName + " WHERE 1 > 2"; // NOSONAR
+    private static String createQueryByTableName(final Connection conn, final String tableName) {
+        return createQueryByTableName(tableName, JdbcUtil.getDBProductInfo(conn));
+    }
+
+    private static String createQueryByTableName(final String tableName, final DBProductInfo dbProductInfo) {
+        return "SELECT * FROM " + checkTableName(tableName, dbProductInfo) + " WHERE 1 > 2";
     }
 
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
@@ -897,7 +905,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateSelectSql(final Connection conn, final String tableName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -963,7 +971,7 @@ public final class JdbcCodeGenerationUtil {
             final String whereClause) throws UncheckedSQLException {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1026,7 +1034,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateInsertSql(final Connection conn, final String tableName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1092,7 +1100,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1156,7 +1164,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateNamedInsertSql(final Connection conn, final String tableName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1223,7 +1231,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1289,7 +1297,7 @@ public final class JdbcCodeGenerationUtil {
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1349,7 +1357,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1439,7 +1447,7 @@ public final class JdbcCodeGenerationUtil {
             final Collection<String> keyColumnNames, final String whereClause) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1528,7 +1536,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1590,7 +1598,7 @@ public final class JdbcCodeGenerationUtil {
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
@@ -1675,7 +1683,7 @@ public final class JdbcCodeGenerationUtil {
             final Collection<String> keyColumnNames, final String whereClause) {
         final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
-        final String query = "SELECT * FROM " + tableName + " WHERE 1 > 2";
+        final String query = createQueryByTableName(tableName, dbProductInfo);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {

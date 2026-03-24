@@ -52,6 +52,7 @@ import com.landawn.abacus.util.Objectory;
 import com.landawn.abacus.util.SK;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.stream.CharStream;
 
 /**
  * Utility class for database import/export operations, CSV processing, and data copying between databases.
@@ -2468,19 +2469,18 @@ public final class JdbcUtils {
             final String targetTableName, final int batchSize) throws SQLException {
         String selectSql = null;
         String insertSql = null;
-        Connection conn = null;
+        Connection sourceConn = null;
+        Connection targetConn = null;
 
         try {
-            conn = sourceDataSource.getConnection();
+            sourceConn = sourceDataSource.getConnection();
+            targetConn = targetDataSource.getConnection();
 
-            selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, sourceTableName);
-            insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, sourceTableName);
-
-            if (!sourceTableName.equals(targetTableName)) {
-                insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
-            }
+            selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
+            insertSql = JdbcCodeGenerationUtil.generateInsertSql(targetConn, targetTableName);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+            JdbcUtil.releaseConnection(targetConn, targetDataSource);
         }
 
         return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
@@ -2543,19 +2543,18 @@ public final class JdbcUtils {
             final String targetTableName, final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
         String selectSql = null;
         String insertSql = null;
-        Connection conn = null;
+        Connection sourceConn = null;
+        Connection targetConn = null;
 
         try {
-            conn = sourceDataSource.getConnection();
+            sourceConn = sourceDataSource.getConnection();
+            targetConn = targetDataSource.getConnection();
 
-            selectSql = generateSelectSql(conn, sourceTableName, selectColumnNames);
-            insertSql = generateInsertSql(conn, sourceTableName, selectColumnNames);
-
-            if (!sourceTableName.equals(targetTableName)) {
-                insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
-            }
+            selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
+            insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);
         } finally {
-            JdbcUtil.releaseConnection(conn, sourceDataSource);
+            JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+            JdbcUtil.releaseConnection(targetConn, targetDataSource);
         }
 
         return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
@@ -2801,11 +2800,7 @@ public final class JdbcUtils {
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final int batchSize) throws SQLException {
         final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
-        String insertSql = JdbcCodeGenerationUtil.generateInsertSql(sourceConn, sourceTableName);
-
-        if (!sourceTableName.equals(targetTableName)) {
-            insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
-        }
+        final String insertSql = JdbcCodeGenerationUtil.generateInsertSql(targetConn, targetTableName);
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
     }
@@ -2874,11 +2869,7 @@ public final class JdbcUtils {
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final Collection<String> selectColumnNames, final int batchSize) throws SQLException {
         final String selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
-        String insertSql = generateInsertSql(sourceConn, sourceTableName, selectColumnNames);
-
-        if (!sourceTableName.equals(targetTableName)) {
-            insertSql = Strings.replaceFirstIgnoreCase(insertSql, sourceTableName, targetTableName);
-        }
+        final String insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
     }
@@ -2888,6 +2879,7 @@ public final class JdbcUtils {
             return JdbcCodeGenerationUtil.generateSelectSql(conn, tableName);
         }
 
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.SELECT).append(SK._SPACE);
@@ -2897,10 +2889,14 @@ public final class JdbcUtils {
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(iter.next()).append(SK.COMMA_SPACE);
+            sb.append(checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(iter.next()).append(SK._SPACE).append(SK.FROM).append(SK._SPACE).append(tableName);
+        sb.append(checkColumnName(iter.next(), dbProductInfo))
+                .append(SK._SPACE)
+                .append(SK.FROM)
+                .append(SK._SPACE)
+                .append(checkTableName(tableName, dbProductInfo));
 
         return sb.toString();
     }
@@ -2910,19 +2906,20 @@ public final class JdbcUtils {
             return JdbcCodeGenerationUtil.generateInsertSql(conn, tableName);
         }
 
+        final DBProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final StringBuilder sb = new StringBuilder();
 
-        sb.append(SK.INSERT).append(SK._SPACE).append(SK.INTO).append(SK._SPACE).append(tableName).append(SK._PARENTHESIS_L);
+        sb.append(SK.INSERT).append(SK._SPACE).append(SK.INTO).append(SK._SPACE).append(checkTableName(tableName, dbProductInfo)).append(SK._PARENTHESIS_L);
 
         final Iterator<String> iter = selectColumnNames.iterator();
         final int lastIdx = selectColumnNames.size() - 1;
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(iter.next()).append(SK.COMMA_SPACE);
+            sb.append(checkColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(iter.next())
+        sb.append(checkColumnName(iter.next(), dbProductInfo))
                 .append(SK._PARENTHESIS_R)
                 .append(SK._SPACE)
                 .append(SK.VALUES)
@@ -2930,6 +2927,24 @@ public final class JdbcUtils {
                 .append(Strings.repeat("?", selectColumnNames.size(), ", ", "(", ")"));
 
         return sb.toString();
+    }
+
+    private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {
+        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+
+        return CharStream.of(tableName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? tableName
+                : Strings.wrap(tableName, quote);
+    }
+
+    private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {
+        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+
+        return CharStream.of(columnName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? columnName
+                : Strings.wrap(columnName, quote);
+    }
+
+    private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {
+        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.productName(), "MySQL", "MariaDB") ? "`" : "\"";
     }
 
     /**
