@@ -1740,7 +1740,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, "tableName");
 
-        final String[] nameParts = tableName.trim().split("\\.");
+        final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
         final String catalog;
         final String schema;
         final String table;
@@ -1749,17 +1749,17 @@ public final class JdbcUtil {
         if (nameParts.length == 1) {
             catalog = conn.getCatalog();
             schema = conn.getSchema();
-            table = stripIdentifierDelimiters(nameParts[0]);
+            table = nameParts[0];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, null, table);
         } else if (nameParts.length == 2) {
             catalog = conn.getCatalog();
-            schema = stripIdentifierDelimiters(nameParts[0]);
-            table = stripIdentifierDelimiters(nameParts[1]);
+            schema = nameParts[0];
+            table = nameParts[1];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, schema, table);
         } else if (nameParts.length == 3) {
-            catalog = stripIdentifierDelimiters(nameParts[0]);
-            schema = stripIdentifierDelimiters(nameParts[1]);
-            table = stripIdentifierDelimiters(nameParts[2]);
+            catalog = nameParts[0];
+            schema = nameParts[1];
+            table = nameParts[2];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(catalog, schema, table);
         } else {
             throw new IllegalArgumentException("Invalid table name: " + tableName);
@@ -7123,7 +7123,7 @@ public final class JdbcUtil {
         N.checkArgNotBlank(tableName, "tableName");
 
         try {
-            final String[] nameParts = tableName.trim().split("\\.");
+            final String[] nameParts = splitQualifiedSqlIdentifier(tableName, "tableName");
             final String catalog;
             final String schema;
             final String table;
@@ -7131,15 +7131,15 @@ public final class JdbcUtil {
             if (nameParts.length == 1) {
                 catalog = null;
                 schema = null;
-                table = stripIdentifierDelimiters(nameParts[0]);
+                table = nameParts[0];
             } else if (nameParts.length == 2) {
                 catalog = null;
-                schema = stripIdentifierDelimiters(nameParts[0]);
-                table = stripIdentifierDelimiters(nameParts[1]);
+                schema = nameParts[0];
+                table = nameParts[1];
             } else if (nameParts.length == 3) {
-                catalog = stripIdentifierDelimiters(nameParts[0]);
-                schema = stripIdentifierDelimiters(nameParts[1]);
-                table = stripIdentifierDelimiters(nameParts[2]);
+                catalog = nameParts[0];
+                schema = nameParts[1];
+                table = nameParts[2];
             } else {
                 throw new IllegalArgumentException("Invalid table name: " + tableName);
             }
@@ -7261,21 +7261,90 @@ public final class JdbcUtil {
         return trimmed;
     }
 
+    static String[] splitQualifiedSqlIdentifier(final String qualifiedName, final String argName) {
+        N.checkArgNotBlank(qualifiedName, argName);
+
+        final String trimmed = qualifiedName.trim();
+        final List<String> parts = new ArrayList<>(3);
+        final StringBuilder sb = new StringBuilder(trimmed.length());
+        char closingQuote = 0;
+
+        for (int i = 0, len = trimmed.length(); i < len; i++) {
+            final char ch = trimmed.charAt(i);
+
+            if (closingQuote == 0) {
+                if (ch == '.') {
+                    addQualifiedIdentifierPart(parts, sb, qualifiedName, argName);
+                    continue;
+                }
+
+                if (isBlank(sb)) {
+                    if (ch == '"' || ch == '`') {
+                        closingQuote = ch;
+                    } else if (ch == '[') {
+                        closingQuote = ']';
+                    }
+                }
+
+                sb.append(ch);
+            } else {
+                sb.append(ch);
+
+                if (ch == closingQuote) {
+                    if (i + 1 < len && trimmed.charAt(i + 1) == closingQuote) {
+                        sb.append(trimmed.charAt(++i));
+                    } else {
+                        closingQuote = 0;
+                    }
+                }
+            }
+        }
+
+        if (closingQuote != 0) {
+            throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+        }
+
+        addQualifiedIdentifierPart(parts, sb, qualifiedName, argName);
+
+        if (parts.isEmpty() || parts.size() > 3) {
+            throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+        }
+
+        return parts.toArray(String[]::new);
+    }
+
+    private static boolean isBlank(final CharSequence cs) {
+        for (int i = 0, len = cs.length(); i < len; i++) {
+            if (!Character.isWhitespace(cs.charAt(i))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName) {
+        final String part = stripIdentifierDelimiters(sb.toString());
+
+        if (Strings.isEmpty(part)) {
+            throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
+        }
+
+        parts.add(part);
+        sb.setLength(0);
+    }
+
     static String toQualifiedSqlIdentifier(final Connection conn, final String qualifiedName, final String argName) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(qualifiedName, argName);
 
-        final String[] rawNameParts = qualifiedName.trim().split("\\.");
-
-        if (rawNameParts.length == 0 || rawNameParts.length > 3) {
-            throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);
-        }
+        final String[] rawNameParts = splitQualifiedSqlIdentifier(qualifiedName, argName);
 
         final String identifierQuote = normalizeIdentifierQuote(conn.getMetaData());
         final StringBuilder sb = new StringBuilder(qualifiedName.length() + 6);
 
         for (int i = 0, len = rawNameParts.length; i < len; i++) {
-            final String part = stripIdentifierDelimiters(rawNameParts[i]);
+            final String part = rawNameParts[i];
 
             if (Strings.isEmpty(part)) {
                 throw new IllegalArgumentException("Invalid " + argName + ": " + qualifiedName);

@@ -683,6 +683,50 @@ public class JdbcUtilsTest extends TestBase {
     }
 
     @Test
+    public void testCopyWithSelectedColumnsQuotesQualifiedTableNamesPerPart() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final Collection<String> selectColumns = List.of("created-date");
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = JdbcUtils.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumns);
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales`.`source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO \"archive\".\"target-table\"(\"created-date\") VALUES (?)");
+    }
+
+    @Test
+    public void testCopyWithSelectedColumnsPreservesQuotedDotsWithinSingleIdentifier() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
+        final Collection<String> selectColumns = List.of("created-date");
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = JdbcUtils.copy(mockConnection, targetConnection, "\"sales.source-table\"", "\"archive.target-table\"", selectColumns);
+
+        assertEquals(1, result);
+        verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales.source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO \"archive.target-table\"(\"created-date\") VALUES (?)");
+    }
+
+    @Test
     public void testCopyWithCustomSQL() throws SQLException {
         // Setup
         DataSource targetDataSource = mock(DataSource.class);
@@ -951,5 +995,122 @@ public class JdbcUtilsTest extends TestBase {
         assertEquals(2, result);
         verify(targetPreparedStatement, times(2)).executeBatch();
         assertTrue((endTime - startTime) >= 50); // At least one interval delay
+    }
+
+    // importData(Dataset, PreparedStatement, Map) - delegates to batch version (line 700-701)
+    @Test
+    public void testImportDataWithDatasetPreparedStatementAndTypeMap() throws SQLException {
+        Map<String, Type> columnTypeMap = new HashMap<>();
+        columnTypeMap.put("col1", N.typeOf(String.class));
+
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.getColumnIndex("col1")).thenReturn(0);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, columnTypeMap);
+
+        assertEquals(1, result);
+        verify(mockPreparedStatement).addBatch();
+        verify(mockPreparedStatement).executeBatch();
+    }
+
+    // exportCsv(PreparedStatement, File) - delegates to column-filtering version (line 2012-2013)
+    @Test
+    public void testExportCsvFromPreparedStatementToFile() throws SQLException, IOException {
+        File tempFile = File.createTempFile("export_ps", ".csv");
+        tempFile.deleteOnExit();
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("val1");
+
+        long result = JdbcUtils.exportCsv(mockPreparedStatement, tempFile);
+
+        assertEquals(1, result);
+        assertTrue(tempFile.exists());
+        verify(mockPreparedStatement).executeQuery();
+    }
+
+    // exportCsv(ResultSet, File) - delegates to column-filtering version (line 2087-2088)
+    @Test
+    public void testExportCsvFromResultSetToFile() throws SQLException, IOException {
+        File tempFile = File.createTempFile("export_rs", ".csv");
+        tempFile.deleteOnExit();
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(42);
+
+        long result = JdbcUtils.exportCsv(mockResultSet, tempFile);
+
+        assertEquals(1, result);
+        assertTrue(tempFile.exists());
+    }
+
+    // exportCsv(DataSource, String, Writer) - delegates to Connection version (line 2164-2172)
+    @Test
+    public void testExportCsvFromDataSourceToWriter() throws SQLException, IOException {
+        Writer writer = new StringWriter();
+
+        when(mockConnection.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(mockPreparedStatement);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("data");
+
+        long result = JdbcUtils.exportCsv(mockDataSource, "SELECT col1 FROM t", writer);
+
+        assertEquals(1, result);
+        assertTrue(writer.toString().contains("col1"));
+        verify(mockDataSource).getConnection();
+    }
+
+    // exportCsv(Connection, String, Writer) - parses SQL, creates stmt, exports (line 2207-2221)
+    @Test
+    public void testExportCsvFromConnectionToWriter() throws SQLException, IOException {
+        Writer writer = new StringWriter();
+
+        when(mockConnection.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(mockPreparedStatement);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("name");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("age");
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getObject(1)).thenReturn("Alice", "Bob");
+        when(mockResultSet.getObject(2)).thenReturn(30, 25);
+
+        long result = JdbcUtils.exportCsv(mockConnection, "SELECT name, age FROM users", writer);
+
+        assertEquals(2, result);
+        String csv = writer.toString();
+        assertTrue(csv.contains("name"));
+        assertTrue(csv.contains("age"));
+    }
+
+    // copy(Connection, String, Connection, String) - delegates to full copy with default sizes (line 3007-3008)
+    @Test
+    public void testCopyBetweenConnectionsWithCustomSql() throws SQLException {
+        Connection targetConn = mock(Connection.class);
+        PreparedStatement targetStmt = mock(PreparedStatement.class);
+        DatabaseMetaData targetMeta = mock(DatabaseMetaData.class);
+
+        when(targetConn.getMetaData()).thenReturn(targetMeta);
+        when(targetMeta.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetMeta.getDatabaseProductVersion()).thenReturn("8");
+        when(targetConn.prepareStatement(anyString())).thenReturn(targetStmt);
+        when(mockConnection.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(mockPreparedStatement);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("row1");
+        when(targetStmt.executeBatch()).thenReturn(new int[] { 1 });
+
+        long result = JdbcUtils.copy(mockConnection, "SELECT * FROM src", targetConn, "INSERT INTO dst VALUES (?)");
+
+        assertEquals(1, result);
+        verify(targetStmt).addBatch();
+        verify(targetStmt).executeBatch();
     }
 }

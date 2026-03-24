@@ -352,6 +352,53 @@ public class SqlTransactionTest extends TestBase {
         assertTrue(id.contains(String.valueOf(Thread.currentThread().getId())));
     }
 
+    // commit() when refCount < 0 (already committed): should log warn and return (lines 299-300)
+    @Test
+    public void testCommit_WhenAlreadyCommitted_WarnsAndIgnores() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.commit();
+        // second commit: refCount < 0, should silently ignore
+        transaction.commit();
+        // connection.commit() should only have been called once
+        verify(connection, times(1)).commit();
+    }
+
+    // rollback() when refCount < 0 (already rolled back): should log warn and return (lines 391-393)
+    @Test
+    public void testRollback_WhenAlreadyRolledBack_WarnsAndIgnores() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.rollback();
+        // second rollback: refCount < 0, should silently ignore
+        transaction.rollback();
+        verify(connection, times(1)).rollback();
+    }
+
+    // runOutsideTransaction: exception thrown inside cmd should propagate (lines 694-696)
+    @Test
+    public void testRunOutsideTransaction_ExceptionPropagates() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        try {
+            assertThrows(RuntimeException.class, () -> transaction.runOutsideTransaction(() -> {
+                throw new RuntimeException("inner error");
+            }));
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+    }
+
+    // callOutsideTransaction: exception thrown inside cmd should propagate (lines 757-759)
+    @Test
+    public void testCallOutsideTransaction_ExceptionPropagates() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        try {
+            assertThrows(RuntimeException.class, () -> transaction.callOutsideTransaction(() -> {
+                throw new RuntimeException("callable error");
+            }));
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+    }
+
     @Test
     public void testBeginTransactionReusesWhenThreadNameChanges() throws SQLException {
         final String originalThreadName = Thread.currentThread().getName();

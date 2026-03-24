@@ -1,13 +1,19 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -75,5 +81,175 @@ public class JoinEntityHelperTest extends TestBase {
         assertSame(entity, result.orElseNull());
         verify(dao).loadJoinEntities(entity, String.class);
         verify(dao).loadJoinEntities(entity, Integer.class);
+    }
+
+    // findFirst(selectPropNames, Collection<Class<?>>, cond) - loops over each class
+    @Test
+    public void testFindFirst_LoadsEachRequestedJoinEntity_CollectionOfClasses() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.findFirst(null, condition)).thenReturn(Optional.of(entity));
+        doNothing().when(dao).loadJoinEntities(eq(entity), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(eq(entity), eq(Integer.class));
+
+        Optional<TestEntity> result = dao.findFirst(null, List.of(String.class, Integer.class), condition);
+
+        assertTrue(result.isPresent());
+        verify(dao).loadJoinEntities(entity, String.class);
+        verify(dao).loadJoinEntities(entity, Integer.class);
+    }
+
+    // findOnlyOne(selectPropNames, Class<?>, cond) - single class overload
+    @Test
+    public void testFindOnlyOne_LoadsSingleJoinEntityClass() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.findOnlyOne(null, condition)).thenReturn(Optional.of(entity));
+        doNothing().when(dao).loadJoinEntities(eq(entity), eq(String.class));
+
+        Optional<TestEntity> result = dao.findOnlyOne(null, String.class, condition);
+
+        assertTrue(result.isPresent());
+        assertSame(entity, result.orElseNull());
+        verify(dao).loadJoinEntities(entity, String.class);
+    }
+
+    // findOnlyOne(selectPropNames, boolean includeAll, cond) - boolean overload
+    @Test
+    public void testFindOnlyOne_LoadsAllJoinEntitiesWhenRequested() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.findOnlyOne(List.of("id"), condition)).thenReturn(Optional.of(entity));
+        doNothing().when(dao).loadAllJoinEntities(entity);
+
+        Optional<TestEntity> result = dao.findOnlyOne(List.of("id"), true, condition);
+
+        assertTrue(result.isPresent());
+        verify(dao).loadAllJoinEntities(entity);
+    }
+
+    // list(selectPropNames, Class<?>, cond)
+    @Test
+    public void testList_LoadsSingleJoinEntityClass() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+        List<TestEntity> entities = List.of(entity);
+
+        when(dao.list((Collection<String>) null, condition)).thenReturn(entities);
+        doNothing().when(dao).loadJoinEntities(eq(entities), eq(String.class));
+
+        List<TestEntity> result = dao.list(null, String.class, condition);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(dao).loadJoinEntities(entities, String.class);
+    }
+
+    // list(selectPropNames, Collection<Class<?>>, cond)
+    @Test
+    public void testList_LoadsCollectionOfJoinEntityClasses() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+        List<TestEntity> entities = List.of(entity);
+
+        when(dao.list((Collection<String>) null, condition)).thenReturn(entities);
+        doNothing().when(dao).loadJoinEntities(eq(entities), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(eq(entities), eq(Integer.class));
+
+        List<TestEntity> result = dao.list(null, List.of(String.class, Integer.class), condition);
+
+        assertNotNull(result);
+        verify(dao).loadJoinEntities(entities, String.class);
+        verify(dao).loadJoinEntities(entities, Integer.class);
+    }
+
+    // list(selectPropNames, boolean, cond)
+    @Test
+    public void testList_LoadsAllJoinEntitiesWhenRequested() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+        List<TestEntity> entities = List.of(entity);
+
+        when(dao.list((Collection<String>) null, condition)).thenReturn(entities);
+        doNothing().when(dao).loadAllJoinEntities(entities);
+
+        List<TestEntity> result = dao.list(null, true, condition);
+
+        assertNotNull(result);
+        verify(dao).loadAllJoinEntities(entities);
+    }
+
+    // loadJoinEntities(entity, Class<?>) delegates to loadJoinEntities(entity, class, null)
+    @Test
+    public void testLoadJoinEntities_SingleEntity_ClassOnly_DelegatesTo3Param() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        doNothing().when(dao).loadJoinEntities(eq(entity), eq(String.class), isNull());
+
+        dao.loadJoinEntities(entity, String.class);
+
+        verify(dao).loadJoinEntities(entity, String.class, null);
+    }
+
+    // loadJoinEntities(entities, Class<?>) delegates to loadJoinEntities(entities, class, null)
+    @Test
+    public void testLoadJoinEntities_CollectionEntity_ClassOnly_DelegatesTo3Param() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+
+        doNothing().when(dao).loadJoinEntities(eq(entities), eq(String.class), isNull());
+
+        dao.loadJoinEntities(entities, String.class);
+
+        verify(dao).loadJoinEntities(entities, String.class, null);
+    }
+
+    // loadJoinEntities(entity, String) delegates to loadJoinEntities(entity, String, null)
+    @Test
+    public void testLoadJoinEntities_SingleEntity_PropNameOnly_DelegatesTo3Param() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        doNothing().when(dao).loadJoinEntities(eq(entity), eq("orders"), isNull());
+
+        dao.loadJoinEntities(entity, "orders");
+
+        verify(dao).loadJoinEntities(entity, "orders", null);
+    }
+
+    // loadJoinEntitiesIfNull(entity, Class<?>) delegates to loadJoinEntitiesIfNull(entity, class, null)
+    @Test
+    public void testLoadJoinEntitiesIfNull_SingleEntity_ClassOnly_DelegatesTo3Param() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        doNothing().when(dao).loadJoinEntitiesIfNull(eq(entity), eq(String.class), isNull());
+
+        dao.loadJoinEntitiesIfNull(entity, String.class);
+
+        verify(dao).loadJoinEntitiesIfNull(entity, String.class, null);
+    }
+
+    // loadJoinEntitiesIfNull(entities, Class<?>) delegates to loadJoinEntitiesIfNull(entities, class, null)
+    @Test
+    public void testLoadJoinEntitiesIfNull_CollectionEntity_ClassOnly_DelegatesTo3Param() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+
+        doNothing().when(dao).loadJoinEntitiesIfNull(eq(entities), eq(String.class), isNull());
+
+        dao.loadJoinEntitiesIfNull(entities, String.class);
+
+        verify(dao).loadJoinEntitiesIfNull(entities, String.class, null);
     }
 }

@@ -25,6 +25,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -463,7 +464,7 @@ public final class JdbcCodeGenerationUtil {
             final int columnCount = rsmd.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
-                final String columnName = rsmd.getColumnName(i);
+                final String columnName = Strings.isEmpty(rsmd.getColumnName(i)) ? rsmd.getColumnLabel(i) : rsmd.getColumnName(i);
 
                 final Tuple3<String, String, Class<?>> customizedField = customizedFieldMap.getOrDefault(columnName.toLowerCase(),
                         customizedFieldMap.get(Strings.toCamelCase(columnName).toLowerCase()));
@@ -486,9 +487,14 @@ public final class JdbcCodeGenerationUtil {
             }
 
             if (N.isEmpty(idFields) || N.intersection(idFields, fieldNameList).isEmpty()) {
-                try (ResultSet pkColumns = rs.getStatement().getConnection().getMetaData().getPrimaryKeys(null, null, entityName)) {
-                    while (pkColumns.next()) {
-                        idFields.add(pkColumns.getString("COLUMN_NAME"));
+                final Statement stmt = rs.getStatement();
+                final Connection conn = stmt == null ? null : stmt.getConnection();
+
+                if (conn != null) {
+                    try (ResultSet pkColumns = conn.getMetaData().getPrimaryKeys(null, null, entityName)) {
+                        while (pkColumns.next()) {
+                            idFields.add(pkColumns.getString("COLUMN_NAME"));
+                        }
                     }
                 }
             }
@@ -818,6 +824,10 @@ public final class JdbcCodeGenerationUtil {
     private static String getColumnClassName(final ResultSetMetaData rsmd, final int columnIndex) throws SQLException {
         String columnClassName = rsmd.getColumnClassName(columnIndex);
 
+        if (Strings.isEmpty(columnClassName)) {
+            columnClassName = ClassUtil.getCanonicalClassName(Object.class);
+        }
+
         try {
             columnClassName = ClassUtil.getCanonicalClassName(ClassUtil.forName(columnClassName));
         } catch (final Throwable e) {
@@ -839,6 +849,10 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String mapColumClassName(final String columnClassName, final boolean isCustomizedType, final EntityCodeConfig configToUse) {
+        if (Strings.isEmpty(columnClassName)) {
+            return ClassUtil.getCanonicalClassName(Object.class);
+        }
+
         String className = columnClassName.replace("java.lang.", "");
 
         if (isCustomizedType) {
@@ -1833,10 +1847,25 @@ public final class JdbcCodeGenerationUtil {
     }
 
     private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {
-        String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String quote = getTableColumnNameQuoteChar(dbProductInfo);
+        final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
 
-        return CharStream.of(tableName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? tableName
-                : Strings.wrap(tableName, quote);
+        if (parts.length == 1) {
+            return CharStream.of(parts[0]).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? parts[0]
+                    : Strings.wrap(parts[0], quote);
+        }
+
+        final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
+
+        for (int i = 0, len = parts.length; i < len; i++) {
+            if (i > 0) {
+                sb.append('.');
+            }
+
+            sb.append(Strings.wrap(parts[i], quote));
+        }
+
+        return sb.toString();
     }
 
     private static String checkColumnName(final String columnLabel, final DBProductInfo dbProductInfo) {

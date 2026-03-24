@@ -2932,8 +2932,24 @@ public final class JdbcUtils {
     private static String checkTableName(final String tableName, final DBProductInfo dbProductInfo) {
         final String quote = getTableColumnNameQuoteChar(dbProductInfo);
 
-        return CharStream.of(tableName).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? tableName
-                : Strings.wrap(tableName, quote);
+        final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, "tableName");
+
+        if (parts.length == 1) {
+            return CharStream.of(parts[0]).allMatch(ch -> Strings.isAsciiAlpha(ch) || Strings.isAsciiNumeric(ch) || ch == '_') ? parts[0]
+                    : Strings.wrap(parts[0], quote);
+        }
+
+        final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
+
+        for (int i = 0, len = parts.length; i < len; i++) {
+            if (i > 0) {
+                sb.append('.');
+            }
+
+            sb.append(Strings.wrap(parts[i], quote));
+        }
+
+        return sb.toString();
     }
 
     private static String checkColumnName(final String columnName, final DBProductInfo dbProductInfo) {

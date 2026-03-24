@@ -155,4 +155,137 @@ public class CrudDaoTest extends TestBase {
 
         assertEquals(0, dao.batchUpsert(List.of(), 2).size());
     }
+
+    @Test
+    public void testUpsert_InsertPath_WhenEntityNotFound() throws SQLException {
+        IdentifiedCrudDao dao = Mockito.mock(IdentifiedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdentifiedEntity entity = new IdentifiedEntity();
+        entity.setId(5L);
+        entity.setName("new");
+
+        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.empty());
+
+        IdentifiedEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
+
+        assertSame(entity, result);
+        verify(dao).insert(entity);
+    }
+
+    @Test
+    public void testBatchInsert_WithPropNames_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        List<Long> ids = List.of(1L);
+        List<String> props = List.of("name");
+
+        when(dao.batchInsert(entities, props, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(ids);
+
+        assertEquals(ids, dao.batchInsert(entities, props));
+        verify(dao).batchInsert(entities, props, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchGet_WithBatchSize_UsesNullSelectProps() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<Long> ids = List.of(1L, 2L);
+        List<TestEntity> entities = List.of(new TestEntity());
+
+        when(dao.batchGet(ids, (java.util.Collection<String>) null, 500)).thenReturn(entities);
+
+        assertEquals(entities, dao.batchGet(ids, 500));
+        verify(dao).batchGet(ids, (java.util.Collection<String>) null, 500);
+    }
+
+    @Test
+    public void testBatchGet_WithSelectPropsOnly_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<Long> ids = List.of(1L);
+        List<TestEntity> entities = List.of(new TestEntity());
+        List<String> props = List.of("id", "name");
+
+        when(dao.batchGet(ids, props, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(entities);
+
+        assertEquals(entities, dao.batchGet(ids, props));
+        verify(dao).batchGet(ids, props, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchUpdate_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+
+        when(dao.batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(1);
+
+        assertEquals(1, dao.batchUpdate(entities));
+        verify(dao).batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchUpdate_WithPropNames_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        List<String> props = List.of("name");
+
+        when(dao.batchUpdate(entities, props, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(1);
+
+        assertEquals(1, dao.batchUpdate(entities, props));
+        verify(dao).batchUpdate(entities, props, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchUpsert_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        List<TestEntity> result = List.of(new TestEntity());
+
+        Mockito.doReturn(result).when(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+
+        assertEquals(result, dao.batchUpsert(entities));
+        verify(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchRefresh_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+
+        Mockito.doReturn(1).when(dao).batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+
+        assertEquals(1, dao.batchRefresh(entities));
+        verify(dao).batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchRefresh_WithPropNames_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        List<String> props = List.of("name");
+
+        Mockito.doReturn(1).when(dao).batchRefresh(entities, props, JdbcUtil.DEFAULT_BATCH_SIZE);
+
+        assertEquals(1, dao.batchRefresh(entities, props));
+        verify(dao).batchRefresh(entities, props, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchDelete_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+
+        when(dao.batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(1);
+
+        assertEquals(1, dao.batchDelete(entities));
+        verify(dao).batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testBatchDeleteByIds_UsesDefaultBatchSize() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<Long> ids = List.of(1L, 2L);
+
+        when(dao.batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE)).thenReturn(2);
+
+        assertEquals(2, dao.batchDeleteByIds(ids));
+        verify(dao).batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
 }

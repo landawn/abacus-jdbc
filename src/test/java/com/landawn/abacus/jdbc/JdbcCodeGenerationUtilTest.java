@@ -130,6 +130,52 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testGenerateSelectSql_QuotesQualifiedSpecialTableName() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM `sales`.`order-history` WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.order-history");
+
+        assertEquals("SELECT id, created_at FROM `sales`.`order-history`", sql);
+    }
+
+    @Test
+    public void testGenerateSelectSql_PreservesQuotedDotsWithinSingleIdentifier() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM `sales.data` WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
+
+        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "\"sales.data\"");
+
+        assertEquals("SELECT id, created_at FROM `sales.data`", sql);
+    }
+
+    @Test
     public void testGenerateSelectSql_DataSourceWrapsSQLException() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
@@ -357,6 +403,234 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         String sql = JdbcCodeGenerationUtil.generateInsertSql(dataSource, "order_history");
         assertNotNull(sql);
         assertTrue(sql.startsWith("INSERT"));
+    }
+
+    // generateEntityClass(DataSource, entityName, query) - line 261
+    @Test
+    public void testGenerateEntityClass_DataSource_EntityName_Query() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "MyEntity")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(connection.prepareStatement("SELECT * FROM v WHERE 1 > 2")).thenReturn(preparedStatement);
+
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String result = JdbcCodeGenerationUtil.generateEntityClass(dataSource, "MyEntity", "SELECT * FROM v WHERE 1 > 2");
+        assertNotNull(result);
+        assertTrue(result.contains("MyEntity"));
+    }
+
+    // generateSelectSql(DataSource, tableName, excludedColumns, whereClause) - line 940
+    @Test
+    public void testGenerateSelectSql_DataSource_WithExcludedColumnsAndWhere() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateSelectSql(dataSource, "order_history", Arrays.asList("status"), "id > 0");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("SELECT"));
+    }
+
+    // generateInsertSql(DataSource, tableName, excludedColumns) - line 1069
+    @Test
+    public void testGenerateInsertSql_DataSource_WithExcludedColumns() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateInsertSql(dataSource, "order_history", Arrays.asList("id"));
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("INSERT"));
+    }
+
+    // generateNamedInsertSql(DataSource, tableName) - line 1138
+    @Test
+    public void testGenerateNamedInsertSql_DataSource() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateNamedInsertSql(dataSource, "order_history");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("INSERT"));
+    }
+
+    // generateNamedInsertSql(Connection, tableName) - line 1164
+    @Test
+    public void testGenerateNamedInsertSql_Connection() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("INSERT"));
+    }
+
+    // generateNamedInsertSql(DataSource, tableName, excludedColumns) - line 1200
+    @Test
+    public void testGenerateNamedInsertSql_DataSource_WithExcludedColumns() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateNamedInsertSql(dataSource, "order_history", Arrays.asList("id"));
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("INSERT"));
+    }
+
+    // generateNamedInsertSql(Connection, tableName, excludedColumns) - line 1231
+    @Test
+    public void testGenerateNamedInsertSql_Connection_WithExcludedColumns() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history", Arrays.asList("id"));
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("INSERT"));
+    }
+
+    // generateUpdateSql(DataSource, tableName) - line 1270
+    @Test
+    public void testGenerateUpdateSql_DataSource() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateUpdateSql(dataSource, "order_history");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateUpdateSql(Connection, tableName) - line 1298
+    @Test
+    public void testGenerateUpdateSql_Connection() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateUpdateSql(DataSource, tableName, keyColumnName) - line 1331
+    @Test
+    public void testGenerateUpdateSql_DataSource_WithKeyColumn() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateUpdateSql(dataSource, "order_history", "id");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateUpdateSql(Connection, tableName, keyColumnName) - line 1357
+    @Test
+    public void testGenerateUpdateSql_Connection_WithKeyColumn() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "id");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateNamedUpdateSql(DataSource, tableName) - line 1507
+    @Test
+    public void testGenerateNamedUpdateSql_DataSource() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(dataSource, "order_history");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateNamedUpdateSql(Connection, tableName) - line 1536
+    @Test
+    public void testGenerateNamedUpdateSql_Connection() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateNamedUpdateSql(DataSource, tableName, keyColumnName) - line 1572
+    @Test
+    public void testGenerateNamedUpdateSql_DataSource_WithKeyColumn() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(dataSource, "order_history", "id");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateNamedUpdateSql(Connection, tableName, keyColumnName) - line 1598
+    @Test
+    public void testGenerateNamedUpdateSql_Connection_WithKeyColumn() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", "id");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+    }
+
+    // generateUpdateSql(DataSource, tableName, excludedColumnNames, keyColumnNames, whereClause) - line 1420
+    @Test
+    public void testGenerateUpdateSql_DataSource_WithExcludedColumnsAndWhere() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateUpdateSql(dataSource, "order_history", Arrays.asList("created_at"), Arrays.asList("id"), "status = 'OPEN'");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+        assertTrue(sql.contains("WHERE"));
+    }
+
+    // generateUpdateSql(Connection, tableName, excludedColumnNames, keyColumnNames, whereClause) - line 1460
+    @Test
+    public void testGenerateUpdateSql_Connection_WithExcludedColumnsAndWhere() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", Arrays.asList("created_at"), Arrays.asList("id"), "status = 'OPEN'");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+        assertTrue(sql.contains("WHERE"));
+    }
+
+    // generateNamedUpdateSql(DataSource, tableName, excludedColumnNames, keyColumnNames, whereClause) - line 1656
+    @Test
+    public void testGenerateNamedUpdateSql_DataSource_WithExcludedColumnsAndWhere() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(dataSource, "order_history", Arrays.asList("created_at"), Arrays.asList("id"),
+                "status = 'OPEN'");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+        assertTrue(sql.contains(":"));
+        assertTrue(sql.contains("WHERE"));
+    }
+
+    // generateNamedUpdateSql(Connection, tableName, excludedColumnNames, keyColumnNames, whereClause) - line 1696
+    @Test
+    public void testGenerateNamedUpdateSql_Connection_WithExcludedColumnsAndWhere() throws SQLException {
+        String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", Arrays.asList("created_at"), Arrays.asList("id"),
+                "status = 'OPEN'");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+        assertTrue(sql.contains(":"));
+        assertTrue(sql.contains("WHERE"));
+    }
+
+    // convertInsertSqlToUpdateSql(DataSource, insertSql) - line 1762
+    @Test
+    public void testConvertInsertSqlToUpdateSql_DataSource() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String insertSql = "INSERT INTO order_history(id, status) VALUES (1, 'OPEN')";
+        String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, insertSql);
+        assertNotNull(updateSql);
+        assertTrue(updateSql.startsWith("UPDATE"));
+        assertTrue(updateSql.contains("SET"));
+    }
+
+    // convertInsertSqlToUpdateSql(DataSource, insertSql, whereClause) - line 1795
+    @Test
+    public void testConvertInsertSqlToUpdateSql_DataSource_WithWhereClause() throws SQLException {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        String insertSql = "INSERT INTO order_history(status) VALUES ('CLOSED')";
+        String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, insertSql, "id = 42");
+        assertNotNull(updateSql);
+        assertTrue(updateSql.startsWith("UPDATE"));
+        assertTrue(updateSql.contains("WHERE id = 42"));
     }
 
     // Test generateEntityClass with customized EntityCodeConfig fields

@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
@@ -20,6 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.type.Type;
+import com.landawn.abacus.type.TypeFactory;
 
 public class AbstractQueryTest extends TestBase {
 
@@ -261,5 +265,111 @@ public class AbstractQueryTest extends TestBase {
 
         assertEquals(128, query.getFetchSize());
         assertEquals(ResultSet.FETCH_REVERSE, query.getFetchDirection());
+    }
+
+    // setFloat(int, Float, float) - non-null branch (line 867) was not covered
+    @Test
+    public void testSetFloat_WithDefault_NonNull() throws SQLException {
+        TestQuery result = query.setFloat(1, Float.valueOf(2.5f), 0.0f);
+        assertSame(query, result);
+        verify(preparedStatement).setFloat(1, 2.5f);
+    }
+
+    // setDouble(int, Double, double) - non-null branch (line 965) was not covered
+    @Test
+    public void testSetDouble_WithDefault_NonNull() throws SQLException {
+        TestQuery result = query.setDouble(1, Double.valueOf(1.23), 0.0);
+        assertSame(query, result);
+        verify(preparedStatement).setDouble(1, 1.23);
+    }
+
+    // addBatchParameters(Collection<T>, Class<T>) with empty collection should return early
+    @Test
+    public void testAddBatchParameters_EmptyCollectionWithType() throws SQLException {
+        TestQuery result = query.addBatchParameters(List.of(), String.class);
+        assertSame(query, result);
+        verify(preparedStatement, never()).addBatch();
+    }
+
+    // addBatchParameters(Iterator) with empty iterator should return early (line 3679-3680)
+    @Test
+    public void testAddBatchParameters_EmptyIterator() throws SQLException {
+        TestQuery result = query.addBatchParameters(List.of().iterator());
+        assertSame(query, result);
+        verify(preparedStatement, never()).addBatch();
+    }
+
+    // addBatchParameters(Iterator, BiParametersSetter) - lines 3867-3891
+    @Test
+    public void testAddBatchParameters_IteratorWithBiParametersSetter() throws SQLException {
+        final List<String> items = List.of("a", "b");
+        TestQuery result = query.addBatchParameters(items.iterator(), (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> preparedStatement.setString(1, s));
+        assertSame(query, result);
+        verify(preparedStatement).setString(1, "a");
+        verify(preparedStatement).setString(1, "b");
+        verify(preparedStatement, times(2)).addBatch();
+    }
+
+    // addBatchParameters(Collection, BiParametersSetter) - lines 3838-3843
+    @Test
+    public void testAddBatchParameters_CollectionWithBiParametersSetter() throws SQLException {
+        final List<Integer> items = List.of(10, 20);
+        TestQuery result = query.addBatchParameters(items, (Jdbc.BiParametersSetter<TestQuery, Integer>) (q, v) -> preparedStatement.setInt(1, v));
+        assertSame(query, result);
+        verify(preparedStatement).setInt(1, 10);
+        verify(preparedStatement).setInt(1, 20);
+        verify(preparedStatement, times(2)).addBatch();
+    }
+
+    @Test
+    public void testSetObject_WithType_DelegatesToType() throws SQLException {
+        final Type<String> strType = TypeFactory.getType(String.class);
+
+        TestQuery result = query.setObject(1, "hello", strType);
+
+        assertSame(query, result);
+        verify(preparedStatement).setString(1, "hello");
+    }
+
+    @Test
+    public void testFindOnlyOneOrNull_Class_NoResult_ReturnsNull() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        assertNull(query.findOnlyOneOrNull(String.class));
+    }
+
+    @Test
+    public void testFindOnlyOneOrNull_Class_DuplicateResultThrows() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final java.sql.ResultSetMetaData meta = Mockito.mock(java.sql.ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("val");
+        when(rs.getString(1)).thenReturn("first");
+
+        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(String.class));
+    }
+
+    @Test
+    public void testFindOnlyOneOrNull_RowMapper_NoResult_ReturnsNull() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        assertNull(query.findOnlyOneOrNull(r -> r.getString(1)));
+    }
+
+    @Test
+    public void testFindOnlyOneOrNull_RowMapper_DuplicateResultThrows() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true);
+        when(rs.getString(1)).thenReturn("value");
+
+        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(r -> r.getString(1)));
     }
 }

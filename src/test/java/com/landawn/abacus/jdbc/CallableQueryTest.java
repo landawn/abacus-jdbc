@@ -13,15 +13,30 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
+import java.sql.Blob;
 import java.sql.CallableStatement;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.Date;
+import java.sql.NClob;
+import java.sql.RowId;
+import java.sql.SQLXML;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -372,5 +387,383 @@ public class CallableQueryTest extends TestBase {
         CallableQuery result = callableQuery.setObject("obj", "value", Types.VARCHAR);
         assertSame(callableQuery, result);
         verify(callableStatement).setObject("obj", "value", Types.VARCHAR);
+    }
+
+    // setLong(String, BigInteger) - non-null path
+    @Test
+    public void testSetLong_ByName_BigIntegerNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setLong("param", new BigInteger("12345"));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setLong("param", 12345L);
+    }
+
+    // setLong(String, BigInteger) - null path
+    @Test
+    public void testSetLong_ByName_BigIntegerNull() throws SQLException {
+        CallableQuery result = callableQuery.setLong("param", (BigInteger) null);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setNull("param", Types.BIGINT);
+    }
+
+    // setBigDecimal(String, BigInteger) - non-null path
+    @Test
+    public void testSetBigDecimal_ByName_BigIntegerNonNull() throws SQLException {
+        BigInteger val = new BigInteger("9999");
+        CallableQuery result = callableQuery.setBigDecimal("param", val);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setBigDecimal("param", new BigDecimal(val));
+    }
+
+    // setBigDecimal(String, BigInteger) - null path
+    @Test
+    public void testSetBigDecimal_ByName_BigIntegerNull() throws SQLException {
+        CallableQuery result = callableQuery.setBigDecimal("param", (BigInteger) null);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setNull("param", Types.DECIMAL);
+    }
+
+    // setBigIntegerAsString(String, BigInteger) - delegates to setString
+    @Test
+    public void testSetBigIntegerAsString_NonNull() throws SQLException {
+        BigInteger val = new BigInteger("42");
+        CallableQuery result = callableQuery.setBigIntegerAsString("param", val);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("param", "42");
+    }
+
+    // setDate(String, java.util.Date) - non-null util.Date path
+    @Test
+    public void testSetDate_ByName_UtilDate() throws SQLException {
+        java.util.Date date = new java.util.Date(1000L);
+        CallableQuery result = callableQuery.setDate("param", date);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setDate("param", new java.sql.Date(1000L));
+    }
+
+    // setDate(String, LocalDate) - non-null path
+    @Test
+    public void testSetDate_ByName_LocalDate() throws SQLException {
+        LocalDate ld = LocalDate.of(2024, 1, 15);
+        CallableQuery result = callableQuery.setDate("param", ld);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setDate("param", java.sql.Date.valueOf(ld));
+    }
+
+    // setTime(String, java.util.Date) - non-null util.Date path
+    @Test
+    public void testSetTime_ByName_UtilDate() throws SQLException {
+        java.util.Date date = new java.util.Date(5000L);
+        CallableQuery result = callableQuery.setTime("param", date);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTime("param", new java.sql.Time(5000L));
+    }
+
+    // setTime(String, LocalTime) - non-null path
+    @Test
+    public void testSetTime_ByName_LocalTime() throws SQLException {
+        LocalTime lt = LocalTime.of(14, 30, 0);
+        CallableQuery result = callableQuery.setTime("param", lt);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTime("param", java.sql.Time.valueOf(lt));
+    }
+
+    // setTimestamp(String, java.util.Date) - non-null util.Date path
+    @Test
+    public void testSetTimestamp_ByName_UtilDate() throws SQLException {
+        java.util.Date date = new java.util.Date(9000L);
+        CallableQuery result = callableQuery.setTimestamp("param", date);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTimestamp("param", new java.sql.Timestamp(9000L));
+    }
+
+    // setTimestamp(String, LocalDateTime) - non-null path
+    @Test
+    public void testSetTimestamp_ByName_LocalDateTime() throws SQLException {
+        LocalDateTime ldt = LocalDateTime.of(2024, 3, 15, 10, 0, 0);
+        CallableQuery result = callableQuery.setTimestamp("param", ldt);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTimestamp("param", Timestamp.valueOf(ldt));
+    }
+
+    // setTimestamp(String, ZonedDateTime) - non-null path
+    @Test
+    public void testSetTimestamp_ByName_ZonedDateTime() throws SQLException {
+        ZonedDateTime zdt = ZonedDateTime.of(2024, 3, 15, 10, 0, 0, 0, ZoneOffset.UTC);
+        CallableQuery result = callableQuery.setTimestamp("param", zdt);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTimestamp("param", Timestamp.from(zdt.toInstant()));
+    }
+
+    // setTimestamp(String, OffsetDateTime) - non-null path
+    @Test
+    public void testSetTimestamp_ByName_OffsetDateTime() throws SQLException {
+        OffsetDateTime odt = OffsetDateTime.of(2024, 3, 15, 10, 0, 0, 0, ZoneOffset.UTC);
+        CallableQuery result = callableQuery.setTimestamp("param", odt);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTimestamp("param", Timestamp.from(odt.toInstant()));
+    }
+
+    // setTimestamp(String, Instant) - non-null path
+    @Test
+    public void testSetTimestamp_ByName_Instant() throws SQLException {
+        Instant instant = Instant.ofEpochMilli(1000L);
+        CallableQuery result = callableQuery.setTimestamp("param", instant);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setTimestamp("param", Timestamp.from(instant));
+    }
+
+    // setAsciiStream(String, InputStream, long) - line 1025
+    @Test
+    public void testSetAsciiStream_ByName_WithLongLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream("data".getBytes());
+        callableQuery.setAsciiStream("param", is, 4L);
+        verify(callableStatement).setAsciiStream("param", is, 4L);
+    }
+
+    // setBinaryStream(String, InputStream, long) - line 1068
+    @Test
+    public void testSetBinaryStream_ByName_WithLongLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 1, 2 });
+        callableQuery.setBinaryStream("param", is, 2L);
+        verify(callableStatement).setBinaryStream("param", is, 2L);
+    }
+
+    // setCharacterStream(String, Reader, long) - line 1110
+    @Test
+    public void testSetCharacterStream_ByName_WithLongLength() throws SQLException {
+        Reader reader = new StringReader("data");
+        callableQuery.setCharacterStream("param", reader, 4L);
+        verify(callableStatement).setCharacterStream("param", reader, 4L);
+    }
+
+    // setNCharacterStream(String, Reader)
+    @Test
+    public void testSetNCharacterStream_ByName() throws SQLException {
+        Reader reader = new StringReader("nchar");
+        callableQuery.setNCharacterStream("param", reader);
+        verify(callableStatement).setNCharacterStream("param", reader);
+    }
+
+    // setNCharacterStream(String, Reader, long)
+    @Test
+    public void testSetNCharacterStream_ByName_WithLength() throws SQLException {
+        Reader reader = new StringReader("nchar");
+        callableQuery.setNCharacterStream("param", reader, 5L);
+        verify(callableStatement).setNCharacterStream("param", reader, 5L);
+    }
+
+    // setBlob(String, Blob)
+    @Test
+    public void testSetBlob_ByName_Blob() throws SQLException {
+        Blob blob = Mockito.mock(Blob.class);
+        callableQuery.setBlob("param", blob);
+        verify(callableStatement).setBlob("param", blob);
+    }
+
+    // setBlob(String, InputStream)
+    @Test
+    public void testSetBlob_ByName_InputStream() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 1 });
+        callableQuery.setBlob("param", is);
+        verify(callableStatement).setBlob("param", is);
+    }
+
+    // setBlob(String, InputStream, long)
+    @Test
+    public void testSetBlob_ByName_InputStreamWithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 1 });
+        callableQuery.setBlob("param", is, 1L);
+        verify(callableStatement).setBlob("param", is, 1L);
+    }
+
+    // setClob(String, Clob)
+    @Test
+    public void testSetClob_ByName_Clob() throws SQLException {
+        Clob clob = Mockito.mock(Clob.class);
+        callableQuery.setClob("param", clob);
+        verify(callableStatement).setClob("param", clob);
+    }
+
+    // setClob(String, Reader)
+    @Test
+    public void testSetClob_ByName_Reader() throws SQLException {
+        Reader reader = new StringReader("clob");
+        callableQuery.setClob("param", reader);
+        verify(callableStatement).setClob("param", reader);
+    }
+
+    // setClob(String, Reader, long)
+    @Test
+    public void testSetClob_ByName_ReaderWithLength() throws SQLException {
+        Reader reader = new StringReader("clob");
+        callableQuery.setClob("param", reader, 4L);
+        verify(callableStatement).setClob("param", reader, 4L);
+    }
+
+    // setNClob(String, NClob)
+    @Test
+    public void testSetNClob_ByName_NClob() throws SQLException {
+        NClob nclob = Mockito.mock(NClob.class);
+        callableQuery.setNClob("param", nclob);
+        verify(callableStatement).setNClob("param", nclob);
+    }
+
+    // setNClob(String, Reader)
+    @Test
+    public void testSetNClob_ByName_Reader() throws SQLException {
+        Reader reader = new StringReader("nclob");
+        callableQuery.setNClob("param", reader);
+        verify(callableStatement).setNClob("param", reader);
+    }
+
+    // setNClob(String, Reader, long)
+    @Test
+    public void testSetNClob_ByName_ReaderWithLength() throws SQLException {
+        Reader reader = new StringReader("nclob");
+        callableQuery.setNClob("param", reader, 5L);
+        verify(callableStatement).setNClob("param", reader, 5L);
+    }
+
+    // setURL(String, URL)
+    @Test
+    public void testSetURL_ByName() throws Exception {
+        URL url = new URL("https://example.com");
+        callableQuery.setURL("param", url);
+        verify(callableStatement).setURL("param", url);
+    }
+
+    // setSQLXML(String, SQLXML)
+    @Test
+    public void testSetSQLXML_ByName() throws SQLException {
+        SQLXML sqlxml = Mockito.mock(SQLXML.class);
+        callableQuery.setSQLXML("param", sqlxml);
+        verify(callableStatement).setSQLXML("param", sqlxml);
+    }
+
+    // setRowId(String, RowId)
+    @Test
+    public void testSetRowId_ByName() throws SQLException {
+        RowId rowId = Mockito.mock(RowId.class);
+        callableQuery.setRowId("param", rowId);
+        verify(callableStatement).setRowId("param", rowId);
+    }
+
+    // setObject(String, Object, int, int) - with scale
+    @Test
+    public void testSetObject_ByName_WithSqlTypeAndScale() throws SQLException {
+        CallableQuery result = callableQuery.setObject("param", 123.456, Types.DECIMAL, 2);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setObject("param", 123.456, Types.DECIMAL, 2);
+    }
+
+    // setParameters(Map) - sets multiple params from a map
+    @Test
+    public void testSetParameters_WithMap() throws SQLException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", "Alice");
+        CallableQuery result = callableQuery.setParameters(params);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("name", "Alice");
+    }
+
+    @Test
+    public void testSetShort_ByName_WrapperNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setShort("s", (Short) (short) 7);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setShort("s", (short) 7);
+    }
+
+    @Test
+    public void testSetInt_ByName_WrapperNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setInt("count", Integer.valueOf(42));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setInt("count", 42);
+    }
+
+    @Test
+    public void testSetLong_ByName_WrapperNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setLong("id", Long.valueOf(1000L));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setLong("id", 1000L);
+    }
+
+    @Test
+    public void testSetFloat_ByName_WrapperNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setFloat("f", Float.valueOf(2.5f));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setFloat("f", 2.5f);
+    }
+
+    @Test
+    public void testSetDouble_ByName_WrapperNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setDouble("d", Double.valueOf(3.14));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setDouble("d", 3.14);
+    }
+
+    @Test
+    public void testSetLong_ByName_BigIntegerNonNull_Exact() throws SQLException {
+        final java.math.BigInteger val = java.math.BigInteger.valueOf(9999L);
+        CallableQuery result = callableQuery.setLong("bi", val);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setLong("bi", 9999L);
+    }
+
+    @Test
+    public void testSetBigDecimal_ByName_BigIntegerNull2() throws SQLException {
+        CallableQuery result = callableQuery.setBigDecimal("x", (java.math.BigInteger) null);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setNull("x", Types.DECIMAL);
+    }
+
+    @Test
+    public void testSetBigDecimal_ByName_BigIntegerNonNull2() throws SQLException {
+        final java.math.BigInteger val = new java.math.BigInteger("12345");
+        CallableQuery result = callableQuery.setBigDecimal("x", val);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setBigDecimal("x", new java.math.BigDecimal(val));
+    }
+
+    @Test
+    public void testSetString_ByName_CharSequenceNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setString("msg", (CharSequence) new StringBuilder("hello"));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("msg", "hello");
+    }
+
+    @Test
+    public void testSetString_ByName_Char() throws SQLException {
+        CallableQuery result = callableQuery.setString("grade", 'A');
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("grade", "A");
+    }
+
+    @Test
+    public void testSetString_ByName_CharacterNonNull() throws SQLException {
+        CallableQuery result = callableQuery.setString("init", Character.valueOf('Z'));
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("init", "Z");
+    }
+
+    @Test
+    public void testSetString_ByName_CharacterNull() throws SQLException {
+        CallableQuery result = callableQuery.setString("init", (Character) null);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("init", (String) null);
+    }
+
+    @Test
+    public void testSetString_ByName_BigIntegerNonNull() throws SQLException {
+        final java.math.BigInteger bi = new java.math.BigInteger("999");
+        CallableQuery result = callableQuery.setString("val", bi);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("val", "999");
+    }
+
+    @Test
+    public void testSetString_ByName_BigIntegerNull() throws SQLException {
+        CallableQuery result = callableQuery.setString("val", (java.math.BigInteger) null);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setNull("val", Types.VARCHAR);
     }
 }

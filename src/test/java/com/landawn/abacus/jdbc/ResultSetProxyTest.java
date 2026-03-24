@@ -31,13 +31,21 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.net.URL;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Date;
+import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -422,5 +430,535 @@ public class ResultSetProxyTest extends TestBase {
         // Second call uses cached getter
         when(delegate.getObject(2)).thenReturn(99);
         assertEquals(99, proxy.getObject(2));
+    }
+
+    // deprecated getBigDecimal(int, int) - line 263
+    @Test
+    public void testGetBigDecimal_WithScale() throws SQLException {
+        BigDecimal bd = new BigDecimal("123.45");
+        when(delegate.getBigDecimal(1, 2)).thenReturn(bd);
+        assertEquals(bd, proxy.getBigDecimal(1, 2));
+        verify(delegate).getBigDecimal(1, 2);
+    }
+
+    // deprecated getUnicodeStream(int) - line 304
+    @Test
+    public void testGetUnicodeStreamByIndex() throws SQLException {
+        InputStream is = new ByteArrayInputStream("data".getBytes());
+        when(delegate.getUnicodeStream(1)).thenReturn(is);
+        assertSame(is, proxy.getUnicodeStream(1));
+        verify(delegate).getUnicodeStream(1);
+    }
+
+    // getAsciiStream(String) - line 405
+    @Test
+    public void testGetAsciiStreamByLabel() throws SQLException {
+        InputStream is = new ByteArrayInputStream("text".getBytes());
+        when(delegate.getAsciiStream("col")).thenReturn(is);
+        assertSame(is, proxy.getAsciiStream("col"));
+        verify(delegate).getAsciiStream("col");
+    }
+
+    // deprecated getUnicodeStream(String) - line 412
+    @Test
+    public void testGetUnicodeStreamByLabel() throws SQLException {
+        InputStream is = new ByteArrayInputStream("unicode".getBytes());
+        when(delegate.getUnicodeStream("col")).thenReturn(is);
+        assertSame(is, proxy.getUnicodeStream("col"));
+        verify(delegate).getUnicodeStream("col");
+    }
+
+    // getBinaryStream(String) - line 418
+    @Test
+    public void testGetBinaryStreamByLabel() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
+        when(delegate.getBinaryStream("col")).thenReturn(is);
+        assertSame(is, proxy.getBinaryStream("col"));
+        verify(delegate).getBinaryStream("col");
+    }
+
+    // getObject(int, Class<T>) - line 611
+    @Test
+    public void testGetObjectByIndex_WithType() throws SQLException {
+        when(delegate.getObject(1, String.class)).thenReturn("hello");
+        assertEquals("hello", proxy.getObject(1, String.class));
+        verify(delegate).getObject(1, String.class);
+    }
+
+    // getObject(String, Class<T>) - line 619
+    @Test
+    public void testGetObjectByLabel_WithType() throws SQLException {
+        when(delegate.getObject("name", String.class)).thenReturn("world");
+        assertEquals("world", proxy.getObject("name", String.class));
+        verify(delegate).getObject("name", String.class);
+    }
+
+    // setFetchDirection(int) - line 739
+    @Test
+    public void testSetFetchDirection() throws SQLException {
+        proxy.setFetchDirection(ResultSet.FETCH_FORWARD);
+        verify(delegate).setFetchDirection(ResultSet.FETCH_FORWARD);
+    }
+
+    // setFetchSize(int) - line 753
+    @Test
+    public void testSetFetchSize() throws SQLException {
+        proxy.setFetchSize(50);
+        verify(delegate).setFetchSize(50);
+    }
+
+    // rowUpdated() - line 781
+    @Test
+    public void testRowUpdated() throws SQLException {
+        when(delegate.rowUpdated()).thenReturn(true);
+        assertTrue(proxy.rowUpdated());
+        verify(delegate).rowUpdated();
+    }
+
+    // rowInserted() - line 787
+    @Test
+    public void testRowInserted() throws SQLException {
+        when(delegate.rowInserted()).thenReturn(false);
+        assertFalse(proxy.rowInserted());
+        verify(delegate).rowInserted();
+    }
+
+    // rowDeleted() - line 793
+    @Test
+    public void testRowDeleted() throws SQLException {
+        when(delegate.rowDeleted()).thenReturn(true);
+        assertTrue(proxy.rowDeleted());
+        verify(delegate).rowDeleted();
+    }
+
+    // updateNull(int) - line 799
+    @Test
+    public void testUpdateNull_ByIndex() throws SQLException {
+        proxy.updateNull(1);
+        verify(delegate).updateNull(1);
+    }
+
+    // updateBoolean(int, boolean) - line 805
+    @Test
+    public void testUpdateBoolean_ByIndex() throws SQLException {
+        proxy.updateBoolean(1, true);
+        verify(delegate).updateBoolean(1, true);
+    }
+
+    // updateByte(int, byte) - line 811
+    @Test
+    public void testUpdateByte_ByIndex() throws SQLException {
+        proxy.updateByte(1, (byte) 7);
+        verify(delegate).updateByte(1, (byte) 7);
+    }
+
+    // updateShort(int, short) - line 817
+    @Test
+    public void testUpdateShort_ByIndex() throws SQLException {
+        proxy.updateShort(1, (short) 100);
+        verify(delegate).updateShort(1, (short) 100);
+    }
+
+    // updateInt(int, int) - line 823
+    @Test
+    public void testUpdateInt_ByIndex() throws SQLException {
+        proxy.updateInt(1, 42);
+        verify(delegate).updateInt(1, 42);
+    }
+
+    // updateLong(int, long) - line 829
+    @Test
+    public void testUpdateLong_ByIndex() throws SQLException {
+        proxy.updateLong(1, 999L);
+        verify(delegate).updateLong(1, 999L);
+    }
+
+    @Test
+    public void testUpdateFloat_ByIndex() throws SQLException {
+        proxy.updateFloat(1, 1.5f);
+        verify(delegate).updateFloat(1, 1.5f);
+    }
+
+    @Test
+    public void testUpdateDouble_ByIndex() throws SQLException {
+        proxy.updateDouble(1, 3.14);
+        verify(delegate).updateDouble(1, 3.14);
+    }
+
+    @Test
+    public void testUpdateBigDecimal_ByIndex() throws SQLException {
+        BigDecimal bd = new BigDecimal("99.99");
+        proxy.updateBigDecimal(1, bd);
+        verify(delegate).updateBigDecimal(1, bd);
+    }
+
+    @Test
+    public void testUpdateString_ByIndex() throws SQLException {
+        proxy.updateString(1, "hello");
+        verify(delegate).updateString(1, "hello");
+    }
+
+    @Test
+    public void testUpdateBytes_ByIndex() throws SQLException {
+        byte[] data = { 1, 2, 3 };
+        proxy.updateBytes(1, data);
+        verify(delegate).updateBytes(1, data);
+    }
+
+    @Test
+    public void testUpdateDate_ByIndex() throws SQLException {
+        Date date = new Date(System.currentTimeMillis());
+        proxy.updateDate(1, date);
+        verify(delegate).updateDate(1, date);
+    }
+
+    @Test
+    public void testUpdateTime_ByIndex() throws SQLException {
+        Time time = new Time(System.currentTimeMillis());
+        proxy.updateTime(1, time);
+        verify(delegate).updateTime(1, time);
+    }
+
+    @Test
+    public void testUpdateTimestamp_ByIndex() throws SQLException {
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        proxy.updateTimestamp(1, ts);
+        verify(delegate).updateTimestamp(1, ts);
+    }
+
+    @Test
+    public void testUpdateAsciiStream_ByIndex() throws SQLException {
+        InputStream is = new ByteArrayInputStream("data".getBytes());
+        proxy.updateAsciiStream(1, is, 4);
+        verify(delegate).updateAsciiStream(1, is, 4);
+    }
+
+    @Test
+    public void testUpdateBinaryStream_ByIndex() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 1, 2 });
+        proxy.updateBinaryStream(1, is, 2);
+        verify(delegate).updateBinaryStream(1, is, 2);
+    }
+
+    @Test
+    public void testUpdateCharacterStream_ByIndex() throws SQLException {
+        Reader reader = new StringReader("data");
+        proxy.updateCharacterStream(1, reader, 4);
+        verify(delegate).updateCharacterStream(1, reader, 4);
+    }
+
+    @Test
+    public void testUpdateObject_ByIndex_WithScale() throws SQLException {
+        proxy.updateObject(1, "val", 2);
+        verify(delegate).updateObject(1, "val", 2);
+    }
+
+    @Test
+    public void testUpdateObject_ByIndex() throws SQLException {
+        proxy.updateObject(1, "val");
+        verify(delegate).updateObject(1, "val");
+    }
+
+    // Update methods by column label
+    @Test
+    public void testUpdateNull_ByLabel() throws SQLException {
+        proxy.updateNull("col");
+        verify(delegate).updateNull("col");
+    }
+
+    @Test
+    public void testUpdateBoolean_ByLabel() throws SQLException {
+        proxy.updateBoolean("col", false);
+        verify(delegate).updateBoolean("col", false);
+    }
+
+    @Test
+    public void testUpdateByte_ByLabel() throws SQLException {
+        proxy.updateByte("col", (byte) 3);
+        verify(delegate).updateByte("col", (byte) 3);
+    }
+
+    @Test
+    public void testUpdateShort_ByLabel() throws SQLException {
+        proxy.updateShort("col", (short) 5);
+        verify(delegate).updateShort("col", (short) 5);
+    }
+
+    @Test
+    public void testUpdateInt_ByLabel() throws SQLException {
+        proxy.updateInt("col", 10);
+        verify(delegate).updateInt("col", 10);
+    }
+
+    @Test
+    public void testUpdateLong_ByLabel() throws SQLException {
+        proxy.updateLong("col", 100L);
+        verify(delegate).updateLong("col", 100L);
+    }
+
+    @Test
+    public void testUpdateFloat_ByLabel() throws SQLException {
+        proxy.updateFloat("col", 2.0f);
+        verify(delegate).updateFloat("col", 2.0f);
+    }
+
+    @Test
+    public void testUpdateDouble_ByLabel() throws SQLException {
+        proxy.updateDouble("col", 4.0);
+        verify(delegate).updateDouble("col", 4.0);
+    }
+
+    @Test
+    public void testUpdateBigDecimal_ByLabel() throws SQLException {
+        BigDecimal bd = new BigDecimal("1.5");
+        proxy.updateBigDecimal("col", bd);
+        verify(delegate).updateBigDecimal("col", bd);
+    }
+
+    @Test
+    public void testUpdateString_ByLabel() throws SQLException {
+        proxy.updateString("col", "world");
+        verify(delegate).updateString("col", "world");
+    }
+
+    @Test
+    public void testUpdateBytes_ByLabel() throws SQLException {
+        byte[] data = { 9, 8 };
+        proxy.updateBytes("col", data);
+        verify(delegate).updateBytes("col", data);
+    }
+
+    @Test
+    public void testUpdateDate_ByLabel() throws SQLException {
+        Date date = new Date(System.currentTimeMillis());
+        proxy.updateDate("col", date);
+        verify(delegate).updateDate("col", date);
+    }
+
+    @Test
+    public void testUpdateTime_ByLabel() throws SQLException {
+        Time time = new Time(System.currentTimeMillis());
+        proxy.updateTime("col", time);
+        verify(delegate).updateTime("col", time);
+    }
+
+    @Test
+    public void testUpdateTimestamp_ByLabel() throws SQLException {
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        proxy.updateTimestamp("col", ts);
+        verify(delegate).updateTimestamp("col", ts);
+    }
+
+    @Test
+    public void testUpdateAsciiStream_ByLabel() throws SQLException {
+        InputStream is = new ByteArrayInputStream("x".getBytes());
+        proxy.updateAsciiStream("col", is, 1);
+        verify(delegate).updateAsciiStream("col", is, 1);
+    }
+
+    @Test
+    public void testUpdateBinaryStream_ByLabel() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 5 });
+        proxy.updateBinaryStream("col", is, 1);
+        verify(delegate).updateBinaryStream("col", is, 1);
+    }
+
+    @Test
+    public void testUpdateCharacterStream_ByLabel() throws SQLException {
+        Reader reader = new StringReader("z");
+        proxy.updateCharacterStream("col", reader, 1);
+        verify(delegate).updateCharacterStream("col", reader, 1);
+    }
+
+    @Test
+    public void testUpdateObject_ByLabel_WithScale() throws SQLException {
+        proxy.updateObject("col", "v", 2);
+        verify(delegate).updateObject("col", "v", 2);
+    }
+
+    @Test
+    public void testUpdateObject_ByLabel() throws SQLException {
+        proxy.updateObject("col", "v");
+        verify(delegate).updateObject("col", "v");
+    }
+
+    // Row manipulation methods
+    @Test
+    public void testInsertRow() throws SQLException {
+        proxy.insertRow();
+        verify(delegate).insertRow();
+    }
+
+    @Test
+    public void testUpdateRow() throws SQLException {
+        proxy.updateRow();
+        verify(delegate).updateRow();
+    }
+
+    @Test
+    public void testDeleteRow() throws SQLException {
+        proxy.deleteRow();
+        verify(delegate).deleteRow();
+    }
+
+    @Test
+    public void testRefreshRow() throws SQLException {
+        proxy.refreshRow();
+        verify(delegate).refreshRow();
+    }
+
+    @Test
+    public void testCancelRowUpdates() throws SQLException {
+        proxy.cancelRowUpdates();
+        verify(delegate).cancelRowUpdates();
+    }
+
+    @Test
+    public void testMoveToInsertRow() throws SQLException {
+        proxy.moveToInsertRow();
+        verify(delegate).moveToInsertRow();
+    }
+
+    @Test
+    public void testMoveToCurrentRow() throws SQLException {
+        proxy.moveToCurrentRow();
+        verify(delegate).moveToCurrentRow();
+    }
+
+    // getObject with Map
+    @Test
+    public void testGetObjectByIndex_WithMap() throws SQLException {
+        Map<String, Class<?>> typeMap = new HashMap<>();
+        when(delegate.getObject(1, typeMap)).thenReturn("obj");
+        assertEquals("obj", proxy.getObject(1, typeMap));
+        verify(delegate).getObject(1, typeMap);
+    }
+
+    @Test
+    public void testGetObjectByLabel_WithMap() throws SQLException {
+        Map<String, Class<?>> typeMap = new HashMap<>();
+        when(delegate.getObject("col", typeMap)).thenReturn("obj2");
+        assertEquals("obj2", proxy.getObject("col", typeMap));
+        verify(delegate).getObject("col", typeMap);
+    }
+
+    // Complex type getters
+    @Test
+    public void testGetBlob_ByIndex() throws SQLException {
+        Blob blob = Mockito.mock(Blob.class);
+        when(delegate.getBlob(1)).thenReturn(blob);
+        assertSame(blob, proxy.getBlob(1));
+    }
+
+    @Test
+    public void testGetClob_ByIndex() throws SQLException {
+        Clob clob = Mockito.mock(Clob.class);
+        when(delegate.getClob(1)).thenReturn(clob);
+        assertSame(clob, proxy.getClob(1));
+    }
+
+    @Test
+    public void testGetArray_ByIndex() throws SQLException {
+        Array array = Mockito.mock(Array.class);
+        when(delegate.getArray(1)).thenReturn(array);
+        assertSame(array, proxy.getArray(1));
+    }
+
+    @Test
+    public void testGetRef_ByIndex() throws SQLException {
+        Ref ref = Mockito.mock(Ref.class);
+        when(delegate.getRef(1)).thenReturn(ref);
+        assertSame(ref, proxy.getRef(1));
+    }
+
+    @Test
+    public void testGetBlob_ByLabel() throws SQLException {
+        Blob blob = Mockito.mock(Blob.class);
+        when(delegate.getBlob("col")).thenReturn(blob);
+        assertSame(blob, proxy.getBlob("col"));
+    }
+
+    @Test
+    public void testGetClob_ByLabel() throws SQLException {
+        Clob clob = Mockito.mock(Clob.class);
+        when(delegate.getClob("col")).thenReturn(clob);
+        assertSame(clob, proxy.getClob("col"));
+    }
+
+    @Test
+    public void testGetArray_ByLabel() throws SQLException {
+        Array array = Mockito.mock(Array.class);
+        when(delegate.getArray("col")).thenReturn(array);
+        assertSame(array, proxy.getArray("col"));
+    }
+
+    @Test
+    public void testGetRef_ByLabel() throws SQLException {
+        Ref ref = Mockito.mock(Ref.class);
+        when(delegate.getRef("col")).thenReturn(ref);
+        assertSame(ref, proxy.getRef("col"));
+    }
+
+    // Date/Time with Calendar
+    @Test
+    public void testGetDate_ByIndex_WithCalendar() throws SQLException {
+        Calendar cal = Calendar.getInstance();
+        Date date = new Date(System.currentTimeMillis());
+        when(delegate.getDate(1, cal)).thenReturn(date);
+        assertEquals(date, proxy.getDate(1, cal));
+    }
+
+    @Test
+    public void testGetDate_ByLabel_WithCalendar() throws SQLException {
+        Calendar cal = Calendar.getInstance();
+        Date date = new Date(System.currentTimeMillis());
+        when(delegate.getDate("col", cal)).thenReturn(date);
+        assertEquals(date, proxy.getDate("col", cal));
+    }
+
+    @Test
+    public void testGetTime_ByIndex_WithCalendar() throws SQLException {
+        Calendar cal = Calendar.getInstance();
+        Time time = new Time(System.currentTimeMillis());
+        when(delegate.getTime(1, cal)).thenReturn(time);
+        assertEquals(time, proxy.getTime(1, cal));
+    }
+
+    @Test
+    public void testGetTime_ByLabel_WithCalendar() throws SQLException {
+        Calendar cal = Calendar.getInstance();
+        Time time = new Time(System.currentTimeMillis());
+        when(delegate.getTime("col", cal)).thenReturn(time);
+        assertEquals(time, proxy.getTime("col", cal));
+    }
+
+    @Test
+    public void testGetTimestamp_ByIndex_WithCalendar() throws SQLException {
+        Calendar cal = Calendar.getInstance();
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        when(delegate.getTimestamp(1, cal)).thenReturn(ts);
+        assertEquals(ts, proxy.getTimestamp(1, cal));
+    }
+
+    @Test
+    public void testGetTimestamp_ByLabel_WithCalendar() throws SQLException {
+        Calendar cal = Calendar.getInstance();
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        when(delegate.getTimestamp("col", cal)).thenReturn(ts);
+        assertEquals(ts, proxy.getTimestamp("col", cal));
+    }
+
+    @Test
+    public void testGetURL_ByIndex() throws Exception {
+        URL url = new URL("https://example.com");
+        when(delegate.getURL(1)).thenReturn(url);
+        assertEquals(url, proxy.getURL(1));
+    }
+
+    @Test
+    public void testGetURL_ByLabel() throws Exception {
+        URL url = new URL("https://example.com");
+        when(delegate.getURL("col")).thenReturn(url);
+        assertEquals(url, proxy.getURL("col"));
     }
 }

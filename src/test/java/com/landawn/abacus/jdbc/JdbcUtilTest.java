@@ -880,10 +880,28 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testToQualifiedSqlIdentifier_PreservesQuotedDotsWithinIdentifier() throws SQLException {
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+
+        assertEquals("\"schema\".\"sales.data\"", JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "schema.\"sales.data\"", "tableName"));
+        assertEquals("\"sales.data\"", JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "\"sales.data\"", "tableName"));
+    }
+
+    @Test
     public void testToQualifiedSqlIdentifier_RejectsUnsafeWhenNoQuoteSupport() throws SQLException {
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn(" ");
 
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "users;drop", "tableName"));
+    }
+
+    @Test
+    public void testDoesTableExist_WithQuotedDotIdentifier() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+
+        when(mockDatabaseMetaData.getTables(null, null, "sales.data", null)).thenReturn(tableRs);
+        when(tableRs.next()).thenReturn(true);
+
+        assertTrue(JdbcUtil.doesTableExist(mockConnection, "\"sales.data\""));
     }
 
     //    @Test

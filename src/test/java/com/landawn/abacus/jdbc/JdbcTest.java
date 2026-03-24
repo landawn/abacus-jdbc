@@ -41,6 +41,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import com.landawn.abacus.TestBase;
@@ -1435,6 +1436,99 @@ public class JdbcTest extends TestBase {
     //        verify(mockAbstractQuery.stmt).setObject(1, 42);
     //    }
 
+    @Test
+    public void testColumnOneRemainingGetters() throws SQLException {
+        when(mockResultSet.getByte(1)).thenReturn((byte) 7);
+        when(mockResultSet.getShort(1)).thenReturn((short) 200);
+        when(mockResultSet.getLong(1)).thenReturn(9999L);
+        when(mockResultSet.getFloat(1)).thenReturn(1.5f);
+        when(mockResultSet.getDouble(1)).thenReturn(3.14);
+        when(mockResultSet.getBigDecimal(1)).thenReturn(new BigDecimal("12.34"));
+        when(mockResultSet.getDate(1)).thenReturn(new Date(0L));
+        when(mockResultSet.getTime(1)).thenReturn(new Time(0L));
+        when(mockResultSet.getBytes(1)).thenReturn(new byte[] { 1, 2 });
+
+        assertEquals((byte) 7, Jdbc.Columns.ColumnOne.GET_BYTE.apply(mockResultSet));
+        assertEquals((short) 200, Jdbc.Columns.ColumnOne.GET_SHORT.apply(mockResultSet));
+        assertEquals(9999L, Jdbc.Columns.ColumnOne.GET_LONG.apply(mockResultSet));
+        assertEquals(1.5f, Jdbc.Columns.ColumnOne.GET_FLOAT.apply(mockResultSet));
+        assertEquals(3.14, Jdbc.Columns.ColumnOne.GET_DOUBLE.apply(mockResultSet));
+        assertEquals(new BigDecimal("12.34"), Jdbc.Columns.ColumnOne.GET_BIG_DECIMAL.apply(mockResultSet));
+        assertNotNull(Jdbc.Columns.ColumnOne.GET_DATE.apply(mockResultSet));
+        assertNotNull(Jdbc.Columns.ColumnOne.GET_TIME.apply(mockResultSet));
+        assertEquals(2, Jdbc.Columns.ColumnOne.GET_BYTES.apply(mockResultSet).length);
+    }
+
+    @Test
+    public void testColumnOneStreamGetters() throws SQLException {
+        final java.io.InputStream binaryStream = new java.io.ByteArrayInputStream(new byte[0]);
+        final java.io.Reader charStream = new java.io.StringReader("text");
+        final java.sql.Blob blob = Mockito.mock(java.sql.Blob.class);
+        final java.sql.Clob clob = Mockito.mock(java.sql.Clob.class);
+
+        when(mockResultSet.getBinaryStream(1)).thenReturn(binaryStream);
+        when(mockResultSet.getCharacterStream(1)).thenReturn(charStream);
+        when(mockResultSet.getBlob(1)).thenReturn(blob);
+        when(mockResultSet.getClob(1)).thenReturn(clob);
+
+        assertSame(binaryStream, Jdbc.Columns.ColumnOne.GET_BINARY_STREAM.apply(mockResultSet));
+        assertSame(charStream, Jdbc.Columns.ColumnOne.GET_CHARACTER_STREAM.apply(mockResultSet));
+        assertSame(blob, Jdbc.Columns.ColumnOne.GET_BLOB.apply(mockResultSet));
+        assertSame(clob, Jdbc.Columns.ColumnOne.GET_CLOB.apply(mockResultSet));
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testColumnOneSetters() throws SQLException {
+        final java.sql.Date sqlDate = new Date(0L);
+        final Time sqlTime = new Time(0L);
+        final Timestamp sqlTimestamp = new Timestamp(0L);
+        final java.util.Date juDate = new java.util.Date(0L);
+        final byte[] bytes = new byte[] { 1 };
+        final java.sql.Blob blob = Mockito.mock(java.sql.Blob.class);
+        final java.sql.Clob clob = Mockito.mock(java.sql.Clob.class);
+
+        Jdbc.Columns.ColumnOne.SET_BOOLEAN.accept(mockAbstractQuery, true);
+        Jdbc.Columns.ColumnOne.SET_BYTE.accept(mockAbstractQuery, (byte) 1);
+        Jdbc.Columns.ColumnOne.SET_SHORT.accept(mockAbstractQuery, (short) 2);
+        Jdbc.Columns.ColumnOne.SET_INT.accept(mockAbstractQuery, 3);
+        Jdbc.Columns.ColumnOne.SET_LONG.accept(mockAbstractQuery, 4L);
+        Jdbc.Columns.ColumnOne.SET_FLOAT.accept(mockAbstractQuery, 5.0f);
+        Jdbc.Columns.ColumnOne.SET_DOUBLE.accept(mockAbstractQuery, 6.0);
+        Jdbc.Columns.ColumnOne.SET_BIG_DECIMAL.accept(mockAbstractQuery, new BigDecimal("7"));
+        Jdbc.Columns.ColumnOne.SET_STRING.accept(mockAbstractQuery, "eight");
+        Jdbc.Columns.ColumnOne.SET_DATE.accept(mockAbstractQuery, sqlDate);
+        Jdbc.Columns.ColumnOne.SET_TIME.accept(mockAbstractQuery, sqlTime);
+        Jdbc.Columns.ColumnOne.SET_TIMESTAMP.accept(mockAbstractQuery, sqlTimestamp);
+        Jdbc.Columns.ColumnOne.SET_JU_DATE.accept(mockAbstractQuery, juDate);
+        Jdbc.Columns.ColumnOne.SET_JU_TIME.accept(mockAbstractQuery, juDate);
+        Jdbc.Columns.ColumnOne.SET_JU_TIMESTAMP.accept(mockAbstractQuery, juDate);
+        Jdbc.Columns.ColumnOne.SET_BYTES.accept(mockAbstractQuery, bytes);
+        Jdbc.Columns.ColumnOne.SET_BLOB.accept(mockAbstractQuery, blob);
+        Jdbc.Columns.ColumnOne.SET_CLOB.accept(mockAbstractQuery, clob);
+        Jdbc.Columns.ColumnOne.SET_OBJECT.accept(mockAbstractQuery, "obj");
+
+        verify(mockAbstractQuery).setBoolean(1, Boolean.TRUE);
+        verify(mockAbstractQuery).setByte(1, Byte.valueOf((byte) 1));
+        verify(mockAbstractQuery).setShort(1, Short.valueOf((short) 2));
+        verify(mockAbstractQuery).setInt(1, Integer.valueOf(3));
+        verify(mockAbstractQuery).setLong(1, Long.valueOf(4L));
+        verify(mockAbstractQuery).setFloat(1, Float.valueOf(5.0f));
+        verify(mockAbstractQuery).setDouble(1, Double.valueOf(6.0));
+        verify(mockAbstractQuery).setBigDecimal(1, new BigDecimal("7"));
+        verify(mockAbstractQuery).setString(1, "eight");
+        verify(mockAbstractQuery).setDate(1, sqlDate);
+        verify(mockAbstractQuery).setTime(1, sqlTime);
+        verify(mockAbstractQuery).setTimestamp(1, sqlTimestamp);
+        verify(mockAbstractQuery).setDate(1, juDate);
+        verify(mockAbstractQuery).setTime(1, juDate);
+        verify(mockAbstractQuery).setTimestamp(1, juDate);
+        verify(mockAbstractQuery).setBytes(1, bytes);
+        verify(mockAbstractQuery).setBlob(1, blob);
+        verify(mockAbstractQuery).setClob(1, clob);
+        verify(mockAbstractQuery).setObject(1, (Object) "obj");
+    }
+
     // OutParam Tests
     @Test
     public void testOutParam() {
@@ -2067,5 +2161,157 @@ public class JdbcTest extends TestBase {
         assertNotNull(output[11]); // Timestamp
         assertEquals("obj", output[12]);
         assertEquals("typed", output[13]);
+    }
+
+    // deprecated ResultExtractor.toMap(keyExtractor, valueExtractor, downstream) - line 634
+    @Test
+    public void testResultExtractorToMap_DeprecatedWithCollector() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString("category")).thenReturn("A", "A");
+        when(mockResultSet.getInt("value")).thenReturn(10, 20);
+
+        @SuppressWarnings("deprecation")
+        Jdbc.ResultExtractor<Map<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(rs -> rs.getString("category"), rs -> rs.getInt("value"),
+                Collectors.summingInt(Integer::intValue));
+
+        Map<String, Integer> result = extractor.apply(mockResultSet);
+        assertEquals(1, result.size());
+        assertEquals(30, result.get("A"));
+    }
+
+    // deprecated ResultExtractor.toMap(keyExtractor, valueExtractor, downstream, supplier) - line 656
+    @Test
+    public void testResultExtractorToMap_DeprecatedWithCollectorAndSupplier() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getString("key")).thenReturn("X");
+        when(mockResultSet.getInt("val")).thenReturn(5);
+
+        @SuppressWarnings("deprecation")
+        Jdbc.ResultExtractor<LinkedHashMap<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(rs -> rs.getString("key"), rs -> rs.getInt("val"),
+                Collectors.summingInt(Integer::intValue), LinkedHashMap::new);
+
+        LinkedHashMap<String, Integer> result = extractor.apply(mockResultSet);
+        assertTrue(result instanceof LinkedHashMap);
+        assertEquals(1, result.size());
+        assertEquals(5, result.get("X"));
+    }
+
+    // deprecated BiRowMapper.toRowMapper() - lines 2760-2774
+    @Test
+    public void testBiRowMapperToRowMapper() throws SQLException {
+        when(mockResultSet.getString("name")).thenReturn("Alice");
+
+        Jdbc.BiRowMapper<String> biMapper = (rs, cols) -> rs.getString("name");
+        @SuppressWarnings("deprecation")
+        Jdbc.RowMapper<String> rowMapper = biMapper.toRowMapper();
+
+        // first call initializes the column label list
+        assertEquals("Alice", rowMapper.apply(mockResultSet));
+        // second call uses cached column labels
+        assertEquals("Alice", rowMapper.apply(mockResultSet));
+    }
+
+    // RowMapper.builder().getLong(int) - line 2167: getLong configures column 1 to use GET_LONG
+    @Test
+    public void testRowMapperBuilder_GetLongByIndex() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSet.getLong(1)).thenReturn(42L);
+
+        Jdbc.RowMapper<Object[]> mapper = Jdbc.RowMapper.builder().getLong(1).toArray();
+        Object[] result = mapper.apply(mockResultSet);
+
+        assertEquals(1, result.length);
+        assertEquals(42L, result[0]);
+    }
+
+    // HandlerFactory tests
+    static final class TestHandler implements Jdbc.Handler<Object> {
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testHandlerFactory_Register_And_Get() {
+        final String qualifier = "TestHandlerUnique_" + System.nanoTime();
+        final TestHandler handler = new TestHandler();
+        boolean registered = Jdbc.HandlerFactory.register(qualifier, handler);
+        assertTrue(registered);
+
+        // second registration returns false
+        assertFalse(Jdbc.HandlerFactory.register(qualifier, handler));
+
+        assertSame(handler, Jdbc.HandlerFactory.get(qualifier));
+    }
+
+    @Test
+    public void testHandlerFactory_RegisterByClass() {
+        boolean registered = Jdbc.HandlerFactory.register(TestHandler.class);
+        // may be false if already registered in testHandlerFactory_Register_And_Get
+        assertNotNull(Jdbc.HandlerFactory.get(TestHandler.class));
+    }
+
+    @Test
+    public void testHandlerFactory_GetByString_NotFound_ReturnsNull() {
+        assertNull(Jdbc.HandlerFactory.get("nonExistentHandler_xyz_12345"));
+    }
+
+    @Test
+    public void testHandlerFactory_GetByClass_NotFound_ReturnsNull() {
+        assertNull(Jdbc.HandlerFactory.get((Class<? extends Jdbc.Handler<?>>) (Class<?>) java.io.Serializable.class));
+    }
+
+    @Test
+    public void testHandlerFactory_GetOrCreate() {
+        final Jdbc.Handler<?> h = Jdbc.HandlerFactory.getOrCreate(TestHandler.class);
+        assertNotNull(h);
+    }
+
+    @Test
+    public void testHandlerFactory_Create_BeforeInvoke() throws Exception {
+        final boolean[] called = { false };
+        @SuppressWarnings("unchecked")
+        final Jdbc.Handler<Object> handler = Jdbc.HandlerFactory
+                .create((Throwables.TriConsumer<Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (proxy, args,
+                        sig) -> called[0] = true);
+
+        handler.beforeInvoke(new Object(), new Object[0], null);
+        assertTrue(called[0]);
+    }
+
+    @Test
+    public void testHandlerFactory_Create_AfterInvoke() throws Exception {
+        final boolean[] called = { false };
+        @SuppressWarnings("unchecked")
+        final Jdbc.Handler<Object> handler = Jdbc.HandlerFactory
+                .create((Throwables.QuadConsumer<Object, Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (result, proxy,
+                        args, sig) -> called[0] = true);
+
+        handler.afterInvoke(null, new Object(), new Object[0], null);
+        assertTrue(called[0]);
+    }
+
+    @Test
+    public void testHandlerFactory_Create_BothInvoke() throws Exception {
+        final boolean[] beforeCalled = { false };
+        final boolean[] afterCalled = { false };
+        @SuppressWarnings("unchecked")
+        final Jdbc.Handler<Object> handler = Jdbc.HandlerFactory.create(
+                (Throwables.TriConsumer<Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (proxy, args,
+                        sig) -> beforeCalled[0] = true,
+                (Throwables.QuadConsumer<Object, Object, Object[], Tuple3<Method, ImmutableList<Class<?>>, Class<?>>, RuntimeException>) (result, proxy, args,
+                        sig) -> afterCalled[0] = true);
+
+        handler.beforeInvoke(new Object(), new Object[0], null);
+        handler.afterInvoke(null, new Object(), new Object[0], null);
+        assertTrue(beforeCalled[0]);
+        assertTrue(afterCalled[0]);
+    }
+
+    @Test
+    public void testHandlerFactory_RegisterWithQualifier() {
+        final Jdbc.Handler<Object> h = new TestHandler();
+        final String qualifier = "myCustomHandler_unique_12345";
+        assertTrue(Jdbc.HandlerFactory.register(qualifier, h));
+        assertFalse(Jdbc.HandlerFactory.register(qualifier, h));
+        assertSame(h, Jdbc.HandlerFactory.get(qualifier));
     }
 }

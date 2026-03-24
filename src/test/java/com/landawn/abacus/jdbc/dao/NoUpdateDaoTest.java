@@ -6,11 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -19,12 +21,14 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.Throwables;
 
 public class NoUpdateDaoTest extends TestBase {
 
@@ -165,5 +169,159 @@ public class NoUpdateDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.update("name", "value", condition));
         assertThrows(UnsupportedOperationException.class, () -> dao.upsert(new TestEntity(), List.of("id")));
         assertThrows(UnsupportedOperationException.class, () -> dao.upsert(new TestEntity(), condition));
+    }
+
+    @Test
+    public void testPrepareQuery_WithStmtCreator_AlwaysThrows() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator = Mockito.mock(Throwables.BiFunction.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("SELECT 1", stmtCreator));
+    }
+
+    @Test
+    public void testPrepareNamedQuery_UpdateRejected() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("UPDATE t SET x = :x"));
+    }
+
+    @Test
+    public void testPrepareNamedQuery_WithGenerateKeys_AllowedAndRejected() throws SQLException {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final NamedQuery nq = Mockito.mock(NamedQuery.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("UPDATE t SET x = :x", true));
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareNamedQuery(dataSource, "INSERT INTO t VALUES (:v)", true)).thenReturn(nq);
+
+            assertSame(nq, dao.prepareNamedQuery("INSERT INTO t VALUES (:v)", true));
+        }
+    }
+
+    @Test
+    public void testPrepareNamedQuery_WithReturnColumnIndexes_AllowedAndRejected() throws SQLException {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final NamedQuery nq = Mockito.mock(NamedQuery.class);
+        final int[] indexes = { 1 };
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("DELETE FROM t WHERE id = :id", indexes));
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareNamedQuery(dataSource, "INSERT INTO t VALUES (:v)", indexes)).thenReturn(nq);
+
+            assertSame(nq, dao.prepareNamedQuery("INSERT INTO t VALUES (:v)", indexes));
+        }
+    }
+
+    @Test
+    public void testPrepareNamedQuery_WithReturnColumnNames_AllowedAndRejected() throws SQLException {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final NamedQuery nq = Mockito.mock(NamedQuery.class);
+        final String[] cols = { "id" };
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("DELETE FROM t WHERE id = :id", cols));
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareNamedQuery(dataSource, "INSERT INTO t VALUES (:v)", cols)).thenReturn(nq);
+
+            assertSame(nq, dao.prepareNamedQuery("INSERT INTO t VALUES (:v)", cols));
+        }
+    }
+
+    @Test
+    public void testPrepareNamedQuery_WithStmtCreator_AlwaysThrows() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator = Mockito.mock(Throwables.BiFunction.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("INSERT INTO t VALUES (:v)", stmtCreator));
+    }
+
+    @Test
+    public void testPrepareNamedQueryForLargeResult_AllowedAndRejected() throws SQLException {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final NamedQuery nq = Mockito.mock(NamedQuery.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult("UPDATE t SET x = :x"));
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareNamedQueryForLargeResult(dataSource, "SELECT * FROM t")).thenReturn(nq);
+
+            assertSame(nq, dao.prepareNamedQueryForLargeResult("SELECT * FROM t"));
+        }
+    }
+
+    @Test
+    public void testPrepareNamedQuery_ParsedSql_AllowedAndRejected() throws SQLException {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final ParsedSql insertSql = Mockito.mock(ParsedSql.class);
+        final ParsedSql updateSql = Mockito.mock(ParsedSql.class);
+        final NamedQuery nq = Mockito.mock(NamedQuery.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+        when(insertSql.originalSql()).thenReturn("INSERT INTO t VALUES (:v)");
+        when(updateSql.originalSql()).thenReturn("UPDATE t SET x = :x");
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(updateSql));
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareNamedQuery(dataSource, insertSql)).thenReturn(nq);
+
+            assertSame(nq, dao.prepareNamedQuery(insertSql));
+        }
+    }
+
+    @Test
+    public void testPrepareNamedQuery_ParsedSqlWithStmtCreator_AlwaysThrows() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final ParsedSql parsedSql = Mockito.mock(ParsedSql.class);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator = Mockito.mock(Throwables.BiFunction.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(parsedSql, stmtCreator));
+    }
+
+    @Test
+    public void testPrepareCallableQuery_WithStmtCreator_AlwaysThrows() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator = Mockito.mock(Throwables.BiFunction.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.prepareCallableQuery("{call p()}", stmtCreator));
+    }
+
+    @Test
+    public void testUpdate_MapAndEntityOverloads_AlwaysThrow() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+        final TestEntity entity = new TestEntity();
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.update(Map.of("name", "x"), cond));
+        assertThrows(UnsupportedOperationException.class, () -> dao.update(entity, cond));
+        assertThrows(UnsupportedOperationException.class, () -> dao.update(entity, List.of("name"), cond));
+    }
+
+    @Test
+    public void testDelete_AlwaysThrows() {
+        final TestNoUpdateDao dao = Mockito.mock(TestNoUpdateDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.delete(cond));
     }
 }
