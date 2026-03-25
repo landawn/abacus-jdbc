@@ -766,4 +766,51 @@ public class CallableQueryTest extends TestBase {
         assertSame(callableQuery, result);
         verify(callableStatement).setNull("val", Types.VARCHAR);
     }
+
+    // setNString(String, String) — not previously tested
+    @Test
+    public void testSetNString_ByName() throws SQLException {
+        CallableQuery result = callableQuery.setNString("nname", "unicode");
+        assertSame(callableQuery, result);
+        verify(callableStatement).setNString("nname", "unicode");
+    }
+
+    // setBigIntegerAsString(String, BigInteger) — delegates to setString(String, BigInteger)
+    @Test
+    public void testSetBigIntegerAsString_ByName_NonNull() throws SQLException {
+        BigInteger val = new BigInteger("12345678901234567890");
+        CallableQuery result = callableQuery.setBigIntegerAsString("bigStr", val);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setString("bigStr", val.toString(10));
+    }
+
+    @Test
+    public void testSetBigIntegerAsString_ByName_Null() throws SQLException {
+        CallableQuery result = callableQuery.setBigIntegerAsString("bigStr", null);
+        assertSame(callableQuery, result);
+        verify(callableStatement).setNull("bigStr", Types.VARCHAR);
+    }
+
+    // setParameters(Object entity, List<String> parameterNames) — not previously tested
+    @Test
+    public void testSetParameters_EntityValid() throws SQLException {
+        SimpleTestBean bean = new SimpleTestBean();
+        bean.setName("Alice");
+        callableQuery.setParameters(bean, java.util.List.of("name"));
+        verify(callableStatement).setString("name", "Alice");
+    }
+
+    @Test
+    public void testSetParameters_EntityInvalidParam_Throws() throws SQLException {
+        SimpleTestBean bean = new SimpleTestBean();
+        assertThrows(IllegalArgumentException.class,
+                () -> callableQuery.setParameters(bean, java.util.List.of("nonExistent")));
+    }
+
+    private static class SimpleTestBean {
+        private String name;
+
+        public String getName() { return name; }
+        public void setName(final String name) { this.name = name; }
+    }
 }

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
@@ -25,6 +26,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
+import com.landawn.abacus.util.Throwables;
 
 public class AbstractQueryTest extends TestBase {
 
@@ -412,5 +414,126 @@ public class AbstractQueryTest extends TestBase {
         assertEquals("bad condition", iae.getMessage());
         assertEquals(1, iae.getSuppressed().length);
         assertSame(closeEx, iae.getSuppressed()[0]);
+    }
+
+    // setParameters(ParametersSetter<Stmt>) — exception path closes the query (line 2791)
+    @Test
+    public void testSetParameters_ParametersSetter_ThrowsClosesQuery() {
+        assertThrows(SQLException.class, () ->
+                query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> {
+                    throw new SQLException("setter failed");
+                }));
+    }
+
+    // setParameters(T, BiParametersSetter<Stmt,T>) — exception path closes (line 2855)
+    @Test
+    public void testSetParameters_BiParametersSetter_ThrowsClosesQuery() {
+        assertThrows(SQLException.class, () ->
+                query.setParameters("data", (Jdbc.BiParametersSetter<PreparedStatement, String>) (stmt, s) -> {
+                    throw new SQLException("bi-setter failed");
+                }));
+    }
+
+    // settParameters(ParametersSetter<This>) — exception path closes (line 3117)
+    @Test
+    public void testSettParameters_ParametersSetter_ThrowsClosesQuery() {
+        assertThrows(SQLException.class, () ->
+                query.settParameters((Jdbc.ParametersSetter<TestQuery>) q -> {
+                    throw new SQLException("settParameters failed");
+                }));
+    }
+
+    // settParameters(T, BiParametersSetter<This,T>) — exception path closes (line 3165)
+    @Test
+    public void testSettParameters_BiParametersSetter_ThrowsClosesQuery() {
+        assertThrows(SQLException.class, () ->
+                query.settParameters("params", (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> {
+                    throw new SQLException("bi-settParameters failed");
+                }));
+    }
+
+    // addBatchParameters(Iterator<T>, Class<T>) — empty iterator early return (lines 3752-3753)
+    @Test
+    public void testAddBatchParameters_TypedIterator_EmptyIterator() throws SQLException {
+        TestQuery result = query.addBatchParameters(List.<String>of().iterator(), String.class);
+        assertSame(query, result);
+    }
+
+    // configStmt(Consumer<Stmt>) — exception path closes (line 4305)
+    @Test
+    public void testConfigStmt_Consumer_ThrowsClosesQuery() {
+        assertThrows(SQLException.class, () ->
+                query.configStmt((Throwables.Consumer<PreparedStatement, SQLException>) stmt -> {
+                    throw new SQLException("configStmt failed");
+                }));
+    }
+
+    // configStmt(BiConsumer<This,Stmt>) — exception path closes (line 4345)
+    @Test
+    public void testConfigStmt_BiConsumer_ThrowsClosesQuery() {
+        assertThrows(SQLException.class, () ->
+                query.configStmt((Throwables.BiConsumer<TestQuery, PreparedStatement, SQLException>) (q, stmt) -> {
+                    throw new SQLException("configStmt BiConsumer failed");
+                }));
+    }
+
+    // queryForChar() — no rows returns OptionalChar.empty() (line 4415)
+    @Test
+    public void testQueryForChar_NoResult_ReturnsEmpty() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+        // OptionalChar.empty() is returned; verify it is absent (isEmpty)
+        assertTrue(query.queryForChar().isEmpty());
+    }
+
+    // findFirstOrNull(Class) — no rows returns null (line 6079)
+    @Test
+    public void testFindFirstOrNull_Class_NoResult_ReturnsNull() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+        assertNull(query.findFirstOrNull(String.class));
+    }
+
+    // findFirstOrNull(RowMapper) — no rows returns null (line 6114)
+    @Test
+    public void testFindFirstOrNull_RowMapper_NoResult_ReturnsNull() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+        assertNull(query.findFirstOrNull(r -> r.getString(1)));
+    }
+
+    // findFirstOrNull(RowFilter, RowMapper) — no rows returns null (line 6157)
+    @Test
+    public void testFindFirstOrNull_RowFilter_RowMapper_NoResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+        assertNull(query.findFirstOrNull(r -> true, r -> r.getString(1)));
+    }
+
+    // list(RowFilter, RowMapper) — delegates and returns empty list (line 6442)
+    @Test
+    public void testList_RowFilter_RowMapper_EmptyResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+        List<String> result = query.list(r -> true, r -> r.getString(1));
+        assertTrue(result.isEmpty());
+    }
+
+    // list(BiRowFilter, BiRowMapper) — delegates and returns empty list (line 6587)
+    @Test
+    public void testList_BiRowFilter_BiRowMapper_EmptyResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false);
+        List<String> result = query.list((r, labels) -> true, (r, labels) -> r.getString(1));
+        assertTrue(result.isEmpty());
     }
 }
