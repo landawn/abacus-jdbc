@@ -621,4 +621,5 @@ public class DaoTest extends TestBase {
         assertSame(entity, result);
         verify(dao).save(entity);
     }
+
 }

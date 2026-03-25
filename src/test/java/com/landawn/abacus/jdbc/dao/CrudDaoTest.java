@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.util.u.Optional;
@@ -28,6 +30,20 @@ public class CrudDaoTest extends TestBase {
     }
 
     interface IdentifiedCrudDao extends CrudDao<IdentifiedEntity, Long, PSC, IdentifiedCrudDao> {
+    }
+
+    interface IdAnnotatedCrudDao extends CrudDao<IdAnnotatedEntity, Long, PSC, IdAnnotatedCrudDao> {
+    }
+
+    static final class IdAnnotatedEntity {
+        @Id
+        private Long id;
+        private String name;
+
+        public Long getId() { return id; }
+        public void setId(final Long id) { this.id = id; }
+        public String getName() { return name; }
+        public void setName(final String name) { this.name = name; }
     }
 
     static final class IdentifiedEntity {
@@ -287,5 +303,27 @@ public class CrudDaoTest extends TestBase {
 
         assertEquals(2, dao.batchDeleteByIds(ids));
         verify(dao).batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testNotExists_DelegatesToExists() throws SQLException {
+        TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        when(dao.exists(5L)).thenReturn(false);
+        assertTrue(dao.notExists(5L));
+
+        when(dao.exists(5L)).thenReturn(true);
+        assertFalse(dao.notExists(5L));
+    }
+
+    @Test
+    public void testBatchUpsert_WithoutBatchSize_UsesDefault() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+
+        Mockito.doReturn(entities).when(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+
+        assertEquals(entities, dao.batchUpsert(entities));
+        verify(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 }

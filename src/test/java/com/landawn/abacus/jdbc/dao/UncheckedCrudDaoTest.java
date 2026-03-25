@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.SqlBuilder.PSC;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedCrudDaoTest extends TestBase {
@@ -27,6 +30,20 @@ public class UncheckedCrudDaoTest extends TestBase {
     }
 
     interface IdentifiedUncheckedCrudDao extends UncheckedCrudDao<IdentifiedEntity, Long, PSC, IdentifiedUncheckedCrudDao> {
+    }
+
+    interface IdAnnotatedUncheckedCrudDao extends UncheckedCrudDao<IdAnnotatedEntity, Long, PSC, IdAnnotatedUncheckedCrudDao> {
+    }
+
+    static final class IdAnnotatedEntity {
+        @Id
+        private Long id;
+        private String name;
+
+        public Long getId() { return id; }
+        public void setId(final Long id) { this.id = id; }
+        public String getName() { return name; }
+        public void setName(final String name) { this.name = name; }
     }
 
     static final class IdentifiedEntity {
@@ -286,5 +303,41 @@ public class UncheckedCrudDaoTest extends TestBase {
 
         assertEquals(2, dao.batchDeleteByIds(ids));
         verify(dao).batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    @Test
+    public void testNotExists_DelegatesToExists() {
+        TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        when(dao.exists(5L)).thenReturn(false);
+        assertTrue(dao.notExists(5L));
+
+        when(dao.exists(5L)).thenReturn(true);
+        assertFalse(dao.notExists(5L));
+    }
+
+    @Test
+    public void testUpsert_WithUniquePropNames_BuildsCondAndDelegates() {
+        IdentifiedUncheckedCrudDao dao = Mockito.mock(IdentifiedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdentifiedEntity entity = new IdentifiedEntity();
+        entity.setName("Alice");
+
+        Mockito.doReturn(entity).when(dao).upsert(Mockito.same(entity), Mockito.any(Condition.class));
+
+        IdentifiedEntity result = dao.upsert(entity, List.of("name"));
+
+        assertSame(entity, result);
+        verify(dao).upsert(Mockito.same(entity), Mockito.any(Condition.class));
+    }
+
+    @Test
+    public void testBatchUpsert_WithoutBatchSize_UsesDefault() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+
+        Mockito.doReturn(entities).when(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
+
+        assertEquals(entities, dao.batchUpsert(entities));
+        verify(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 }

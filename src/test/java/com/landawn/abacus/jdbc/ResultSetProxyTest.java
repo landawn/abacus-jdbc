@@ -36,9 +36,12 @@ import java.sql.Array;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Date;
+import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.RowId;
+import java.sql.SQLXML;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
@@ -960,5 +963,379 @@ public class ResultSetProxyTest extends TestBase {
         URL url = new URL("https://example.com");
         when(delegate.getURL("col")).thenReturn(url);
         assertEquals(url, proxy.getURL("col"));
+    }
+
+    @Test
+    public void testUpdateRef_ByIndex() throws SQLException {
+        Ref ref = Mockito.mock(Ref.class);
+        proxy.updateRef(1, ref);
+        verify(delegate).updateRef(1, ref);
+    }
+
+    @Test
+    public void testUpdateRef_ByLabel() throws SQLException {
+        Ref ref = Mockito.mock(Ref.class);
+        proxy.updateRef("col", ref);
+        verify(delegate).updateRef("col", ref);
+    }
+
+    @Test
+    public void testUpdateBlob_ByIndex_Blob() throws SQLException {
+        Blob blob = Mockito.mock(Blob.class);
+        proxy.updateBlob(1, blob);
+        verify(delegate).updateBlob(1, blob);
+    }
+
+    @Test
+    public void testUpdateBlob_ByLabel_Blob() throws SQLException {
+        Blob blob = Mockito.mock(Blob.class);
+        proxy.updateBlob("col", blob);
+        verify(delegate).updateBlob("col", blob);
+    }
+
+    @Test
+    public void testUpdateClob_ByIndex_Clob() throws SQLException {
+        Clob clob = Mockito.mock(Clob.class);
+        proxy.updateClob(1, clob);
+        verify(delegate).updateClob(1, clob);
+    }
+
+    @Test
+    public void testUpdateClob_ByLabel_Clob() throws SQLException {
+        Clob clob = Mockito.mock(Clob.class);
+        proxy.updateClob("col", clob);
+        verify(delegate).updateClob("col", clob);
+    }
+
+    @Test
+    public void testUpdateArray_ByIndex() throws SQLException {
+        Array arr = Mockito.mock(Array.class);
+        proxy.updateArray(1, arr);
+        verify(delegate).updateArray(1, arr);
+    }
+
+    @Test
+    public void testUpdateArray_ByLabel() throws SQLException {
+        Array arr = Mockito.mock(Array.class);
+        proxy.updateArray("col", arr);
+        verify(delegate).updateArray("col", arr);
+    }
+
+    @Test
+    public void testGetRowId_ByIndex() throws SQLException {
+        RowId rowId = Mockito.mock(RowId.class);
+        when(delegate.getRowId(1)).thenReturn(rowId);
+        assertSame(rowId, proxy.getRowId(1));
+    }
+
+    @Test
+    public void testGetRowId_ByLabel() throws SQLException {
+        RowId rowId = Mockito.mock(RowId.class);
+        when(delegate.getRowId("col")).thenReturn(rowId);
+        assertSame(rowId, proxy.getRowId("col"));
+    }
+
+    @Test
+    public void testUpdateRowId_ByIndex() throws SQLException {
+        RowId rowId = Mockito.mock(RowId.class);
+        proxy.updateRowId(1, rowId);
+        verify(delegate).updateRowId(1, rowId);
+    }
+
+    @Test
+    public void testUpdateRowId_ByLabel() throws SQLException {
+        RowId rowId = Mockito.mock(RowId.class);
+        proxy.updateRowId("col", rowId);
+        verify(delegate).updateRowId("col", rowId);
+    }
+
+    @Test
+    public void testUpdateNString_ByIndex() throws SQLException {
+        proxy.updateNString(1, "nstring");
+        verify(delegate).updateNString(1, "nstring");
+    }
+
+    @Test
+    public void testUpdateNString_ByLabel() throws SQLException {
+        proxy.updateNString("col", "nstring");
+        verify(delegate).updateNString("col", "nstring");
+    }
+
+    @Test
+    public void testUpdateNClob_ByIndex_NClob() throws SQLException {
+        NClob nclob = Mockito.mock(NClob.class);
+        proxy.updateNClob(1, nclob);
+        verify(delegate).updateNClob(1, nclob);
+    }
+
+    @Test
+    public void testUpdateNClob_ByLabel_NClob() throws SQLException {
+        NClob nclob = Mockito.mock(NClob.class);
+        proxy.updateNClob("col", nclob);
+        verify(delegate).updateNClob("col", nclob);
+    }
+
+    @Test
+    public void testGetNClob_ByIndex() throws SQLException {
+        NClob nclob = Mockito.mock(NClob.class);
+        when(delegate.getNClob(1)).thenReturn(nclob);
+        assertSame(nclob, proxy.getNClob(1));
+    }
+
+    @Test
+    public void testGetNClob_ByLabel() throws SQLException {
+        NClob nclob = Mockito.mock(NClob.class);
+        when(delegate.getNClob("col")).thenReturn(nclob);
+        assertSame(nclob, proxy.getNClob("col"));
+    }
+
+    @Test
+    public void testGetSQLXML_ByIndex() throws SQLException {
+        SQLXML xml = Mockito.mock(SQLXML.class);
+        when(delegate.getSQLXML(1)).thenReturn(xml);
+        assertSame(xml, proxy.getSQLXML(1));
+    }
+
+    @Test
+    public void testGetSQLXML_ByLabel() throws SQLException {
+        SQLXML xml = Mockito.mock(SQLXML.class);
+        when(delegate.getSQLXML("col")).thenReturn(xml);
+        assertSame(xml, proxy.getSQLXML("col"));
+    }
+
+    @Test
+    public void testUpdateSQLXML_ByIndex() throws SQLException {
+        SQLXML xml = Mockito.mock(SQLXML.class);
+        proxy.updateSQLXML(1, xml);
+        verify(delegate).updateSQLXML(1, xml);
+    }
+
+    @Test
+    public void testUpdateSQLXML_ByLabel() throws SQLException {
+        SQLXML xml = Mockito.mock(SQLXML.class);
+        proxy.updateSQLXML("col", xml);
+        verify(delegate).updateSQLXML("col", xml);
+    }
+
+    @Test
+    public void testGetNString_ByIndex() throws SQLException {
+        when(delegate.getNString(1)).thenReturn("ns");
+        assertEquals("ns", proxy.getNString(1));
+    }
+
+    @Test
+    public void testGetNString_ByLabel() throws SQLException {
+        when(delegate.getNString("col")).thenReturn("ns2");
+        assertEquals("ns2", proxy.getNString("col"));
+    }
+
+    @Test
+    public void testGetNCharacterStream_ByIndex() throws SQLException {
+        Reader reader = new StringReader("text");
+        when(delegate.getNCharacterStream(1)).thenReturn(reader);
+        assertSame(reader, proxy.getNCharacterStream(1));
+    }
+
+    @Test
+    public void testGetNCharacterStream_ByLabel() throws SQLException {
+        Reader reader = new StringReader("text");
+        when(delegate.getNCharacterStream("col")).thenReturn(reader);
+        assertSame(reader, proxy.getNCharacterStream("col"));
+    }
+
+    @Test
+    public void testUpdateNCharacterStream_ByIndex_WithLength() throws SQLException {
+        Reader reader = new StringReader("nchar");
+        proxy.updateNCharacterStream(1, reader, 5L);
+        verify(delegate).updateNCharacterStream(1, reader, 5L);
+    }
+
+    @Test
+    public void testUpdateNCharacterStream_ByLabel_WithLength() throws SQLException {
+        Reader reader = new StringReader("nchar");
+        proxy.updateNCharacterStream("col", reader, 5L);
+        verify(delegate).updateNCharacterStream("col", reader, 5L);
+    }
+
+    @Test
+    public void testUpdateAsciiStream_ByIndex_WithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 1 });
+        proxy.updateAsciiStream(1, is, 1L);
+        verify(delegate).updateAsciiStream(1, is, 1L);
+    }
+
+    @Test
+    public void testUpdateBinaryStream_ByIndex_WithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 2 });
+        proxy.updateBinaryStream(1, is, 1L);
+        verify(delegate).updateBinaryStream(1, is, 1L);
+    }
+
+    @Test
+    public void testUpdateCharacterStream_ByIndex_WithLength() throws SQLException {
+        Reader reader = new StringReader("x");
+        proxy.updateCharacterStream(1, reader, 1L);
+        verify(delegate).updateCharacterStream(1, reader, 1L);
+    }
+
+    @Test
+    public void testUpdateAsciiStream_ByLabel_WithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 3 });
+        proxy.updateAsciiStream("col", is, 1L);
+        verify(delegate).updateAsciiStream("col", is, 1L);
+    }
+
+    @Test
+    public void testUpdateBinaryStream_ByLabel_WithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 4 });
+        proxy.updateBinaryStream("col", is, 1L);
+        verify(delegate).updateBinaryStream("col", is, 1L);
+    }
+
+    @Test
+    public void testUpdateCharacterStream_ByLabel_WithLength() throws SQLException {
+        Reader reader = new StringReader("y");
+        proxy.updateCharacterStream("col", reader, 1L);
+        verify(delegate).updateCharacterStream("col", reader, 1L);
+    }
+
+    @Test
+    public void testUpdateBlob_ByIndex_WithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 5 });
+        proxy.updateBlob(1, is, 1L);
+        verify(delegate).updateBlob(1, is, 1L);
+    }
+
+    @Test
+    public void testUpdateBlob_ByLabel_WithLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 6 });
+        proxy.updateBlob("col", is, 1L);
+        verify(delegate).updateBlob("col", is, 1L);
+    }
+
+    @Test
+    public void testUpdateClob_ByIndex_WithLength() throws SQLException {
+        Reader reader = new StringReader("clob");
+        proxy.updateClob(1, reader, 4L);
+        verify(delegate).updateClob(1, reader, 4L);
+    }
+
+    @Test
+    public void testUpdateClob_ByLabel_WithLength() throws SQLException {
+        Reader reader = new StringReader("clob");
+        proxy.updateClob("col", reader, 4L);
+        verify(delegate).updateClob("col", reader, 4L);
+    }
+
+    @Test
+    public void testUpdateNClob_ByIndex_WithLength() throws SQLException {
+        Reader reader = new StringReader("nclob");
+        proxy.updateNClob(1, reader, 5L);
+        verify(delegate).updateNClob(1, reader, 5L);
+    }
+
+    @Test
+    public void testUpdateNClob_ByLabel_WithLength() throws SQLException {
+        Reader reader = new StringReader("nclob");
+        proxy.updateNClob("col", reader, 5L);
+        verify(delegate).updateNClob("col", reader, 5L);
+    }
+
+    @Test
+    public void testUpdateNCharacterStream_ByIndex_NoLength() throws SQLException {
+        Reader reader = new StringReader("nch");
+        proxy.updateNCharacterStream(1, reader);
+        verify(delegate).updateNCharacterStream(1, reader);
+    }
+
+    @Test
+    public void testUpdateNCharacterStream_ByLabel_NoLength() throws SQLException {
+        Reader reader = new StringReader("nch");
+        proxy.updateNCharacterStream("col", reader);
+        verify(delegate).updateNCharacterStream("col", reader);
+    }
+
+    @Test
+    public void testUpdateAsciiStream_ByIndex_NoLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 7 });
+        proxy.updateAsciiStream(1, is);
+        verify(delegate).updateAsciiStream(1, is);
+    }
+
+    @Test
+    public void testUpdateBinaryStream_ByIndex_NoLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 8 });
+        proxy.updateBinaryStream(1, is);
+        verify(delegate).updateBinaryStream(1, is);
+    }
+
+    @Test
+    public void testUpdateCharacterStream_ByIndex_NoLength() throws SQLException {
+        Reader reader = new StringReader("cs");
+        proxy.updateCharacterStream(1, reader);
+        verify(delegate).updateCharacterStream(1, reader);
+    }
+
+    @Test
+    public void testUpdateAsciiStream_ByLabel_NoLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 9 });
+        proxy.updateAsciiStream("col", is);
+        verify(delegate).updateAsciiStream("col", is);
+    }
+
+    @Test
+    public void testUpdateBinaryStream_ByLabel_NoLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 10 });
+        proxy.updateBinaryStream("col", is);
+        verify(delegate).updateBinaryStream("col", is);
+    }
+
+    @Test
+    public void testUpdateCharacterStream_ByLabel_NoLength() throws SQLException {
+        Reader reader = new StringReader("cs");
+        proxy.updateCharacterStream("col", reader);
+        verify(delegate).updateCharacterStream("col", reader);
+    }
+
+    @Test
+    public void testUpdateBlob_ByIndex_NoLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 11 });
+        proxy.updateBlob(1, is);
+        verify(delegate).updateBlob(1, is);
+    }
+
+    @Test
+    public void testUpdateBlob_ByLabel_NoLength() throws SQLException {
+        InputStream is = new ByteArrayInputStream(new byte[] { 12 });
+        proxy.updateBlob("col", is);
+        verify(delegate).updateBlob("col", is);
+    }
+
+    @Test
+    public void testUpdateClob_ByIndex_NoLength() throws SQLException {
+        Reader reader = new StringReader("cl");
+        proxy.updateClob(1, reader);
+        verify(delegate).updateClob(1, reader);
+    }
+
+    @Test
+    public void testUpdateClob_ByLabel_NoLength() throws SQLException {
+        Reader reader = new StringReader("cl");
+        proxy.updateClob("col", reader);
+        verify(delegate).updateClob("col", reader);
+    }
+
+    @Test
+    public void testUpdateNClob_ByIndex_NoLength() throws SQLException {
+        Reader reader = new StringReader("ncl");
+        proxy.updateNClob(1, reader);
+        verify(delegate).updateNClob(1, reader);
+    }
+
+    @Test
+    public void testUpdateNClob_ByLabel_NoLength() throws SQLException {
+        Reader reader = new StringReader("ncl");
+        proxy.updateNClob("col", reader);
+        verify(delegate).updateNClob("col", reader);
     }
 }

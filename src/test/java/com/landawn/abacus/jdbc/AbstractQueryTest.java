@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -371,5 +372,45 @@ public class AbstractQueryTest extends TestBase {
         when(rs.getString(1)).thenReturn("value");
 
         assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(r -> r.getString(1)));
+    }
+
+    @Test
+    public void testCheckArgNotNull_NullArg_ThrowsIllegalArgument() {
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.checkArgNotNull(null, "myParam"));
+        assertTrue(iae.getMessage().contains("myParam"));
+    }
+
+    @Test
+    public void testCheckArgNotNull_CloseHandlerThrows_SuppressedException() {
+        final RuntimeException closeEx = new RuntimeException("close handler failed");
+        query.onClose(() -> { throw closeEx; });
+
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.checkArgNotNull(null, "someArg"));
+
+        assertTrue(iae.getMessage().contains("someArg"));
+        assertEquals(1, iae.getSuppressed().length);
+        assertSame(closeEx, iae.getSuppressed()[0]);
+    }
+
+    @Test
+    public void testCheckArg_FalseCondition_ThrowsIllegalArgument() {
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.checkArg(false, "condition must be true"));
+        assertEquals("condition must be true", iae.getMessage());
+    }
+
+    @Test
+    public void testCheckArg_CloseHandlerThrows_SuppressedException() {
+        final RuntimeException closeEx = new RuntimeException("close handler failed");
+        query.onClose(() -> { throw closeEx; });
+
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.checkArg(false, "bad condition"));
+
+        assertEquals("bad condition", iae.getMessage());
+        assertEquals(1, iae.getSuppressed().length);
+        assertSame(closeEx, iae.getSuppressed()[0]);
     }
 }

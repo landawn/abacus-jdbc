@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
@@ -80,7 +81,13 @@ public class JdbcUtilTest extends TestBase {
     private Clob mockClob;
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    @SuppressWarnings("unchecked")
+    public void setUp() throws Exception {
+        // Reset the static resultSetClassNotSupportAbsolute set so tests don't pollute each other
+        final Field rsNoAbsoluteField = JdbcUtil.class.getDeclaredField("resultSetClassNotSupportAbsolute");
+        rsNoAbsoluteField.setAccessible(true);
+        ((Set<?>) rsNoAbsoluteField.get(null)).clear();
+
         mockDataSource = mock(DataSource.class);
         mockConnection = mock(Connection.class);
         mockPreparedStatement = mock(PreparedStatement.class);
@@ -2012,6 +2019,58 @@ public class JdbcUtilTest extends TestBase {
         CallableQuery query = JdbcUtil.prepareCallableQuery(mockConnection, "{call proc(?)}");
         assertNotNull(query);
         query.close();
+    }
+
+    @Test
+    public void testSkip_ZeroRows_ReturnsZero() throws SQLException {
+        assertEquals(0, JdbcUtil.skip(mockResultSet, 0));
+        assertEquals(0, JdbcUtil.skip(mockResultSet, 0L));
+    }
+
+    @Test
+    public void testSkip_ManualIteration_WhenCurrentRowNearMax() throws SQLException {
+        // rowsToSkip=2, currentRow=Integer.MAX_VALUE-1 → 2 > (MAX - (MAX-1)) = 2 > 1 → manual loop
+        ResultSet freshRs = mock(ResultSet.class);
+        when(freshRs.getRow()).thenReturn(Integer.MAX_VALUE - 1);
+        when(freshRs.next()).thenReturn(true, false);
+
+        int skipped = JdbcUtil.skip(freshRs, 2L);
+        assertEquals(1, skipped);
+    }
+
+    @Test
+    public void testSkip_Absolute_PastEnd_LastReturnsTrue() throws SQLException {
+        // Use a fresh mock to avoid static resultSetClassNotSupportAbsolute pollution
+        // rs.absolute() ignored; newRow=0 → else → rs.last() returns true → lastRow=3
+        ResultSet freshRs = mock(ResultSet.class);
+        when(freshRs.getRow()).thenReturn(0, 0, 3);
+        when(freshRs.last()).thenReturn(true);
+
+        int skipped = JdbcUtil.skip(freshRs, 5L);
+        assertEquals(3, skipped);
+    }
+
+    @Test
+    public void testSkip_Absolute_PastEnd_LastReturnsFalse() throws SQLException {
+        // Use a fresh mock; newRow=0 → else → rs.last() returns false → skipped=0
+        ResultSet freshRs = mock(ResultSet.class);
+        when(freshRs.getRow()).thenReturn(0, 0);
+        when(freshRs.last()).thenReturn(false);
+
+        int skipped = JdbcUtil.skip(freshRs, 5L);
+        assertEquals(0, skipped);
+    }
+
+    @Test
+    public void testSkip_AbsoluteThrows_FallsBackToManualIteration() throws SQLException {
+        // rs.absolute() throws → catch block → remaining=1 after getRow adjustment → rs.next()==true → skipped=2
+        ResultSet freshRs = mock(ResultSet.class);
+        when(freshRs.getRow()).thenReturn(0, 1);
+        doThrow(new SQLException("absolute not supported")).when(freshRs).absolute(anyInt());
+        when(freshRs.next()).thenReturn(true, false);
+
+        int skipped = JdbcUtil.skip(freshRs, 2L);
+        assertEquals(2, skipped);
     }
 
     // Test entity class for various tests

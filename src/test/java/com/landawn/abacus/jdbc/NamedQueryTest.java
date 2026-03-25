@@ -1409,6 +1409,110 @@ public class NamedQueryTest extends TestBase {
         verify(mockPreparedStatement, times(2)).addBatch();
     }
 
+    // Helper to create a NamedQuery with paramCount >= MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP (5)
+    // so the paramNameIndexMap branch is exercised.
+    private NamedQuery createMapBranchQuery(final ImmutableList<String> names) throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(names);
+        when(mockParsedSql.parameterCount()).thenReturn(names.size());
+        return new NamedQuery(mockPreparedStatement, mockParsedSql);
+    }
+
+    @Test
+    public void testSetNull_MapBranch_ParamNotFound() throws SQLException {
+        // paramCount >= 5, param not in map → throws
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        assertThrows(IllegalArgumentException.class, () -> q.setNull("unknown", Types.INTEGER));
+    }
+
+    @Test
+    public void testSetNull_MapBranch_TwoOccurrences() throws SQLException {
+        // paramCount >= 5, same param twice → lines 173-174
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setNull("p", Types.INTEGER);
+        verify(mockPreparedStatement).setNull(4, Types.INTEGER);
+        verify(mockPreparedStatement).setNull(5, Types.INTEGER);
+    }
+
+    @Test
+    public void testSetNull_MapBranch_ThreeOccurrences() throws SQLException {
+        // paramCount >= 5, same param three times → lines 176-178
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        q.setNull("p", Types.INTEGER);
+        verify(mockPreparedStatement, times(3)).setNull(anyInt(), eq(Types.INTEGER));
+    }
+
+    @Test
+    public void testSetNull_MapBranch_FourOccurrences() throws SQLException {
+        // paramCount >= 5, same param four times → for loop (line 180-182)
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setNull("p", Types.INTEGER);
+        verify(mockPreparedStatement, times(4)).setNull(anyInt(), eq(Types.INTEGER));
+    }
+
+    @Test
+    public void testSetNullTypeName_LoopBranch_ParamNotFound() throws SQLException {
+        // paramCount < 5, typeName overload, param not found → lines 221-222
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNull("unknown", Types.STRUCT, "MY_TYPE"));
+    }
+
+    @Test
+    public void testSetNullTypeName_MapBranch_ParamNotFound() throws SQLException {
+        // paramCount >= 5, typeName overload, param not found → lines 232-233
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        assertThrows(IllegalArgumentException.class, () -> q.setNull("unknown", Types.STRUCT, "MY_TYPE"));
+    }
+
+    @Test
+    public void testSetNullTypeName_MapBranch_TwoOccurrences() throws SQLException {
+        // paramCount >= 5, typeName overload, 2 occurrences → lines 238-239
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setNull("p", Types.STRUCT, "MY_TYPE");
+        verify(mockPreparedStatement).setNull(4, Types.STRUCT, "MY_TYPE");
+        verify(mockPreparedStatement).setNull(5, Types.STRUCT, "MY_TYPE");
+    }
+
+    @Test
+    public void testSetNullTypeName_MapBranch_ThreeOccurrences() throws SQLException {
+        // paramCount >= 5, typeName overload, 3 occurrences → lines 241-244
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        q.setNull("p", Types.STRUCT, "MY_TYPE");
+        verify(mockPreparedStatement, times(3)).setNull(anyInt(), eq(Types.STRUCT), eq("MY_TYPE"));
+    }
+
+    @Test
+    public void testSetBoolean_LoopBranch_ParamNotFound() throws SQLException {
+        // paramCount < 5, setBoolean, param not found → lines 283-284
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBoolean("unknown", true));
+    }
+
+    @Test
+    public void testSetBoolean_MapBranch_TwoOccurrences() throws SQLException {
+        // paramCount >= 5, setBoolean, 2 occurrences → lines 300-301
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setBoolean("p", true);
+        verify(mockPreparedStatement, times(2)).setBoolean(anyInt(), eq(true));
+    }
+
+    @Test
+    public void testSetBoolean_MapBranch_FourOccurrences() throws SQLException {
+        // paramCount >= 5, setBoolean, 4 occurrences → for loop (line 308)
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setBoolean("p", false);
+        verify(mockPreparedStatement, times(4)).setBoolean(anyInt(), eq(false));
+    }
+
+    @Test
+    public void testSetByte_LoopBranch_ParamNotFound() throws SQLException {
+        // paramCount < 5, setByte, param not found → lines 371-372
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setByte("unknown", (byte) 1));
+    }
+
+    @Test
+    public void testSetShort_LoopBranch_ParamNotFound() throws SQLException {
+        // paramCount < 5, setShort, param not found → lines 459-460
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setShort("unknown", (short) 1));
+    }
+
     // Helper test entity class
     private static class TestEntity {
         private String param1;

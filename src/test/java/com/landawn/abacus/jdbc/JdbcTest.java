@@ -182,18 +182,35 @@ public class JdbcTest extends TestBase {
         verify(mockPreparedStatement, times(1)).setInt(anyInt(), anyInt());
     }
 
-    //    @Test
-    //    public void testBiParametersSetterCreateForList() throws SQLException {
-    //        List<String> fields = Arrays.asList("name", "age");
-    //        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.createForList(fields, TestEntity.class);
-    //
-    //        List<Object> params = Arrays.asList("John", 25);
-    //        setter.accept(mockPreparedStatement, params);
-    //
-    //        //  verify(mockPreparedStatement, times(2)).setObject(anyInt(), any());
-    //        verify(mockPreparedStatement, times(1)).setString(anyInt(), any());
-    //        verify(mockPreparedStatement, times(1)).setInt(anyInt(), any());
-    //    }
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testBiParametersSetterCreateForList() throws SQLException {
+        List<String> fields = Arrays.asList("name", "age");
+        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.createForList(fields, TestEntity.class);
+        assertNotNull(setter);
+
+        List<Object> params = Arrays.asList("John", 25);
+        setter.accept(mockPreparedStatement, params);
+
+        verify(mockPreparedStatement, times(1)).setString(anyInt(), any());
+        verify(mockPreparedStatement, times(1)).setInt(anyInt(), anyInt());
+    }
+
+    @Test
+    public void testBiParametersSetterCreateForList_InvalidField() {
+        List<String> fields = Arrays.asList("nonexistentField");
+        Jdbc.BiParametersSetter<PreparedStatement, List<Object>> setter = Jdbc.BiParametersSetter.createForList(fields, TestEntity.class);
+        assertNotNull(setter);
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, Arrays.asList("value")));
+    }
+
+    @Test
+    public void testBiParametersSetterCreateForArray_InvalidField() {
+        List<String> fields = Arrays.asList("nonexistentField");
+        Jdbc.BiParametersSetter<PreparedStatement, Object[]> setter = Jdbc.BiParametersSetter.createForArray(fields, TestEntity.class);
+        assertNotNull(setter);
+        assertThrows(IllegalArgumentException.class, () -> setter.accept(mockPreparedStatement, new Object[] { "value" }));
+    }
 
     // TriParametersSetter Tests
     @Test
@@ -317,6 +334,41 @@ public class JdbcTest extends TestBase {
         Map<String, Double> result = extractor.apply(mockResultSet);
         assertEquals(1, result.size());
         assertEquals(30.0, result.get("A"), 0.001);
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMap_WithCollector_Deprecated() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString("category")).thenReturn("A", "A");
+        when(mockResultSet.getInt("value")).thenReturn(5, 7);
+
+        // 3-arg deprecated toMap delegates to 4-arg toMap which delegates to groupTo
+        Jdbc.ResultExtractor<Map<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(
+                rs -> rs.getString("category"), rs -> rs.getInt("value"),
+                Collectors.summingInt(Integer::intValue));
+
+        Map<String, Integer> result = extractor.apply(mockResultSet);
+        assertEquals(1, result.size());
+        assertEquals(12, result.get("A"));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMap_WithCollectorAndSupplier_Deprecated() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getString("key")).thenReturn("X");
+        when(mockResultSet.getInt("val")).thenReturn(99);
+
+        // 4-arg deprecated toMap delegates to groupTo
+        Jdbc.ResultExtractor<LinkedHashMap<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(
+                rs -> rs.getString("key"), rs -> rs.getInt("val"),
+                Collectors.summingInt(Integer::intValue),
+                LinkedHashMap::new);
+
+        LinkedHashMap<String, Integer> result = extractor.apply(mockResultSet);
+        assertEquals(1, result.size());
+        assertEquals(99, result.get("X"));
     }
 
     @Test
@@ -651,6 +703,19 @@ public class JdbcTest extends TestBase {
         assertEquals(1, result.get(0));
         assertEquals("John", result.get(1));
         assertEquals(25, result.get(2));
+    }
+
+    @Test
+    public void testRowMapperToDisposableObjArray_WithEntityClass() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(2L);
+        when(mockResultSet.getString(2)).thenReturn("Nina");
+        when(mockResultSet.getObject(3)).thenReturn(27);
+
+        Jdbc.RowMapper<DisposableObjArray> mapper = Jdbc.RowMapper.toDisposableObjArray(TestEntity.class);
+        DisposableObjArray result = mapper.apply(mockResultSet);
+
+        assertNotNull(result);
+        assertEquals(3, result.length());
     }
 
     @Test
@@ -994,6 +1059,106 @@ public class JdbcTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> Jdbc.BiRowMapper.builder(null));
     }
 
+    @Test
+    public void testBiRowMapperBuilder_ToEntity_WithDefaultGetter() throws SQLException {
+        // Uses default GET_OBJECT getter → triggers rsColumnGetters[i] = ColumnGetter.get(propType) path
+        when(mockResultSet.getObject(1)).thenReturn(5L);
+        when(mockResultSet.getObject(2)).thenReturn("Leo");
+        when(mockResultSet.getObject(3)).thenReturn(30);
+
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.builder().to(TestEntity.class);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToEntity_UnmatchedIgnored() throws SQLException {
+        // Unmatched column with ignoreUnmatchedColumns=true → columnLabels[i]=null then continue
+        when(mockResultSet.getObject(1)).thenReturn(6L);
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.builder().to(TestEntity.class, true);
+        List<String> columnLabels = Arrays.asList("id", "unknown_col", "age");
+
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertNull(result.getName()); // unknown_col skipped
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToEntity_UnmatchedThrows() {
+        // Unmatched column with ignoreUnmatchedColumns=false → throws IllegalArgumentException
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.builder().to(TestEntity.class, false);
+        List<String> columnLabels = Arrays.asList("unknown_col");
+
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, columnLabels));
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToScalarType() throws SQLException {
+        // Non-array/list/map/bean type → single-column scalar path
+        when(mockResultSet.getString(1)).thenReturn("scalar_value");
+
+        Jdbc.BiRowMapper<String> mapper = Jdbc.BiRowMapper.builder().to(String.class);
+        List<String> columnLabels = Arrays.asList("value");
+
+        String result = mapper.apply(mockResultSet, columnLabels);
+        assertEquals("scalar_value", result);
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToScalarType_MultiColumnThrows() throws SQLException {
+        // Scalar type with multiple columns → throws
+        Jdbc.BiRowMapper<String> mapper = Jdbc.BiRowMapper.builder().to(String.class);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col2")));
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToList() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(1);
+        when(mockResultSet.getObject(2)).thenReturn("Ivy");
+        when(mockResultSet.getObject(3)).thenReturn(22);
+
+        Jdbc.BiRowMapper<List> mapper = Jdbc.BiRowMapper.builder().to(List.class);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        List result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(1, result.get(0));
+        assertEquals("Ivy", result.get(1));
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_ToMap() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(7);
+        when(mockResultSet.getObject(2)).thenReturn("Jack");
+        when(mockResultSet.getObject(3)).thenReturn(35);
+
+        Jdbc.BiRowMapper<Map> mapper = Jdbc.BiRowMapper.builder().to(Map.class);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        Map result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(7, result.get("id"));
+        assertEquals("Jack", result.get("name"));
+    }
+
+    @Test
+    public void testBiRowMapperBuilder_UnknownColumnThrows() throws SQLException {
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.builder()
+                .getString("nonexistent")
+                .to(TestEntity.class);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> mapper.apply(mockResultSet, Arrays.asList("id", "name", "age")));
+    }
+
     // RowConsumer Tests
     @Test
     public void testRowConsumerDoNothing() throws SQLException {
@@ -1072,6 +1237,24 @@ public class JdbcTest extends TestBase {
         assertEquals(25, results.get(2));
     }
 
+    @Test
+    public void testRowConsumerOneOff_WithEntityClass() throws SQLException {
+        when(mockResultSet.getLong(1)).thenReturn(99L);
+        when(mockResultSet.getString(2)).thenReturn("Kim");
+        when(mockResultSet.getObject(3)).thenReturn(null);
+
+        List<Object> results = new ArrayList<>();
+        Jdbc.RowConsumer consumer = Jdbc.RowConsumer.oneOff(TestEntity.class, arr -> {
+            for (int i = 0; i < arr.length(); i++) {
+                results.add(arr.get(i));
+            }
+        });
+
+        consumer.accept(mockResultSet);
+
+        assertEquals(3, results.size());
+    }
+
     // BiRowConsumer Tests
     @Test
     public void testBiRowConsumerDoNothing() throws SQLException {
@@ -1144,6 +1327,29 @@ public class JdbcTest extends TestBase {
         assertEquals(columnLabels, capturedLabels);
     }
 
+    @Test
+    public void testBiRowConsumerOneOff_WithEntityClass() throws SQLException {
+        when(mockResultSet.getLong(1)).thenReturn(5L);
+        when(mockResultSet.getString(2)).thenReturn("Leo");
+        when(mockResultSet.getObject(3)).thenReturn(null);
+
+        List<Object> results = new ArrayList<>();
+        List<String> capturedLabels = new ArrayList<>();
+
+        Jdbc.BiRowConsumer consumer = Jdbc.BiRowConsumer.oneOff(TestEntity.class, (cols, arr) -> {
+            capturedLabels.addAll(cols);
+            for (int i = 0; i < arr.length(); i++) {
+                results.add(arr.get(i));
+            }
+        });
+
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+        consumer.accept(mockResultSet, columnLabels);
+
+        assertEquals(3, results.size());
+        assertEquals(columnLabels, capturedLabels);
+    }
+
     // RowFilter Tests
     @Test
     public void testRowFilterAlwaysTrue() throws SQLException {
@@ -1202,6 +1408,21 @@ public class JdbcTest extends TestBase {
         assertTrue(biFilter.test(mockResultSet, Arrays.asList("age")));
     }
 
+    @Test
+    public void testRowFilterOr() throws SQLException {
+        when(mockResultSet.getBoolean("active")).thenReturn(false);
+        when(mockResultSet.getInt("age")).thenReturn(16);
+
+        Jdbc.RowFilter filter1 = rs -> rs.getBoolean("active");
+        Jdbc.RowFilter filter2 = rs -> rs.getInt("age") >= 18;
+        Jdbc.RowFilter combined = filter1.or(filter2);
+
+        assertFalse(combined.test(mockResultSet));
+
+        when(mockResultSet.getBoolean("active")).thenReturn(true);
+        assertTrue(combined.test(mockResultSet));
+    }
+
     // BiRowFilter Tests
     @Test
     public void testBiRowFilterAlwaysTrue() throws SQLException {
@@ -1251,6 +1472,22 @@ public class JdbcTest extends TestBase {
         assertFalse(combined.test(mockResultSet, Arrays.asList("col1", "col2")));
     }
 
+    @Test
+    public void testBiRowFilterOr() throws SQLException {
+        when(mockResultSet.getInt(1)).thenReturn(10);
+
+        Jdbc.BiRowFilter filter1 = (rs, cols) -> cols.size() > 3;
+        Jdbc.BiRowFilter filter2 = (rs, cols) -> rs.getInt(1) > 5;
+        Jdbc.BiRowFilter combined = filter1.or(filter2);
+
+        // filter1=false (only 2 cols), filter2=true (10 > 5) => true
+        assertTrue(combined.test(mockResultSet, Arrays.asList("a", "b")));
+
+        when(mockResultSet.getInt(1)).thenReturn(3);
+        // filter1=false, filter2=false => false
+        assertFalse(combined.test(mockResultSet, Arrays.asList("a", "b")));
+    }
+
     // RowExtractor Tests
     @Test
     public void testRowExtractorAccept() throws SQLException {
@@ -1284,6 +1521,35 @@ public class JdbcTest extends TestBase {
         assertEquals(1L, outputRow[0]);
         assertEquals("John", outputRow[1]);
         assertEquals(25, outputRow[2]);
+    }
+
+    @Test
+    public void testRowExtractorCreateBy_WithColumnLabels() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(3L);
+        when(mockResultSet.getString(2)).thenReturn("Mia");
+
+        List<String> columnLabels = Arrays.asList("id", "name");
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class, columnLabels);
+        Object[] outputRow = new Object[2];
+
+        extractor.accept(mockResultSet, outputRow);
+
+        assertEquals(3L, outputRow[0]);
+        assertEquals("Mia", outputRow[1]);
+    }
+
+    @Test
+    public void testRowExtractorCreateBy_WithPrefixMap() throws SQLException {
+        when(mockResultSet.getLong(1)).thenReturn(7L);
+        when(mockResultSet.getString(2)).thenReturn("Ned");
+        when(mockResultSet.getObject(3)).thenReturn(40);
+
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class, new HashMap<>());
+        Object[] outputRow = new Object[3];
+
+        extractor.accept(mockResultSet, outputRow);
+
+        assertNotNull(extractor);
     }
 
     @Test
@@ -1424,17 +1690,25 @@ public class JdbcTest extends TestBase {
         assertEquals(25, result.getAge().intValue());
     }
 
-    //    @Test
-    //    public void testColumnOneSet() throws SQLException {
-    //        Jdbc.BiParametersSetter<AbstractQuery, String> stringSetter = Jdbc.Columns.ColumnOne.set(String.class);
-    //        Jdbc.BiParametersSetter<AbstractQuery, Integer> intSetter = Jdbc.Columns.ColumnOne.set(Integer.class);
-    //
-    //        stringSetter.accept(mockAbstractQuery, "test");
-    //        intSetter.accept(mockAbstractQuery, 42);
-    //
-    //        verify(mockAbstractQuery.stmt).setObject(1, "test");
-    //        verify(mockAbstractQuery.stmt).setObject(1, 42);
-    //    }
+    @Test
+    public void testColumnOneSet_ByClass() {
+        // Just creating the setter covers the factory method lines (lambda not invoked)
+        Jdbc.BiParametersSetter<AbstractQuery, String> stringSetter = Jdbc.Columns.ColumnOne.set(String.class);
+        Jdbc.BiParametersSetter<AbstractQuery, Integer> intSetter = Jdbc.Columns.ColumnOne.set(Integer.class);
+
+        assertNotNull(stringSetter);
+        assertNotNull(intSetter);
+    }
+
+    @Test
+    public void testColumnOneSet_ByType() {
+        // Just creating the setter covers the factory method lambda creation line
+        @SuppressWarnings("rawtypes")
+        com.landawn.abacus.type.Type<String> stringType = com.landawn.abacus.type.TypeFactory.getType(String.class);
+        Jdbc.BiParametersSetter<AbstractQuery, String> setter = Jdbc.Columns.ColumnOne.set(stringType);
+
+        assertNotNull(setter);
+    }
 
     @Test
     public void testColumnOneRemainingGetters() throws SQLException {
@@ -1605,7 +1879,37 @@ public class JdbcTest extends TestBase {
         assertEquals(Object.class, methodSignature._3);
     }
 
+    static final class RegisterByClassHandler implements Jdbc.Handler<Object> {
+    }
+
+    static final class GetOrCreateHandler implements Jdbc.Handler<Object> {
+    }
+
     // HandlerFactory Tests
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testHandlerFactoryRegisterByClass() {
+        // register by class - first time should succeed
+        Jdbc.HandlerFactory.register(RegisterByClassHandler.class);
+        Jdbc.Handler<?> retrieved = Jdbc.HandlerFactory.get(RegisterByClassHandler.class);
+        assertNotNull(retrieved);
+        assertTrue(retrieved instanceof RegisterByClassHandler);
+
+        // second registration should return false
+        assertFalse(Jdbc.HandlerFactory.register(RegisterByClassHandler.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testHandlerFactoryGetOrCreate() {
+        Jdbc.Handler<?> handler = Jdbc.HandlerFactory.getOrCreate(GetOrCreateHandler.class);
+        assertNotNull(handler);
+
+        // second call should return the same instance
+        Jdbc.Handler<?> handler2 = Jdbc.HandlerFactory.getOrCreate(GetOrCreateHandler.class);
+        assertSame(handler, handler2);
+    }
+
     //    @Test
     //    public void testHandlerFactoryRegisterClass() {
     //        class TestHandler implements Jdbc.Handler<Object> {
@@ -1901,6 +2205,129 @@ public class JdbcTest extends TestBase {
         assertSame(map, cache3.cache());
         assertEquals(1, cache3.cache().size());
         assertEquals("val1", cache3.cache().get("key1"));
+    }
+
+    @Test
+    public void testDaoCacheByMapPutNullResult() throws Exception {
+        Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        // null result should return false and not be stored
+        assertFalse(cache.put("key1", null, null, null, methodSignature));
+        assertNull(cache.get("key1", null, null, methodSignature));
+
+        // null result with TTL should return false too
+        assertFalse(cache.put("key2", null, 5000, 3000, null, null, methodSignature));
+        assertNull(cache.get("key2", null, null, methodSignature));
+    }
+
+    @Test
+    public void testDaoCacheByMapUpdate_EmptyTableName() throws Exception {
+        Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        cache.put("entry1", "val1", null, null, methodSignature);
+        cache.put("entry2", "val2", null, null, methodSignature);
+
+        // key without '#' → empty table name → entire cache cleared
+        cache.update("simplekey", 1, null, null, methodSignature);
+
+        assertNull(cache.get("entry1", null, null, methodSignature));
+        assertNull(cache.get("entry2", null, null, methodSignature));
+    }
+
+    @Test
+    public void testDaoCacheByMapUpdate_BuiltInUpdateMethod_ZeroResult() throws Exception {
+        Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
+
+        // Get an actual method from BUILT_IN_DAO_UPDATE_METHODS
+        Method builtInUpdateMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
+                .filter(m -> m.getName().equals("update") && m.getParameterCount() == 1)
+                .findFirst().orElse(null);
+
+        if (builtInUpdateMethod != null) {
+            ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+            Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(builtInUpdateMethod, paramTypes, int.class);
+
+            cache.put("method#users#params", "cached", null, null, methodSignature);
+
+            // result=0 with BUILT_IN_DAO_UPDATE_METHODS method → early return, cache not cleared
+            cache.update("method#users#update", 0, null, null, methodSignature);
+
+            // Cache should NOT be cleared (early return occurred)
+            assertEquals("cached", cache.get("method#users#params", null, null, methodSignature));
+        }
+    }
+
+    @Test
+    public void testDefaultDaoCacheUpdate_EmptyTableName() throws Exception {
+        Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        cache.put("entry1", "val1", null, null, methodSignature);
+        cache.put("entry2", "val2", null, null, methodSignature);
+
+        // key without '#' → empty table name → entire pool cleared
+        cache.update("simplekey", 1, null, null, methodSignature);
+
+        assertNull(cache.get("entry1", null, null, methodSignature));
+        assertNull(cache.get("entry2", null, null, methodSignature));
+    }
+
+    @Test
+    public void testDefaultDaoCacheUpdate_BuiltInUpdateMethod_ZeroResult() throws Exception {
+        Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
+
+        // Get an actual method from BUILT_IN_DAO_UPDATE_METHODS (update method from CrudDao)
+        Method builtInUpdateMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
+                .filter(m -> m.getName().equals("update") && m.getParameterCount() == 1)
+                .findFirst().orElse(null);
+
+        if (builtInUpdateMethod != null) {
+            ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+            // Return type is int.class
+            Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(builtInUpdateMethod, paramTypes, int.class);
+
+            cache.put("method#users#params", "cached", null, null, methodSignature);
+
+            // result=0 with BUILT_IN_DAO_UPDATE_METHODS method → early return, cache not cleared
+            cache.update("method#users#update", 0, null, null, methodSignature);
+
+            // Cache should NOT be cleared (early return occurred)
+            assertEquals("cached", cache.get("method#users#params", null, null, methodSignature));
+        }
+    }
+
+    @Test
+    public void testDefaultDaoCacheUpdate_BuiltInUpdateMethod_NonZeroResult() throws Exception {
+        Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(100, 1000);
+
+        // Get an actual method from BUILT_IN_DAO_UPDATE_METHODS
+        Method builtInUpdateMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
+                .filter(m -> m.getName().equals("update") && m.getParameterCount() == 1)
+                .findFirst().orElse(null);
+
+        if (builtInUpdateMethod != null) {
+            ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+            Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(builtInUpdateMethod, paramTypes, int.class);
+
+            cache.put("method#users#params", "cached", null, null, methodSignature);
+
+            // result=1 (non-zero) → does NOT early return → cache is cleared
+            cache.update("method#users#update", 1, null, null, methodSignature);
+
+            // Cache should be cleared
+            assertNull(cache.get("method#users#params", null, null, methodSignature));
+        }
     }
 
     // Edge cases and error conditions
@@ -2313,5 +2740,584 @@ public class JdbcTest extends TestBase {
         assertTrue(Jdbc.HandlerFactory.register(qualifier, h));
         assertFalse(Jdbc.HandlerFactory.register(qualifier, h));
         assertSame(h, Jdbc.HandlerFactory.get(qualifier));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMergedList_EmptyResultSet() throws SQLException {
+        when(mockResultSet.next()).thenReturn(false);
+
+        Jdbc.ResultExtractor<List<TestEntity>> extractor = Jdbc.ResultExtractor.toMergedList(TestEntity.class);
+        assertNotNull(extractor);
+
+        List<TestEntity> result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMergedList_NullArgThrows() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.ResultExtractor.toMergedList(null));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMergedList_WithIdPropName() throws SQLException {
+        when(mockResultSet.next()).thenReturn(false);
+
+        Jdbc.ResultExtractor<List<TestEntity>> extractor = Jdbc.ResultExtractor.toMergedList(TestEntity.class, "id");
+        assertNotNull(extractor);
+
+        List<TestEntity> result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testResultExtractorToMergedList_WithIdPropNames() throws SQLException {
+        when(mockResultSet.next()).thenReturn(false);
+
+        Jdbc.ResultExtractor<List<TestEntity>> extractor = Jdbc.ResultExtractor.toMergedList(TestEntity.class, Arrays.asList("id", "name"));
+        assertNotNull(extractor);
+
+        List<TestEntity> result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testResultExtractorToDataset_WithEntityClass() throws SQLException {
+        when(mockResultSet.next()).thenReturn(false);
+
+        Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(TestEntity.class);
+        assertNotNull(extractor);
+
+        Dataset result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    public void testResultExtractorToDataset_WithEntityClassAndPrefixMap() throws SQLException {
+        when(mockResultSet.next()).thenReturn(false);
+
+        Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(TestEntity.class, new HashMap<>());
+        assertNotNull(extractor);
+
+        Dataset result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    public void testResultExtractorToDataset_WithRowFilter() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("Alice");
+        when(mockResultSet.getObject(3)).thenReturn(30);
+
+        Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(rs -> true);
+        assertNotNull(extractor);
+
+        Dataset result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    public void testResultExtractorToDataset_WithRowExtractor() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("Bob");
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        final Jdbc.RowExtractor noopExtractor = (rs, output) -> {};
+        Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(noopExtractor);
+        assertNotNull(extractor);
+
+        Dataset result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testResultExtractorToDataset_WithRowFilterAndExtractor() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(2L);
+        when(mockResultSet.getObject(2)).thenReturn("Carol");
+        when(mockResultSet.getObject(3)).thenReturn(28);
+
+        final Jdbc.RowExtractor noopExtractor = (rs, output) -> {};
+        Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(rs -> true, noopExtractor);
+        assertNotNull(extractor);
+
+        Dataset result = extractor.apply(mockResultSet);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testResultExtractorToDatasetAndThen() throws SQLException {
+        when(mockResultSet.next()).thenReturn(false);
+
+        Jdbc.ResultExtractor<Integer> extractor = Jdbc.ResultExtractor.toDatasetAndThen(ds -> ds.size());
+        assertNotNull(extractor);
+
+        Integer result = extractor.apply(mockResultSet);
+        assertEquals(0, result);
+    }
+
+    @Test
+    public void testBiRowMapperToMap_WithRowExtractor() throws SQLException {
+        Jdbc.RowExtractor extractor = (rs, output) -> {
+            output[0] = rs.getObject(1);
+            output[1] = rs.getObject(2);
+            output[2] = rs.getObject(3);
+        };
+        when(mockResultSet.getObject(1)).thenReturn(10);
+        when(mockResultSet.getObject(2)).thenReturn("Eve");
+        when(mockResultSet.getObject(3)).thenReturn(null);
+
+        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(extractor);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
+        assertEquals(3, result.size());
+        assertEquals(10, result.get("id"));
+        assertEquals("Eve", result.get("name"));
+        assertNull(result.get("age"));
+    }
+
+    @Test
+    public void testBiRowMapperToMap_WithRowExtractorAndValueFilter() throws SQLException {
+        Jdbc.RowExtractor extractor = (rs, output) -> {
+            output[0] = rs.getObject(1);
+            output[1] = rs.getObject(2);
+            output[2] = rs.getObject(3);
+        };
+        when(mockResultSet.getObject(1)).thenReturn(20);
+        when(mockResultSet.getObject(2)).thenReturn("Frank");
+        when(mockResultSet.getObject(3)).thenReturn(null);
+
+        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(
+                extractor,
+                (key, value) -> value != null,
+                IntFunctions.ofLinkedHashMap());
+
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+        Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
+        assertEquals(2, result.size());
+        assertEquals(20, result.get("id"));
+        assertEquals("Frank", result.get("name"));
+        assertFalse(result.containsKey("age"));
+    }
+
+    @Test
+    public void testBiRowMapperToMap_WithRowExtractorAndNameConverter() throws SQLException {
+        Jdbc.RowExtractor extractor = (rs, output) -> {
+            output[0] = rs.getObject(1);
+            output[1] = rs.getObject(2);
+        };
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("first_name");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("user_age");
+        when(mockResultSet.getObject(1)).thenReturn("Grace");
+        when(mockResultSet.getObject(2)).thenReturn(28);
+
+        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(
+                extractor,
+                col -> col.toUpperCase(),
+                IntFunctions.ofTreeMap());
+
+        List<String> columnLabels = Arrays.asList("first_name", "user_age");
+        Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
+        assertEquals(2, result.size());
+        assertTrue(result instanceof TreeMap);
+        assertEquals("Grace", result.get("FIRST_NAME"));
+        assertEquals(28, result.get("USER_AGE"));
+    }
+
+    @Test
+    public void testBiRowMapperToDisposableObjArray_WithEntityClass() throws SQLException {
+        when(mockResultSet.getString(2)).thenReturn("Helen");
+        when(mockResultSet.getObject(1)).thenReturn(5L);
+        when(mockResultSet.getObject(3)).thenReturn(32);
+
+        Jdbc.BiRowMapper<DisposableObjArray> mapper = Jdbc.BiRowMapper.toDisposableObjArray(TestEntity.class);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        DisposableObjArray result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(3, result.length());
+    }
+
+    @Test
+    public void testRowMapperBuilder_GetObjectByIndexAndType() throws SQLException {
+        when(mockResultSet.getString(1)).thenReturn("hello");
+        when(mockResultSet.getObject(2)).thenReturn(null);
+        when(mockResultSet.getObject(3)).thenReturn(null);
+
+        Jdbc.RowMapper<Object[]> mapper = Jdbc.RowMapper.builder().getObject(1, String.class).toArray();
+        Object[] result = mapper.apply(mockResultSet);
+
+        assertEquals(3, result.length);
+        assertEquals("hello", result[0]);
+    }
+
+    @Test
+    public void testRowMapperBuilder_ToFinisher() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("Alice");
+        when(mockResultSet.getObject(3)).thenReturn(30);
+
+        Jdbc.RowMapper<String> mapper = Jdbc.RowMapper.builder()
+                .to((columnLabels, row) -> columnLabels.get(1) + "=" + row.get(1));
+
+        String result = mapper.apply(mockResultSet);
+        assertEquals("name=Alice", result);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testBiRowMapper_ToRowMapper() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("Bob");
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        Jdbc.RowMapper<Object[]> rowMapper = Jdbc.BiRowMapper.TO_ARRAY.toRowMapper();
+        assertNotNull(rowMapper);
+
+        Object[] result = rowMapper.apply(mockResultSet);
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertEquals(1L, result[0]);
+        assertEquals("Bob", result[1]);
+    }
+
+    @Test
+    public void testBiRowMapper_ToWithColumnFilterAndConverter() throws SQLException {
+        when(mockResultSet.getString(2)).thenReturn("Carol");
+
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(
+                TestEntity.class,
+                col -> col.equals("name"),
+                col -> col);
+
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+
+        assertNotNull(result);
+        assertEquals("Carol", result.getName());
+        assertNull(result.getId());
+        assertNull(result.getAge());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testBiRowMapper_ToObjectArray_WithFilter() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("Diana");
+        when(mockResultSet.getObject(3)).thenReturn(25);
+
+        // filter: only include "name" column; converter: identity
+        Jdbc.BiRowMapper<Object[]> mapper = Jdbc.BiRowMapper.to(
+                Object[].class,
+                col -> col.equals("name"),
+                col -> col,
+                false);
+
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+        Object[] result = mapper.apply(mockResultSet, columnLabels);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertNull(result[0]); // id filtered out
+        assertEquals("Diana", result[1]);
+        assertNull(result[2]); // age filtered out
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testBiRowMapper_ToList_WithFilter() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(2L);
+        when(mockResultSet.getObject(2)).thenReturn("Eric");
+        when(mockResultSet.getObject(3)).thenReturn(30);
+
+        // filter: only "id" and "name"; converter: identity
+        Jdbc.BiRowMapper<List> mapper = Jdbc.BiRowMapper.to(
+                List.class,
+                col -> !col.equals("age"),
+                col -> col,
+                false);
+
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+        List result = mapper.apply(mockResultSet, columnLabels);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(2L, result.get(0));
+        assertEquals("Eric", result.get(1));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testBiRowMapper_ToMap_WithFilter() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(3L);
+        when(mockResultSet.getObject(2)).thenReturn("Fiona");
+        when(mockResultSet.getObject(3)).thenReturn(28);
+
+        // filter: only "name"; converter: uppercase
+        Jdbc.BiRowMapper<Map> mapper = Jdbc.BiRowMapper.to(
+                Map.class,
+                col -> col.equals("name"),
+                col -> col.toUpperCase(),
+                false);
+
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+        Map result = mapper.apply(mockResultSet, columnLabels);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Fiona", result.get("NAME"));
+    }
+
+    @Test
+    public void testBiRowMapper_ToScalarType_NullFilter() throws SQLException {
+        // Scalar type with null filter/converter → stateful single-column BiRowMapper
+        when(mockResultSet.getString(1)).thenReturn("hello");
+
+        Jdbc.BiRowMapper<String> mapper = Jdbc.BiRowMapper.to(String.class, null, null, false);
+        List<String> columnLabels = Arrays.asList("value");
+
+        String result = mapper.apply(mockResultSet, columnLabels);
+        assertEquals("hello", result);
+    }
+
+    @Test
+    public void testBiRowMapper_ToScalarType_MultiColumnThrows() throws SQLException {
+        // Scalar type with null filter/converter and multiple columns → throws
+        Jdbc.BiRowMapper<String> mapper = Jdbc.BiRowMapper.to(String.class, null, null, false);
+        List<String> columnLabels = Arrays.asList("col1", "col2");
+
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, columnLabels));
+    }
+
+    @Test
+    public void testBiRowMapper_ToScalarType_WithFilterThrows() {
+        // Scalar type with non-null filter → throws immediately
+        assertThrows(IllegalArgumentException.class,
+                () -> Jdbc.BiRowMapper.to(String.class, col -> true, null, false));
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_EmptyPrefix() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(4L);
+        when(mockResultSet.getString(2)).thenReturn("George");
+        when(mockResultSet.getObject(3)).thenReturn(35);
+
+        // empty prefix map → delegates to 2-arg to(entityClass, ignoreUnmatched)
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, new HashMap<>());
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_NonEmpty_IgnoreUnmatched() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(5L);
+        when(mockResultSet.getString(2)).thenReturn("Hannah");
+        when(mockResultSet.getObject(3)).thenReturn(40);
+
+        Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("u_", "");
+
+        // non-empty prefix map, ignoreUnmatched=true
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, prefixMap, true);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testBiRowMapper_ToList_WithNullFilter() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(6L);
+        when(mockResultSet.getObject(2)).thenReturn("Ivan");
+        when(mockResultSet.getObject(3)).thenReturn(22);
+
+        // null filter with null converter → simple List lambda path (lines 2993-3003)
+        Jdbc.BiRowMapper<List> mapper = Jdbc.BiRowMapper.to(List.class, null, null, false);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        List result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(3, result.size());
+    }
+
+    @Test
+    public void testBiRowMapper_ToMap_WithNullFilter() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(7L);
+        when(mockResultSet.getObject(2)).thenReturn("Jana");
+        when(mockResultSet.getObject(3)).thenReturn(33);
+
+        // null filter with null converter → simple Map lambda path (lines 3042-3060)
+        Jdbc.BiRowMapper<Map> mapper = Jdbc.BiRowMapper.to(Map.class, null, null, false);
+        List<String> columnLabels = Arrays.asList("id", "name", "age");
+
+        Map result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(3, result.size());
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_UnmatchedColumn_IgnoreUnmatched() throws SQLException {
+        // Columns that don't match any property → columnLabels[i] = null → continue in row loop
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("Test");
+        when(mockResultSet.getObject(3)).thenReturn(null);
+
+        Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("u_", "");
+
+        // non-empty prefix map, ignoreUnmatchedColumns=true, all columns unmatched
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, prefixMap, true);
+        List<String> columnLabels = Arrays.asList("u_id", "u_name", "u_age");
+
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        // all columns were unmatched/null → entity has no fields set
+        assertNotNull(result);
+        assertNull(result.getId());
+        assertNull(result.getName());
+        assertNull(result.getAge());
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_UnmatchedColumn_ThrowsException() throws SQLException {
+        Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("x_", "");
+
+        // non-empty prefix map, ignoreUnmatchedColumns=false → throws on unmatched column
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, prefixMap, false);
+        List<String> columnLabels = Arrays.asList("x_unknown");
+
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, columnLabels));
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_MixedColumns_DirectAndUnmatched() throws SQLException {
+        // Some columns match directly, some are unmatched (ignoreUnmatched=true)
+        when(mockResultSet.getObject(1)).thenReturn(7L);
+        when(mockResultSet.getString(2)).thenReturn("Mixed");
+
+        Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("x_", "");
+
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, prefixMap, true);
+        // "id" and "name" match directly; "x_unknown" is unmatched
+        List<String> columnLabels = Arrays.asList("id", "name", "x_unknown");
+
+        TestEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals(7L, result.getId());
+        assertEquals("Mixed", result.getName());
+        assertNull(result.getAge());
+    }
+
+    // Entity with camelCase field to exercise column2FieldNameMap lookup path
+    public static class CamelCaseEntity {
+        private String firstName;
+        private Integer totalCount;
+
+        public String getFirstName() {
+            return firstName;
+        }
+
+        public void setFirstName(final String firstName) {
+            this.firstName = firstName;
+        }
+
+        public Integer getTotalCount() {
+            return totalCount;
+        }
+
+        public void setTotalCount(final Integer totalCount) {
+            this.totalCount = totalCount;
+        }
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_Column2FieldNameMap() throws SQLException {
+        // "first_name" doesn't directly match prop "firstName", but column2FieldNameMap maps it.
+        // Using a non-empty prefix map forces the prefix-map code path (lines 3279-3365).
+        when(mockResultSet.getString(1)).thenReturn("Alice");
+
+        Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("unused_", ""); // non-empty, triggers prefix-map branch
+
+        Jdbc.BiRowMapper<CamelCaseEntity> mapper = Jdbc.BiRowMapper.to(CamelCaseEntity.class, prefixMap, false);
+        List<String> columnLabels = Arrays.asList("first_name");
+
+        CamelCaseEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals("Alice", result.getFirstName());
+    }
+
+    @Test
+    public void testBiRowMapper_ToPrefixMap_Column2FieldNameMapIgnoreUnmatched() throws SQLException {
+        // Column labels with both a directly-matched prop and a column2FieldNameMap-matched prop.
+        when(mockResultSet.getString(1)).thenReturn("Bob");
+        when(mockResultSet.getObject(2)).thenReturn(99);
+
+        Map<String, String> prefixMap = new HashMap<>();
+        prefixMap.put("x_", "");
+
+        Jdbc.BiRowMapper<CamelCaseEntity> mapper = Jdbc.BiRowMapper.to(CamelCaseEntity.class, prefixMap, true);
+        List<String> columnLabels = Arrays.asList("first_name", "total_count");
+
+        CamelCaseEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals("Bob", result.getFirstName());
+    }
+
+    @Test
+    public void testRowExtractor_CreateBy_WithColumnLabels_UnmatchedColumns() throws SQLException {
+        // Unmatched column labels → goes through column2FieldNameMap and checkPrefix fallback chain.
+        when(mockResultSet.getObject(1)).thenReturn("fallback_value");
+
+        List<String> columnLabels = Arrays.asList("unknown_col");
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(TestEntity.class, columnLabels);
+        Object[] outputRow = new Object[1];
+
+        extractor.accept(mockResultSet, outputRow);
+        // unknown_col has no match → JdbcUtil.getColumnValue falls back → rs.getObject(1)
+        assertEquals("fallback_value", outputRow[0]);
+    }
+
+    @Test
+    public void testRowExtractor_CreateBy_WithColumnLabels_CamelCaseField() throws SQLException {
+        // "first_name" maps to "firstName" via column2FieldNameMap on CamelCaseEntity.
+        when(mockResultSet.getString(1)).thenReturn("Carol");
+
+        List<String> columnLabels = Arrays.asList("first_name");
+        Jdbc.RowExtractor extractor = Jdbc.RowExtractor.createBy(CamelCaseEntity.class, columnLabels);
+        Object[] outputRow = new Object[1];
+
+        extractor.accept(mockResultSet, outputRow);
+        assertEquals("Carol", outputRow[0]);
+    }
+
+    @Test
+    public void testBiRowMapper_To4Arg_EntityClass_Column2FieldNameMap() throws SQLException {
+        // 4-arg BiRowMapper.to(entityClass, filter, converter, ignoreUnmatched) with entity path.
+        // column "first_name" doesn't directly match "firstName", but column2FieldNameMap maps it.
+        when(mockResultSet.getString(1)).thenReturn("Dave");
+
+        Jdbc.BiRowMapper<CamelCaseEntity> mapper = Jdbc.BiRowMapper.to(CamelCaseEntity.class, null, null, false);
+        List<String> columnLabels = Arrays.asList("first_name");
+
+        CamelCaseEntity result = mapper.apply(mockResultSet, columnLabels);
+        assertNotNull(result);
+        assertEquals("Dave", result.getFirstName());
     }
 }
