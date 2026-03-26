@@ -32,9 +32,14 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+
+import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -961,5 +966,87 @@ public class AbstractQueryTest extends TestBase {
         query.setFetchDirection(FetchDirection.FORWARD);
         verify(preparedStatement).getFetchDirection();
         verify(preparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+    }
+
+    // forEach(RowFilter, RowConsumer): rowFilter returns true → rowConsumer.accept called (L8463)
+    @Test
+    public void testForEach_WithRowFilter_MatchingRow_CallsConsumer() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+
+        List<ResultSet> consumed = new ArrayList<>();
+        query.forEach(r -> true, consumed::add);
+        assertEquals(1, consumed.size());
+    }
+
+    // insert(BiRowMapper, Predicate): rs.next() returns false → returns Optional.empty() (L8844)
+    @Test
+    public void testInsert_NoGeneratedKey_ReturnsEmpty() throws SQLException {
+        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
+        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
+        when(generatedKeys.next()).thenReturn(false);
+
+        com.landawn.abacus.util.u.Optional<?> result = query.insert(
+                (Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1),
+                id -> id == null || (Long) id == 0L);
+        assertTrue(result.isEmpty());
+    }
+
+    // batchInsert(RowMapper, Predicate): all IDs are null → returns empty list (L8961)
+    @Test
+    public void testBatchInsert_RowMapper_AllNullIds_ReturnsEmptyList() throws SQLException {
+        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
+        when(generatedKeys.next()).thenReturn(true, false);
+
+        @SuppressWarnings("unchecked")
+        Predicate<Object> isDefault = id -> id == null;
+        List<?> result = query.batchInsert((Jdbc.RowMapper<Long>) rs -> null, isDefault);
+        assertEquals(0, result.size());
+    }
+
+    // listAllResultSets(Class): no result sets → returns empty list (L6685-6709)
+    @Test
+    public void testListAllResultSets_Class_ReturnsEmptyList() throws SQLException {
+        when(preparedStatement.execute()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        List<List<String>> result = query.listAllResultSets(String.class);
+        assertTrue(result.isEmpty());
+    }
+
+    // createQuerySupplier lambda: executeQuery() throws SQLException → wrapped in UncheckedSQLException (L7706-7707)
+    @Test
+    public void testStream_RowMapper_ExecuteQueryThrows_WrapsUncheckedSQLException() throws SQLException {
+        when(preparedStatement.executeQuery()).thenThrow(new SQLException("forced"));
+        Stream<String> stream = query.stream(rs -> rs.getString(1));
+        assertThrows(UncheckedSQLException.class, stream::toList);
+    }
+
+    // createExecuteSupplier lambda: stmt.execute() throws SQLException → wrapped in UncheckedSQLException (L7715-7717)
+    @Test
+    public void testStreamAllResultSets_ResultExtractor_ExecuteThrows_WrapsUncheckedSQLException() throws SQLException {
+        when(preparedStatement.execute()).thenThrow(new SQLException("forced"));
+        Stream<List<String>> stream = query.streamAllResultSets((Jdbc.ResultExtractor<List<String>>) rs -> new ArrayList<>());
+        assertThrows(UncheckedSQLException.class, stream::toList);
+    }
+
+    // batchInsert(BiRowMapper, Predicate): all IDs are null → returns empty list (L9001)
+    @Test
+    public void testBatchInsert_BiRowMapper_AllNullIds_ReturnsEmptyList() throws SQLException {
+        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
+        when(generatedKeys.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("id");
+        when(generatedKeys.next()).thenReturn(true, false);
+
+        @SuppressWarnings("unchecked")
+        Predicate<Object> isDefault = id -> id == null;
+        List<?> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> null, isDefault);
+        assertEquals(0, result.size());
     }
 }

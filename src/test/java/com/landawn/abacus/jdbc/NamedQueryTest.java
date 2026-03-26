@@ -8,7 +8,9 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -3132,6 +3134,30 @@ public class NamedQueryTest extends TestBase {
     }
 
     // Helper test entity class
+    private static class BeanWithP {
+        private String p;
+
+        public String getP() {
+            return p;
+        }
+
+        public void setP(String p) {
+            this.p = p;
+        }
+    }
+
+    private static class BeanNoProps {
+        private String foo;
+
+        public String getFoo() {
+            return foo;
+        }
+
+        public void setFoo(String v) {
+            this.foo = v;
+        }
+    }
+
     private static class TestEntity {
         private String param1;
         private int param2;
@@ -3545,5 +3571,151 @@ public class NamedQueryTest extends TestBase {
     public void testSetTimestampInstant_Null() throws SQLException {
         namedQuery.setTimestamp("param1", (Instant) null);
         verify(mockPreparedStatement).setTimestamp(1, null);
+    }
+
+    // --- addBatchParameters(Iterator): empty iterator returns this (L4252-4253) ---
+
+    @Test
+    public void testAddBatchParameters_Iterator_Empty() throws SQLException {
+        NamedQuery result = namedQuery.addBatchParameters(new ArrayList<>().iterator());
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement, never()).addBatch();
+    }
+
+    // --- addBatchParameters(Iterator): bean parameters for 2+ rows (L4274,4278,4286,4289,4292,4296,4298,4300,4303,4306,4310) ---
+
+    @Test
+    public void testAddBatchParameters_Iterator_BeanMultipleRows() throws SQLException {
+        TestEntity e1 = new TestEntity();
+        e1.setParam1("v1");
+        e1.setParam2(1);
+        TestEntity e2 = new TestEntity();
+        e2.setParam1("v2");
+        e2.setParam2(2);
+        namedQuery.addBatchParameters(Arrays.asList(e1, e2).iterator());
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // --- addBatchParameters(Iterator): bean missing property throws (L4281-4282) ---
+
+    @Test
+    public void testAddBatchParameters_Iterator_BeanMissingProp_Throws() throws SQLException {
+        BeanNoProps bean = new BeanNoProps();
+        bean.setFoo("x");
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.addBatchParameters(Arrays.asList(bean).iterator()));
+    }
+
+    // --- addBatchParameters(Iterator): null second element when paramCount==1 (L4267-4268) ---
+
+    @Test
+    public void testAddBatchParameters_Iterator_NullFirst_NullSubsequent() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        // first is null (paramCount==1 → ok), second is also null → hits L4267-4268
+        q.addBatchParameters(Arrays.asList(null, null).iterator());
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // --- setParameters(entity, Collection): 2 occurrences of same param (L4065-4066) ---
+
+    @Test
+    public void testSetParameters_Entity_TwoOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        BeanWithP bean = new BeanWithP();
+        bean.setP("val");
+        NamedQuery result = q.setParameters(bean, Arrays.asList("p"));
+        assertSame(q, result);
+    }
+
+    // --- setParameters(entity, Collection): 3 occurrences of same param (L4068-4070) ---
+
+    @Test
+    public void testSetParameters_Entity_ThreeOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        BeanWithP bean = new BeanWithP();
+        bean.setP("val");
+        NamedQuery result = q.setParameters(bean, Arrays.asList("p"));
+        assertSame(q, result);
+    }
+
+    // --- setParameters(entity, Collection): 4+ occurrences (L4072-4073) ---
+
+    @Test
+    public void testSetParameters_Entity_FourOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        BeanWithP bean = new BeanWithP();
+        bean.setP("val");
+        NamedQuery result = q.setParameters(bean, Arrays.asList("p"));
+        assertSame(q, result);
+    }
+
+    // --- setParameters(Object) when Map: routes to setParameters(Map) (L3968) ---
+
+    @Test
+    public void testSetParameters_Object_MapDelegates() throws SQLException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("param1", "hello");
+        NamedQuery result = namedQuery.setParameters((Object) params);
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement).setString(eq(1), eq("hello"));
+    }
+
+    // --- setParameters(EntityId): exception closes and rethrows (L3899-3900) ---
+
+    @Test
+    public void testSetParameters_Object_EntityId_ExceptionClosesAndRethrows() throws SQLException {
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        final com.landawn.abacus.util.EntityId eid = com.landawn.abacus.util.EntityId.of("param1", null);
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters((Object) eid));
+    }
+
+    // --- setParameters(Map): exception in setObject closes and rethrows (L3877-3878) ---
+
+    @Test
+    public void testSetParameters_Map_ExceptionClosesAndRethrows() throws SQLException {
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        Map<String, Object> params = new HashMap<>();
+        params.put("param1", null);
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
+    }
+
+    // --- setParameters(Object) with bean missing property throws (L3955-3957, L3963-3965) ---
+
+    @Test
+    public void testSetParameters_Object_BeanMissingProp_Throws() throws SQLException {
+        BeanNoProps bean = new BeanNoProps();
+        bean.setFoo("x");
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters(bean));
+    }
+
+    // --- setParameters(Object) with Collection, exception (L3971-3974) ---
+
+    @Test
+    public void testSetParameters_Object_Collection_ExceptionClosesAndRethrows() throws SQLException {
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        List<Object> params = Arrays.asList(null, null);
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
+    }
+
+    // --- setParameters(Object) with Object[], exception (L3978-3981) ---
+
+    @Test
+    public void testSetParameters_Object_Array_ExceptionClosesAndRethrows() throws SQLException {
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters(new Object[] { null, null }));
+    }
+
+    // --- setParameters(Object) with single value, exception (L3989-3990) ---
+
+    @Test
+    public void testSetParameters_Object_SingleValue_ExceptionClosesAndRethrows() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        // Integer (not bean/Map/Collection/Object[]/EntityId), paramCount==1 → calls stmt.setInt
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setInt(anyInt(), anyInt());
+        assertThrows(RuntimeException.class, () -> q.setParameters(Integer.valueOf(42)));
     }
 }

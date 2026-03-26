@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -1065,5 +1066,270 @@ public class CallableQueryTest extends TestBase {
                 callableQuery.listAndGetOutParameters(rs -> rs.getString(1));
         assertNotNull(result);
         assertEquals(0, result._1.size());
+    }
+
+    // --- registerOutParameters(ParametersSetter) happy path (L1984, L1986, L1987, L1993) ---
+
+    @Test
+    public void testRegisterOutParameters_Consumer_HappyPath() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameters(q -> q.registerOutParameter(1, Types.INTEGER));
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(1, Types.INTEGER);
+    }
+
+    // --- executeQuery() else-branch: update count loop (L2106, L2107) ---
+
+    @Test
+    public void testExecuteQuery_UpdateCountLoop_ElseBranch() throws SQLException {
+        // execute()=false so ret=false; getUpdateCount()=5 first → enters while, hits else branch
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(5, -1);
+        when(callableStatement.getMoreResults()).thenReturn(false);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<?, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters();
+        assertNotNull(result);
+        verify(callableStatement).getMoreResults();
+    }
+
+    // --- queryAndGetOutParameters(ResultExtractor): rs != null path (L2460) ---
+
+    @Test
+    public void testQueryAndGetOutParameters_ResultExtractor_WithResultSet() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
+                callableQuery.queryAndGetOutParameters(resultSet -> "extracted");
+        assertNotNull(result);
+        assertEquals("extracted", result._1);
+    }
+
+    // --- queryAndGetOutParameters(BiResultExtractor): rs != null path (L2512) ---
+
+    // --- listAndGetOutParameters(RowMapper): rs != null with row (L2976) ---
+
+    @Test
+    public void testListAndGetOutParameters_RowMapper_WithRow() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+        when(rs.getString(1)).thenReturn("Alice");
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.listAndGetOutParameters(r -> r.getString(1));
+        assertNotNull(result);
+        assertEquals(1, result._1.size());
+        assertEquals("Alice", result._1.get(0));
+    }
+
+    // --- listAndGetOutParameters(RowFilter, RowMapper): rs != null with filtered row (L3030-3049) ---
+
+    @Test
+    public void testListAndGetOutParameters_RowFilter_RowMapper_WithRow() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+        when(rs.getString(1)).thenReturn("match");
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.listAndGetOutParameters(r -> true, r -> r.getString(1));
+        assertNotNull(result);
+        assertEquals(1, result._1.size());
+        assertEquals("match", result._1.get(0));
+    }
+
+    // --- listAndGetOutParameters(BiRowMapper): rs != null with row (L3105-3108) ---
+
+    @Test
+    public void testListAndGetOutParameters_BiRowMapper_WithRow() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        java.sql.ResultSetMetaData meta = Mockito.mock(java.sql.ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.listAndGetOutParameters((r, labels) -> "row");
+        assertNotNull(result);
+        assertEquals(1, result._1.size());
+        assertEquals("row", result._1.get(0));
+    }
+
+    // --- listAndGetOutParameters(BiRowFilter, BiRowMapper): rs != null with row (L3175-3196) ---
+
+    @Test
+    public void testListAndGetOutParameters_BiRowFilter_BiRowMapper_WithRow() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        java.sql.ResultSetMetaData meta = Mockito.mock(java.sql.ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.listAndGetOutParameters((r, labels) -> true, (r, labels) -> "birow");
+        assertNotNull(result);
+        assertEquals(1, result._1.size());
+        assertEquals("birow", result._1.get(0));
+    }
+
+    // --- listAllResultSetsAndGetOutParameters(Class): empty path (L3243-3266) ---
+
+    @Test
+    public void testListAllResultSetsAndGetOutParameters_ByClass_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
+                callableQuery.listAllResultSetsAndGetOutParameters(String.class);
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- listAllResultSetsAndGetOutParameters(RowMapper): empty path (L3318-3341) ---
+
+    @Test
+    public void testListAllResultSetsAndGetOutParameters_RowMapper_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
+                callableQuery.listAllResultSetsAndGetOutParameters(rs -> rs.getString(1));
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    @Test
+    public void testQueryAndGetOutParameters_BiResultExtractor_WithResultSet() throws SQLException {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        java.sql.ResultSetMetaData meta = Mockito.mock(java.sql.ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
+                callableQuery.queryAndGetOutParameters((resultSet, labels) -> "bi-extracted");
+        assertNotNull(result);
+        assertEquals("bi-extracted", result._1);
+    }
+
+    // --- listAllResultSetsAndGetOutParameters(RowFilter, RowMapper): empty path (L3395-3419) ---
+
+    @Test
+    public void testListAllResultSetsAndGetOutParameters_RowFilter_RowMapper_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
+                callableQuery.listAllResultSetsAndGetOutParameters(r -> true, rs -> rs.getString(1));
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- listAllResultSetsAndGetOutParameters(BiRowMapper): empty path (L3478-3501) ---
+
+    @Test
+    public void testListAllResultSetsAndGetOutParameters_BiRowMapper_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
+                callableQuery.listAllResultSetsAndGetOutParameters((rs, labels) -> rs.getString(1));
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- listAllResultSetsAndGetOutParameters(BiRowFilter, BiRowMapper): empty path (L3575-3599) ---
+
+    @Test
+    public void testListAllResultSetsAndGetOutParameters_BiRowFilter_BiRowMapper_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
+                callableQuery.listAllResultSetsAndGetOutParameters((r, labels) -> true, (rs, labels) -> rs.getString(1));
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- queryAllResultSetsAndGetOutParameters(): empty path (L2551) ---
+
+    @Test
+    public void testQueryAllResultSetsAndGetOutParameters_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<com.landawn.abacus.util.Dataset>, Jdbc.OutParamResult> result =
+                callableQuery.queryAllResultSetsAndGetOutParameters();
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- queryAllResultSetsAndGetOutParameters(ResultExtractor): empty path (L2592-2615) ---
+
+    @Test
+    public void testQueryAllResultSetsAndGetOutParameters_ResultExtractor_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.queryAllResultSetsAndGetOutParameters(rs -> "extracted");
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- queryAllResultSetsAndGetOutParameters(BiResultExtractor): empty path (L2665-2688) ---
+
+    @Test
+    public void testQueryAllResultSetsAndGetOutParameters_BiResultExtractor_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.queryAllResultSetsAndGetOutParameters((rs, labels) -> "bi-extracted");
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- query2ResultSetsAndGetOutParameters: empty path (L2741-2770) ---
+
+    @Test
+    public void testQuery2ResultSetsAndGetOutParameters_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple3<String, String, Jdbc.OutParamResult> result =
+                callableQuery.query2ResultSetsAndGetOutParameters((rs, labels) -> "r1", (rs, labels) -> "r2");
+        assertNotNull(result);
+    }
+
+    // --- query3ResultSetsAndGetOutParameters: empty path (L2828-2863) ---
+
+    @Test
+    public void testQuery3ResultSetsAndGetOutParameters_Empty() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple4<String, String, String, Jdbc.OutParamResult> result =
+                callableQuery.query3ResultSetsAndGetOutParameters((rs, labels) -> "r1", (rs, labels) -> "r2", (rs, labels) -> "r3");
+        assertNotNull(result);
+    }
+
+    // --- closeStatement(): clearParameters throws → logger.warn (L3626) ---
+
+    @Test
+    public void testCloseStatement_ClearParametersThrows() throws SQLException {
+        doThrow(new SQLException("clear failed")).when(callableStatement).clearParameters();
+        // close() calls closeStatement(), which calls clearParameters()
+        callableQuery.close();
+        // No exception should propagate - warning is logged and super.closeStatement() is called
+        verify(callableStatement).clearParameters();
     }
 }

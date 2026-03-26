@@ -1397,4 +1397,90 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getDate(1)).thenReturn(sqlDate);
         assertEquals(sqlDate, proxy.getObject("dob"));
     }
+
+    // getObject(int) - java.sql.Date, metadata re-fetched (L482), Timestamp metadata branch (L507-509)
+    @Test
+    public void testGetObjectByIndex_SqlDate_MetadataRefetched_TimestampBranch() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(delegate.getMetaData()).thenReturn(meta);
+        // First call with column 1 (String) - initializes columnGetters, sets metadata in L466
+        when(delegate.getObject(1)).thenReturn("init");
+        assertEquals("init", proxy.getObject(1));
+        // Second call with column 2 (java.sql.Date): columnGetters != null, metadata local var is null → L482
+        java.sql.Date sqlDate = new java.sql.Date(System.currentTimeMillis());
+        java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(2)).thenReturn(sqlDate);
+        when(delegate.getTimestamp(2)).thenReturn(ts);
+        Object result = proxy.getObject(2);
+        assertEquals(ts, result);
+    }
+
+    // getObject(int) - java.sql.Date, metadata re-fetched (L482), non-Timestamp metadata → L511
+    @Test
+    public void testGetObjectByIndex_SqlDate_MetadataRefetched_DateBranch() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(2)).thenReturn("java.sql.Date");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(1)).thenReturn("init");
+        assertEquals("init", proxy.getObject(1));
+        java.sql.Date sqlDate = new java.sql.Date(System.currentTimeMillis());
+        when(delegate.getObject(2)).thenReturn(sqlDate);
+        Object result = proxy.getObject(2);
+        assertEquals(sqlDate, result);
+    }
+
+    // getObject(int) - Other object type → L513-514 (else: ColumnGetter.GET_OBJECT)
+    @Test
+    public void testGetObjectByIndex_OtherObject_GetObjectGetter() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(1)).thenReturn("init");
+        assertEquals("init", proxy.getObject(1));
+        // java.util.Date is not String/Number/Timestamp/Boolean/oracle/java.sql.Date → else branch
+        java.util.Date utilDate = new java.util.Date();
+        when(delegate.getObject(2)).thenReturn(utilDate);
+        Object result = proxy.getObject(2);
+        assertEquals(utilDate, result);
+    }
+
+    // getObject(String) - second column with java.sql.Date, metadata re-fetched (L563)
+    @Test
+    public void testGetObjectByLabel_SecondColumn_MetadataRefetched() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("col1")).thenReturn(1);
+        when(delegate.findColumn("col2")).thenReturn(2);
+        when(delegate.getObject(1)).thenReturn("init");
+        proxy.getObject("col1"); // initializes columnGettersByLabel
+        // second column: col2 returns java.sql.Date; metadata is null locally → L563
+        java.sql.Date sqlDate = new java.sql.Date(System.currentTimeMillis());
+        java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(2)).thenReturn(sqlDate);
+        when(delegate.getTimestamp(2)).thenReturn(ts);
+        Object result = proxy.getObject("col2");
+        assertEquals(ts, result);
+    }
+
+    // getObject(String) - Other object type → L594
+    @Test
+    public void testGetObjectByLabel_OtherObject_GetObjectGetter() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("col1")).thenReturn(1);
+        when(delegate.findColumn("col2")).thenReturn(2);
+        when(delegate.getObject(1)).thenReturn("init");
+        proxy.getObject("col1");
+        // java.util.Date is not String/Number/Timestamp/Boolean/oracle/java.sql.Date → L594
+        java.util.Date utilDate = new java.util.Date();
+        when(delegate.getObject(2)).thenReturn(utilDate);
+        Object result = proxy.getObject("col2");
+        assertEquals(utilDate, result);
+    }
 }
