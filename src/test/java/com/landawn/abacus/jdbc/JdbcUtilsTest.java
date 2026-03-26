@@ -1016,6 +1016,39 @@ public class JdbcUtilsTest extends TestBase {
         verify(mockPreparedStatement).executeBatch();
     }
 
+    // importData with columnTypeMap that doesn't include all dataset columns → default Object type used (L805)
+    @Test
+    public void testImportDataWithColumnTypeMap_DefaultsToObjectType() throws SQLException {
+        Map<String, Type> columnTypeMap = new HashMap<>();
+        columnTypeMap.put("col1", N.typeOf(String.class));
+        // Dataset has col1 AND col2; columnTypeMap only has col1 → col2 gets Object type (L805)
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(0)).thenReturn("value1");  // col1 value
+        when(mockDataset.get(1)).thenReturn(42);        // col2 value (gets Object type)
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        int result = JdbcUtils.importData(mockDataset, mockPreparedStatement, columnTypeMap);
+        assertEquals(1, result);
+    }
+
+    // importData with columnTypeMap that has a column NOT in the dataset → IllegalArgumentException (L810-812)
+    @Test
+    public void testImportDataWithColumnTypeMap_ExtraColumnInMap_Throws() throws SQLException {
+        Map<String, Type> columnTypeMap = new HashMap<>();
+        columnTypeMap.put("col1", N.typeOf(String.class));
+        columnTypeMap.put("nonExistent", N.typeOf(String.class));  // not in dataset
+        // Dataset only has col1
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(1);
+        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.getColumnIndex("col1")).thenReturn(0);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtils.importData(mockDataset, mockPreparedStatement, columnTypeMap));
+    }
+
     // exportCsv(PreparedStatement, File) - delegates to column-filtering version (line 2012-2013)
     @Test
     public void testExportCsvFromPreparedStatementToFile() throws SQLException, IOException {

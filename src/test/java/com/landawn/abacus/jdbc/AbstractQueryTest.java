@@ -1,22 +1,40 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigInteger;
 import java.sql.Connection;
+import java.util.Calendar;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -535,5 +553,413 @@ public class AbstractQueryTest extends TestBase {
         when(rs.next()).thenReturn(false);
         List<String> result = query.list((r, labels) -> true, (r, labels) -> r.getString(1));
         assertTrue(result.isEmpty());
+    }
+
+    // allMatch(BiRowFilter) returns false when a row fails the filter (L8302)
+    @Test
+    public void testAllMatch_BiRowFilter_ReturnsFalseWhenRowFails() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(true, false);
+
+        final boolean result = query.allMatch((r, labels) -> false);
+
+        assertFalse(result);
+    }
+
+    // setLong(int, BigInteger) when stmt.setLong throws → close() is called (L795)
+    @Test
+    public void testSetLong_BigInteger_WhenSetLongThrows_ClosesQuery() throws SQLException {
+        doThrow(new SQLException("setLong failed")).when(preparedStatement).setLong(anyInt(), anyLong());
+
+        assertThrows(SQLException.class, () -> query.setLong(1, BigInteger.valueOf(42L)));
+        // after exception, query should be closed
+        verify(preparedStatement).close();
+    }
+
+    // findFirst(RowFilter, RowMapper) returns empty Optional when no row matches filter (L5962 / L6240)
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testFindFirst_RowFilter_RowMapper_NoMatchingRow() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);  // one row but filter rejects it
+
+        final com.landawn.abacus.util.u.Optional<String> result = query.findFirst(r -> false, r -> r.getString(1));
+
+        assertNotNull(result);
+        assertFalse(result.isPresent());
+    }
+
+    // close() logs warning when stmt.setFetchDirection throws during reset (L9919-9920)
+    @Test
+    public void testClose_WhenResetFetchDirectionFails_LogsWarning() throws SQLException {
+        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
+        // Only throw on reset call (FETCH_REVERSE), not on the initial set call (FETCH_FORWARD)
+        doThrow(new SQLException("reset fetch dir failed")).when(preparedStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
+
+        query.setFetchDirection(FetchDirection.FORWARD);  // stores defaultFetchDirection = FETCH_REVERSE
+
+        // close() resets to FETCH_REVERSE which throws, but is swallowed
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // close() logs warning when stmt.setFetchSize throws during reset (L9927-9928)
+    @Test
+    public void testClose_WhenResetFetchSizeFails_LogsWarning() throws SQLException {
+        when(preparedStatement.getFetchSize()).thenReturn(100);
+        doThrow(new SQLException("reset fetch size failed")).when(preparedStatement).setFetchSize(100);
+
+        query.setFetchSize(500);  // stores defaultFetchSize = 100
+
+        // close() resets to 100 which throws, but is swallowed
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // close() logs warning when stmt.setQueryTimeout throws during reset (L9943-9944)
+    @Test
+    public void testClose_WhenResetQueryTimeoutFails_LogsWarning() throws SQLException {
+        when(preparedStatement.getQueryTimeout()).thenReturn(30);
+        doThrow(new SQLException("reset timeout failed")).when(preparedStatement).setQueryTimeout(30);
+
+        query.setQueryTimeout(60);  // stores defaultQueryTimeout = 30
+
+        // close() resets to 30 which throws, but is swallowed
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // close() logs warning when stmt.setMaxFieldSize throws during reset (L9935-9936)
+    @Test
+    public void testClose_WhenResetMaxFieldSizeFails_LogsWarning() throws SQLException {
+        when(preparedStatement.getMaxFieldSize()).thenReturn(100);
+        doThrow(new SQLException("reset maxFieldSize failed")).when(preparedStatement).setMaxFieldSize(100);
+
+        query.setMaxFieldSize(512); // stores defaultMaxFieldSize = 100
+
+        // close() resets to 100 which throws, but is swallowed
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // findFirst(BiRowFilter, BiRowMapper) no match returns empty Optional (L5962 + L6240)
+    @Test
+    public void testFindFirst_BiRowFilter_BiRowMapper_NoMatchingRow() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(true, false);
+
+        com.landawn.abacus.util.u.Optional<String> result = query.findFirst((r, labels) -> false, (r, labels) -> "val");
+
+        assertNotNull(result);
+        assertFalse(result.isPresent());
+    }
+
+    // addBatchParameters(Iterator) exception closes query (L3717)
+    @Test
+    public void testAddBatchParameters_Iterator_ExceptionClosesQuery() throws SQLException {
+        doThrow(new SQLException("addBatch failed")).when(preparedStatement).addBatch();
+        assertThrows(SQLException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator()));
+        verify(preparedStatement).close();
+    }
+
+    // addBatchParameters(Iterator, Class) exception closes query (L3764)
+    @Test
+    public void testAddBatchParameters_IteratorWithClass_ExceptionClosesQuery() throws SQLException {
+        doThrow(new SQLException("addBatch failed")).when(preparedStatement).addBatch();
+        assertThrows(SQLException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator(), String.class));
+        verify(preparedStatement).close();
+    }
+
+    // addBatchParameters(Iterator, BiParametersSetter) exception closes query (L3887)
+    @Test
+    public void testAddBatchParameters_BiSetter_ExceptionClosesQuery() throws SQLException {
+        assertThrows(RuntimeException.class, () -> query.addBatchParameters(
+                Arrays.asList("x").iterator(),
+                (q, val) -> { throw new RuntimeException("setter error"); }));
+        verify(preparedStatement).close();
+    }
+
+    // addBatchParameters(Iterator, TriParametersSetter) exception closes query (L4018)
+    @Test
+    public void testAddBatchParameters_TriSetter_ExceptionClosesQuery() throws SQLException {
+        assertThrows(RuntimeException.class, () -> query.addBatchParameters(
+                Arrays.asList("x").iterator(),
+                (q, stmt2, val) -> { throw new RuntimeException("setter error"); }));
+        verify(preparedStatement).close();
+    }
+
+    // stream(RowFilter, RowMapper) creates stream pipeline (L7375-7384)
+    @Test
+    public void testStream_WithRowFilter_CreatesPipeline() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        try (com.landawn.abacus.util.stream.Stream<String> s = query.stream((r) -> true, r -> r.getString(1))) {
+            assertNotNull(s);
+        }
+    }
+
+    // stream(BiRowFilter, BiRowMapper) creates stream pipeline (L7425-7434)
+    @Test
+    public void testStream_WithBiRowFilter_CreatesPipeline() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false);
+
+        try (com.landawn.abacus.util.stream.Stream<String> s = query.stream((r, labels) -> true, (r, labels) -> "val")) {
+            assertNotNull(s);
+        }
+    }
+
+    // streamAllResultSets() – no-arg delegates to ResultExtractor.TO_DATASET (L7601)
+    @Test
+    public void testStreamAllResultSets_NoArg() throws SQLException {
+        when(preparedStatement.execute()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+
+        try (com.landawn.abacus.util.stream.Stream<?> s = query.streamAllResultSets()) {
+            assertNotNull(s);
+        }
+    }
+
+    // streamAllResultSets(ResultExtractor) creates stream pipeline (L7638-7646)
+    @Test
+    public void testStreamAllResultSets_WithResultExtractor() throws SQLException {
+        when(preparedStatement.execute()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+
+        try (com.landawn.abacus.util.stream.Stream<String> s = query.streamAllResultSets(Jdbc.ResultExtractor.TO_DATASET.andThen(ds -> "result"))) {
+            assertNotNull(s);
+        }
+    }
+
+    // streamAllResultSets(BiResultExtractor) creates stream pipeline (L7691-7699)
+    @Test
+    public void testStreamAllResultSets_WithBiResultExtractor() throws SQLException {
+        when(preparedStatement.execute()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+
+        try (com.landawn.abacus.util.stream.Stream<String> s = query.streamAllResultSets(
+                Jdbc.BiResultExtractor.TO_DATASET.andThen(ds -> "result"))) {
+            assertNotNull(s);
+        }
+    }
+
+    // ifExistsOrElse(BiRowConsumer, Runnable) – orElseAction runs when no rows (L7972)
+    @Test
+    public void testIfExistsOrElse_BiRowConsumer_OrElseActionRuns() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false); // no rows
+
+        final boolean[] called = {false};
+        query.ifExistsOrElse((r, labels) -> {}, () -> called[0] = true);
+
+        assertTrue(called[0]);
+    }
+
+    // forEach(RowFilter, RowConsumer) – filter rejects row so consumer not called (L8455-8469)
+    @Test
+    public void testForEach_WithRowFilter_FilterRejectsRow() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+
+        final boolean[] consumed = {false};
+        query.forEach((r) -> false, r -> consumed[0] = true);
+
+        assertFalse(consumed[0]);
+    }
+
+    // foreach(Class, Consumer<DisposableObjArray>) delegates to forEach(RowConsumer) (L8686-8689)
+    @Test
+    public void testForeach_WithEntityClassAndConsumer() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false);
+
+        // No rows so consumer is never invoked — just verify no exception
+        query.foreach(String.class, arr -> {});
+    }
+
+    @Test
+    public void testSetNString_NonNull() throws SQLException {
+        TestQuery result = query.setNString(1, (CharSequence) "hello");
+        assertSame(query, result);
+        verify(preparedStatement).setNString(1, "hello");
+    }
+
+    @Test
+    public void testSetNString_Null() throws SQLException {
+        query.setNString(1, (CharSequence) null);
+        verify(preparedStatement).setNString(1, null);
+    }
+
+    // setDate(int, java.util.Date) - converts non-sql Date to java.sql.Date
+    @Test
+    public void testSetDate_UtilDate_NonNull() throws SQLException {
+        java.util.Date utilDate = new java.util.Date(1000L);
+        query.setDate(1, utilDate);
+        verify(preparedStatement).setDate(1, new java.sql.Date(1000L));
+    }
+
+    @Test
+    public void testSetDate_UtilDate_Null() throws SQLException {
+        query.setDate(1, (java.util.Date) null);
+        verify(preparedStatement).setDate(1, (java.sql.Date) null);
+    }
+
+    @Test
+    public void testSetDate_SqlDate_WithCalendar() throws SQLException {
+        java.sql.Date sqlDate = new java.sql.Date(2000L);
+        Calendar cal = Calendar.getInstance();
+        query.setDate(1, sqlDate, cal);
+        verify(preparedStatement).setDate(1, sqlDate, cal);
+    }
+
+    @Test
+    public void testSetDate_LocalDate_NonNull() throws SQLException {
+        LocalDate ld = LocalDate.of(2024, 1, 15);
+        query.setDate(1, ld);
+        verify(preparedStatement).setDate(1, java.sql.Date.valueOf(ld));
+    }
+
+    @Test
+    public void testSetDate_LocalDate_Null() throws SQLException {
+        query.setDate(1, (LocalDate) null);
+        verify(preparedStatement).setDate(1, (java.sql.Date) null);
+    }
+
+    // setTime(int, java.util.Date) - converts non-sql Time
+    @Test
+    public void testSetTime_UtilDate_NonNull() throws SQLException {
+        java.util.Date utilDate = new java.util.Date(3000L);
+        query.setTime(1, utilDate);
+        verify(preparedStatement).setTime(1, new java.sql.Time(3000L));
+    }
+
+    @Test
+    public void testSetTime_UtilDate_Null() throws SQLException {
+        query.setTime(1, (java.util.Date) null);
+        verify(preparedStatement).setTime(1, (java.sql.Time) null);
+    }
+
+    @Test
+    public void testSetTime_SqlTime_WithCalendar() throws SQLException {
+        java.sql.Time sqlTime = new java.sql.Time(4000L);
+        Calendar cal = Calendar.getInstance();
+        query.setTime(1, sqlTime, cal);
+        verify(preparedStatement).setTime(1, sqlTime, cal);
+    }
+
+    @Test
+    public void testSetTime_LocalTime_NonNull() throws SQLException {
+        LocalTime lt = LocalTime.of(14, 30, 0);
+        query.setTime(1, lt);
+        verify(preparedStatement).setTime(1, java.sql.Time.valueOf(lt));
+    }
+
+    @Test
+    public void testSetTime_LocalTime_Null() throws SQLException {
+        query.setTime(1, (LocalTime) null);
+        verify(preparedStatement).setTime(1, (java.sql.Time) null);
+    }
+
+    // setTimestamp variants
+    @Test
+    public void testSetTimestamp_UtilDate_NonNull() throws SQLException {
+        java.util.Date utilDate = new java.util.Date(5000L);
+        query.setTimestamp(1, utilDate);
+        verify(preparedStatement).setTimestamp(1, new Timestamp(5000L));
+    }
+
+    @Test
+    public void testSetTimestamp_UtilDate_Null() throws SQLException {
+        query.setTimestamp(1, (java.util.Date) null);
+        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
+    }
+
+    @Test
+    public void testSetTimestamp_SqlTimestamp_WithCalendar() throws SQLException {
+        Timestamp ts = new Timestamp(6000L);
+        Calendar cal = Calendar.getInstance();
+        query.setTimestamp(1, ts, cal);
+        verify(preparedStatement).setTimestamp(1, ts, cal);
+    }
+
+    @Test
+    public void testSetTimestamp_LocalDateTime_NonNull() throws SQLException {
+        LocalDateTime ldt = LocalDateTime.of(2024, 6, 15, 10, 30, 0);
+        query.setTimestamp(1, ldt);
+        verify(preparedStatement).setTimestamp(1, Timestamp.valueOf(ldt));
+    }
+
+    @Test
+    public void testSetTimestamp_LocalDateTime_Null() throws SQLException {
+        query.setTimestamp(1, (LocalDateTime) null);
+        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
+    }
+
+    @Test
+    public void testSetTimestamp_ZonedDateTime_NonNull() throws SQLException {
+        ZonedDateTime zdt = ZonedDateTime.now();
+        query.setTimestamp(1, zdt);
+        verify(preparedStatement).setTimestamp(1, Timestamp.from(zdt.toInstant()));
+    }
+
+    @Test
+    public void testSetTimestamp_ZonedDateTime_Null() throws SQLException {
+        query.setTimestamp(1, (ZonedDateTime) null);
+        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
+    }
+
+    @Test
+    public void testSetTimestamp_OffsetDateTime_NonNull() throws SQLException {
+        OffsetDateTime odt = OffsetDateTime.now();
+        query.setTimestamp(1, odt);
+        verify(preparedStatement).setTimestamp(1, Timestamp.from(odt.toInstant()));
+    }
+
+    @Test
+    public void testSetTimestamp_OffsetDateTime_Null() throws SQLException {
+        query.setTimestamp(1, (OffsetDateTime) null);
+        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
+    }
+
+    @Test
+    public void testSetTimestamp_Instant_NonNull() throws SQLException {
+        Instant instant = Instant.ofEpochMilli(7000L);
+        query.setTimestamp(1, instant);
+        verify(preparedStatement).setTimestamp(1, Timestamp.from(instant));
+    }
+
+    @Test
+    public void testSetTimestamp_Instant_Null() throws SQLException {
+        query.setTimestamp(1, (Instant) null);
+        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
+    }
+
+    // setFetchDirection: first call saves default (defaultFetchDirection < 0 branch)
+    @Test
+    public void testSetFetchDirection_FirstCall_SavesDefault() throws SQLException {
+        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_FORWARD);
+        query.setFetchDirection(FetchDirection.FORWARD);
+        verify(preparedStatement).getFetchDirection();
+        verify(preparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
     }
 }

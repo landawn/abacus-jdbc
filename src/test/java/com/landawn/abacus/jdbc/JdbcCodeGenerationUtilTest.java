@@ -653,4 +653,192 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
     static final class TestEntity {
     }
+
+    // generateEntityClass(DataSource, entityName, query, config) wraps SQLException from getConnection (L291-292)
+    @Test
+    public void testGenerateEntityClass_DataSourceEntityNameQueryConfig_WrapsSQLException() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass(dataSource, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
+    }
+
+    // generateEntityClass(Connection, entityName, query, config) wraps SQLException from prepareStatement (L385-386)
+    @Test
+    public void testGenerateEntityClass_ConnectionEntityNameQueryConfig_WrapsSQLException() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        when(conn.prepareStatement(Mockito.anyString())).thenThrow(new SQLException("prepare failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass(conn, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
+    }
+
+    // generateEntityClass with custom tableAnnotationClass and columnAnnotationClass (L418, L421)
+    @Test
+    public void testGenerateEntityClass_WithCustomAnnotationClasses() throws SQLException {
+        setupFullGenerateEntityClassMock();
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(jakarta.persistence.Table.class)
+                .columnAnnotationClass(jakarta.persistence.Column.class)
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+    }
+
+    // generateEntityClass with additionalFieldsOrLines set (L444-455)
+    @Test
+    public void testGenerateEntityClass_WithAdditionalFieldsOrLines() throws SQLException {
+        setupFullGenerateEntityClassMock();
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .additionalFieldsOrLines("private String extraField; // extra\nprivate int extraCount;")
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+    }
+
+    // Primary key column populates idFields (L496)
+    @Test
+    public void testGenerateEntityClass_WithPrimaryKey() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+        when(resultSetMetaData.getColumnName(1)).thenReturn("id");
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.BIGINT);
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn("java.lang.Long");
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history");
+        assertNotNull(result);
+        assertTrue(result.contains("@Id") || result.contains("id"));
+    }
+
+    // classNamesToImport adds custom imports (L535)
+    @Test
+    public void testGenerateEntityClass_WithClassNamesToImport() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .classNamesToImport(Arrays.asList("com.example.MyAnnotation"))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("import com.example.MyAnnotation;"));
+    }
+
+    // Jakarta annotation in headPart triggers extra LINE_SEPARATOR (L597)
+    // and custom tableAnnotationClass = jakarta.persistence.Table covers L542 path
+    @Test
+    public void testGenerateEntityClass_WithJakartaAnnotations_AddsLineSeparator() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(jakarta.persistence.Table.class)
+                .columnAnnotationClass(jakarta.persistence.Column.class)
+                .idAnnotationClass(jakarta.persistence.Id.class)
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("jakarta.persistence"));
+    }
+
+    // Custom non-jakarta tableAnnotationClass replaces internal annotation import (L541)
+    @Test
+    public void testGenerateEntityClass_WithCustomNonJakartaAnnotationClass() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(org.junit.jupiter.api.Test.class) // non-jakarta, non-abacus annotation
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+    }
+
+    // nonUpdatableFields marks a field @NonUpdatable (L661)
+    @Test
+    public void testGenerateEntityClass_WithNonUpdatableField() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .nonUpdatableFields(Arrays.asList("status"))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("@NonUpdatable"));
+    }
+
+    // customizedFieldDbTypes adds @Type annotation (L669)
+    @Test
+    public void testGenerateEntityClass_WithCustomizedFieldDbType() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .customizedFieldDbTypes(Arrays.asList(Tuple.of("status", "VARCHAR(255)")))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+    }
+
+    // generateCopyMethod=true and additionalFieldsOrLines generates copy() with extra fields (L715)
+    @Test
+    public void testGenerateEntityClass_WithCopyMethodAndAdditionalFields() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateCopyMethod(true)
+                .additionalFieldsOrLines("private String extra; // extra")
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("copy()"));
+    }
+
+    // generateFieldNameTable=true generates X interface with property name constants (L722-751)
+    @Test
+    public void testGenerateEntityClass_WithFieldNameTable() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .generateFieldNameTable(true)
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("public interface "));
+    }
+
+    // jsonXmlConfig with namingPolicy generates @JsonXmlConfig (L603-635)
+    @Test
+    public void testGenerateEntityClass_WithJsonXmlConfig() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jsonXmlConfig =
+                new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
+        jsonXmlConfig.setNamingPolicy(NamingPolicy.CAMEL_CASE);
+        jsonXmlConfig.setIgnoredFields("createdAt");
+        jsonXmlConfig.setDateFormat("yyyy-MM-dd");
+        jsonXmlConfig.setTimeZone("UTC");
+        jsonXmlConfig.setNumberFormat("#.##");
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .jsonXmlConfig(jsonXmlConfig)
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("@JsonXmlConfig"));
+    }
 }

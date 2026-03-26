@@ -203,6 +203,35 @@ public class DaoImplTest extends TestBase {
                 () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
     }
 
+    // QueryInfo: sql ends with ";" - trims it (L6536 branch)
+    @Test
+    void testQueryInfo_SqlWithTrailingSemicolon() {
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1;", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, false);
+        assertEquals("SELECT 1", qi.sql);
+    }
+
+    // QueryInfo: pre-parsed sql provided (L6537 non-null branch)
+    @Test
+    void testQueryInfo_WithPreParsedSql() {
+        com.landawn.abacus.query.ParsedSql parsed = com.landawn.abacus.query.ParsedSql.parse("SELECT 1");
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", parsed, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, false);
+        assertEquals(parsed, qi.parsedSql);
+    }
+
+    // QueryInfo: fragmentContainsNamedParameters=true with named SQL → isNamedQuery=true (L6548 branch)
+    @Test
+    void testQueryInfo_FragmentContainsNamedParameters_NamedSql() {
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = :id", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, true);
+        assertTrue(qi.isNamedQuery);
+    }
+
+    // QueryInfo: fragmentContainsNamedParameters=true with positional SQL → throws (L6551)
+    @Test
+    void testQueryInfo_FragmentContainsNamedParameters_PositionalSql_Throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = ?", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, true));
+    }
+
     private static DataSource mockDataSourceForDaoCreation() throws SQLException {
         DataSource ds = mock(DataSource.class);
         Connection conn = mock(Connection.class);

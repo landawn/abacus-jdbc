@@ -15,6 +15,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
@@ -3319,5 +3323,23 @@ public class JdbcTest extends TestBase {
         CamelCaseEntity result = mapper.apply(mockResultSet, columnLabels);
         assertNotNull(result);
         assertEquals("Dave", result.getFirstName());
+    }
+
+    // Invoke SET_BINARY_STREAM lambda body (L5811) - covers the lambda execution
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testColumnOne_SetBinaryStream_LambdaBody() throws Exception {
+        InputStream is = new ByteArrayInputStream(new byte[]{1, 2, 3});
+        Jdbc.Columns.ColumnOne.SET_BINARY_STREAM.accept(mockAbstractQuery, is);
+        verify(mockAbstractQuery).setBinaryStream(1, is);
+    }
+
+    // Invoke SET_CHARACTER_STREAM lambda body (L5817)
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testColumnOne_SetCharacterStream_LambdaBody() throws Exception {
+        Reader reader = new StringReader("test");
+        Jdbc.Columns.ColumnOne.SET_CHARACTER_STREAM.accept(mockAbstractQuery, reader);
+        verify(mockAbstractQuery).setCharacterStream(1, reader);
     }
 }

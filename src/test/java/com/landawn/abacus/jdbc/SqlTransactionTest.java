@@ -429,4 +429,147 @@ public class SqlTransactionTest extends TestBase {
             }
         }
     }
+
+    // rollback() on a nested transaction (refCount > 0) marks status as MARKED_ROLLBACK without executing actual rollback
+    @Test
+    public void testRollback_WhenNested_MarksForRollback() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
+
+        // first rollback: nested (refCount > 0) -> marks MARKED_ROLLBACK, does NOT actually rollback
+        transaction.rollback();
+
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        verify(connection, never()).rollback();
+
+        // cleanup: final rollback (refCount reaches 0) -> actually rolls back
+        transaction.rollback();
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection, times(1)).rollback();
+    }
+
+    // rollbackIfNotCommitted() after a direct rollbackIfNotCommitted() returns early on second call (L436)
+    @Test
+    public void testRollbackIfNotCommitted_WhenAlreadyRolledBackDirectly_DoesNothing() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        transaction.rollbackIfNotCommitted(); // actual rollback
+        transaction.rollbackIfNotCommitted(); // early return via L436 (status already ROLLED_BACK)
+
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection, times(1)).rollback();
+    }
+
+    // rollback() when connection.rollback() throws SQLException -> UncheckedSQLException, status=FAILED_ROLLBACK
+    @Test
+    public void testRollback_WhenRollbackFails_ThrowsUncheckedSQLException() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("Rollback failed")).when(connection).rollback();
+
+        assertThrows(UncheckedSQLException.class, transaction::rollback);
+        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+    }
+
+    // resetAndCloseConnection() swallows SQLException from setAutoCommit (L507-508)
+    @Test
+    public void testRollback_WhenResetConnectionFails_SwallowsException() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("setAutoCommit failed")).when(connection).setAutoCommit(true);
+
+        // rollback should succeed even if resetting connection fails
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) transaction::rollback);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
+    }
+
+    // commit() when transaction already committed logs warning and returns (L298-300)
+    @Test
+    public void testCommit_WhenAlreadyCommitted_LogsWarningAndReturns() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.commit(); // first commit succeeds, refCount → 0
+        // second commit: refCount goes to -1 → L298-300 logs warning and returns silently
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) transaction::commit);
+        verify(connection, times(1)).commit(); // only one actual DB commit
+    }
+
+    // commit() fails, then rollback also fails → rollback exception swallowed, original rethrown (L335-337)
+    @Test
+    public void testCommit_WhenRollbackAlsoFails_RollbackExceptionSwallowed() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("Commit failed")).when(connection).commit();
+        doThrow(new SQLException("Rollback also failed")).when(connection).rollback();
+
+        assertThrows(UncheckedSQLException.class, transaction::commit);
+        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        verify(connection).rollback();
+    }
+
+    // rollback() after commit logs warning and returns (L391-393)
+    @Test
+    public void testRollback_WhenAlreadyCommitted_LogsWarningAndReturns() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.commit();
+        // second rollback: refCount goes to -1 → L391-393 logs warning and returns silently
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) transaction::rollback);
+        verify(connection, never()).rollback();
+    }
+
+    // incrementAndGetRef() throws UncheckedSQLException when setTransactionIsolation fails (L544-545)
+    @Test
+    public void testIncrementAndGetRef_WhenSetIsolationFails_ThrowsUncheckedSQLException() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        doThrow(new SQLException("setIsolation failed")).when(connection).setTransactionIsolation(org.mockito.ArgumentMatchers.anyInt());
+        assertThrows(UncheckedSQLException.class,
+                () -> transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false));
+        transaction.rollbackIfNotCommitted();
+    }
+
+    // decrementAndGetRef() throws UncheckedSQLException when restoring isolation fails (L596-597)
+    @Test
+    public void testDecrementAndGetRef_WhenRestoreIsolationFails_ThrowsUncheckedSQLException() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        // increment to get refCount=2; this works since setTransactionIsolation not yet throwing
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false);
+        // now make setTransactionIsolation throw on restore
+        doThrow(new SQLException("restore failed")).when(connection).setTransactionIsolation(org.mockito.ArgumentMatchers.anyInt());
+        // rollback() → decrementAndGetRef() → res=1 → tries to restore isolation → throws
+        assertThrows(UncheckedSQLException.class, transaction::rollback);
+    }
+
+    // runOutsideTransaction(): another transaction opened during cmd causes IllegalStateException (L699-705)
+    @Test
+    public void testRunOutsideTransaction_WhenAnotherTransactionOpenedInsideCmd_ThrowsISE() throws SQLException {
+        final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        try {
+            // cmd starts another transaction with same datasource → same _id → conflict in finally
+            assertThrows(IllegalStateException.class, () -> outerTx.runOutsideTransaction(() -> {
+                JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+            }));
+        } finally {
+            // clean up inner transaction that remains in the map
+            final SqlTransaction remaining = SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL);
+            if (remaining != null) {
+                remaining.rollbackIfNotCommitted();
+            }
+        }
+    }
+
+    // callOutsideTransaction(): another transaction opened during cmd causes IllegalStateException (L762-768)
+    @Test
+    public void testCallOutsideTransaction_WhenAnotherTransactionOpenedInsideCmd_ThrowsISE() throws SQLException {
+        final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        try {
+            assertThrows(IllegalStateException.class, () -> outerTx.callOutsideTransaction(() -> {
+                JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+                return null;
+            }));
+        } finally {
+            final SqlTransaction remaining = SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL);
+            if (remaining != null) {
+                remaining.rollbackIfNotCommitted();
+            }
+        }
+    }
 }

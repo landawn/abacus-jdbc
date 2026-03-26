@@ -497,6 +497,226 @@ public class JoinInfoTest extends TestBase {
             this.items = items;
         }
     }
+
+    // Entity with @JoinedBy("") - empty value - triggers L241-243
+    public static final class EmptyJoinedByEntity {
+        private long id;
+        @JoinedBy("")
+        private List<OrderEntity> orders;
+
+        public long getId() { return id; }
+        public void setId(long id) { this.id = id; }
+        public List<OrderEntity> getOrders() { return orders; }
+        public void setOrders(List<OrderEntity> orders) { this.orders = orders; }
+    }
+
+    // Direct join with '=' appearing more than once in a pair (L509-511)
+    public static final class MultiEqJoinEntity {
+        private long userId;
+        @JoinedBy("userId = OrderEntity.id = extra")
+        private List<OrderEntity> orders;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public List<OrderEntity> getOrders() { return orders; }
+        public void setOrders(List<OrderEntity> orders) { this.orders = orders; }
+    }
+
+    // Direct join with non-existent source property (L514-517)
+    public static final class NoSrcPropJoinEntity {
+        private long userId;
+        @JoinedBy("nonExistentSrcProp = userId")
+        private List<OrderEntity> orders;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public List<OrderEntity> getOrders() { return orders; }
+        public void setOrders(List<OrderEntity> orders) { this.orders = orders; }
+    }
+
+    // Direct join with non-existent referenced property (L520-524)
+    public static final class NoRefPropJoinEntity {
+        private long userId;
+        @JoinedBy("userId = nonExistentRefProp")
+        private List<OrderEntity> orders;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public List<OrderEntity> getOrders() { return orders; }
+        public void setOrders(List<OrderEntity> orders) { this.orders = orders; }
+    }
+
+    // Referenced entity with a String id to cause type mismatch (L527-530)
+    public static final class StringIdEntity {
+        private String id;
+        private long userId;
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+    }
+
+    // Direct join where source type (long) != referenced type (String) → type mismatch (L527-530)
+    public static final class TypeMismatchJoinEntity {
+        private long userId;
+        @JoinedBy("userId = id")
+        private List<StringIdEntity> items;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public List<StringIdEntity> getItems() { return items; }
+        public void setItems(List<StringIdEntity> items) { this.items = items; }
+    }
+
+    // Entity with single (non-collection) join property (L993)
+    public static final class SingleJoinEntity {
+        private long userId;
+        @JoinedBy("userId")
+        private OrderEntity order;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public OrderEntity getOrder() { return order; }
+        public void setOrder(OrderEntity order) { this.order = order; }
+    }
+
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface SingleJoinDao extends Dao<SingleJoinEntity, PSC, SingleJoinDao> {}
+
+    // Test constructor with empty @JoinedBy value throws
+    @Test
+    public void testConstructor_EmptyJoinedByValue() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(EmptyJoinedByEntity.class, "empty_joined_by_entity", "orders", false));
+    }
+
+    // Test constructor throws when direct join pair contains more than one '='
+    @Test
+    public void testConstructor_MultiEqInJoinPair() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(MultiEqJoinEntity.class, "multi_eq_join_entity", "orders", false));
+    }
+
+    // Test constructor throws when source property name does not exist
+    @Test
+    public void testConstructor_DirectJoin_NoSrcProp() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(NoSrcPropJoinEntity.class, "no_src_prop_join_entity", "orders", false));
+    }
+
+    // Test constructor throws when referenced property name does not exist
+    @Test
+    public void testConstructor_DirectJoin_NoRefProp() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(NoRefPropJoinEntity.class, "no_ref_prop_join_entity", "orders", false));
+    }
+
+    // Test constructor throws when source and referenced property types do not match
+    @Test
+    public void testConstructor_DirectJoin_TypeMismatch() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(TypeMismatchJoinEntity.class, "type_mismatch_join_entity", "items", false));
+    }
+
+    // Test setJoinPropEntities populates a single (non-collection) join property (L993)
+    @Test
+    public void testSetJoinPropEntities_SingleEntityProp() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(SingleJoinDao.class, SingleJoinEntity.class, "single_join_entity", "order");
+        final SingleJoinEntity parent = new SingleJoinEntity();
+        parent.setUserId(10L);
+        final OrderEntity child = new OrderEntity();
+        child.setUserId(10L);
+
+        joinInfo.setJoinPropEntities(List.of(parent), List.of(child));
+
+        assertEquals(child, parent.getOrder());
+    }
+
+    // M2M: first pair has no '=' separator → L268-271
+    @Test
+    public void testConstructor_ManyToManyJoin_NoEqInFirstPair() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MNoEqSeparatorEntity.class, "m2m_no_eq", "roles", false));
+    }
+
+    // M2M: source property name not found in entity class → L274-277
+    @Test
+    public void testConstructor_ManyToManyJoin_NoSrcProp() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MNoSrcPropEntity.class, "m2m_no_src", "roles", false));
+    }
+
+    // M2M: referenced property name not found in referenced entity class → L280-283
+    @Test
+    public void testConstructor_ManyToManyJoin_NoRefProp() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MNoRefPropEntity.class, "m2m_no_ref", "roles", false));
+    }
+
+    // M2M: left[1] has no dot notation (no middle entity prefix) → L288-290
+    @Test
+    public void testConstructor_ManyToManyJoin_NoDotInMiddleRef() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MNoDotInMiddleEntity.class, "m2m_no_dot", "roles", false));
+    }
+
+    // M2M: right[0] prefix does not match left[1] prefix → L295-298
+    @Test
+    public void testConstructor_ManyToManyJoin_WrongMiddleEntityPrefix() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MWrongMiddleEntityEntity.class, "m2m_wrong_prefix", "roles", false));
+    }
+
+    // M2M: intermediate entity class does not exist on classpath → L307-309
+    @Test
+    public void testConstructor_ManyToManyJoin_MiddleClassNotFound() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MClassNotFoundEntity.class, "m2m_class_not_found", "roles", false));
+    }
+
+    // M2M: left middle property not found in intermediate entity → L324-326
+    @Test
+    public void testConstructor_ManyToManyJoin_LeftMiddlePropNotFound() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MLeftMiddlePropNotFoundEntity.class, "m2m_left_prop", "roles", false));
+    }
+
+    // M2M: right middle property not found in intermediate entity → L329-331
+    @Test
+    public void testConstructor_ManyToManyJoin_RightMiddlePropNotFound() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MRightMiddlePropNotFoundEntity.class, "m2m_right_prop", "roles", false));
+    }
+
+    // M2M: source prop type (long) does not match middle entity left prop type (String) → L335-340
+    @Test
+    public void testConstructor_ManyToManyJoin_TypeMismatch() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new JoinInfo(M2MTypeMismatchEntity.class, "m2m_type_mismatch", "roles", false));
+    }
+
+    // M2M getSelectSqlPlan with selectPropNames not containing the referenced prop (L381-386)
+    @Test
+    public void testGetSelectSqlPlan_ManyToMany_WithColumnsMissingRefProp() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        // Pass column names that do NOT include the referenced prop (roleId)
+        String sql = plan._1.apply(List.of("name"));
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
+
+    // M2M getSelectSqlPlan with selectPropNames containing the referenced prop (L388)
+    @Test
+    public void testGetSelectSqlPlan_ManyToMany_WithColumnsIncludingRefProp() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+        Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        // Pass column names that include roleId (the referenced prop)
+        String sql = plan._1.apply(List.of("roleId", "name"));
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
 }
 
 final class UserRoleUserEntity {
@@ -562,4 +782,132 @@ final class UserRoleLink {
     public void setRoleId(final long roleId) {
         this.roleId = roleId;
     }
+}
+
+// M2M join where the first pair has no '=' separator → L268-271
+final class M2MNoEqSeparatorEntity {
+    private long userId;
+
+    @JoinedBy("userId, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join with non-existent source property → L274-277
+final class M2MNoSrcPropEntity {
+    private long userId;
+
+    @JoinedBy("nonExistentSrc = UserRoleLink.userId, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join with non-existent referenced property → L280-283
+final class M2MNoRefPropEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId, UserRoleLink.roleId = nonExistentRef")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join where left[1] has no dot notation → L288-290
+final class M2MNoDotInMiddleEntity {
+    private long userId;
+
+    @JoinedBy("userId = nodotpart, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join where right[0] doesn't start with the middle entity prefix → L295-298
+final class M2MWrongMiddleEntityEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId, DifferentClass.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join where intermediate entity class does not exist → L307-309
+final class M2MClassNotFoundEntity {
+    private long userId;
+
+    @JoinedBy("userId = NonExistentMiddleClassXyz.userId, NonExistentMiddleClassXyz.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join where left middle property does not exist → L324-326
+final class M2MLeftMiddlePropNotFoundEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.nonExistentProp, UserRoleLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// M2M join where right middle property does not exist → L329-331
+final class M2MRightMiddlePropNotFoundEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId, UserRoleLink.nonExistentProp = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
+}
+
+// Middle entity where userId is String (type mismatch with long in source entity) → L335-340
+final class M2MTypeMismatchLink {
+    private String userId;  // String instead of long → type mismatch
+    private long roleId;
+
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+    public long getRoleId() { return roleId; }
+    public void setRoleId(long roleId) { this.roleId = roleId; }
+}
+
+// M2M join where source prop type (long) does not match middle entity left prop type (String) → L335-340
+final class M2MTypeMismatchEntity {
+    private long userId;
+
+    @JoinedBy("userId = M2MTypeMismatchLink.userId, M2MTypeMismatchLink.roleId = roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() { return userId; }
+    public void setUserId(long userId) { this.userId = userId; }
+    public List<RoleLookupEntity> getRoles() { return roles; }
+    public void setRoles(List<RoleLookupEntity> roles) { this.roles = roles; }
 }

@@ -26,6 +26,9 @@ import java.sql.SQLXML;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.JDBCType;
+import java.sql.ResultSet;
+import java.sql.SQLType;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -812,5 +815,255 @@ public class CallableQueryTest extends TestBase {
 
         public String getName() { return name; }
         public void setName(final String name) { this.name = name; }
+    }
+
+    // --- registerOutParameter(int, int) – by index with int sqlType (L1602) ---
+
+    @Test
+    public void testRegisterOutParameter_ByIndex_SqlType() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter(1, Types.INTEGER);
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(1, Types.INTEGER);
+    }
+
+    // --- registerOutParameter(int, int, int) – by index with scale (L1637) ---
+
+    @Test
+    public void testRegisterOutParameter_ByIndex_SqlTypeAndScale() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter(2, Types.DECIMAL, 4);
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(2, Types.DECIMAL, 4);
+    }
+
+    // --- registerOutParameter(int, int, String) – by index with typeName (L1675) ---
+
+    @Test
+    public void testRegisterOutParameter_ByIndex_SqlTypeAndTypeName() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter(3, Types.STRUCT, "MY_STRUCT");
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(3, Types.STRUCT, "MY_STRUCT");
+    }
+
+    // --- registerOutParameter(String, int, String) – by name with typeName (L1772) ---
+
+    @Test
+    public void testRegisterOutParameter_ByName_SqlTypeAndTypeName() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter("result", Types.STRUCT, "SCHEMA.MY_TYPE");
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter("result", Types.STRUCT, "SCHEMA.MY_TYPE");
+    }
+
+    // --- registerOutParameter(int, SQLType) – by index with SQLType (L1800) ---
+
+    @Test
+    public void testRegisterOutParameter_ByIndex_SQLType() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter(1, JDBCType.INTEGER);
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(1, (SQLType) JDBCType.INTEGER);
+    }
+
+    // --- registerOutParameter(int, SQLType, int) – by index with SQLType and scale (L1829) ---
+
+    @Test
+    public void testRegisterOutParameter_ByIndex_SQLTypeAndScale() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter(2, JDBCType.DECIMAL, 2);
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(2, (SQLType) JDBCType.DECIMAL, 2);
+    }
+
+    // --- registerOutParameter(int, SQLType, String) – by index with SQLType and typeName (L1858) ---
+
+    @Test
+    public void testRegisterOutParameter_ByIndex_SQLTypeAndTypeName() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter(3, JDBCType.STRUCT, "MY_STRUCT");
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter(3, (SQLType) JDBCType.STRUCT, "MY_STRUCT");
+    }
+
+    // --- registerOutParameter(String, SQLType) – by name with SQLType (L1886) ---
+
+    @Test
+    public void testRegisterOutParameter_ByName_SQLType() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter("total", JDBCType.INTEGER);
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter("total", (SQLType) JDBCType.INTEGER);
+    }
+
+    // --- registerOutParameter(String, SQLType, int) – by name with SQLType and scale (L1915) ---
+
+    @Test
+    public void testRegisterOutParameter_ByName_SQLTypeAndScale() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter("price", JDBCType.DECIMAL, 2);
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter("price", (SQLType) JDBCType.DECIMAL, 2);
+    }
+
+    // --- registerOutParameter(String, SQLType, String) – by name with SQLType and typeName (L1945) ---
+
+    @Test
+    public void testRegisterOutParameter_ByName_SQLTypeAndTypeName() throws SQLException {
+        CallableQuery result = callableQuery.registerOutParameter("obj", JDBCType.STRUCT, "MY_TYPE");
+        assertSame(callableQuery, result);
+        verify(callableStatement).registerOutParameter("obj", (SQLType) JDBCType.STRUCT, "MY_TYPE");
+    }
+
+    // --- registerOutParameters(T, BiParametersSetter) exception closes query (L2047) ---
+
+    @Test
+    public void testRegisterOutParameters_BiSetter_ClosesOnException() throws SQLException {
+        assertThrows(RuntimeException.class, () -> callableQuery.registerOutParameters("ctx", (q, ctx) -> {
+            throw new RuntimeException("error");
+        }));
+        verify(callableStatement).close();
+    }
+
+    // --- executeThenApply(Function<CallableStatement>) (L2140) ---
+
+    @Test
+    public void testExecuteThenApply_WithFunction() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        String result = callableQuery.executeThenApply(stmt -> "done");
+        assertEquals("done", result);
+        verify(callableStatement).execute();
+    }
+
+    // --- executeThenApply(BiFunction<CallableStatement, Boolean>) (L2174) ---
+
+    @Test
+    public void testExecuteThenApply_WithBiFunction() throws SQLException {
+        when(callableStatement.execute()).thenReturn(true);
+        Boolean result = callableQuery.executeThenApply((stmt, isResultSet) -> isResultSet);
+        assertTrue(result);
+        verify(callableStatement).execute();
+    }
+
+    // --- executeThenAccept(Consumer<CallableStatement>) (L2264) ---
+
+    @Test
+    public void testExecuteThenAccept_WithConsumer() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        final boolean[] called = {false};
+        callableQuery.executeThenAccept(stmt -> called[0] = true);
+        assertTrue(called[0]);
+        verify(callableStatement).execute();
+    }
+
+    // --- executeThenAccept(BiConsumer<CallableStatement, Boolean>) (L2295) ---
+
+    @Test
+    public void testExecuteThenAccept_WithBiConsumer() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        final boolean[] called = {false};
+        callableQuery.executeThenAccept((stmt, isResultSet) -> called[0] = true);
+        assertTrue(called[0]);
+        verify(callableStatement).execute();
+    }
+
+    // --- executeThenAccept(TriConsumer<CallableStatement, OutParams, Boolean>) (L2334) ---
+
+    @Test
+    public void testExecuteThenAccept_WithTriConsumer() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        final boolean[] called = {false};
+        callableQuery.executeThenAccept((stmt, outParams, isResultSet) -> called[0] = true);
+        assertTrue(called[0]);
+    }
+
+    // --- executeAndGetOutParameters() (L2374) ---
+
+    @Test
+    public void testExecuteAndGetOutParameters() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
+        assertNotNull(result);
+    }
+
+    // --- executeQuery() returns null when no result sets (L2096-2111) ---
+
+    @Test
+    public void testExecuteQuery_ReturnsNullWhenNoResultSet() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        // isFetchDirectionSet=false so setFetchDirection is called first
+        ResultSet rs = callableQuery.executeQuery();
+        org.junit.jupiter.api.Assertions.assertNull(rs);
+        verify(callableStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+    }
+
+    // --- executeQuery() returns the first ResultSet (L2104) ---
+
+    @Test
+    public void testExecuteQuery_ReturnsFirstResultSet() throws SQLException {
+        ResultSet mockRs = Mockito.mock(ResultSet.class);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(mockRs);
+        ResultSet rs = callableQuery.executeQuery();
+        assertSame(mockRs, rs);
+    }
+
+    // --- queryAndGetOutParameters() - delegation (L2414) ---
+
+    @Test
+    public void testQueryAndGetOutParameters_NoArg() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<?, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters();
+        assertNotNull(result);
+        assertNotNull(result._2);
+    }
+
+    // --- queryAndGetOutParameters(ResultExtractor) - no result set path (L2459 false branch) ---
+
+    @Test
+    public void testQueryAndGetOutParameters_WithResultExtractor_NullRs() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
+                callableQuery.queryAndGetOutParameters(rs -> "extracted");
+        assertNotNull(result);
+        org.junit.jupiter.api.Assertions.assertNull(result._1);
+    }
+
+    // --- queryAndGetOutParameters(BiResultExtractor) - no result set path ---
+
+    @Test
+    public void testQueryAndGetOutParameters_WithBiResultExtractor_NullRs() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
+                callableQuery.queryAndGetOutParameters((rs, labels) -> "bi-extracted");
+        assertNotNull(result);
+        org.junit.jupiter.api.Assertions.assertNull(result._1);
+    }
+
+    // --- listAndGetOutParameters(Class) - delegation (L2914-2916) ---
+
+    @Test
+    public void testListAndGetOutParameters_ByClass_EmptyResultSet() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.listAndGetOutParameters(String.class);
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+    }
+
+    // --- listAndGetOutParameters(RowMapper) - empty result set path (L2974 false branch) ---
+
+    @Test
+    public void testListAndGetOutParameters_WithRowMapper_NullRs() throws SQLException {
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
+                callableQuery.listAndGetOutParameters(rs -> rs.getString(1));
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
     }
 }

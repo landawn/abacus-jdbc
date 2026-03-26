@@ -3152,4 +3152,398 @@ public class NamedQueryTest extends TestBase {
             this.param2 = param2;
         }
     }
+
+    // --- setNull(typeName) map branch: 4+ occurrences (L246 for-loop) ---
+
+    @Test
+    public void testSetNullTypeName_MapBranch_FourOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setNull("p", Types.STRUCT, "MY_TYPE");
+        verify(mockPreparedStatement, times(4)).setNull(anyInt(), eq(Types.STRUCT), eq("MY_TYPE"));
+    }
+
+    // --- setAsciiStream(String, InputStream, long): all uncovered paths (L1991-2016) ---
+
+    @Test
+    public void testSetAsciiStreamLong_LoopBranch_ParamNotFound() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setAsciiStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+    }
+
+    @Test
+    public void testSetAsciiStreamLong_MapBranch_NotFound() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        assertThrows(IllegalArgumentException.class,
+                () -> q.setAsciiStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+    }
+
+    @Test
+    public void testSetAsciiStreamLong_MapBranch_OneOccurrence() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        q.setAsciiStream("a", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement).setAsciiStream(eq(1), any(InputStream.class), eq(1L));
+    }
+
+    @Test
+    public void testSetAsciiStreamLong_MapBranch_TwoOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement, times(2)).setAsciiStream(anyInt(), any(InputStream.class), eq(1L));
+    }
+
+    @Test
+    public void testSetAsciiStreamLong_MapBranch_ThreeOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement, times(3)).setAsciiStream(anyInt(), any(InputStream.class), eq(1L));
+    }
+
+    @Test
+    public void testSetAsciiStreamLong_MapBranch_FourOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement, times(4)).setAsciiStream(anyInt(), any(InputStream.class), eq(1L));
+    }
+
+    // --- setBinaryStream(String, InputStream, long): all uncovered paths (L2137-2162) ---
+
+    @Test
+    public void testSetBinaryStreamLong_LoopBranch_ParamNotFound() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setBinaryStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+    }
+
+    @Test
+    public void testSetBinaryStreamLong_MapBranch_NotFound() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        assertThrows(IllegalArgumentException.class,
+                () -> q.setBinaryStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+    }
+
+    @Test
+    public void testSetBinaryStreamLong_MapBranch_OneOccurrence() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        q.setBinaryStream("b", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement).setBinaryStream(eq(2), any(InputStream.class), eq(1L));
+    }
+
+    @Test
+    public void testSetBinaryStreamLong_MapBranch_TwoOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement, times(2)).setBinaryStream(anyInt(), any(InputStream.class), eq(1L));
+    }
+
+    @Test
+    public void testSetBinaryStreamLong_MapBranch_ThreeOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement, times(3)).setBinaryStream(anyInt(), any(InputStream.class), eq(1L));
+    }
+
+    @Test
+    public void testSetBinaryStreamLong_MapBranch_FourOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        verify(mockPreparedStatement, times(4)).setBinaryStream(anyInt(), any(InputStream.class), eq(1L));
+    }
+
+    // --- setCharacterStream(String, Reader, long): all uncovered paths (L2283-2308) ---
+
+    @Test
+    public void testSetCharacterStreamLong_LoopBranch_ParamNotFound() throws SQLException {
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setCharacterStream("unknown", new StringReader("x"), 1L));
+    }
+
+    @Test
+    public void testSetCharacterStreamLong_MapBranch_NotFound() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        assertThrows(IllegalArgumentException.class,
+                () -> q.setCharacterStream("unknown", new StringReader("x"), 1L));
+    }
+
+    @Test
+    public void testSetCharacterStreamLong_MapBranch_OneOccurrence() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        q.setCharacterStream("c", new StringReader("x"), 1L);
+        verify(mockPreparedStatement).setCharacterStream(eq(3), any(Reader.class), eq(1L));
+    }
+
+    @Test
+    public void testSetCharacterStreamLong_MapBranch_TwoOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setCharacterStream("p", new StringReader("x"), 1L);
+        verify(mockPreparedStatement, times(2)).setCharacterStream(anyInt(), any(Reader.class), eq(1L));
+    }
+
+    @Test
+    public void testSetCharacterStreamLong_MapBranch_ThreeOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        q.setCharacterStream("p", new StringReader("x"), 1L);
+        verify(mockPreparedStatement, times(3)).setCharacterStream(anyInt(), any(Reader.class), eq(1L));
+    }
+
+    @Test
+    public void testSetCharacterStreamLong_MapBranch_FourOccurrences() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setCharacterStream("p", new StringReader("x"), 1L);
+        verify(mockPreparedStatement, times(4)).setCharacterStream(anyInt(), any(Reader.class), eq(1L));
+    }
+
+    // --- setObject(String, Object, Type): all uncovered paths (L3811-3836) ---
+
+    @Test
+    public void testSetObjectWithType_LoopBranch_ParamNotFound() throws SQLException {
+        final Type<String> type = TypeFactory.getType(String.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setObject("unknown", "val", type));
+    }
+
+    @Test
+    public void testSetObjectWithType_MapBranch_NotFound() throws SQLException {
+        final Type<String> type = TypeFactory.getType(String.class);
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "val", type));
+    }
+
+    @Test
+    public void testSetObjectWithType_MapBranch_OneOccurrence() throws SQLException {
+        final Type<String> type = TypeFactory.getType(String.class);
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
+        q.setObject("a", "hello", type);
+        verify(mockPreparedStatement).setString(1, "hello");
+    }
+
+    @Test
+    public void testSetObjectWithType_MapBranch_TwoOccurrences() throws SQLException {
+        final Type<String> type = TypeFactory.getType(String.class);
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
+        q.setObject("p", "hi", type);
+        verify(mockPreparedStatement, times(2)).setString(anyInt(), eq("hi"));
+    }
+
+    @Test
+    public void testSetObjectWithType_MapBranch_ThreeOccurrences() throws SQLException {
+        final Type<String> type = TypeFactory.getType(String.class);
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
+        q.setObject("p", "hi", type);
+        verify(mockPreparedStatement, times(3)).setString(anyInt(), eq("hi"));
+    }
+
+    @Test
+    public void testSetObjectWithType_MapBranch_FourOccurrences() throws SQLException {
+        final Type<String> type = TypeFactory.getType(String.class);
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
+        q.setObject("p", "hi", type);
+        verify(mockPreparedStatement, times(4)).setString(anyInt(), eq("hi"));
+    }
+
+    // --- setParameters(Object): various uncovered branches (L3955-3994) ---
+
+    @Test
+    public void testSetParameters_Object_Collection() throws SQLException {
+        // Collection branch → delegates to setParameters(Collection)
+        NamedQuery result = namedQuery.setParameters(Arrays.asList("value1", 123));
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement).setString(eq(1), eq("value1"));
+        verify(mockPreparedStatement).setInt(eq(2), eq(123));
+    }
+
+    @Test
+    public void testSetParameters_Object_Array() throws SQLException {
+        // Object[] branch → delegates to setParameters(Object[])
+        NamedQuery result = namedQuery.setParameters(new Object[] { "value1", 123 });
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement).setString(eq(1), eq("value1"));
+        verify(mockPreparedStatement).setInt(eq(2), eq(123));
+    }
+
+    @Test
+    public void testSetParameters_Object_EntityId() throws SQLException {
+        // EntityId branch (L3984)
+        final com.landawn.abacus.util.EntityId eid = com.landawn.abacus.util.EntityId.of("param1", "v1");
+        NamedQuery result = namedQuery.setParameters((Object) eid);
+        assertSame(namedQuery, result);
+    }
+
+    @Test
+    public void testSetParameters_Object_SingleValue() throws SQLException {
+        // Single parameter query, unsupported type → falls into parameterCount==1 branch (L3987)
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        NamedQuery result = q.setParameters((Object) 42);
+        assertSame(q, result);
+        verify(mockPreparedStatement).setInt(1, 42);
+    }
+
+    @Test
+    public void testSetParameters_Object_UnsupportedType() throws SQLException {
+        // Multi-param query, unsupported non-bean type → throws (L3993-3994)
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters((Object) 42));
+    }
+
+    // --- setParameters(Object, Collection<String>): uncovered paths (L4050-4085) ---
+
+    @Test
+    public void testSetParameters_EntityWithNames_PropNotFound() throws SQLException {
+        // Bean class but the requested property doesn't exist → throws (L4050)
+        TestEntity entity = new TestEntity();
+        entity.setParam1("x");
+        entity.setParam2(1);
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setParameters(entity, Arrays.asList("nonExistentProp")));
+    }
+
+    @Test
+    public void testSetParameters_EntityWithNames_ParamNotInQuery() throws SQLException {
+        // Property exists but not in query parameter list → throws (L4060)
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("a", "b", "c", "d", "e"));
+        when(mockParsedSql.parameterCount()).thenReturn(5);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        // TestEntity has param1/param2; query has a/b/c/d/e → "param1" not in query
+        TestEntity entity = new TestEntity();
+        entity.setParam1("x");
+        assertThrows(IllegalArgumentException.class,
+                () -> q.setParameters(entity, Arrays.asList("param1")));
+    }
+
+    @Test
+    public void testSetParameters_EntityWithNames_NonBeanType() throws SQLException {
+        // Non-bean entity → throws (L4083-4085)
+        assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setParameters("notABean", Arrays.asList("param1")));
+    }
+
+    // --- setParameters(T, TriParametersSetter): exception closes query (L4133) ---
+
+    @Test
+    public void testSetParameters_WithSetter_ExceptionClosesQuery() throws SQLException {
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters("x",
+                (sql, q, p) -> { throw new RuntimeException("setter error"); }));
+        verify(mockPreparedStatement).close();
+    }
+
+    // --- addBatchParameters(Collection): empty input returns early (L4189) ---
+
+    @Test
+    public void testAddBatchParameters_Collection_Empty() throws SQLException {
+        NamedQuery result = namedQuery.addBatchParameters(new ArrayList<>());
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement, org.mockito.Mockito.never()).addBatch();
+    }
+
+    // --- addBatchParameters(Iterator): null first + paramCount != 1 throws (L4260) ---
+
+    @Test
+    public void testAddBatchParameters_NullFirst_MultiParam_Throws() throws SQLException {
+        // paramCount=2 but first element is null → IAE (L4260)
+        List<Object> batch = new ArrayList<>();
+        batch.add(null);
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.addBatchParameters(batch.iterator()));
+    }
+
+    // --- addBatchParameters(Iterator): EntityId elements (L4347-4355) ---
+
+    @Test
+    public void testAddBatchParameters_EntityId_Elements() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        final com.landawn.abacus.util.EntityId eid1 = com.landawn.abacus.util.EntityId.of("param1", "v1");
+        final com.landawn.abacus.util.EntityId eid2 = com.landawn.abacus.util.EntityId.of("param1", "v2");
+        List<com.landawn.abacus.util.EntityId> batch = Arrays.asList(eid1, eid2);
+        q.addBatchParameters(batch.iterator());
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // --- addBatchParameters(Iterator): single-value elements (L4357-4363) ---
+
+    @Test
+    public void testAddBatchParameters_SingleValue_Elements() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        q.addBatchParameters(Arrays.asList(1, 2, 3).iterator());
+        verify(mockPreparedStatement, times(3)).setObject(eq(1), any());
+        verify(mockPreparedStatement, times(3)).addBatch();
+    }
+
+    // --- addBatchParameters(Iterator): unsupported type throws (L4366) ---
+
+    @Test
+    public void testAddBatchParameters_UnsupportedType_Throws() throws SQLException {
+        // Multi-param query, first element is not a bean/map/collection/array/EntityId → throws (L4366)
+        List<Object> batch = new ArrayList<>();
+        batch.add(42); // Integer, not a bean; paramCount=2
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.addBatchParameters(batch.iterator()));
+    }
+
+    // setNullTypeName map branch - 1 occurrence (L235-236)
+    @Test
+    public void testSetNullTypeName_MapBranch_OneOccurrence() throws SQLException {
+        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "p"));
+        q.setNull("p", Types.STRUCT, "MY_TYPE");
+        verify(mockPreparedStatement).setNull(5, Types.STRUCT, "MY_TYPE");
+    }
+
+    // setDate(String, java.util.Date) with a java.sql.Date argument (instanceof branch, L1433)
+    @Test
+    public void testSetDate_UtilDate_IsSqlDate() throws SQLException {
+        java.sql.Date sqlDate = new java.sql.Date(System.currentTimeMillis());
+        namedQuery.setDate("param1", (java.util.Date) sqlDate);
+        verify(mockPreparedStatement).setDate(eq(1), eq(sqlDate));
+    }
+
+    // setTime(String, java.util.Date) with a java.sql.Time argument (instanceof branch, L1549)
+    @Test
+    public void testSetTime_UtilDate_IsSqlTime() throws SQLException {
+        java.sql.Time sqlTime = new java.sql.Time(System.currentTimeMillis());
+        namedQuery.setTime("param1", (java.util.Date) sqlTime);
+        verify(mockPreparedStatement).setTime(eq(1), eq(sqlTime));
+    }
+
+    // setTimestamp(String, java.util.Date) with a java.sql.Timestamp argument (instanceof branch, L1681)
+    @Test
+    public void testSetTimestamp_UtilDate_IsSqlTimestamp() throws SQLException {
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        namedQuery.setTimestamp("param1", (java.util.Date) ts);
+        verify(mockPreparedStatement).setTimestamp(eq(1), eq(ts));
+    }
+
+    // setTime(String, LocalTime) - null case (L1580 null branch)
+    @Test
+    public void testSetTimeLocalTime_Null() throws SQLException {
+        namedQuery.setTime("param1", (LocalTime) null);
+        verify(mockPreparedStatement).setTime(1, null);
+    }
+
+    // setTimestamp(String, LocalDateTime) - null case (L1712 null branch)
+    @Test
+    public void testSetTimestampLocalDateTime_Null() throws SQLException {
+        namedQuery.setTimestamp("param1", (LocalDateTime) null);
+        verify(mockPreparedStatement).setTimestamp(1, null);
+    }
+
+    // setTimestamp(String, ZonedDateTime) - null case (L1741 null branch)
+    @Test
+    public void testSetTimestampZonedDateTime_Null() throws SQLException {
+        namedQuery.setTimestamp("param1", (ZonedDateTime) null);
+        verify(mockPreparedStatement).setTimestamp(1, null);
+    }
+
+    // setTimestamp(String, OffsetDateTime) - null case (L1770 null branch)
+    @Test
+    public void testSetTimestampOffsetDateTime_Null() throws SQLException {
+        namedQuery.setTimestamp("param1", (OffsetDateTime) null);
+        verify(mockPreparedStatement).setTimestamp(1, null);
+    }
+
+    // setTimestamp(String, Instant) - null case (L1801 null branch)
+    @Test
+    public void testSetTimestampInstant_Null() throws SQLException {
+        namedQuery.setTimestamp("param1", (Instant) null);
+        verify(mockPreparedStatement).setTimestamp(1, null);
+    }
 }

@@ -1338,4 +1338,63 @@ public class ResultSetProxyTest extends TestBase {
         proxy.updateNClob("col", reader);
         verify(delegate).updateNClob("col", reader);
     }
+
+    // deprecated getBigDecimal(String, int) - line 371
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testGetBigDecimalByLabel_WithScale() throws SQLException {
+        final BigDecimal bd = new BigDecimal("99.12");
+        when(delegate.getBigDecimal("price", 2)).thenReturn(bd);
+        assertEquals(bd, proxy.getBigDecimal("price", 2));
+        verify(delegate).getBigDecimal("price", 2);
+    }
+
+    // getObject(String) - second call uses cached getter (L547, L602)
+    @Test
+    public void testGetObjectByLabel_CachedGetter() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("name")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn("Alice");
+        // First call: populates columnGettersByLabel
+        assertEquals("Alice", proxy.getObject("name"));
+        // Second call: hits L547 (getter = columnGettersByLabel.get(columnLabel)) and L602 (return getter.apply(delegate))
+        when(delegate.getObject(1)).thenReturn("Bob");
+        assertEquals("Bob", proxy.getObject("name"));
+    }
+
+    // getObject(String) - ret instanceof java.sql.Date, metadata class is "java.sql.Timestamp" (L587-589)
+    @Test
+    public void testGetObjectByLabel_SqlDate_TimestampMetadata() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(1)).thenReturn("java.sql.Timestamp");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("created")).thenReturn(1);
+        Date sqlDate = new Date(System.currentTimeMillis());
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(sqlDate);
+        when(delegate.getTimestamp(1)).thenReturn(ts);
+        Object result = proxy.getObject("created");
+        assertEquals(ts, result);
+    }
+
+    // getObject(String) - ret instanceof java.sql.Date, metadata class is not "java.sql.Timestamp" (L590-592)
+    @Test
+    public void testGetObjectByLabel_SqlDate_DateMetadata() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(1)).thenReturn("java.sql.Date");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("dob")).thenReturn(1);
+        Date sqlDate = new Date(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(sqlDate);
+        when(delegate.getDate(1)).thenReturn(sqlDate);
+        Object result = proxy.getObject("dob");
+        assertEquals(sqlDate, result);
+        // Second call uses cached getter (rs -> rs.getDate(columnIndex))
+        when(delegate.getDate(1)).thenReturn(sqlDate);
+        assertEquals(sqlDate, proxy.getObject("dob"));
+    }
 }
