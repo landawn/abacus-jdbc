@@ -440,4 +440,37 @@ public class UncheckedCrudDaoTest extends TestBase {
         assertThrows(IllegalArgumentException.class,
                 () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of(), 5));
     }
+
+    // refresh variants validate input and short-circuit empty collections.
+    @Test
+    public void testRefresh_NullEntity() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.refresh(null));
+    }
+
+    @Test
+    public void testRefresh_NotFound() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(3L);
+
+        when(dao.gett(Mockito.eq(3L), Mockito.anyCollection())).thenReturn(null);
+
+        assertFalse(dao.refresh(entity, List.of("name")));
+    }
+
+    @Test
+    public void testBatchRefresh_EmptyEntities() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertEquals(0, dao.batchRefresh(List.of(), 5));
+    }
+
+    @Test
+    public void testBatchRefresh_WithPropNames_EmptyEntities() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertEquals(0, dao.batchRefresh(List.of(), List.of("name"), 5));
+    }
 }

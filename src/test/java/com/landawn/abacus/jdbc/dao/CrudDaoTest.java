@@ -433,4 +433,37 @@ public class CrudDaoTest extends TestBase {
 
         assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of(), 5));
     }
+
+    // refresh variants validate input and short-circuit empty collections.
+    @Test
+    public void testRefresh_NullEntity() {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.refresh(null));
+    }
+
+    @Test
+    public void testRefresh_NotFound() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(3L);
+
+        when(dao.gett(Mockito.eq(3L), Mockito.anyCollection())).thenReturn(null);
+
+        assertFalse(dao.refresh(entity, List.of("name")));
+    }
+
+    @Test
+    public void testBatchRefresh_EmptyEntities() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertEquals(0, dao.batchRefresh(List.of(), 5));
+    }
+
+    @Test
+    public void testBatchRefresh_WithPropNames_EmptyEntities() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertEquals(0, dao.batchRefresh(List.of(), List.of("name"), 5));
+    }
 }

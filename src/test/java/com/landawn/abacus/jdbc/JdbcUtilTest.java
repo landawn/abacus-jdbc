@@ -348,6 +348,31 @@ public class JdbcUtilTest extends TestBase {
         verify(mockConnection).close();
     }
 
+    // closeQuietly(ResultSet, boolean, boolean) validates flags and discovers statement/connection handles.
+    @Test
+    public void testCloseQuietly_ResultSetFlags() throws SQLException {
+        when(mockResultSet.getStatement()).thenReturn(mockStatement);
+        when(mockStatement.getConnection()).thenReturn(mockConnection);
+
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, true, true));
+
+        verify(mockResultSet).getStatement();
+        verify(mockStatement).getConnection();
+        verify(mockResultSet).close();
+        verify(mockStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    public void testCloseQuietly_InvalidFlags() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.closeQuietly(mockResultSet, false, true));
+    }
+
+    @Test
+    public void testCloseQuietly_NullResultSetWithFlags() {
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly((ResultSet) null, true, true));
+    }
+
     @Test
     public void testSkipInt() throws SQLException {
         when(mockResultSet.getRow()).thenReturn(0, 2);

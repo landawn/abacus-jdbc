@@ -87,6 +87,16 @@ public class DaoImplTest extends TestBase {
         List<TestEntity> findByFilter(Jdbc.RowFilter rowFilter);
     }
 
+    interface QueryClassifierDao {
+        List<TestEntity> getEntities();
+
+        List<TestEntity> selectWithExtractor(Jdbc.ResultExtractor<List<TestEntity>> extractor);
+
+        String existsAsString();
+
+        boolean existsWithMapper(Jdbc.RowMapper<TestEntity> mapper);
+    }
+
     static final class StubQuery extends AbstractQuery<PreparedStatement, StubQuery> {
         private final Dataset dataset;
 
@@ -201,6 +211,64 @@ public class DaoImplTest extends TestBase {
     void testCreateDaoRejectsRowFilterInUnsupportedPosition() throws Exception {
         assertThrows(UnsupportedOperationException.class,
                 () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+    }
+
+    // DAO query classifier branches are private factory inputs exercised through reflection.
+    @Test
+    public void testIsListQuery_ListOpRejectsNonCollection() throws Exception {
+        Method method = QueryClassifierDao.class.getMethod("getEntities");
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        InvocationTargetException ex = assertThrows(InvocationTargetException.class,
+                () -> classifier.invoke(null, method, TestEntity.class, OP.list, "QueryClassifierDao.getEntities"));
+
+        assertTrue(ex.getCause() instanceof UnsupportedOperationException);
+    }
+
+    @Test
+    public void testIsListQuery_DefaultSinglePrefixCollection() throws Exception {
+        Method method = QueryClassifierDao.class.getMethod("getEntities");
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        Object result = classifier.invoke(null, method, List.class, OP.DEFAULT, "QueryClassifierDao.getEntities");
+
+        assertEquals(false, result);
+    }
+
+    @Test
+    public void testIsListQuery_ResultExtractorParameter() throws Exception {
+        Method method = QueryClassifierDao.class.getMethod("selectWithExtractor", Jdbc.ResultExtractor.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        Object result = classifier.invoke(null, method, List.class, OP.DEFAULT, "QueryClassifierDao.selectWithExtractor");
+
+        assertEquals(false, result);
+    }
+
+    @Test
+    public void testIsExistsQuery_ExplicitOpRejectsNonBoolean() throws Exception {
+        Method method = QueryClassifierDao.class.getMethod("existsAsString");
+        Method classifier = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        InvocationTargetException ex = assertThrows(InvocationTargetException.class,
+                () -> classifier.invoke(null, method, OP.exists, "QueryClassifierDao.existsAsString"));
+
+        assertTrue(ex.getCause() instanceof UnsupportedOperationException);
+    }
+
+    @Test
+    public void testIsExistsQuery_MapperParameter() throws Exception {
+        Method method = QueryClassifierDao.class.getMethod("existsWithMapper", Jdbc.RowMapper.class);
+        Method classifier = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        Object result = classifier.invoke(null, method, OP.DEFAULT, "QueryClassifierDao.existsWithMapper");
+
+        assertEquals(false, result);
     }
 
     // QueryInfo: sql ends with ";" - trims it (L6536 branch)

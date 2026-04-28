@@ -458,4 +458,67 @@ public class JoinEntityHelperTest extends TestBase {
         verify(dao).loadJoinEntitiesIfNull(entities, "orders");
         verify(dao).loadJoinEntitiesIfNull(entities, "addresses");
     }
+
+    // stream variants load joins while flattening split batches.
+    @Test
+    public void testStream_LoadsSingleJoinEntityClass() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity first = new TestEntity();
+        TestEntity second = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+        List<String> selectPropNames = List.of("id");
+
+        when(dao.stream(selectPropNames, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(first, second));
+        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>>any(), eq(String.class));
+
+        List<TestEntity> result = dao.stream(selectPropNames, String.class, condition).toList();
+
+        assertEquals(2, result.size());
+        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>>any(), eq(String.class));
+    }
+
+    @Test
+    public void testStream_LoadsCollectionOfJoinEntityClasses() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
+        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>>any(), eq(String.class));
+        doNothing().when(dao).loadJoinEntities(Mockito.<Collection<TestEntity>>any(), eq(Integer.class));
+
+        List<TestEntity> result = dao.stream(null, List.of(String.class, Integer.class), condition).toList();
+
+        assertEquals(1, result.size());
+        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>>any(), eq(String.class));
+        verify(dao).loadJoinEntities(Mockito.<Collection<TestEntity>>any(), eq(Integer.class));
+    }
+
+    @Test
+    public void testStream_LoadsAllJoinEntitiesWhenRequested() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
+        doNothing().when(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>>any());
+
+        List<TestEntity> result = dao.stream(null, true, condition).toList();
+
+        assertEquals(1, result.size());
+        verify(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>>any());
+    }
+
+    @Test
+    public void testStream_IncludeAllJoinEntitiesFalse() {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Condition condition = Mockito.mock(Condition.class);
+
+        when(dao.stream((Collection<String>) null, condition)).thenReturn(com.landawn.abacus.util.stream.Stream.of(entity));
+
+        List<TestEntity> result = dao.stream(null, false, condition).toList();
+
+        assertEquals(1, result.size());
+    }
 }

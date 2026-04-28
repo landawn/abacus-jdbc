@@ -100,6 +100,26 @@ public class DaoUtilTest extends TestBase {
         assertFalse(DaoUtil.isInsertQuery("delete from demo"));
     }
 
+    // CTE and leading-comment SQL classification exercises the keyword scanner.
+    @Test
+    public void testIsSelectQuery_WithLeadingCommentsAndCte() {
+        final String sql = "  -- leading comment\n/* block comment */\n# shell comment\nWITH cte AS (SELECT 'not final' AS name) SELECT * FROM cte";
+
+        assertTrue(DaoUtil.isSelectQuery(sql));
+    }
+
+    @Test
+    public void testIsInsertQuery_WithRecursiveCte() {
+        final String sql = "WITH RECURSIVE cte AS (SELECT 1) INSERT INTO audit_log(id) SELECT id FROM cte";
+
+        assertTrue(DaoUtil.isInsertQuery(sql));
+    }
+
+    @Test
+    public void testIsSelectQuery_CommentsOnly() {
+        assertFalse(DaoUtil.isSelectQuery(" /* block */ -- line\n # shell\n "));
+    }
+
     // Simple entity for extractId / createIdExtractor tests
     public static final class SimpleEntity {
         private long id;
