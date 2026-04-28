@@ -622,4 +622,99 @@ public class DaoTest extends TestBase {
         verify(dao).save(entity);
     }
 
+    // Bean class without an id property — used to cover the
+    // `idPropNameList.isEmpty()` branch in upsert (Dao.java line 2342-2343).
+    static final class NoIdEntity {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    interface NoIdDao extends Dao<NoIdEntity, PSC, NoIdDao> {
+    }
+
+    @Test
+    public void testUpsert_UpdatePath_WhenIdPropNamesEmpty_CopiesAllFields() throws SQLException {
+        final NoIdDao dao = Mockito.mock(NoIdDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition condition = Mockito.mock(Condition.class);
+        final NoIdEntity entity = new NoIdEntity();
+        entity.setName("updated");
+        final NoIdEntity dbEntity = new NoIdEntity();
+        dbEntity.setName("original");
+
+        when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
+        when(dao.targetEntityClass()).thenReturn(NoIdEntity.class);
+        when(dao.update(Mockito.same(dbEntity), Mockito.same(condition))).thenReturn(1);
+
+        final NoIdEntity result = dao.upsert(entity, condition);
+
+        assertSame(dbEntity, result);
+        assertEquals("updated", dbEntity.getName());
+    }
+
+    @Test
+    public void testPrepareQuery_WithSelectPropsAndCondition_DelegatesToDaoUtil() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+        final List<String> props = List.of("id", "name");
+        final PreparedQuery expected = Mockito.mock(PreparedQuery.class);
+
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> pqFunc = Mockito.mock(Throwables.BiFunction.class);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException> nqFunc = Mockito.mock(Throwables.BiFunction.class);
+
+        when(pqFunc.apply(props, cond)).thenReturn(expected);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            daoUtil.when(() -> DaoUtil.getDaoPreparedQueryFunc(dao)).thenReturn(com.landawn.abacus.util.Tuple.of(pqFunc, nqFunc));
+
+            assertSame(expected, dao.prepareQuery(props, cond));
+        }
+    }
+
+    @Test
+    public void testPrepareNamedQuery_WithSelectPropsAndCondition_DelegatesToDaoUtil() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+        final List<String> props = List.of("id", "name");
+        final NamedQuery expected = Mockito.mock(NamedQuery.class);
+
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException> pqFunc = Mockito.mock(Throwables.BiFunction.class);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException> nqFunc = Mockito.mock(Throwables.BiFunction.class);
+
+        when(nqFunc.apply(props, cond)).thenReturn(expected);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            daoUtil.when(() -> DaoUtil.getDaoPreparedQueryFunc(dao)).thenReturn(com.landawn.abacus.util.Tuple.of(pqFunc, nqFunc));
+
+            assertSame(expected, dao.prepareNamedQuery(props, cond));
+        }
+    }
+
+    @Test
+    public void testPrepareCallableQuery_WithStmtCreator_DelegatesToJdbcUtil() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final CallableQuery expected = Mockito.mock(CallableQuery.class);
+        @SuppressWarnings("unchecked")
+        final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator = Mockito.mock(Throwables.BiFunction.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.prepareCallableQuery(dataSource, "{call demo_proc(?)}", stmtCreator)).thenReturn(expected);
+
+            assertSame(expected, dao.prepareCallableQuery("{call demo_proc(?)}", stmtCreator));
+        }
+    }
+
 }

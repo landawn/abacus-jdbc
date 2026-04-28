@@ -717,6 +717,304 @@ public class JoinInfoTest extends TestBase {
         assertNotNull(sql);
         assertTrue(sql.contains("SELECT"));
     }
+
+    // getDeleteSqlPlan throws on unsupported SqlBuilder (L845)
+    @Test
+    public void testGetDeleteSqlPlan_UnsupportedBuilder() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.getDeleteSqlPlan(MSC.class));
+    }
+
+    // getBatchDeleteSqlPlan throws on unsupported SqlBuilder (L894)
+    @Test
+    public void testGetBatchDeleteSqlPlan_UnsupportedBuilder() {
+        JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.getBatchDeleteSqlPlan(MSC.class));
+    }
+
+    // getJoinPropValue throws when join value is null/default and allowJoiningByNullOrDefaultValue=false (L1026-1028)
+    interface UserStrictDao extends Dao<UserEntity, PSC, UserStrictDao> {
+    }
+
+    @Test
+    public void testParamSetter_NullJoinValue_NotAllowed_Throws() {
+        // UserStrictDao has no @DaoConfig allowJoiningByNullOrDefaultValue -> defaults to false.
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserStrictDao.class, UserEntity.class, "user_entity_strict", "orders");
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserEntity entity = new UserEntity();
+        entity.setUserId(0L); // 0 is the default for long → triggers the "not allowed" path
+
+        assertThrows(IllegalArgumentException.class, () -> plan._2.accept(stmt, entity));
+    }
+
+    // setJoinPropEntities for a non-List collection prop (Set) (L978-981)
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface SetUserDao extends Dao<SetUserEntity, PSC, SetUserDao> {
+    }
+
+    public static final class SetUserEntity {
+        private long userId;
+        @JoinedBy("userId")
+        private java.util.Set<OrderEntity> orders;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public java.util.Set<OrderEntity> getOrders() { return orders; }
+        public void setOrders(java.util.Set<OrderEntity> orders) { this.orders = orders; }
+    }
+
+    @Test
+    public void testSetJoinPropEntities_SetCollection() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(SetUserDao.class, SetUserEntity.class, "set_user_entity", "orders");
+        final SetUserEntity user = new SetUserEntity();
+        user.setUserId(1L);
+        final OrderEntity o = new OrderEntity();
+        o.setUserId(1L);
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(o));
+
+        assertNotNull(user.getOrders());
+        assertEquals(1, user.getOrders().size());
+    }
+
+    // setJoinPropEntities for Map property (L988-991)
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface MapUserDao extends Dao<MapUserEntity, PSC, MapUserDao> {
+    }
+
+    public static final class MapUserEntity {
+        private long userId;
+        @JoinedBy("userId")
+        private java.util.Map<Object, OrderEntity> orderByKey;
+
+        public long getUserId() { return userId; }
+        public void setUserId(long userId) { this.userId = userId; }
+        public java.util.Map<Object, OrderEntity> getOrderByKey() { return orderByKey; }
+        public void setOrderByKey(java.util.Map<Object, OrderEntity> orderByKey) { this.orderByKey = orderByKey; }
+    }
+
+    @Test
+    public void testSetJoinPropEntities_MapProperty() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(MapUserDao.class, MapUserEntity.class, "map_user_entity", "orderByKey");
+        final MapUserEntity user = new MapUserEntity();
+        user.setUserId(1L);
+        final OrderEntity o = new OrderEntity();
+        o.setUserId(1L);
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(o));
+
+        assertNotNull(user.getOrderByKey());
+        assertEquals(1, user.getOrderByKey().size());
+    }
+
+    // setJoinPropEntities for Map prop with multiple matched entities (L984-985)
+    @Test
+    public void testSetJoinPropEntities_MapProperty_MultipleMatches_Throws() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(MapUserDao.class, MapUserEntity.class, "map_user_entity_multi", "orderByKey");
+        final MapUserEntity user = new MapUserEntity();
+        user.setUserId(2L);
+        final OrderEntity o1 = new OrderEntity();
+        o1.setUserId(2L);
+        final OrderEntity o2 = new OrderEntity();
+        o2.setUserId(2L);
+
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(List.of(user), List.of(o1, o2)));
+    }
+
+    // 2-column composite join — exercise the BiParametersSetter & batch setter for srcPropInfos.length == 2
+    @Test
+    public void testParamSetter_TwoColumnJoin_ExecutesLambda() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item_2col", "details");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final OrderItemEntity entity = new OrderItemEntity();
+        entity.setOrderId(10L);
+        entity.setProductId(20L);
+
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, entity);
+
+        // Two parameter slots should have been set.
+        org.mockito.Mockito.verify(stmt).setLong(1, 10L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 20L);
+    }
+
+    @Test
+    public void testBatchParamSetter_TwoColumnJoin_ExecutesLambda() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item_2col_batch", "details");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final OrderItemEntity e1 = new OrderItemEntity();
+        e1.setOrderId(1L);
+        e1.setProductId(2L);
+        final OrderItemEntity e2 = new OrderItemEntity();
+        e2.setOrderId(3L);
+        e2.setProductId(4L);
+
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> batchPlan = joinInfo
+                .getBatchSelectSqlPlan(PSC.class);
+        batchPlan._2.accept(stmt, List.of(e1, e2));
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 1L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 2L);
+        org.mockito.Mockito.verify(stmt).setLong(3, 3L);
+        org.mockito.Mockito.verify(stmt).setLong(4, 4L);
+    }
+
+    // setNull param setter for 2-column composite join (L575-579)
+    @Test
+    public void testSetNullParamSetter_TwoColumnJoin() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item_setnull", "details");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final OrderItemEntity entity = new OrderItemEntity();
+        entity.setOrderId(7L);
+        entity.setProductId(8L);
+
+        // The set-null plan exposes a Tuple3<setNullSql, paramSetter, ...>; just confirm we can invoke the param setter.
+        final Tuple3<String, ?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan =
+                (Tuple3) joinInfo.getDeleteSqlPlan(PSC.class);
+        // Use deleteSql plan param setter for 2-column entity (L538-547 path).
+        plan._3.accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 7L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 8L);
+    }
+
+    // 3-column composite key — exercises srcPropInfos.length == 3 branch (L671-683)
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface ThreeColParentDao extends Dao<ThreeColParent, PSC, ThreeColParentDao> {
+    }
+
+    public static final class ThreeColParent {
+        private long a;
+        private long b;
+        private long c;
+
+        @JoinedBy("a=ThreeColChild.a, b=ThreeColChild.b, c=ThreeColChild.c")
+        private List<ThreeColChild> children;
+
+        public long getA() { return a; }
+        public void setA(long a) { this.a = a; }
+        public long getB() { return b; }
+        public void setB(long b) { this.b = b; }
+        public long getC() { return c; }
+        public void setC(long c) { this.c = c; }
+        public List<ThreeColChild> getChildren() { return children; }
+        public void setChildren(List<ThreeColChild> children) { this.children = children; }
+    }
+
+    public static final class ThreeColChild {
+        private long a;
+        private long b;
+        private long c;
+
+        public long getA() { return a; }
+        public void setA(long a) { this.a = a; }
+        public long getB() { return b; }
+        public void setB(long b) { this.b = b; }
+        public long getC() { return c; }
+        public void setC(long c) { this.c = c; }
+    }
+
+    @Test
+    public void testThreeColumnJoin_KeyExtractor() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(ThreeColParentDao.class, ThreeColParent.class, "three_col_parent", "children");
+        final ThreeColParent p = new ThreeColParent();
+        p.setA(1L);
+        p.setB(2L);
+        p.setC(3L);
+        final ThreeColChild c = new ThreeColChild();
+        c.setA(1L);
+        c.setB(2L);
+        c.setC(3L);
+
+        joinInfo.setJoinPropEntities(List.of(p), List.of(c));
+
+        assertNotNull(p.getChildren());
+        assertEquals(1, p.getChildren().size());
+    }
+
+    // 4-column composite key — exercises srcPropInfos.length > 3 branch (L685-702)
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface FourColParentDao extends Dao<FourColParent, PSC, FourColParentDao> {
+    }
+
+    public static final class FourColParent {
+        private long a;
+        private long b;
+        private long c;
+        private long d;
+
+        @JoinedBy("a=FourColChild.a, b=FourColChild.b, c=FourColChild.c, d=FourColChild.d")
+        private List<FourColChild> children;
+
+        public long getA() { return a; }
+        public void setA(long a) { this.a = a; }
+        public long getB() { return b; }
+        public void setB(long b) { this.b = b; }
+        public long getC() { return c; }
+        public void setC(long c) { this.c = c; }
+        public long getD() { return d; }
+        public void setD(long d) { this.d = d; }
+        public List<FourColChild> getChildren() { return children; }
+        public void setChildren(List<FourColChild> children) { this.children = children; }
+    }
+
+    public static final class FourColChild {
+        private long a;
+        private long b;
+        private long c;
+        private long d;
+
+        public long getA() { return a; }
+        public void setA(long a) { this.a = a; }
+        public long getB() { return b; }
+        public void setB(long b) { this.b = b; }
+        public long getC() { return c; }
+        public void setC(long c) { this.c = c; }
+        public long getD() { return d; }
+        public void setD(long d) { this.d = d; }
+    }
+
+    @Test
+    public void testFourColumnJoin_KeyExtractor() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(FourColParentDao.class, FourColParent.class, "four_col_parent", "children");
+        final FourColParent p = new FourColParent();
+        p.setA(1L);
+        p.setB(2L);
+        p.setC(3L);
+        p.setD(4L);
+        final FourColChild c = new FourColChild();
+        c.setA(1L);
+        c.setB(2L);
+        c.setC(3L);
+        c.setD(4L);
+
+        joinInfo.setJoinPropEntities(List.of(p), List.of(c));
+
+        assertNotNull(p.getChildren());
+        assertEquals(1, p.getChildren().size());
+    }
+
+    @Test
+    public void testFourColumnJoin_BatchParamSetter() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(FourColParentDao.class, FourColParent.class, "four_col_parent_batch", "children");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final FourColParent p = new FourColParent();
+        p.setA(10L);
+        p.setB(20L);
+        p.setC(30L);
+        p.setD(40L);
+
+        // Param setter for >2-column branch (L562-570).
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan =
+                joinInfo.getBatchSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, List.of(p));
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 10L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 20L);
+        org.mockito.Mockito.verify(stmt).setLong(3, 30L);
+        org.mockito.Mockito.verify(stmt).setLong(4, 40L);
+    }
 }
 
 final class UserRoleUserEntity {

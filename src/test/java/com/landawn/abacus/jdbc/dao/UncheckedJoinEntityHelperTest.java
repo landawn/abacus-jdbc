@@ -238,4 +238,203 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
 
         verify(dao).loadJoinEntitiesIfNull(entities, String.class, null);
     }
+
+    // loadJoinEntities(entity, Collection<String>) — loops over each property name.
+    @Test
+    public void testLoadJoinEntities_Entity_PropNames_LoopsEach() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+
+        dao.loadJoinEntities(entity, List.of("orders", "addresses"));
+
+        verify(dao).loadJoinEntities(entity, "orders");
+        verify(dao).loadJoinEntities(entity, "addresses");
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entity_PropNames_EmptyShortCircuits() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        dao.loadJoinEntities(entity, List.<String>of());
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.eq(entity), Mockito.anyString());
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entity_PropNames_InParallelFalse() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entity), Mockito.anyCollection());
+
+        dao.loadJoinEntities(entity, List.of("orders"), false);
+
+        verify(dao).loadJoinEntities(entity, List.of("orders"));
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entity_PropNames_WithExecutor_RunsLoad() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+
+        dao.loadJoinEntities(entity, List.of("orders", "addresses"), Runnable::run);
+
+        verify(dao).loadJoinEntities(entity, "orders");
+        verify(dao).loadJoinEntities(entity, "addresses");
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entity_PropNames_WithExecutor_EmptyShortCircuits() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        dao.loadJoinEntities(entity, List.<String>of(), Runnable::run);
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.same(entity), Mockito.anyString());
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entity_PropNames_InParallelTrue_UsesExecutor() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        when(dao.executor()).thenReturn(Runnable::run);
+        doNothing().when(dao).loadJoinEntities(eq(entity), Mockito.anyString());
+
+        dao.loadJoinEntities(entity, List.of("orders"), true);
+
+        verify(dao).executor();
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entities_PropNames_LoopsEach() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString());
+
+        dao.loadJoinEntities(entities, List.of("orders", "addresses"));
+
+        verify(dao).loadJoinEntities(entities, "orders");
+        verify(dao).loadJoinEntities(entities, "addresses");
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entities_PropNames_EmptyEntitiesShortCircuits() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+
+        dao.loadJoinEntities(List.<TestEntity>of(), List.of("orders"));
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>>any(), Mockito.anyString());
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entities_PropNames_InParallelFalse() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyCollection());
+
+        dao.loadJoinEntities(entities, List.of("orders"), false);
+
+        verify(dao).loadJoinEntities(entities, List.of("orders"));
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entities_PropNames_WithExecutor_RunsLoad() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString());
+
+        dao.loadJoinEntities(entities, List.of("orders", "addresses"), Runnable::run);
+
+        verify(dao).loadJoinEntities(entities, "orders");
+        verify(dao).loadJoinEntities(entities, "addresses");
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entities_PropNames_WithExecutor_EmptyShortCircuits() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+
+        dao.loadJoinEntities(List.<TestEntity>of(), List.of("orders"), Runnable::run);
+        Mockito.verify(dao, Mockito.never()).loadJoinEntities(Mockito.<List<TestEntity>>any(), Mockito.anyString());
+    }
+
+    @Test
+    public void testLoadJoinEntities_Entities_PropNames_InParallelTrue_UsesExecutor() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        when(dao.executor()).thenReturn(Runnable::run);
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString());
+
+        dao.loadJoinEntities(entities, List.of("orders"), true);
+
+        verify(dao).executor();
+    }
+
+    @Test
+    public void testLoadAllJoinEntities_Entity_InParallelFalse() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        doNothing().when(dao).loadAllJoinEntities(entity);
+
+        dao.loadAllJoinEntities(entity, false);
+
+        verify(dao).loadAllJoinEntities(entity);
+    }
+
+    @Test
+    public void testLoadAllJoinEntities_Entity_InParallelTrue_UsesExecutor() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        when(dao.executor()).thenReturn(Runnable::run);
+        doNothing().when(dao).loadAllJoinEntities(Mockito.same(entity), Mockito.<java.util.concurrent.Executor>any());
+
+        dao.loadAllJoinEntities(entity, true);
+
+        verify(dao).executor();
+    }
+
+    @Test
+    public void testLoadAllJoinEntities_Entities_InParallelFalse() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        doNothing().when(dao).loadAllJoinEntities(entities);
+
+        dao.loadAllJoinEntities(entities, false);
+
+        verify(dao).loadAllJoinEntities(entities);
+    }
+
+    @Test
+    public void testLoadAllJoinEntities_Entities_InParallelTrue_UsesExecutor() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        when(dao.executor()).thenReturn(Runnable::run);
+        doNothing().when(dao).loadAllJoinEntities(Mockito.same(entities), Mockito.<java.util.concurrent.Executor>any());
+
+        dao.loadAllJoinEntities(entities, true);
+
+        verify(dao).executor();
+    }
+
+    @Test
+    public void testLoadJoinEntitiesIfNull_Entity_PropNames_LoopsEach() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        doNothing().when(dao).loadJoinEntitiesIfNull(eq(entity), Mockito.anyString());
+
+        dao.loadJoinEntitiesIfNull(entity, List.of("orders", "addresses"));
+
+        verify(dao).loadJoinEntitiesIfNull(entity, "orders");
+        verify(dao).loadJoinEntitiesIfNull(entity, "addresses");
+    }
+
+    @Test
+    public void testLoadJoinEntitiesIfNull_Entities_PropNames_LoopsEach() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        doNothing().when(dao).loadJoinEntitiesIfNull(Mockito.same(entities), Mockito.anyString());
+
+        dao.loadJoinEntitiesIfNull(entities, List.of("orders", "addresses"));
+
+        verify(dao).loadJoinEntitiesIfNull(entities, "orders");
+        verify(dao).loadJoinEntitiesIfNull(entities, "addresses");
+    }
 }

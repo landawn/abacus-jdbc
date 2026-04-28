@@ -2103,4 +2103,157 @@ public class JdbcUtilTest extends TestBase {
             this.age = age;
         }
     }
+
+    // close(ResultSet) wraps SQLException as UncheckedSQLException (line 988).
+    @Test
+    public void testClose_ResultSet_WrapsSQLException() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        doThrow(new SQLException("boom")).when(rs).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(rs));
+    }
+
+    // close(ResultSet, boolean, boolean) — closeConnection without closeStatement throws (line 1052).
+    @Test
+    public void testClose_ResultSetBooleanFlags_InvalidConfig_Throws() {
+        ResultSet rs = mock(ResultSet.class);
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.close(rs, false, true));
+    }
+
+    // close(ResultSet, boolean, boolean) — null rs short-circuits.
+    @Test
+    public void testClose_ResultSetBooleanFlags_NullResultSet_NoOp() {
+        assertDoesNotThrow(() -> JdbcUtil.close((ResultSet) null, true, true));
+    }
+
+    // close(ResultSet, boolean, boolean) — getStatement throws SQLException (line 1071).
+    @Test
+    public void testClose_ResultSetBooleanFlags_GetStatementThrows_WrapsSQLException() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getStatement()).thenThrow(new SQLException("getStatement failed"));
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(rs, true, false));
+    }
+
+    // close(Statement) wraps SQLException (line 1108).
+    @Test
+    public void testClose_Statement_WrapsSQLException() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        doThrow(new SQLException("boom")).when(stmt).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(stmt));
+    }
+
+    // close(Connection) wraps SQLException (line 1145).
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testClose_Connection_WrapsSQLException() throws SQLException {
+        Connection conn = mock(Connection.class);
+        doThrow(new SQLException("boom")).when(conn).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(conn));
+    }
+
+    // close(rs, stmt) — rs.close() throws (line 1186).
+    @Test
+    public void testClose_ResultSetStatement_RsThrows_WrapsSQLException() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        Statement stmt = mock(Statement.class);
+        doThrow(new SQLException("rs boom")).when(rs).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(rs, stmt));
+    }
+
+    // close(rs, stmt) — stmt.close() throws (line 1193).
+    @Test
+    public void testClose_ResultSetStatement_StmtThrows_WrapsSQLException() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        doThrow(new SQLException("stmt boom")).when(stmt).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close((ResultSet) null, stmt));
+    }
+
+    // close(stmt, conn) — stmt.close() throws (line 1230).
+    @Test
+    public void testClose_StatementConnection_StmtThrows_WrapsSQLException() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        Connection conn = mock(Connection.class);
+        doThrow(new SQLException("stmt boom")).when(stmt).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(stmt, conn));
+    }
+
+    // close(stmt, conn) — conn.close() throws when stmt is null (line 1237).
+    @Test
+    public void testClose_StatementConnection_ConnThrows_WrapsSQLException() throws SQLException {
+        Connection conn = mock(Connection.class);
+        doThrow(new SQLException("conn boom")).when(conn).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close((Statement) null, conn));
+    }
+
+    // close(rs, stmt, conn) — rs.close() throws (line 1276).
+    @Test
+    public void testClose_RsStmtConn_RsThrows_WrapsSQLException() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        doThrow(new SQLException("rs boom")).when(rs).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close(rs, null, null));
+    }
+
+    // close(rs, stmt, conn) — stmt.close() throws (line 1283).
+    @Test
+    public void testClose_RsStmtConn_StmtThrows_WrapsSQLException() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        doThrow(new SQLException("stmt boom")).when(stmt).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> JdbcUtil.close((ResultSet) null, stmt, (Connection) null));
+    }
+
+    // close(rs, stmt, conn) — conn.close() throws (line 1290).
+    @Test
+    public void testClose_RsStmtConn_ConnThrows_WrapsSQLException() throws SQLException {
+        Connection conn = mock(Connection.class);
+        doThrow(new SQLException("conn boom")).when(conn).close();
+
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> JdbcUtil.close((ResultSet) null, (Statement) null, conn));
+    }
+
+    // closeQuietly(Statement, Connection) — both null is no-op (lines 1517-1519).
+    @Test
+    public void testCloseQuietly_StatementConnection_NullSafe() {
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly((Statement) null, (Connection) null));
+    }
+
+    // closeQuietly(Statement, Connection) — both throw, neither propagates.
+    @Test
+    public void testCloseQuietly_StatementConnection_BothThrow_Suppressed() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        Connection conn = mock(Connection.class);
+        doThrow(new SQLException("stmt")).when(stmt).close();
+        doThrow(new SQLException("conn")).when(conn).close();
+
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(stmt, conn));
+    }
+
+    // DEFAULT_SQL_EXTRACTOR — basic statement returns toString() (lines 250-266 happy path).
+    @Test
+    public void testDefaultSqlExtractor_BasicStatement() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        when(stmt.toString()).thenReturn("SELECT 1");
+
+        String sql = JdbcUtil.DEFAULT_SQL_EXTRACTOR.apply(stmt);
+
+        assertEquals("SELECT 1", sql);
+    }
+
+    // getDriverClassByUrl — unsupported URL throws IllegalArgumentException (lines 843-845).
+    @Test
+    public void testCreateConnection_UnsupportedUrl_Throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createConnection("jdbc:unknownDB://localhost", "u", "p"));
+    }
 }

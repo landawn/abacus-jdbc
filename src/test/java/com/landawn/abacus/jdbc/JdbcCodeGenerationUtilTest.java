@@ -841,4 +841,265 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertNotNull(result);
         assertTrue(result.contains("@JsonXmlConfig"));
     }
+
+    // Tests for SQL generation methods that wrap SQLException into UncheckedSQLException
+    // (DataSource overloads — covers catch blocks at lines 958-959, 1026-1027, 1087-1088,
+    // 1155-1156, 1218-1219, 1287-1288, 1348-1349, 1424-1425, 1496-1497, 1524-1525,
+    // 1589-1590, 1660-1661).
+
+    @Test
+    public void testGenerateSelectSql_DataSourceWithExcluded_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(ds, "t", List.of("x"), "id = 1"));
+    }
+
+    @Test
+    public void testGenerateInsertSql_DataSource_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(ds, "t"));
+    }
+
+    @Test
+    public void testGenerateInsertSql_DataSourceWithExcluded_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateInsertSql(ds, "t", List.of("x")));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_DataSource_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "t"));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_DataSourceWithExcluded_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "t", List.of("x")));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_DataSource_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(ds, "t"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_DataSourceWithKey_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(ds, "t", "id"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_DataSourceWithExcludedAndKeys_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateUpdateSql(ds, "t", List.of("x"), List.of("id"), null));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_DataSource_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "t"));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_DataSourceWithKey_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "t", "id"));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_DataSourceWithExcludedAndKeys_WrapsSQLException() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
+
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "t", List.of("x"), List.of("id"), null));
+    }
+
+    // Tests for the Connection-based catch blocks (lines 930-931, 1001-1002, 1060-1061,
+    // 1130-1131, 1190-1191, 1261-1262, 1323-1324, 1385-1386, 1496-1497, 1564-1565,
+    // 1626-1627, 1736-1737) — triggered when the inner JDBC operation throws SQLException.
+
+    private Connection mockConnectionThatThrowsOnExecuteQuery() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("MySQL");
+        when(md.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenThrow(new SQLException("execute failed"));
+        return conn;
+    }
+
+    @Test
+    public void testGenerateSelectSql_Connection_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(conn, "t"));
+    }
+
+    @Test
+    public void testGenerateSelectSql_ConnectionWithExcluded_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(conn, "t", List.of("x"), null));
+    }
+
+    @Test
+    public void testGenerateInsertSql_Connection_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(conn, "t"));
+    }
+
+    @Test
+    public void testGenerateInsertSql_ConnectionWithExcluded_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateInsertSql(conn, "t", List.of("x")));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_Connection_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "t"));
+    }
+
+    @Test
+    public void testGenerateNamedInsertSql_ConnectionWithExcluded_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "t", List.of("x")));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_Connection_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(conn, "t"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_ConnectionWithKey_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(conn, "t", "id"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_ConnectionWithExcludedAndKeys_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateUpdateSql(conn, "t", List.of("x"), List.of("id"), null));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_Connection_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t"));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_ConnectionWithKey_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t", "id"));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_ConnectionWithExcludedAndKeys_WrapsSQLException() throws SQLException {
+        final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
+        assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t", List.of("x"), List.of("id"), null));
+    }
+
+    // convertInsertSqlToUpdateSql edge cases (lines 1816-1817 column/value count mismatch
+    // and 1842-1843 catch-all Exception path).
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_ColumnValueCountMismatch_ThrowsIllegalArgument() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenReturn(connection);
+
+        // Two columns, one value -> should throw IllegalArgumentException.
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a,b) VALUES (1)"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_InvalidSql_ThrowsIllegalArgument() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenReturn(connection);
+
+        // Malformed SQL — missing parentheses/values — exercises the catch-all wrapper.
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "garbage sql"));
+    }
+
+    // generateEntityClass — excludedFields filters out a column (lines 475-476).
+    @Test
+    public void testGenerateEntityClass_ExcludedFieldsFiltersColumn() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .excludedFields(Arrays.asList("status"))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        // 'status' field should be filtered out
+        assertTrue(!result.contains("private String status"));
+    }
+
+    // generateEntityClass — additionalFields with a parameterized java.util collection
+    // exercises the import-resolution branch (lines 511-526).
+    @Test
+    public void testGenerateEntityClass_AdditionalFieldsImportsJavaUtilCollection() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .additionalFieldsOrLines("private List<String> tags;")
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("import java.util.List;"));
+    }
+
+    // generateEntityClass — jsonXmlConfig with enumerated set (line 631-632).
+    @Test
+    public void testGenerateEntityClass_JsonXmlConfigWithEnumerated() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jx =
+                new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
+        jx.setEnumerated(com.landawn.abacus.util.EnumType.ORDINAL);
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .jsonXmlConfig(jx)
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("enumerated = "));
+    }
 }

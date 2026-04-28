@@ -326,4 +326,111 @@ public class CrudDaoTest extends TestBase {
         assertEquals(entities, dao.batchUpsert(entities));
         verify(dao).batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
+
+    // upsert(entity) — single-arg variant resolves idPropNames from class then delegates
+    // (lines 1100-1108).
+    @Test
+    public void testUpsert_SingleArg_DelegatesToUpsertWithIdPropNames() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(7L);
+        entity.setName("X");
+
+        Mockito.doReturn(entity).when(dao).upsert(Mockito.same(entity), Mockito.anyList());
+
+        assertSame(entity, dao.upsert(entity));
+        verify(dao).upsert(Mockito.same(entity), Mockito.anyList());
+    }
+
+    // upsert(entity, cond) — entity class with no @Id triggers the empty-idPropNameList branch
+    // and copies all fields (lines 1142-1143).
+    static final class NoIdEntity {
+        private String name;
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+    }
+
+    interface NoIdCrudDao extends CrudDao<NoIdEntity, Long, PSC, NoIdCrudDao> {
+    }
+
+    @Test
+    public void testUpsert_UpdatePath_NoIdField_CopiesAllFields() throws SQLException {
+        NoIdCrudDao dao = Mockito.mock(NoIdCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        NoIdEntity entity = new NoIdEntity();
+        entity.setName("updated");
+        NoIdEntity dbEntity = new NoIdEntity();
+        dbEntity.setName("original");
+
+        when(dao.findOnlyOne(Mockito.any())).thenReturn(Optional.of(dbEntity));
+        when(dao.update(dbEntity)).thenReturn(1);
+
+        NoIdEntity result = dao.upsert(entity, Mockito.mock(com.landawn.abacus.query.condition.Condition.class));
+
+        assertSame(dbEntity, result);
+        assertEquals("updated", dbEntity.getName());
+    }
+
+    // batchUpsert(entities, batchSize) — non-empty path resolves id prop names and delegates
+    // (lines 1196-1201).
+    @Test
+    public void testBatchUpsert_NonEmptyEntities_DelegatesToFullSignature() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+        List<IdAnnotatedEntity> result = List.of(new IdAnnotatedEntity());
+
+        Mockito.doReturn(result).when(dao).batchUpsert(Mockito.same(entities), Mockito.anyList(), Mockito.eq(2));
+
+        assertEquals(result, dao.batchUpsert(entities, 2));
+        verify(dao).batchUpsert(Mockito.same(entities), Mockito.anyList(), Mockito.eq(2));
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery) — delegates with default batch size
+    // (line 1221).
+    @Test
+    public void testBatchUpsert_WithUniquePropNames_UsesDefaultBatchSize() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+        List<String> uniqueProps = List.of("name");
+        List<IdAnnotatedEntity> result = List.of(new IdAnnotatedEntity());
+
+        Mockito.doReturn(result).when(dao).batchUpsert(entities, uniqueProps, JdbcUtil.DEFAULT_BATCH_SIZE);
+
+        assertEquals(result, dao.batchUpsert(entities, uniqueProps));
+        verify(dao).batchUpsert(entities, uniqueProps, JdbcUtil.DEFAULT_BATCH_SIZE);
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — empty entities short-circuits
+    // (line 1247).
+    @Test
+    public void testBatchUpsert_FullSig_EmptyEntities_ReturnsEmpty() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertEquals(0, dao.batchUpsert(List.of(), List.of("name"), 5).size());
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — unknown property name throws
+    // (lines 1258-1259).
+    @Test
+    public void testBatchUpsert_FullSig_UnknownUniqueProp_Throws() {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(entities, List.of("nonExistent"), 5));
+    }
+
+    // batchUpsert validates batchSize must be positive.
+    @Test
+    public void testBatchUpsert_FullSig_NonPositiveBatchSize_Throws() {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of("name"), 0));
+    }
+
+    // batchUpsert validates uniquePropNamesForQuery must not be empty.
+    @Test
+    public void testBatchUpsert_FullSig_EmptyUniqueProps_Throws() {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of(), 5));
+    }
 }
