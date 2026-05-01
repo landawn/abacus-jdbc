@@ -127,7 +127,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @return the generated ID of the inserted entity
-     * @throws UncheckedSQLException if a database access error occurs or the entity is null
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
      */
     @Override
     ID insert(final T entityToInsert) throws UncheckedSQLException;

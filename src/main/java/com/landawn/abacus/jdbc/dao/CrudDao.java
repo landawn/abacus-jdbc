@@ -152,7 +152,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param entityToInsert the entity to insert (must not be null)
      * @return the ID of the inserted entity (either database-generated or entity-provided)
-     * @throws SQLException if a database access error occurs or the entity is null
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
      */
     ID insert(final T entityToInsert) throws SQLException;
 

@@ -5575,18 +5575,19 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
-     * 
-     * <p>This method ensures that the query returns exactly one row. If no rows or multiple rows
-     * are found, it throws an appropriate exception.</p>
-     * 
+     * Executes a query and returns an {@code Optional} containing a map of column names to values
+     * if exactly one record is found.
+     *
+     * <p>If the query returns no rows, the result is an empty {@code Optional}. If the query returns
+     * more than one row, {@link DuplicateResultException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Find exactly one user by ID
      * Optional<Map<String, Object>> user = preparedQuery
      *     .setLong(1, userId)
      *     .findOnlyOne();
-     * 
+     *
      * user.ifPresent(u -> System.out.println("Found user: " + u.get("name")));
      * }</pre>
      *
