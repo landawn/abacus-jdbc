@@ -182,7 +182,7 @@ public final class DBLock {
      * @param tableName the name of the database table to use for storing lock information.
      *        This table will be created if it does not exist. Must not be {@code null} or empty.
      * @throws UncheckedSQLException if any database operation fails during initialization (e.g., table creation).
-     * @throws RuntimeException if the lock table cannot be created or verified after creation.
+     * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.
      */
     @SuppressWarnings("deprecation")
     DBLock(final DataSource ds, final String tableName) {

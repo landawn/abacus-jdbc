@@ -160,8 +160,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
  *
  * <p>This class serves as the {@link InvocationHandler} for DAO proxies created by {@link JdbcUtil#createDao(Class, javax.sql.DataSource)},
- * implementing the method interception and execution logic for SQL operations defined through annotations like {@code @Query},
- * {@code @Insert}, {@code @Update}, {@code @Delete}, and {@code @Select}.</p>
+ * implementing the method interception and execution logic for SQL operations defined through annotations such as {@code @Query}
+ * (which covers SELECT/INSERT/UPDATE/DELETE/stored-procedure calls) together with helpers like {@code @Bind}, {@code @BindList},
+ * {@code @SqlScript}, and {@code @SqlSource}.</p>
  *
  * <p>The DaoImpl class is responsible for:</p>
  * <ul>
@@ -177,8 +178,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * <p><b>Key Features:</b></p>
  * <ul>
- *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query}, {@code @Insert}, {@code @Update}, {@code @Delete}, {@code @Select}
- *       with flexible parameter binding using {@code @Bind}, {@code @BindList}, {@code @SqlScript}</li>
+ *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query} for inline or named SQL (covering SELECT/INSERT/UPDATE/DELETE
+ *       and stored-procedure calls) with flexible parameter binding via {@code @Bind}, {@code @BindList}, and {@code @SqlScript}</li>
  *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., :paramName)</li>
  *   <li><b>Collection Parameter Expansion:</b> Handles IN clauses by expanding collection parameters</li>
  *   <li><b>Entity Mapping:</b> Automatic mapping between database result sets and entity classes</li>

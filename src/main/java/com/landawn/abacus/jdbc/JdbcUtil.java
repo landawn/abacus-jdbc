@@ -2867,7 +2867,7 @@ public final class JdbcUtil {
 
     /**
      * Prepares a SQL query using a custom {@link PreparedStatement} creator.
-     * This method provides an extension point to customize the creation of the {@code PreparedStatement},
+     * This method provides an extension point to customize the creation of the {@code PreparedStatement}.
      *
      * <p>
      * This method intelligently manages connections: if a transaction is active on the current thread
@@ -7072,9 +7072,16 @@ public final class JdbcUtil {
     };
 
     /**
-     * Checks if a table exists in the database.
-     * This method attempts to execute a simple SELECT query on the table to determine its existence.
-     * 
+     * Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource}.
+     *
+     * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's catalog/schema
+     * and the table name as supplied, then upper- and lower-case variants). If metadata lookup yields no match,
+     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL state from that query
+     * matching a known "table not found" code returns {@code false}; any other SQL error is propagated.</p>
+     *
+     * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
+     * or {@code catalog.schema.table}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (JdbcUtil.doesTableExist(ds, "users")) {
@@ -7084,10 +7091,11 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param ds The data source to get the connection from
-     * @param tableName The name of the table to check
+     * @param ds the data source to get the connection from
+     * @param tableName the table name (optionally qualified); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
-     * @throws UncheckedSQLException if a database error occurs (other than table not existing)
+     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
+     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
      */
     public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName) {
         Connection conn = null;
@@ -7101,9 +7109,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if a table exists in the database.
-     * This method attempts to execute a simple SELECT query on the table to determine its existence.
-     * 
+     * Checks whether a table exists on the given {@link Connection}.
+     *
+     * <p>The lookup first consults {@link DatabaseMetaData#getTables} (trying the connection's catalog/schema
+     * and the table name as supplied, then upper- and lower-case variants). If metadata lookup yields no match,
+     * the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} — a SQL state from that query
+     * matching a known "table not found" code returns {@code false}; any other SQL error is propagated.</p>
+     *
+     * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
+     * or {@code catalog.schema.table}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (JdbcUtil.doesTableExist(connection, "users")) {
@@ -7113,10 +7128,11 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param conn The database connection to use for checking table existence
-     * @param tableName The name of the table to check
+     * @param conn the database connection to use for checking table existence
+     * @param tableName the table name (optionally qualified); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
-     * @throws UncheckedSQLException if a database error occurs (other than table not existing)
+     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
+     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
      */
     public static boolean doesTableExist(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
@@ -7380,9 +7396,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a table if it does not already exist in the database.
-     * This method first checks if the table exists, and if not, executes the provided schema to create it.
-     * 
+     * Creates a table if it does not already exist.
+     *
+     * <p>The method first checks for existence via {@link #doesTableExist(Connection, String)} and only
+     * executes the supplied {@code schema} statement when the table is missing. If the {@code CREATE} fails
+     * because the table was created concurrently by another process, this method returns {@code false}
+     * rather than rethrowing; any other SQL error is wrapped as {@link UncheckedSQLException}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String schema = "CREATE TABLE users (" +
@@ -7393,11 +7413,12 @@ public final class JdbcUtil {
      * System.out.println(created ? "Table created" : "Table already exists");
      * }</pre>
      *
-     * @param conn The database connection to use for creating the table
-     * @param tableName The name of the table to create
-     * @param schema The SQL schema definition (CREATE TABLE statement) for the table
-     * @return {@code true} if the table was created, {@code false} if the table already exists
-     * @throws UncheckedSQLException if a database access error occurs during table creation
+     * @param conn the database connection to use for creating the table
+     * @param tableName the name of the table to create (optionally qualified); must not be blank
+     * @param schema the SQL DDL statement (typically {@code CREATE TABLE ...}) used to create the table
+     * @return {@code true} if this call created the table; {@code false} if the table already existed
+     *         when checked, or was created concurrently while this call was running
+     * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (doesTableExist(conn, tableName)) {
@@ -7419,9 +7440,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Drops the specified table if it exists in the database.
-     * This method first checks if the table exists before attempting to drop it,
-     * preventing errors from trying to drop a non-existent table.
+     * Drops the specified table if it exists.
+     *
+     * <p>The method first checks for existence via {@link #doesTableExist(Connection, String)} and only
+     * issues a {@code DROP TABLE} if the table is found. If the drop itself fails because the table no
+     * longer exists (for example, a concurrent drop), the method returns {@code false}; any other SQL
+     * error is wrapped and rethrown as {@link UncheckedSQLException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7429,9 +7453,12 @@ public final class JdbcUtil {
      * System.out.println(dropped ? "Table dropped" : "Table did not exist");
      * }</pre>
      *
-     * @param conn The database connection to use for dropping the table
-     * @param tableName The name of the table to drop
-     * @return {@code true} if the table was dropped, {@code false} if the table did not exist or could not be dropped
+     * @param conn the database connection to use for dropping the table
+     * @param tableName the name of the table to drop (optionally qualified); must not be blank
+     * @return {@code true} if the table was dropped by this call; {@code false} if the table did not exist
+     *         (either at the time of the existence check or by the time the {@code DROP} executed)
+     * @throws UncheckedSQLException if a database error other than "table not found" occurs during the drop
+     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
@@ -10643,13 +10670,13 @@ public final class JdbcUtil {
      *     // - findFirst(Condition where)
      *
      *     // Custom query methods
-     *     @Select("SELECT * FROM users WHERE email = ?")
+     *     @Query("SELECT * FROM users WHERE email = ?")
      *     Optional<User> findByEmail(String email);
      *
-     *     @Select("SELECT * FROM users WHERE status = ? ORDER BY created_at DESC")
+     *     @Query("SELECT * FROM users WHERE status = ? ORDER BY created_at DESC")
      *     List<User> findByStatus(String status);
      *
-     *     @NamedSelect("SELECT * FROM users WHERE age >= :minAge AND city = :city")
+     *     @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city")
      *     Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city);
      * }
      *
@@ -10693,18 +10720,18 @@ public final class JdbcUtil {
      * // Define a DAO with complex queries
      * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
      *     // Aggregate queries
-     *     @Select("SELECT COUNT(*) FROM orders WHERE status = ?")
+     *     @Query("SELECT COUNT(*) FROM orders WHERE status = ?")
      *     long countByStatus(String status);
      *
-     *     @Select("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?")
+     *     @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?")
      *     Optional<BigDecimal> getTotalByCustomer(Long customerId);
      *
      *     // Complex joins (SQL defined externally in SQL mapper file)
-     *     @NamedSelect("findOrdersWithCustomerDetails")
+     *     @Query(id = "findOrdersWithCustomerDetails")
      *     List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start);
      *
      *     // Async operations
-     *     @Select("SELECT * FROM orders WHERE id = ?")
+     *     @Query("SELECT * FROM orders WHERE id = ?")
      *     CompletableFuture<Optional<Order>> findByIdAsync(Long id);
      * }
      *

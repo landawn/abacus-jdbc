@@ -67,6 +67,13 @@ public final class SpringApplicationContext {
     @Autowired // NOSONAR
     private ApplicationContext appContext;
 
+    /**
+     * Constructs a new {@code SpringApplicationContext}.
+     *
+     * <p>The Spring {@link ApplicationContext} field is populated by Spring after construction
+     * via {@link Autowired}, so calling {@link #getBean(String)} or {@link #getBean(Class)} before
+     * Spring has finished injection will return {@code null}.</p>
+     */
     public SpringApplicationContext() {
     }
 
