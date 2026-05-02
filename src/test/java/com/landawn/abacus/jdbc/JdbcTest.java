@@ -348,8 +348,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getInt("value")).thenReturn(5, 7);
 
         // 3-arg deprecated toMap delegates to 4-arg toMap which delegates to groupTo
-        Jdbc.ResultExtractor<Map<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(
-                rs -> rs.getString("category"), rs -> rs.getInt("value"),
+        Jdbc.ResultExtractor<Map<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(rs -> rs.getString("category"), rs -> rs.getInt("value"),
                 Collectors.summingInt(Integer::intValue));
 
         Map<String, Integer> result = extractor.apply(mockResultSet);
@@ -365,10 +364,8 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getInt("val")).thenReturn(99);
 
         // 4-arg deprecated toMap delegates to groupTo
-        Jdbc.ResultExtractor<LinkedHashMap<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(
-                rs -> rs.getString("key"), rs -> rs.getInt("val"),
-                Collectors.summingInt(Integer::intValue),
-                LinkedHashMap::new);
+        Jdbc.ResultExtractor<LinkedHashMap<String, Integer>> extractor = Jdbc.ResultExtractor.toMap(rs -> rs.getString("key"), rs -> rs.getInt("val"),
+                Collectors.summingInt(Integer::intValue), LinkedHashMap::new);
 
         LinkedHashMap<String, Integer> result = extractor.apply(mockResultSet);
         assertEquals(1, result.size());
@@ -1117,8 +1114,7 @@ public class JdbcTest extends TestBase {
         // Scalar type with multiple columns → throws
         Jdbc.BiRowMapper<String> mapper = Jdbc.BiRowMapper.builder().to(String.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col2")));
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col2")));
     }
 
     @Test
@@ -1155,12 +1151,9 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testBiRowMapperBuilder_UnknownColumnThrows() throws SQLException {
-        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.builder()
-                .getString("nonexistent")
-                .to(TestEntity.class);
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.builder().getString("nonexistent").to(TestEntity.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> mapper.apply(mockResultSet, Arrays.asList("id", "name", "age")));
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, Arrays.asList("id", "name", "age")));
     }
 
     // RowConsumer Tests
@@ -1804,7 +1797,7 @@ public class JdbcTest extends TestBase {
         verify(mockAbstractQuery).setBytes(1, bytes);
         verify(mockAbstractQuery).setBlob(1, blob);
         verify(mockAbstractQuery).setClob(1, clob);
-        verify(mockAbstractQuery).setObject(1, (Object) "obj");
+        verify(mockAbstractQuery).setObject(1, "obj");
     }
 
     // OutParam Tests
@@ -2253,7 +2246,8 @@ public class JdbcTest extends TestBase {
         // Get an actual method from BUILT_IN_DAO_UPDATE_METHODS
         Method builtInUpdateMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
                 .filter(m -> m.getName().equals("update") && m.getParameterCount() == 1)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
 
         if (builtInUpdateMethod != null) {
             ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
@@ -2294,7 +2288,8 @@ public class JdbcTest extends TestBase {
         // Get an actual method from BUILT_IN_DAO_UPDATE_METHODS (update method from CrudDao)
         Method builtInUpdateMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
                 .filter(m -> m.getName().equals("update") && m.getParameterCount() == 1)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
 
         if (builtInUpdateMethod != null) {
             ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
@@ -2318,7 +2313,8 @@ public class JdbcTest extends TestBase {
         // Get an actual method from BUILT_IN_DAO_UPDATE_METHODS
         Method builtInUpdateMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
                 .filter(m -> m.getName().equals("update") && m.getParameterCount() == 1)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
 
         if (builtInUpdateMethod != null) {
             ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
@@ -2837,7 +2833,8 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(2)).thenReturn("Bob");
         when(mockResultSet.getObject(3)).thenReturn(25);
 
-        final Jdbc.RowExtractor noopExtractor = (rs, output) -> {};
+        final Jdbc.RowExtractor noopExtractor = (rs, output) -> {
+        };
         Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(noopExtractor);
         assertNotNull(extractor);
 
@@ -2852,7 +2849,8 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(2)).thenReturn("Carol");
         when(mockResultSet.getObject(3)).thenReturn(28);
 
-        final Jdbc.RowExtractor noopExtractor = (rs, output) -> {};
+        final Jdbc.RowExtractor noopExtractor = (rs, output) -> {
+        };
         Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.toDataset(rs -> true, noopExtractor);
         assertNotNull(extractor);
 
@@ -2903,10 +2901,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(2)).thenReturn("Frank");
         when(mockResultSet.getObject(3)).thenReturn(null);
 
-        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(
-                extractor,
-                (key, value) -> value != null,
-                IntFunctions.ofLinkedHashMap());
+        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(extractor, (key, value) -> value != null, IntFunctions.ofLinkedHashMap());
 
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
@@ -2928,10 +2923,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(1)).thenReturn("Grace");
         when(mockResultSet.getObject(2)).thenReturn(28);
 
-        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(
-                extractor,
-                col -> col.toUpperCase(),
-                IntFunctions.ofTreeMap());
+        Jdbc.BiRowMapper<Map<String, Object>> mapper = Jdbc.BiRowMapper.toMap(extractor, col -> col.toUpperCase(), IntFunctions.ofTreeMap());
 
         List<String> columnLabels = Arrays.asList("first_name", "user_age");
         Map<String, Object> result = mapper.apply(mockResultSet, columnLabels);
@@ -2974,8 +2966,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(2)).thenReturn("Alice");
         when(mockResultSet.getObject(3)).thenReturn(30);
 
-        Jdbc.RowMapper<String> mapper = Jdbc.RowMapper.builder()
-                .to((columnLabels, row) -> columnLabels.get(1) + "=" + row.get(1));
+        Jdbc.RowMapper<String> mapper = Jdbc.RowMapper.builder().to((columnLabels, row) -> columnLabels.get(1) + "=" + row.get(1));
 
         String result = mapper.apply(mockResultSet);
         assertEquals("name=Alice", result);
@@ -3002,10 +2993,7 @@ public class JdbcTest extends TestBase {
     public void testBiRowMapper_ToWithColumnFilterAndConverter() throws SQLException {
         when(mockResultSet.getString(2)).thenReturn("Carol");
 
-        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(
-                TestEntity.class,
-                col -> col.equals("name"),
-                col -> col);
+        Jdbc.BiRowMapper<TestEntity> mapper = Jdbc.BiRowMapper.to(TestEntity.class, col -> col.equals("name"), col -> col);
 
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         TestEntity result = mapper.apply(mockResultSet, columnLabels);
@@ -3024,11 +3012,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(3)).thenReturn(25);
 
         // filter: only include "name" column; converter: identity
-        Jdbc.BiRowMapper<Object[]> mapper = Jdbc.BiRowMapper.to(
-                Object[].class,
-                col -> col.equals("name"),
-                col -> col,
-                false);
+        Jdbc.BiRowMapper<Object[]> mapper = Jdbc.BiRowMapper.to(Object[].class, col -> col.equals("name"), col -> col, false);
 
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         Object[] result = mapper.apply(mockResultSet, columnLabels);
@@ -3048,11 +3032,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(3)).thenReturn(30);
 
         // filter: only "id" and "name"; converter: identity
-        Jdbc.BiRowMapper<List> mapper = Jdbc.BiRowMapper.to(
-                List.class,
-                col -> !col.equals("age"),
-                col -> col,
-                false);
+        Jdbc.BiRowMapper<List> mapper = Jdbc.BiRowMapper.to(List.class, col -> !col.equals("age"), col -> col, false);
 
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         List result = mapper.apply(mockResultSet, columnLabels);
@@ -3071,11 +3051,7 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.getObject(3)).thenReturn(28);
 
         // filter: only "name"; converter: uppercase
-        Jdbc.BiRowMapper<Map> mapper = Jdbc.BiRowMapper.to(
-                Map.class,
-                col -> col.equals("name"),
-                col -> col.toUpperCase(),
-                false);
+        Jdbc.BiRowMapper<Map> mapper = Jdbc.BiRowMapper.to(Map.class, col -> col.equals("name"), col -> col.toUpperCase(), false);
 
         List<String> columnLabels = Arrays.asList("id", "name", "age");
         Map result = mapper.apply(mockResultSet, columnLabels);
@@ -3109,8 +3085,7 @@ public class JdbcTest extends TestBase {
     @Test
     public void testBiRowMapper_ToScalarType_WithFilterThrows() {
         // Scalar type with non-null filter → throws immediately
-        assertThrows(IllegalArgumentException.class,
-                () -> Jdbc.BiRowMapper.to(String.class, col -> true, null, false));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.BiRowMapper.to(String.class, col -> true, null, false));
     }
 
     @Test
@@ -3329,7 +3304,7 @@ public class JdbcTest extends TestBase {
     @Test
     @SuppressWarnings("unchecked")
     public void testColumnOne_SetBinaryStream_LambdaBody() throws Exception {
-        InputStream is = new ByteArrayInputStream(new byte[]{1, 2, 3});
+        InputStream is = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
         Jdbc.Columns.ColumnOne.SET_BINARY_STREAM.accept(mockAbstractQuery, is);
         verify(mockAbstractQuery).setBinaryStream(1, is);
     }

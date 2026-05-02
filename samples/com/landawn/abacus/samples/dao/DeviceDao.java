@@ -14,8 +14,8 @@
 package com.landawn.abacus.samples.dao;
 
 import com.landawn.abacus.jdbc.dao.CrudDao;
-import com.landawn.abacus.samples.entity.Device;
 import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.samples.entity.Device;
 
 public interface DeviceDao extends CrudDao<Device, Integer, SqlBuilder.PSC, DeviceDao> {
 }

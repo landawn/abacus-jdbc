@@ -21,15 +21,14 @@ import java.sql.CallableStatement;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.Date;
+import java.sql.JDBCType;
 import java.sql.NClob;
+import java.sql.ResultSet;
 import java.sql.RowId;
-import java.sql.SQLXML;
 import java.sql.SQLException;
+import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.sql.JDBCType;
-import java.sql.ResultSet;
-import java.sql.SQLType;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -254,7 +253,7 @@ public class CallableQueryTest extends TestBase {
     @Test
     public void testSetBigDecimal_ByName_NonNull() throws SQLException {
         BigDecimal bd = new BigDecimal("123.45");
-        CallableQuery result = callableQuery.setBigDecimal("amount", (BigDecimal) bd);
+        CallableQuery result = callableQuery.setBigDecimal("amount", bd);
         assertSame(callableQuery, result);
         verify(callableStatement).setBigDecimal("amount", bd);
     }
@@ -270,7 +269,7 @@ public class CallableQueryTest extends TestBase {
     // Tests for setString by name
     @Test
     public void testSetString_ByName_NonNull() throws SQLException {
-        CallableQuery result = callableQuery.setString("name", (String) "Alice");
+        CallableQuery result = callableQuery.setString("name", "Alice");
         assertSame(callableQuery, result);
         verify(callableStatement).setString("name", "Alice");
     }
@@ -730,7 +729,7 @@ public class CallableQueryTest extends TestBase {
 
     @Test
     public void testSetString_ByName_CharSequenceNonNull() throws SQLException {
-        CallableQuery result = callableQuery.setString("msg", (CharSequence) new StringBuilder("hello"));
+        CallableQuery result = callableQuery.setString("msg", new StringBuilder("hello"));
         assertSame(callableQuery, result);
         verify(callableStatement).setString("msg", "hello");
     }
@@ -807,15 +806,19 @@ public class CallableQueryTest extends TestBase {
     @Test
     public void testSetParameters_EntityInvalidParam_Throws() throws SQLException {
         SimpleTestBean bean = new SimpleTestBean();
-        assertThrows(IllegalArgumentException.class,
-                () -> callableQuery.setParameters(bean, java.util.List.of("nonExistent")));
+        assertThrows(IllegalArgumentException.class, () -> callableQuery.setParameters(bean, java.util.List.of("nonExistent")));
     }
 
     private static class SimpleTestBean {
         private String name;
 
-        public String getName() { return name; }
-        public void setName(final String name) { this.name = name; }
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
     }
 
     // --- registerOutParameter(int, int) – by index with int sqlType (L1602) ---
@@ -860,7 +863,7 @@ public class CallableQueryTest extends TestBase {
     public void testRegisterOutParameter_ByIndex_SQLType() throws SQLException {
         CallableQuery result = callableQuery.registerOutParameter(1, JDBCType.INTEGER);
         assertSame(callableQuery, result);
-        verify(callableStatement).registerOutParameter(1, (SQLType) JDBCType.INTEGER);
+        verify(callableStatement).registerOutParameter(1, JDBCType.INTEGER);
     }
 
     // --- registerOutParameter(int, SQLType, int) – by index with SQLType and scale (L1829) ---
@@ -869,7 +872,7 @@ public class CallableQueryTest extends TestBase {
     public void testRegisterOutParameter_ByIndex_SQLTypeAndScale() throws SQLException {
         CallableQuery result = callableQuery.registerOutParameter(2, JDBCType.DECIMAL, 2);
         assertSame(callableQuery, result);
-        verify(callableStatement).registerOutParameter(2, (SQLType) JDBCType.DECIMAL, 2);
+        verify(callableStatement).registerOutParameter(2, JDBCType.DECIMAL, 2);
     }
 
     // --- registerOutParameter(int, SQLType, String) – by index with SQLType and typeName (L1858) ---
@@ -878,7 +881,7 @@ public class CallableQueryTest extends TestBase {
     public void testRegisterOutParameter_ByIndex_SQLTypeAndTypeName() throws SQLException {
         CallableQuery result = callableQuery.registerOutParameter(3, JDBCType.STRUCT, "MY_STRUCT");
         assertSame(callableQuery, result);
-        verify(callableStatement).registerOutParameter(3, (SQLType) JDBCType.STRUCT, "MY_STRUCT");
+        verify(callableStatement).registerOutParameter(3, JDBCType.STRUCT, "MY_STRUCT");
     }
 
     // --- registerOutParameter(String, SQLType) – by name with SQLType (L1886) ---
@@ -887,7 +890,7 @@ public class CallableQueryTest extends TestBase {
     public void testRegisterOutParameter_ByName_SQLType() throws SQLException {
         CallableQuery result = callableQuery.registerOutParameter("total", JDBCType.INTEGER);
         assertSame(callableQuery, result);
-        verify(callableStatement).registerOutParameter("total", (SQLType) JDBCType.INTEGER);
+        verify(callableStatement).registerOutParameter("total", JDBCType.INTEGER);
     }
 
     // --- registerOutParameter(String, SQLType, int) – by name with SQLType and scale (L1915) ---
@@ -896,7 +899,7 @@ public class CallableQueryTest extends TestBase {
     public void testRegisterOutParameter_ByName_SQLTypeAndScale() throws SQLException {
         CallableQuery result = callableQuery.registerOutParameter("price", JDBCType.DECIMAL, 2);
         assertSame(callableQuery, result);
-        verify(callableStatement).registerOutParameter("price", (SQLType) JDBCType.DECIMAL, 2);
+        verify(callableStatement).registerOutParameter("price", JDBCType.DECIMAL, 2);
     }
 
     // --- registerOutParameter(String, SQLType, String) – by name with SQLType and typeName (L1945) ---
@@ -905,7 +908,7 @@ public class CallableQueryTest extends TestBase {
     public void testRegisterOutParameter_ByName_SQLTypeAndTypeName() throws SQLException {
         CallableQuery result = callableQuery.registerOutParameter("obj", JDBCType.STRUCT, "MY_TYPE");
         assertSame(callableQuery, result);
-        verify(callableStatement).registerOutParameter("obj", (SQLType) JDBCType.STRUCT, "MY_TYPE");
+        verify(callableStatement).registerOutParameter("obj", JDBCType.STRUCT, "MY_TYPE");
     }
 
     // --- registerOutParameters(T, BiParametersSetter) exception closes query (L2047) ---
@@ -943,7 +946,7 @@ public class CallableQueryTest extends TestBase {
     @Test
     public void testExecuteThenAccept_WithConsumer() throws SQLException {
         when(callableStatement.execute()).thenReturn(false);
-        final boolean[] called = {false};
+        final boolean[] called = { false };
         callableQuery.executeThenAccept(stmt -> called[0] = true);
         assertTrue(called[0]);
         verify(callableStatement).execute();
@@ -954,7 +957,7 @@ public class CallableQueryTest extends TestBase {
     @Test
     public void testExecuteThenAccept_WithBiConsumer() throws SQLException {
         when(callableStatement.execute()).thenReturn(false);
-        final boolean[] called = {false};
+        final boolean[] called = { false };
         callableQuery.executeThenAccept((stmt, isResultSet) -> called[0] = true);
         assertTrue(called[0]);
         verify(callableStatement).execute();
@@ -966,7 +969,7 @@ public class CallableQueryTest extends TestBase {
     public void testExecuteThenAccept_WithTriConsumer() throws SQLException {
         when(callableStatement.execute()).thenReturn(false);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        final boolean[] called = {false};
+        final boolean[] called = { false };
         callableQuery.executeThenAccept((stmt, outParams, isResultSet) -> called[0] = true);
         assertTrue(called[0]);
     }
@@ -1023,8 +1026,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
-                callableQuery.queryAndGetOutParameters(rs -> "extracted");
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters(rs -> "extracted");
         assertNotNull(result);
         org.junit.jupiter.api.Assertions.assertNull(result._1);
     }
@@ -1036,8 +1038,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
-                callableQuery.queryAndGetOutParameters((rs, labels) -> "bi-extracted");
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters((rs, labels) -> "bi-extracted");
         assertNotNull(result);
         org.junit.jupiter.api.Assertions.assertNull(result._1);
     }
@@ -1049,8 +1050,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.listAndGetOutParameters(String.class);
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(String.class);
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1062,8 +1062,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.listAndGetOutParameters(rs -> rs.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(rs -> rs.getString(1));
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1099,8 +1098,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
-                callableQuery.queryAndGetOutParameters(resultSet -> "extracted");
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters(resultSet -> "extracted");
         assertNotNull(result);
         assertEquals("extracted", result._1);
     }
@@ -1117,8 +1115,7 @@ public class CallableQueryTest extends TestBase {
         when(rs.next()).thenReturn(true, false);
         when(rs.getString(1)).thenReturn("Alice");
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.listAndGetOutParameters(r -> r.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(r -> r.getString(1));
         assertNotNull(result);
         assertEquals(1, result._1.size());
         assertEquals("Alice", result._1.get(0));
@@ -1134,8 +1131,7 @@ public class CallableQueryTest extends TestBase {
         when(rs.next()).thenReturn(true, false);
         when(rs.getString(1)).thenReturn("match");
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.listAndGetOutParameters(r -> true, r -> r.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(r -> true, r -> r.getString(1));
         assertNotNull(result);
         assertEquals(1, result._1.size());
         assertEquals("match", result._1.get(0));
@@ -1153,8 +1149,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.listAndGetOutParameters((r, labels) -> "row");
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters((r, labels) -> "row");
         assertNotNull(result);
         assertEquals(1, result._1.size());
         assertEquals("row", result._1.get(0));
@@ -1172,8 +1167,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.listAndGetOutParameters((r, labels) -> true, (r, labels) -> "birow");
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters((r, labels) -> true,
+                (r, labels) -> "birow");
         assertNotNull(result);
         assertEquals(1, result._1.size());
         assertEquals("birow", result._1.get(0));
@@ -1186,8 +1181,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
-                callableQuery.listAllResultSetsAndGetOutParameters(String.class);
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result = callableQuery.listAllResultSetsAndGetOutParameters(String.class);
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1199,8 +1193,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
-                callableQuery.listAllResultSetsAndGetOutParameters(rs -> rs.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result = callableQuery
+                .listAllResultSetsAndGetOutParameters(rs -> rs.getString(1));
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1214,8 +1208,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result =
-                callableQuery.queryAndGetOutParameters((resultSet, labels) -> "bi-extracted");
+        com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result = callableQuery
+                .queryAndGetOutParameters((resultSet, labels) -> "bi-extracted");
         assertNotNull(result);
         assertEquals("bi-extracted", result._1);
     }
@@ -1227,8 +1221,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
-                callableQuery.listAllResultSetsAndGetOutParameters(r -> true, rs -> rs.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result = callableQuery.listAllResultSetsAndGetOutParameters(r -> true,
+                rs -> rs.getString(1));
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1240,8 +1234,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
-                callableQuery.listAllResultSetsAndGetOutParameters((rs, labels) -> rs.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result = callableQuery
+                .listAllResultSetsAndGetOutParameters((rs, labels) -> rs.getString(1));
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1253,8 +1247,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result =
-                callableQuery.listAllResultSetsAndGetOutParameters((r, labels) -> true, (rs, labels) -> rs.getString(1));
+        com.landawn.abacus.util.Tuple.Tuple2<List<List<String>>, Jdbc.OutParamResult> result = callableQuery
+                .listAllResultSetsAndGetOutParameters((r, labels) -> true, (rs, labels) -> rs.getString(1));
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1266,8 +1260,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<com.landawn.abacus.util.Dataset>, Jdbc.OutParamResult> result =
-                callableQuery.queryAllResultSetsAndGetOutParameters();
+        com.landawn.abacus.util.Tuple.Tuple2<List<com.landawn.abacus.util.Dataset>, Jdbc.OutParamResult> result = callableQuery
+                .queryAllResultSetsAndGetOutParameters();
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1279,8 +1273,7 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.queryAllResultSetsAndGetOutParameters(rs -> "extracted");
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.queryAllResultSetsAndGetOutParameters(rs -> "extracted");
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1292,8 +1285,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result =
-                callableQuery.queryAllResultSetsAndGetOutParameters((rs, labels) -> "bi-extracted");
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery
+                .queryAllResultSetsAndGetOutParameters((rs, labels) -> "bi-extracted");
         assertNotNull(result);
         assertEquals(0, result._1.size());
     }
@@ -1305,8 +1298,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple3<String, String, Jdbc.OutParamResult> result =
-                callableQuery.query2ResultSetsAndGetOutParameters((rs, labels) -> "r1", (rs, labels) -> "r2");
+        com.landawn.abacus.util.Tuple.Tuple3<String, String, Jdbc.OutParamResult> result = callableQuery
+                .query2ResultSetsAndGetOutParameters((rs, labels) -> "r1", (rs, labels) -> "r2");
         assertNotNull(result);
     }
 
@@ -1317,8 +1310,8 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(false);
         when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
-        com.landawn.abacus.util.Tuple.Tuple4<String, String, String, Jdbc.OutParamResult> result =
-                callableQuery.query3ResultSetsAndGetOutParameters((rs, labels) -> "r1", (rs, labels) -> "r2", (rs, labels) -> "r3");
+        com.landawn.abacus.util.Tuple.Tuple4<String, String, String, Jdbc.OutParamResult> result = callableQuery
+                .query3ResultSetsAndGetOutParameters((rs, labels) -> "r1", (rs, labels) -> "r2", (rs, labels) -> "r3");
         assertNotNull(result);
     }
 

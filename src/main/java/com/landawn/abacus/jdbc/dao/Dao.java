@@ -396,7 +396,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-        return prepareQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
+        return prepareQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
     /**
@@ -637,7 +637,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
-        return prepareNamedQuery(selectPropNames, cond).configStmt(DaoUtil.stmtSetterForBigQueryResult);
+        return prepareNamedQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
     /**
@@ -1278,7 +1278,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> balance = dao.queryForSingleResult(
+     * Nullable<BigDecimal> balance = dao.queryForSingleValue(
      *     "balance", 
      *     Filters.eq("account_id", 123), 
      *     BigDecimal.class
@@ -1291,9 +1291,9 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param targetValueType the class of the target value type
      * @return Nullable containing the value
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleValue(Class)
      */
-    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
      * Queries for a single non-null value of the specified type.
@@ -1350,7 +1350,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> uniqueEmail = dao.queryForUniqueResult(
+     * Nullable<String> uniqueEmail = dao.queryForUniqueValue(
      *     "email",
      *     Filters.eq("username", "john_doe"),
      *     String.class
@@ -1365,9 +1365,9 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return Nullable containing the unique value
      * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueValue(Class)
      */
-    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
+    <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicateResultException, SQLException;
 
     /**

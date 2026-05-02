@@ -54,7 +54,7 @@ import com.landawn.abacus.util.Throwables;
  * <p><b>Supported Operations:</b></p>
  * <ul>
  *   <li><b>Read Operations:</b> {@code list}, {@code findFirst}, {@code findOnlyOne}, {@code count},
- *       {@code exists}, {@code queryForSingleResult}, etc.</li>
+ *       {@code exists}, {@code queryForSingleValue}, etc.</li>
  *   <li><b>Insert Operations:</b> {@code save}, {@code batchSave} (inherited from {@link Dao})</li>
  *   <li><b>Query Preparation:</b> {@code prepareQuery} and {@code prepareNamedQuery} for
  *       {@code SELECT} and {@code INSERT} statements</li>
@@ -154,15 +154,13 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
      *
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", true)
+     * Optional<Long> generatedId = dao.prepareQuery(
+     *             "INSERT INTO users (name, email) VALUES (?, ?)", true)
      *         .setString(1, "John Doe")
      *         .setString(2, "john@example.com")
-     *         .insert()
-     *         .orElse(null);
+     *         .insert();
      *
-     * if (generated != null) {
-     *     long generatedId = generated.getLong(1);
-     * }
+     * generatedId.ifPresent(id -> System.out.println("Generated id: " + id));
      * }</pre>
      *
      * @param query the SQL query string to prepare (must be {@code SELECT} or {@code INSERT})
@@ -192,12 +190,13 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
      *
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * // Retrieve only the first and third auto-generated columns
-     * Row generated = dao.prepareQuery("INSERT INTO orders (customer_id, total) VALUES (?, ?)", new int[] {1, 3})
+     * // Retrieve auto-generated keys from columns 1 and 3
+     * Optional<Long> generatedId = dao.prepareQuery(
+     *             "INSERT INTO orders (customer_id, total) VALUES (?, ?)",
+     *             new int[] {1, 3})
      *         .setLong(1, customerId)
      *         .setBigDecimal(2, orderTotal)
-     *         .insert()
-     *         .orElse(null);
+     *         .insert();
      * }</pre>
      *
      * @param query the SQL query string to prepare (must be {@code SELECT} or {@code INSERT})
@@ -228,17 +227,15 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
      *
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
-     * Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)",
-     *         new String[] {"id", "created_timestamp"})
+     * // Retrieve named auto-generated keys via a custom row mapper
+     * Optional<Tuple2<Long, Timestamp>> generated = dao.prepareQuery(
+     *             "INSERT INTO users (name, email) VALUES (?, ?)",
+     *             new String[] {"id", "created_timestamp"})
      *         .setString(1, "Jane Doe")
      *         .setString(2, "jane@example.com")
-     *         .insert()
-     *         .orElse(null);
+     *         .insert(rs -> Tuple.of(rs.getLong("id"), rs.getTimestamp("created_timestamp")));
      *
-     * if (generated != null) {
-     *     long id = generated.getLong("id");
-     *     Timestamp created = generated.getTimestamp("created_timestamp");
-     * }
+     * generated.ifPresent(t -> System.out.println("id=" + t._1 + ", created=" + t._2));
      * }</pre>
      *
      * @param query the SQL query string to prepare (must be {@code SELECT} or {@code INSERT})

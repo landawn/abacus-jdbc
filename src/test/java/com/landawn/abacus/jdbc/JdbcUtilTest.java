@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
@@ -35,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -2233,8 +2233,7 @@ public class JdbcUtilTest extends TestBase {
         Statement stmt = mock(Statement.class);
         doThrow(new SQLException("stmt boom")).when(stmt).close();
 
-        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
-                () -> JdbcUtil.close((ResultSet) null, stmt, (Connection) null));
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close((ResultSet) null, stmt, (Connection) null));
     }
 
     // close(rs, stmt, conn) — conn.close() throws (line 1290).
@@ -2243,8 +2242,7 @@ public class JdbcUtilTest extends TestBase {
         Connection conn = mock(Connection.class);
         doThrow(new SQLException("conn boom")).when(conn).close();
 
-        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
-                () -> JdbcUtil.close((ResultSet) null, (Statement) null, conn));
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> JdbcUtil.close((ResultSet) null, (Statement) null, conn));
     }
 
     // closeQuietly(Statement, Connection) — both null is no-op (lines 1517-1519).
@@ -2278,7 +2276,6 @@ public class JdbcUtilTest extends TestBase {
     // getDriverClassByUrl — unsupported URL throws IllegalArgumentException (lines 843-845).
     @Test
     public void testCreateConnection_UnsupportedUrl_Throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcUtil.createConnection("jdbc:unknownDB://localhost", "u", "p"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createConnection("jdbc:unknownDB://localhost", "u", "p"));
     }
 }

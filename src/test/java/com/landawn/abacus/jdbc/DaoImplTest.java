@@ -289,7 +289,8 @@ public class DaoImplTest extends TestBase {
     // QueryInfo: fragmentContainsNamedParameters=true with named SQL → isNamedQuery=true (L6548 branch)
     @Test
     void testQueryInfo_FragmentContainsNamedParameters_NamedSql() {
-        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = :id", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, true);
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = :id", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false,
+                true);
         assertTrue(qi.isNamedQuery);
     }
 

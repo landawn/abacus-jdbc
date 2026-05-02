@@ -44,7 +44,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *   <li>{@code count(Condition)} - Count records matching a condition</li>
  *   <li>{@code exists(Condition)} - Check if any records match a condition</li>
  *   <li>{@code queryForBoolean/Int/Long/String(propName, ID)} - Query single column value by ID</li>
- *   <li>{@code queryForSingleResult(propName, ID, Class)} - Query single property value by ID</li>
+ *   <li>{@code queryForSingleValue(propName, ID, Class)} - Query single property value by ID</li>
  *   <li>{@code prepareQuery(String)} - Prepare {@code SELECT} queries for execution</li>
  * </ul>
  *

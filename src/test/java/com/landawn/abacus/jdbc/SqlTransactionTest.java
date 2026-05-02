@@ -1,7 +1,7 @@
 package com.landawn.abacus.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,8 +22,8 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -519,8 +519,7 @@ public class SqlTransactionTest extends TestBase {
     public void testIncrementAndGetRef_WhenSetIsolationFails_ThrowsUncheckedSQLException() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         doThrow(new SQLException("setIsolation failed")).when(connection).setTransactionIsolation(org.mockito.ArgumentMatchers.anyInt());
-        assertThrows(UncheckedSQLException.class,
-                () -> transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false));
+        assertThrows(UncheckedSQLException.class, () -> transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false));
         transaction.rollbackIfNotCommitted();
     }
 

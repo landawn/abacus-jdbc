@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -19,7 +18,6 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigInteger;
 import java.sql.Connection;
-import java.util.Calendar;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -34,12 +32,9 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
-
-import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,9 +42,11 @@ import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.stream.Stream;
 
 public class AbstractQueryTest extends TestBase {
 
@@ -168,7 +165,7 @@ public class AbstractQueryTest extends TestBase {
 
     @Test
     public void testSetShort_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setShort(1, (Short) (short) 7, (short) 0);
+        TestQuery result = query.setShort(1, (short) 7, (short) 0);
         assertSame(query, result);
         verify(preparedStatement).setShort(1, (short) 7);
     }
@@ -401,18 +398,18 @@ public class AbstractQueryTest extends TestBase {
 
     @Test
     public void testCheckArgNotNull_NullArg_ThrowsIllegalArgument() {
-        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.checkArgNotNull(null, "myParam"));
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArgNotNull(null, "myParam"));
         assertTrue(iae.getMessage().contains("myParam"));
     }
 
     @Test
     public void testCheckArgNotNull_CloseHandlerThrows_SuppressedException() {
         final RuntimeException closeEx = new RuntimeException("close handler failed");
-        query.onClose(() -> { throw closeEx; });
+        query.onClose(() -> {
+            throw closeEx;
+        });
 
-        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.checkArgNotNull(null, "someArg"));
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArgNotNull(null, "someArg"));
 
         assertTrue(iae.getMessage().contains("someArg"));
         assertEquals(1, iae.getSuppressed().length);
@@ -421,18 +418,18 @@ public class AbstractQueryTest extends TestBase {
 
     @Test
     public void testCheckArg_FalseCondition_ThrowsIllegalArgument() {
-        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.checkArg(false, "condition must be true"));
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArg(false, "condition must be true"));
         assertEquals("condition must be true", iae.getMessage());
     }
 
     @Test
     public void testCheckArg_CloseHandlerThrows_SuppressedException() {
         final RuntimeException closeEx = new RuntimeException("close handler failed");
-        query.onClose(() -> { throw closeEx; });
+        query.onClose(() -> {
+            throw closeEx;
+        });
 
-        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.checkArg(false, "bad condition"));
+        IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.checkArg(false, "bad condition"));
 
         assertEquals("bad condition", iae.getMessage());
         assertEquals(1, iae.getSuppressed().length);
@@ -442,62 +439,56 @@ public class AbstractQueryTest extends TestBase {
     // setParameters(ParametersSetter<Stmt>) — exception path closes the query (line 2791)
     @Test
     public void testSetParameters_ParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () ->
-                query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> {
-                    throw new SQLException("setter failed");
-                }));
+        assertThrows(SQLException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> {
+            throw new SQLException("setter failed");
+        }));
     }
 
     // setParameters(T, BiParametersSetter<Stmt,T>) — exception path closes (line 2855)
     @Test
     public void testSetParameters_BiParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () ->
-                query.setParameters("data", (Jdbc.BiParametersSetter<PreparedStatement, String>) (stmt, s) -> {
-                    throw new SQLException("bi-setter failed");
-                }));
+        assertThrows(SQLException.class, () -> query.setParameters("data", (Jdbc.BiParametersSetter<PreparedStatement, String>) (stmt, s) -> {
+            throw new SQLException("bi-setter failed");
+        }));
     }
 
     // settParameters(ParametersSetter<This>) — exception path closes (line 3117)
     @Test
     public void testSettParameters_ParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () ->
-                query.settParameters((Jdbc.ParametersSetter<TestQuery>) q -> {
-                    throw new SQLException("settParameters failed");
-                }));
+        assertThrows(SQLException.class, () -> query.settParameters((Jdbc.ParametersSetter<TestQuery>) q -> {
+            throw new SQLException("settParameters failed");
+        }));
     }
 
     // settParameters(T, BiParametersSetter<This,T>) — exception path closes (line 3165)
     @Test
     public void testSettParameters_BiParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () ->
-                query.settParameters("params", (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> {
-                    throw new SQLException("bi-settParameters failed");
-                }));
+        assertThrows(SQLException.class, () -> query.settParameters("params", (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> {
+            throw new SQLException("bi-settParameters failed");
+        }));
     }
 
     // addBatchParameters(Iterator<T>, Class<T>) — empty iterator early return (lines 3752-3753)
     @Test
     public void testAddBatchParameters_TypedIterator_EmptyIterator() throws SQLException {
-        TestQuery result = query.addBatchParameters(List.<String>of().iterator(), String.class);
+        TestQuery result = query.addBatchParameters(List.<String> of().iterator(), String.class);
         assertSame(query, result);
     }
 
-    // configStmt(Consumer<Stmt>) — exception path closes (line 4305)
+    // configureStatement(Consumer<Stmt>) — exception path closes (line 4305)
     @Test
     public void testConfigStmt_Consumer_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () ->
-                query.configStmt((Throwables.Consumer<PreparedStatement, SQLException>) stmt -> {
-                    throw new SQLException("configStmt failed");
-                }));
+        assertThrows(SQLException.class, () -> query.configureStatement((Throwables.Consumer<PreparedStatement, SQLException>) stmt -> {
+            throw new SQLException("configureStatement failed");
+        }));
     }
 
-    // configStmt(BiConsumer<This,Stmt>) — exception path closes (line 4345)
+    // configureStatement(BiConsumer<This,Stmt>) — exception path closes (line 4345)
     @Test
     public void testConfigStmt_BiConsumer_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () ->
-                query.configStmt((Throwables.BiConsumer<TestQuery, PreparedStatement, SQLException>) (q, stmt) -> {
-                    throw new SQLException("configStmt BiConsumer failed");
-                }));
+        assertThrows(SQLException.class, () -> query.configureStatement((Throwables.BiConsumer<TestQuery, PreparedStatement, SQLException>) (q, stmt) -> {
+            throw new SQLException("configureStatement BiConsumer failed");
+        }));
     }
 
     // queryForChar() — no rows returns OptionalChar.empty() (line 4415)
@@ -508,6 +499,28 @@ public class AbstractQueryTest extends TestBase {
         when(rs.next()).thenReturn(false);
         // OptionalChar.empty() is returned; verify it is absent (isEmpty)
         assertTrue(query.queryForChar().isEmpty());
+    }
+
+    @Test
+    public void testQueryForUniqueResult_NullFirstValueWithSecondRowThrowsDuplicate() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true);
+        when(rs.getString(1)).thenReturn(null);
+        when(rs.getObject(1)).thenReturn("second");
+
+        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueValue(String.class));
+    }
+
+    @Test
+    public void testQueryForUniqueNonNull_NullFirstValueWithSecondRowThrowsDuplicate() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true);
+        when(rs.getString(1)).thenReturn(null);
+        when(rs.getObject(1)).thenReturn("second");
+
+        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueNonNull(String.class));
     }
 
     // findFirstOrNull(Class) — no rows returns null (line 6079)
@@ -591,7 +604,7 @@ public class AbstractQueryTest extends TestBase {
     public void testFindFirst_RowFilter_RowMapper_NoMatchingRow() throws SQLException {
         final ResultSet rs = Mockito.mock(ResultSet.class);
         when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, false);  // one row but filter rejects it
+        when(rs.next()).thenReturn(true, false); // one row but filter rejects it
 
         final com.landawn.abacus.util.u.Optional<String> result = query.findFirst(r -> false, r -> r.getString(1));
 
@@ -606,7 +619,7 @@ public class AbstractQueryTest extends TestBase {
         // Only throw on reset call (FETCH_REVERSE), not on the initial set call (FETCH_FORWARD)
         doThrow(new SQLException("reset fetch dir failed")).when(preparedStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
 
-        query.setFetchDirection(FetchDirection.FORWARD);  // stores defaultFetchDirection = FETCH_REVERSE
+        query.setFetchDirection(FetchDirection.FORWARD); // stores defaultFetchDirection = FETCH_REVERSE
 
         // close() resets to FETCH_REVERSE which throws, but is swallowed
         assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
@@ -618,7 +631,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.getFetchSize()).thenReturn(100);
         doThrow(new SQLException("reset fetch size failed")).when(preparedStatement).setFetchSize(100);
 
-        query.setFetchSize(500);  // stores defaultFetchSize = 100
+        query.setFetchSize(500); // stores defaultFetchSize = 100
 
         // close() resets to 100 which throws, but is swallowed
         assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
@@ -630,7 +643,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.getQueryTimeout()).thenReturn(30);
         doThrow(new SQLException("reset timeout failed")).when(preparedStatement).setQueryTimeout(30);
 
-        query.setQueryTimeout(60);  // stores defaultQueryTimeout = 30
+        query.setQueryTimeout(60); // stores defaultQueryTimeout = 30
 
         // close() resets to 30 which throws, but is swallowed
         assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
@@ -683,18 +696,18 @@ public class AbstractQueryTest extends TestBase {
     // addBatchParameters(Iterator, BiParametersSetter) exception closes query (L3887)
     @Test
     public void testAddBatchParameters_BiSetter_ExceptionClosesQuery() throws SQLException {
-        assertThrows(RuntimeException.class, () -> query.addBatchParameters(
-                Arrays.asList("x").iterator(),
-                (q, val) -> { throw new RuntimeException("setter error"); }));
+        assertThrows(RuntimeException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator(), (q, val) -> {
+            throw new RuntimeException("setter error");
+        }));
         verify(preparedStatement).close();
     }
 
     // addBatchParameters(Iterator, TriParametersSetter) exception closes query (L4018)
     @Test
     public void testAddBatchParameters_TriSetter_ExceptionClosesQuery() throws SQLException {
-        assertThrows(RuntimeException.class, () -> query.addBatchParameters(
-                Arrays.asList("x").iterator(),
-                (q, stmt2, val) -> { throw new RuntimeException("setter error"); }));
+        assertThrows(RuntimeException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator(), (q, stmt2, val) -> {
+            throw new RuntimeException("setter error");
+        }));
         verify(preparedStatement).close();
     }
 
@@ -753,8 +766,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.execute()).thenReturn(false);
         when(preparedStatement.getUpdateCount()).thenReturn(-1);
 
-        try (com.landawn.abacus.util.stream.Stream<String> s = query.streamAllResultSets(
-                Jdbc.BiResultExtractor.TO_DATASET.andThen(ds -> "result"))) {
+        try (com.landawn.abacus.util.stream.Stream<String> s = query.streamAllResultSets(Jdbc.BiResultExtractor.TO_DATASET.andThen(ds -> "result"))) {
             assertNotNull(s);
         }
     }
@@ -769,8 +781,9 @@ public class AbstractQueryTest extends TestBase {
         when(meta.getColumnCount()).thenReturn(0);
         when(rs.next()).thenReturn(false); // no rows
 
-        final boolean[] called = {false};
-        query.ifExistsOrElse((r, labels) -> {}, () -> called[0] = true);
+        final boolean[] called = { false };
+        query.ifExistsOrElse((r, labels) -> {
+        }, () -> called[0] = true);
 
         assertTrue(called[0]);
     }
@@ -782,7 +795,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.executeQuery()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
 
-        final boolean[] consumed = {false};
+        final boolean[] consumed = { false };
         query.forEach((r) -> false, r -> consumed[0] = true);
 
         assertFalse(consumed[0]);
@@ -799,7 +812,8 @@ public class AbstractQueryTest extends TestBase {
         when(rs.next()).thenReturn(false);
 
         // No rows so consumer is never invoked — just verify no exception
-        query.foreach(String.class, arr -> {});
+        query.foreach(String.class, arr -> {
+        });
     }
 
     @Test
@@ -987,9 +1001,7 @@ public class AbstractQueryTest extends TestBase {
         when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
         when(generatedKeys.next()).thenReturn(false);
 
-        com.landawn.abacus.util.u.Optional<?> result = query.insert(
-                (Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1),
-                id -> id == null || (Long) id == 0L);
+        com.landawn.abacus.util.u.Optional<?> result = query.insert((Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1), id -> id == null || (Long) id == 0L);
         assertTrue(result.isEmpty());
     }
 

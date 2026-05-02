@@ -19,9 +19,9 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,8 +41,8 @@ import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
-import java.sql.SQLXML;
 import java.sql.SQLException;
+import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -433,6 +433,17 @@ public class ResultSetProxyTest extends TestBase {
         // Second call uses cached getter
         when(delegate.getObject(2)).thenReturn(99);
         assertEquals(99, proxy.getObject(2));
+    }
+
+    @Test
+    public void testGetObjectByIndex_InvalidHighIndexDelegatesSQLException() throws SQLException {
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        final SQLException invalidColumn = new SQLException("Invalid column index");
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(2)).thenThrow(invalidColumn);
+
+        assertSame(invalidColumn, assertThrows(SQLException.class, () -> proxy.getObject(2)));
     }
 
     // deprecated getBigDecimal(int, int) - line 263

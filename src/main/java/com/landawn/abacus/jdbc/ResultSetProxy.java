@@ -467,6 +467,10 @@ final class ResultSetProxy implements ResultSet {
             columnGetters = new ColumnGetter[metadata.getColumnCount() + 1];
         }
 
+        if (columnIndex <= 0 || columnIndex >= columnGetters.length) {
+            return delegate.getObject(columnIndex);
+        }
+
         if (columnGetters[columnIndex] == null) {
             Object ret = delegate.getObject(columnIndex);
 

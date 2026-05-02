@@ -140,7 +140,7 @@ public enum OP {
      * String getUserName(long id);
      * }</pre>
      *
-     * @see AbstractQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleValue(Class)
      */
     queryForSingle,
 
@@ -159,7 +159,7 @@ public enum OP {
      * String findEmailByUsername(String username);
      * }</pre>
      *
-     * @see AbstractQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueValue(Class)
      */
     queryForUnique,
 

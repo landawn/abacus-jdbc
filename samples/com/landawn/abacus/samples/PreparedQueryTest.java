@@ -25,18 +25,18 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.SqlBuilder.NSC;
+import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.query.SqlBuilder.NSC;
-import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.util.stream.IntStream;
 
 public class PreparedQueryTest {
@@ -69,7 +69,7 @@ public class PreparedQueryTest {
     }
 
     @Test
-    public void test_queryForSingleResult() throws SQLException {
+    public void test_queryForSingleValue() throws SQLException {
 
         final String firstName = N.toJson(N.asList("a", "b", "c"));
 
@@ -79,7 +79,7 @@ public class PreparedQueryTest {
 
         final List<String> firstNameV = JdbcUtil.prepareQuery(dataSource, "select first_name from user1 where id = ?") //
                 .setLong(1, id)
-                .queryForSingleResult(Type.ofList(String.class))
+                .queryForSingleValue(Type.ofList(String.class))
                 .orElseNull();
 
         N.println(firstNameV);

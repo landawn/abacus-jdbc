@@ -335,8 +335,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> salary = userDao.queryForSingleResult("salary", 123L, BigDecimal.class);
-     * Nullable<UserStatus> status = userDao.queryForSingleResult("status", 123L, UserStatus.class);
+     * Nullable<BigDecimal> salary = userDao.queryForSingleValue("salary", 123L, BigDecimal.class);
+     * Nullable<UserStatus> status = userDao.queryForSingleValue("status", 123L, UserStatus.class);
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
@@ -346,9 +346,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
      */
-    default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
+    default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws SQLException {
-        return queryForSingleResult(singleSelectPropName, Long.valueOf(id), targetValueType);
+        return queryForSingleValue(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
@@ -407,7 +407,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class);
+     * Nullable<String> email = userDao.queryForUniqueValue("email", 123L, String.class);
      * // Throws DuplicateResultException if multiple records found
      * }</pre>
      *
@@ -419,9 +419,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
+    default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws DuplicateResultException, SQLException {
-        return queryForUniqueResult(singleSelectPropName, Long.valueOf(id), targetValueType);
+        return queryForUniqueValue(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**

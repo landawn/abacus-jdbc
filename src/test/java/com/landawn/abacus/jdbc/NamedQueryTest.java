@@ -1,6 +1,5 @@
 package com.landawn.abacus.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,9 +32,9 @@ import java.sql.PreparedStatement;
 import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.RowId;
-import java.sql.SQLXML;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.sql.SQLXML;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -1821,42 +1820,40 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetNStringCharSeq_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setNString("unknown", (CharSequence) new StringBuilder("val")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNString("unknown", new StringBuilder("val")));
     }
 
     @Test
     public void testSetNStringCharSeq_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setNString("unknown", (CharSequence) new StringBuilder("val")));
+        assertThrows(IllegalArgumentException.class, () -> q.setNString("unknown", new StringBuilder("val")));
     }
 
     @Test
     public void testSetNStringCharSeq_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setNString("a", (CharSequence) new StringBuilder("hi"));
+        q.setNString("a", new StringBuilder("hi"));
         verify(mockPreparedStatement).setNString(1, "hi");
     }
 
     @Test
     public void testSetNStringCharSeq_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setNString("p", (CharSequence) new StringBuilder("two"));
+        q.setNString("p", new StringBuilder("two"));
         verify(mockPreparedStatement, times(2)).setNString(anyInt(), eq("two"));
     }
 
     @Test
     public void testSetNStringCharSeq_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setNString("p", (CharSequence) new StringBuilder("three"));
+        q.setNString("p", new StringBuilder("three"));
         verify(mockPreparedStatement, times(3)).setNString(anyInt(), eq("three"));
     }
 
     @Test
     public void testSetNStringCharSeq_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setNString("p", (CharSequence) new StringBuilder("four"));
+        q.setNString("p", new StringBuilder("four"));
         verify(mockPreparedStatement, times(4)).setNString(anyInt(), eq("four"));
     }
 
@@ -1864,15 +1861,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetDate_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setDate("unknown", java.sql.Date.valueOf("2024-01-01")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setDate("unknown", java.sql.Date.valueOf("2024-01-01")));
     }
 
     @Test
     public void testSetDate_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setDate("unknown", java.sql.Date.valueOf("2024-01-01")));
+        assertThrows(IllegalArgumentException.class, () -> q.setDate("unknown", java.sql.Date.valueOf("2024-01-01")));
     }
 
     @Test
@@ -1911,15 +1906,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetTime_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setTime("unknown", java.sql.Time.valueOf("10:00:00")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setTime("unknown", java.sql.Time.valueOf("10:00:00")));
     }
 
     @Test
     public void testSetTime_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setTime("unknown", java.sql.Time.valueOf("10:00:00")));
+        assertThrows(IllegalArgumentException.class, () -> q.setTime("unknown", java.sql.Time.valueOf("10:00:00")));
     }
 
     @Test
@@ -1958,8 +1951,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetTimestamp_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setTimestamp("unknown", new Timestamp(0)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setTimestamp("unknown", new Timestamp(0)));
     }
 
     @Test
@@ -2004,8 +1996,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetBytes_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setBytes("unknown", new byte[] { 1, 2 }));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBytes("unknown", new byte[] { 1, 2 }));
     }
 
     @Test
@@ -2050,60 +2041,52 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetAsciiStream_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setAsciiStream("unknown", new ByteArrayInputStream(new byte[] {})));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setAsciiStream("unknown", new ByteArrayInputStream(new byte[] {})));
     }
 
     @Test
     public void testSetAsciiStream_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setAsciiStream("unknown", new ByteArrayInputStream(new byte[] {})));
+        assertThrows(IllegalArgumentException.class, () -> q.setAsciiStream("unknown", new ByteArrayInputStream(new byte[] {})));
     }
 
     // --- setBinaryStream (no-length overload): loop not-found, map not-found ---
 
     @Test
     public void testSetBinaryStream_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setBinaryStream("unknown", new ByteArrayInputStream(new byte[] {})));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBinaryStream("unknown", new ByteArrayInputStream(new byte[] {})));
     }
 
     @Test
     public void testSetBinaryStream_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setBinaryStream("unknown", new ByteArrayInputStream(new byte[] {})));
+        assertThrows(IllegalArgumentException.class, () -> q.setBinaryStream("unknown", new ByteArrayInputStream(new byte[] {})));
     }
 
     // --- setCharacterStream (no-length overload): loop not-found, map not-found ---
 
     @Test
     public void testSetCharacterStream_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setCharacterStream("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setCharacterStream("unknown", new StringReader("x")));
     }
 
     @Test
     public void testSetCharacterStream_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setCharacterStream("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> q.setCharacterStream("unknown", new StringReader("x")));
     }
 
     // --- setNCharacterStream (no-length overload): loop not-found, map not-found ---
 
     @Test
     public void testSetNCharacterStream_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setNCharacterStream("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNCharacterStream("unknown", new StringReader("x")));
     }
 
     @Test
     public void testSetNCharacterStream_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setNCharacterStream("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> q.setNCharacterStream("unknown", new StringReader("x")));
     }
 
     // --- setNCharacterStream(Reader) map happy paths ---
@@ -2140,15 +2123,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetNCharacterStreamLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setNCharacterStream("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNCharacterStream("unknown", new StringReader("x"), 1L));
     }
 
     @Test
     public void testSetNCharacterStreamLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setNCharacterStream("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setNCharacterStream("unknown", new StringReader("x"), 1L));
     }
 
     @Test
@@ -2184,28 +2165,28 @@ public class NamedQueryTest extends TestBase {
     @Test
     public void testSetAsciiStream_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setAsciiStream("c", new ByteArrayInputStream(new byte[]{1}));
+        q.setAsciiStream("c", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement).setAsciiStream(eq(3), any(InputStream.class));
     }
 
     @Test
     public void testSetAsciiStream_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}));
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement, times(2)).setAsciiStream(anyInt(), any(InputStream.class));
     }
 
     @Test
     public void testSetAsciiStream_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}));
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement, times(3)).setAsciiStream(anyInt(), any(InputStream.class));
     }
 
     @Test
     public void testSetAsciiStream_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}));
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement, times(4)).setAsciiStream(anyInt(), any(InputStream.class));
     }
 
@@ -2214,28 +2195,28 @@ public class NamedQueryTest extends TestBase {
     @Test
     public void testSetBinaryStream_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setBinaryStream("d", new ByteArrayInputStream(new byte[]{2}));
+        q.setBinaryStream("d", new ByteArrayInputStream(new byte[] { 2 }));
         verify(mockPreparedStatement).setBinaryStream(eq(4), any(InputStream.class));
     }
 
     @Test
     public void testSetBinaryStream_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{2}));
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[] { 2 }));
         verify(mockPreparedStatement, times(2)).setBinaryStream(anyInt(), any(InputStream.class));
     }
 
     @Test
     public void testSetBinaryStream_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{2}));
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[] { 2 }));
         verify(mockPreparedStatement, times(3)).setBinaryStream(anyInt(), any(InputStream.class));
     }
 
     @Test
     public void testSetBinaryStream_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{2}));
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[] { 2 }));
         verify(mockPreparedStatement, times(4)).setBinaryStream(anyInt(), any(InputStream.class));
     }
 
@@ -2273,8 +2254,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetBlob_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setBlob("unknown", mock(Blob.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBlob("unknown", mock(Blob.class)));
     }
 
     @Test
@@ -2319,42 +2299,40 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetBlobStream_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setBlob("unknown", new ByteArrayInputStream(new byte[]{1})));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBlob("unknown", new ByteArrayInputStream(new byte[] { 1 })));
     }
 
     @Test
     public void testSetBlobStream_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setBlob("unknown", new ByteArrayInputStream(new byte[]{1})));
+        assertThrows(IllegalArgumentException.class, () -> q.setBlob("unknown", new ByteArrayInputStream(new byte[] { 1 })));
     }
 
     @Test
     public void testSetBlobStream_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setBlob("b", new ByteArrayInputStream(new byte[]{1}));
+        q.setBlob("b", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement).setBlob(eq(2), any(InputStream.class));
     }
 
     @Test
     public void testSetBlobStream_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setBlob("p", new ByteArrayInputStream(new byte[]{1}));
+        q.setBlob("p", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement, times(2)).setBlob(anyInt(), any(InputStream.class));
     }
 
     @Test
     public void testSetBlobStream_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setBlob("p", new ByteArrayInputStream(new byte[]{1}));
+        q.setBlob("p", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement, times(3)).setBlob(anyInt(), any(InputStream.class));
     }
 
     @Test
     public void testSetBlobStream_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setBlob("p", new ByteArrayInputStream(new byte[]{1}));
+        q.setBlob("p", new ByteArrayInputStream(new byte[] { 1 }));
         verify(mockPreparedStatement, times(4)).setBlob(anyInt(), any(InputStream.class));
     }
 
@@ -2362,42 +2340,40 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetBlobStreamLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setBlob("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBlob("unknown", new ByteArrayInputStream(new byte[] { 1 }), 1L));
     }
 
     @Test
     public void testSetBlobStreamLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setBlob("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setBlob("unknown", new ByteArrayInputStream(new byte[] { 1 }), 1L));
     }
 
     @Test
     public void testSetBlobStreamLong_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setBlob("c", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBlob("c", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement).setBlob(eq(3), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetBlobStreamLong_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setBlob("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBlob("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(2)).setBlob(anyInt(), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetBlobStreamLong_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setBlob("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBlob("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(3)).setBlob(anyInt(), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetBlobStreamLong_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setBlob("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBlob("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(4)).setBlob(anyInt(), any(InputStream.class), eq(1L));
     }
 
@@ -2405,8 +2381,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetClob_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setClob("unknown", mock(Clob.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setClob("unknown", mock(Clob.class)));
     }
 
     @Test
@@ -2451,8 +2426,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetClobReader_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setClob("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setClob("unknown", new StringReader("x")));
     }
 
     @Test
@@ -2493,15 +2467,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetClobReaderLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setClob("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setClob("unknown", new StringReader("x"), 1L));
     }
 
     @Test
     public void testSetClobReaderLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setClob("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setClob("unknown", new StringReader("x"), 1L));
     }
 
     @Test
@@ -2536,8 +2508,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetNClob_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setNClob("unknown", mock(NClob.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNClob("unknown", mock(NClob.class)));
     }
 
     @Test
@@ -2582,15 +2553,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetNClobReader_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setNClob("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNClob("unknown", new StringReader("x")));
     }
 
     @Test
     public void testSetNClobReader_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setNClob("unknown", new StringReader("x")));
+        assertThrows(IllegalArgumentException.class, () -> q.setNClob("unknown", new StringReader("x")));
     }
 
     @Test
@@ -2625,15 +2594,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetNClobReaderLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setNClob("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setNClob("unknown", new StringReader("x"), 1L));
     }
 
     @Test
     public void testSetNClobReaderLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setNClob("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setNClob("unknown", new StringReader("x"), 1L));
     }
 
     @Test
@@ -2668,15 +2635,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetURL_LoopBranch_ParamNotFound() throws Exception {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setURL("unknown", new URL("http://example.com")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setURL("unknown", new URL("http://example.com")));
     }
 
     @Test
     public void testSetURL_MapBranch_NotFound() throws Exception {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setURL("unknown", new URL("http://example.com")));
+        assertThrows(IllegalArgumentException.class, () -> q.setURL("unknown", new URL("http://example.com")));
     }
 
     @Test
@@ -2715,15 +2680,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetSQLXML_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setSQLXML("unknown", mock(SQLXML.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setSQLXML("unknown", mock(SQLXML.class)));
     }
 
     @Test
     public void testSetSQLXML_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setSQLXML("unknown", mock(SQLXML.class)));
+        assertThrows(IllegalArgumentException.class, () -> q.setSQLXML("unknown", mock(SQLXML.class)));
     }
 
     @Test
@@ -2762,15 +2725,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetRowId_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setRowId("unknown", mock(RowId.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setRowId("unknown", mock(RowId.class)));
     }
 
     @Test
     public void testSetRowId_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setRowId("unknown", mock(RowId.class)));
+        assertThrows(IllegalArgumentException.class, () -> q.setRowId("unknown", mock(RowId.class)));
     }
 
     @Test
@@ -2809,15 +2770,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetRef_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setRef("unknown", mock(Ref.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setRef("unknown", mock(Ref.class)));
     }
 
     @Test
     public void testSetRef_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setRef("unknown", mock(Ref.class)));
+        assertThrows(IllegalArgumentException.class, () -> q.setRef("unknown", mock(Ref.class)));
     }
 
     @Test
@@ -2856,15 +2815,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetArray_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setArray("unknown", mock(Array.class)));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setArray("unknown", mock(Array.class)));
     }
 
     @Test
     public void testSetArray_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setArray("unknown", mock(Array.class)));
+        assertThrows(IllegalArgumentException.class, () -> q.setArray("unknown", mock(Array.class)));
     }
 
     @Test
@@ -2903,8 +2860,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetObject_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setObject("unknown", (Object) null));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", (Object) null));
     }
 
     @Test
@@ -2945,15 +2901,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetObjectWithSqlType_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setObject("unknown", "value", Types.VARCHAR));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "value", Types.VARCHAR));
     }
 
     @Test
     public void testSetObjectWithSqlType_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setObject("unknown", "value", Types.VARCHAR));
+        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "value", Types.VARCHAR));
     }
 
     @Test
@@ -2988,15 +2942,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetObjectWithSqlTypeScale_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setObject("unknown", "value", Types.DECIMAL, 2));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "value", Types.DECIMAL, 2));
     }
 
     @Test
     public void testSetObjectWithSqlTypeScale_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setObject("unknown", "value", Types.DECIMAL, 2));
+        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "value", Types.DECIMAL, 2));
     }
 
     @Test
@@ -3031,15 +2983,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetObjectWithJDBCType_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setObject("unknown", "value", JDBCType.VARCHAR));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "value", JDBCType.VARCHAR));
     }
 
     @Test
     public void testSetObjectWithJDBCType_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setObject("unknown", "value", JDBCType.VARCHAR));
+        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "value", JDBCType.VARCHAR));
     }
 
     @Test
@@ -3074,15 +3024,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetObjectWithJDBCTypeScale_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setObject("unknown", "val", JDBCType.DECIMAL, 2));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "val", JDBCType.DECIMAL, 2));
     }
 
     @Test
     public void testSetObjectWithJDBCTypeScale_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setObject("unknown", "val", JDBCType.DECIMAL, 2));
+        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "val", JDBCType.DECIMAL, 2));
     }
 
     @Test
@@ -3129,8 +3077,7 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetParameters_Map_NullThrows() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setParameters((Map<String, ?>) null));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters((Map<String, ?>) null));
     }
 
     // Helper test entity class
@@ -3192,42 +3139,40 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetAsciiStreamLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setAsciiStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setAsciiStream("unknown", new ByteArrayInputStream(new byte[] { 1 }), 1L));
     }
 
     @Test
     public void testSetAsciiStreamLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setAsciiStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setAsciiStream("unknown", new ByteArrayInputStream(new byte[] { 1 }), 1L));
     }
 
     @Test
     public void testSetAsciiStreamLong_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setAsciiStream("a", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setAsciiStream("a", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement).setAsciiStream(eq(1), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetAsciiStreamLong_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(2)).setAsciiStream(anyInt(), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetAsciiStreamLong_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(3)).setAsciiStream(anyInt(), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetAsciiStreamLong_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setAsciiStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setAsciiStream("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(4)).setAsciiStream(anyInt(), any(InputStream.class), eq(1L));
     }
 
@@ -3235,42 +3180,40 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetBinaryStreamLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setBinaryStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setBinaryStream("unknown", new ByteArrayInputStream(new byte[] { 1 }), 1L));
     }
 
     @Test
     public void testSetBinaryStreamLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setBinaryStream("unknown", new ByteArrayInputStream(new byte[]{1}), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setBinaryStream("unknown", new ByteArrayInputStream(new byte[] { 1 }), 1L));
     }
 
     @Test
     public void testSetBinaryStreamLong_MapBranch_OneOccurrence() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setBinaryStream("b", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBinaryStream("b", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement).setBinaryStream(eq(2), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetBinaryStreamLong_MapBranch_TwoOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(2)).setBinaryStream(anyInt(), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetBinaryStreamLong_MapBranch_ThreeOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(3)).setBinaryStream(anyInt(), any(InputStream.class), eq(1L));
     }
 
     @Test
     public void testSetBinaryStreamLong_MapBranch_FourOccurrences() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setBinaryStream("p", new ByteArrayInputStream(new byte[]{1}), 1L);
+        q.setBinaryStream("p", new ByteArrayInputStream(new byte[] { 1 }), 1L);
         verify(mockPreparedStatement, times(4)).setBinaryStream(anyInt(), any(InputStream.class), eq(1L));
     }
 
@@ -3278,15 +3221,13 @@ public class NamedQueryTest extends TestBase {
 
     @Test
     public void testSetCharacterStreamLong_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setCharacterStream("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setCharacterStream("unknown", new StringReader("x"), 1L));
     }
 
     @Test
     public void testSetCharacterStreamLong_MapBranch_NotFound() throws SQLException {
         NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setCharacterStream("unknown", new StringReader("x"), 1L));
+        assertThrows(IllegalArgumentException.class, () -> q.setCharacterStream("unknown", new StringReader("x"), 1L));
     }
 
     @Test
@@ -3322,8 +3263,7 @@ public class NamedQueryTest extends TestBase {
     @Test
     public void testSetObjectWithType_LoopBranch_ParamNotFound() throws SQLException {
         final Type<String> type = TypeFactory.getType(String.class);
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setObject("unknown", "val", type));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "val", type));
     }
 
     @Test
@@ -3399,7 +3339,7 @@ public class NamedQueryTest extends TestBase {
         when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("id"));
         when(mockParsedSql.parameterCount()).thenReturn(1);
         NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
-        NamedQuery result = q.setParameters((Object) 42);
+        NamedQuery result = q.setParameters(42);
         assertSame(q, result);
         verify(mockPreparedStatement).setInt(1, 42);
     }
@@ -3407,7 +3347,7 @@ public class NamedQueryTest extends TestBase {
     @Test
     public void testSetParameters_Object_UnsupportedType() throws SQLException {
         // Multi-param query, unsupported non-bean type → throws (L3993-3994)
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters((Object) 42));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters(42));
     }
 
     // --- setParameters(Object, Collection<String>): uncovered paths (L4050-4085) ---
@@ -3418,8 +3358,7 @@ public class NamedQueryTest extends TestBase {
         TestEntity entity = new TestEntity();
         entity.setParam1("x");
         entity.setParam2(1);
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setParameters(entity, Arrays.asList("nonExistentProp")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters(entity, Arrays.asList("nonExistentProp")));
     }
 
     @Test
@@ -3431,23 +3370,22 @@ public class NamedQueryTest extends TestBase {
         // TestEntity has param1/param2; query has a/b/c/d/e → "param1" not in query
         TestEntity entity = new TestEntity();
         entity.setParam1("x");
-        assertThrows(IllegalArgumentException.class,
-                () -> q.setParameters(entity, Arrays.asList("param1")));
+        assertThrows(IllegalArgumentException.class, () -> q.setParameters(entity, Arrays.asList("param1")));
     }
 
     @Test
     public void testSetParameters_EntityWithNames_NonBeanType() throws SQLException {
         // Non-bean entity → throws (L4083-4085)
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.setParameters("notABean", Arrays.asList("param1")));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters("notABean", Arrays.asList("param1")));
     }
 
     // --- setParameters(T, TriParametersSetter): exception closes query (L4133) ---
 
     @Test
     public void testSetParameters_WithSetter_ExceptionClosesQuery() throws SQLException {
-        assertThrows(RuntimeException.class, () -> namedQuery.setParameters("x",
-                (sql, q, p) -> { throw new RuntimeException("setter error"); }));
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters("x", (sql, q, p) -> {
+            throw new RuntimeException("setter error");
+        }));
         verify(mockPreparedStatement).close();
     }
 
@@ -3602,8 +3540,7 @@ public class NamedQueryTest extends TestBase {
     public void testAddBatchParameters_Iterator_BeanMissingProp_Throws() throws SQLException {
         BeanNoProps bean = new BeanNoProps();
         bean.setFoo("x");
-        assertThrows(IllegalArgumentException.class,
-                () -> namedQuery.addBatchParameters(Arrays.asList(bean).iterator()));
+        assertThrows(IllegalArgumentException.class, () -> namedQuery.addBatchParameters(Arrays.asList(bean).iterator()));
     }
 
     // --- addBatchParameters(Iterator): null second element when paramCount==1 (L4267-4268) ---

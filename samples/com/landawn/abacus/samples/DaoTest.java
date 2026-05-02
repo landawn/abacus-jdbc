@@ -64,7 +64,6 @@ import com.landawn.abacus.samples.entity.s;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.Dates;
-import com.landawn.abacus.util.Dates.DateUtil;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Fnn;
@@ -1275,7 +1274,7 @@ public class DaoTest {
         employeeDao.loadAllJoinEntities(employeeFromDB);
         System.out.println(employeeFromDB);
 
-        Project project = Project.builder().projectId(1000).title("Project X").startDate(DateUtil.currentJUDatePlus(3, TimeUnit.DAYS)).build();
+        Project project = Project.builder().projectId(1000).title("Project X").startDate(Dates.currentJUDatePlus(3, TimeUnit.DAYS)).build();
         projectDao.insert(project);
 
         final Project projectFromDB = projectDao.gett(project.getProjectId());

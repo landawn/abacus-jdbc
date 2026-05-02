@@ -48,7 +48,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws if multiple found)</li>
  *   <li>{@code count(Condition)} - Count records matching a condition</li>
  *   <li>{@code exists(Condition)} - Check if any records match a condition</li>
- *   <li>{@code queryForSingleResult(...)} - Query for single column values</li>
+ *   <li>{@code queryForSingleValue(...)} - Query for single column values</li>
  *   <li>{@code prepareQuery(String)} - Prepare {@code SELECT} queries for execution</li>
  *   <li>{@code prepareNamedQuery(String)} - Prepare named {@code SELECT} queries for execution</li>
  * </ul>

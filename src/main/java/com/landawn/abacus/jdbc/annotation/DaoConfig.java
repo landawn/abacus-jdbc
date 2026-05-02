@@ -76,7 +76,7 @@ public @interface DaoConfig {
      * <p>Single query methods include:</p>
      * <ul>
      *   <li>{@code queryForSingleXxx()} methods</li>
-     *   <li>{@code queryForUniqueResult()}</li>
+     *   <li>{@code queryForUniqueValue()}</li>
      *   <li>{@code findFirst()}</li>
      *   <li>{@code findOnlyOne()}</li>
      *   <li>{@code exists()}</li>

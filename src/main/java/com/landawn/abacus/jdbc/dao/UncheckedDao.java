@@ -783,7 +783,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", Filters.eq("productId", 100), BigDecimal.class);
+     * Nullable<BigDecimal> price = userDao.queryForSingleValue("price", Filters.eq("productId", 100), BigDecimal.class);
      * }</pre>
      *
      * @param <V> the target value type
@@ -792,15 +792,15 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param targetValueType the class of the target value type
      * @return a Nullable containing the converted value, or empty if no match found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the non-null value in the first row/column if it exists.
-     * Unlike queryForSingleResult, this method returns empty Optional for {@code null} values.
+     * Unlike queryForSingleValue, this method returns empty Optional for {@code null} values.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -849,7 +849,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> uniqueCode = userDao.queryForUniqueResult("code", Filters.eq("type", "ADMIN"), String.class);
+     * Nullable<String> uniqueCode = userDao.queryForUniqueValue("code", Filters.eq("type", "ADMIN"), String.class);
      * }</pre>
      *
      * @param <V> the value type
@@ -859,10 +859,10 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @return a Nullable containing the unique result value, or empty if no match found
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
+    <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
             throws DuplicateResultException, UncheckedSQLException;
 
     /**

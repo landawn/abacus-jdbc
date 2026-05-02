@@ -296,9 +296,7 @@ public class DBLockTest extends TestBase {
     @Test
     public void testLock_RemoveExpiredLock_ThrowsException_LockStillSucceeds() throws Exception {
         final LockFixture fixture = newLockFixture(1);
-        when(fixture.preparedStatement.executeUpdate())
-                .thenThrow(new RuntimeException("remove expired failed"))
-                .thenReturn(1); // lockSQL succeeds on retry
+        when(fixture.preparedStatement.executeUpdate()).thenThrow(new RuntimeException("remove expired failed")).thenReturn(1); // lockSQL succeeds on retry
         final String code = fixture.lock.lock("resource-exc-remove", 200L, 100L, 0L);
         assertNotNull(code);
     }
@@ -307,10 +305,9 @@ public class DBLockTest extends TestBase {
     @Test
     public void testLock_LockAcquire_ExceptionThenSuccess_WithRetryInterval() throws Exception {
         final LockFixture fixture = newLockFixture(1);
-        when(fixture.preparedStatement.executeUpdate())
-                .thenReturn(0)                               // removeExpiredLock: no expired
+        when(fixture.preparedStatement.executeUpdate()).thenReturn(0) // removeExpiredLock: no expired
                 .thenThrow(new RuntimeException("lock failed")) // lockSQL first attempt: throws
-                .thenReturn(1);                               // lockSQL second attempt: succeeds
+                .thenReturn(1); // lockSQL second attempt: succeeds
         final String code = fixture.lock.lock("resource-exc-retry", 200L, 100L, 1L);
         assertNotNull(code);
     }

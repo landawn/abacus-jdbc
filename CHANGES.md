@@ -239,7 +239,7 @@
 
 ### 3.8.6
 
-* Refactoring: `Dao.queryForSingleResult/queryForUniqueResult`.
+* Refactoring: `Dao.queryForSingleValue/queryForUniqueValue`.
 * Improvements and bug fix.
 
 ### 3.8.5

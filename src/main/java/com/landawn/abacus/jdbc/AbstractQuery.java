@@ -70,7 +70,6 @@ import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
-import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -4279,7 +4278,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     stmt.setPoolable(false);
      * };
      * 
-     * query.configStmt(commonConfig)
+     * query.configureStatement(commonConfig)
      *      .setParameters(params)
      *      .list();
      * }</pre>
@@ -4290,7 +4289,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This configStmt(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException {
+    public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException {
         checkArgNotNull(stmtSetter, cs.stmtSetter);
         assertNotClosed();
 
@@ -4314,7 +4313,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.configStmt((q, stmt) -> {
+     * query.configureStatement((q, stmt) -> {
      *     q.setFetchSize(100).setQueryTimeout(60);
      *     // Additional direct statement configuration
      *     stmt.setPoolable(false);
@@ -4329,7 +4328,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    public This configStmt(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter)
+    public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter)
             throws IllegalArgumentException, SQLException {
         checkArgNotNull(stmtSetter, cs.stmtSetter);
         assertNotClosed();
@@ -4802,7 +4801,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<LocalDate> date = query
      *     .setString(1, orderId)
-     *     .queryForSingleResult(LocalDate.class);   // SELECT order_date FROM orders WHERE id = ?
+     *     .queryForSingleValue(LocalDate.class);   // SELECT order_date FROM orders WHERE id = ?
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
@@ -4812,11 +4811,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
-    public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+    public <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
-        return queryForSingleResult(Type.of(targetValueType));
+        return queryForSingleValue(Type.of(targetValueType));
     }
 
     /**
@@ -4827,7 +4826,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Type<MyCustomType> customType = TypeFactory.getType(MyCustomType.class);
      * Nullable<MyCustomType> result = query
      *     .setInt(1, id)
-     *     .queryForSingleResult(customType);
+     *     .queryForSingleValue(customType);
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
@@ -4837,7 +4836,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
-    public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
+    public <V> Nullable<V> queryForSingleValue(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
@@ -4919,7 +4918,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<String> username = query
      *     .setString(1, email)
-     *     .queryForUniqueResult(String.class);   // SELECT username FROM users WHERE email = ?
+     *     .queryForUniqueValue(String.class);   // SELECT username FROM users WHERE email = ?
      * // Throws exception if multiple users have the same email
      * }</pre>
      *
@@ -4931,12 +4930,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws DuplicateResultException If more than one row is found
      * @throws SQLException if a database access error occurs
      */
-    public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType)
+    public <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
-        return queryForUniqueResult(Type.of(targetValueType));
+        return queryForUniqueValue(Type.of(targetValueType));
     }
 
     /**
@@ -4948,7 +4947,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Type<BigDecimal> moneyType = Type.of(BigDecimal.class);
      * Nullable<BigDecimal> balance = query
      *     .setString(1, accountNumber)
-     *     .queryForUniqueResult(moneyType);   // SELECT balance FROM accounts WHERE account_no = ?
+     *     .queryForUniqueValue(moneyType);   // SELECT balance FROM accounts WHERE account_no = ?
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
@@ -4959,20 +4958,23 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws DuplicateResultException If more than one row is found
      * @throws SQLException if a database access error occurs
      */
-    public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType)
+    public <V> Nullable<V> queryForUniqueValue(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException {
         checkArgNotNull(targetValueType, cs.targetType);
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Nullable<V> result = rs.next() ? Nullable.of(targetValueType.get(rs, 1)) : Nullable.empty();
+            if (rs.next()) {
+                final V result = targetValueType.get(rs, 1);
 
-            if (result.isPresent() && rs.next()) {
-                throw new DuplicateResultException(
-                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetValueType)));
+                if (rs.next()) {
+                    throw new DuplicateResultException("At least two results found");
+                }
+
+                return Nullable.of(result);
             }
 
-            return result;
+            return Nullable.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5038,14 +5040,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try (ResultSet rs = executeQuery()) {
-            final Optional<V> result = rs.next() ? Optional.of(targetValueType.get(rs, 1)) : Optional.empty();
+            if (rs.next()) {
+                final V result = targetValueType.get(rs, 1);
 
-            if (result.isPresent() && rs.next()) {
-                throw new DuplicateResultException(
-                        "At least two results found: " + Strings.concat(result.get(), ", ", N.convert(JdbcUtil.getColumnValue(rs, 1), targetValueType)));
+                if (rs.next()) {
+                    throw new DuplicateResultException("At least two results found");
+                }
+
+                return Optional.of(result);
             }
 
-            return result;
+            return Optional.empty();
         } finally {
             closeAfterExecutionIfAllowed();
         }
@@ -5594,7 +5599,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
      * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
-     * @see #queryForUniqueResult(Class)
+     * @see #queryForUniqueValue(Class)
      * @see #queryForUniqueNonNull(Class)
      */
     public Optional<Map<String, Object>> findOnlyOne() throws DuplicateResultException, SQLException {
@@ -5625,7 +5630,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
-     * @see #queryForUniqueResult(Class)
+     * @see #queryForUniqueValue(Class)
      * @see #queryForUniqueNonNull(Class)
      */
     public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException {

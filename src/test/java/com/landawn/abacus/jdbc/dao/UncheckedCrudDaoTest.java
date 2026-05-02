@@ -40,10 +40,21 @@ public class UncheckedCrudDaoTest extends TestBase {
         private Long id;
         private String name;
 
-        public Long getId() { return id; }
-        public void setId(final Long id) { this.id = id; }
-        public String getName() { return name; }
-        public void setName(final String name) { this.name = name; }
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
     }
 
     static final class IdentifiedEntity {
@@ -357,8 +368,14 @@ public class UncheckedCrudDaoTest extends TestBase {
     // upsert(entity, cond) — entity class with no id triggers the empty-idPropNameList branch.
     static final class NoIdEntity {
         private String name;
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 
     interface NoIdUncheckedCrudDao extends UncheckedCrudDao<NoIdEntity, Long, PSC, NoIdUncheckedCrudDao> {
@@ -429,16 +446,14 @@ public class UncheckedCrudDaoTest extends TestBase {
     public void testBatchUpsert_FullSig_NonPositiveBatchSize_Throws() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of("name"), 0));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of("name"), 0));
     }
 
     @Test
     public void testBatchUpsert_FullSig_EmptyUniqueProps_Throws() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of(), 5));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(List.of(new IdAnnotatedEntity()), List.of(), 5));
     }
 
     // refresh variants validate input and short-circuit empty collections.

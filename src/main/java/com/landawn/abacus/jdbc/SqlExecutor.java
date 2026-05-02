@@ -45,7 +45,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p><b>Historical CRUD Pattern:</b></p>
  * <pre>{@code
- * static final DataSource dataSource = JdbcUtil.createDataSource(...);
+ * static final DataSource dataSource = JdbcUtil.createHikariDataSource(url, user, password);
  * static final SqlExecutor sqlExecutor = new SqlExecutor(dataSource);
  *
  * Account account = createAccount();
@@ -2710,7 +2710,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalBoolean queryForBoolean(final String sql, final Object... parameters) {
@@ -2723,7 +2723,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalChar queryForChar(final String sql, final Object... parameters) {
@@ -2736,7 +2736,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalByte queryForByte(final String sql, final Object... parameters) {
@@ -2749,7 +2749,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalShort queryForShort(final String sql, final Object... parameters) {
@@ -2762,7 +2762,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalInt queryForInt(final String sql, final Object... parameters) {
@@ -2775,7 +2775,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalLong queryForLong(final String sql, final Object... parameters) {
@@ -2788,7 +2788,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalFloat queryForFloat(final String sql, final Object... parameters) {
@@ -2801,7 +2801,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final OptionalDouble queryForDouble(final String sql, final Object... parameters) {
@@ -2814,7 +2814,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<BigDecimal> queryForBigDecimal(final String sql, final Object... parameters) {
@@ -2827,7 +2827,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, Connection, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, Connection, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<String> queryForString(final String sql, final Object... parameters) {
@@ -2840,7 +2840,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<Date> queryForDate(final String sql, final Object... parameters) {
@@ -2853,7 +2853,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<Time> queryForTime(final String sql, final Object... parameters) {
@@ -2866,7 +2866,7 @@ final class SqlExecutor {
     //     * @param sql
     //     * @param parameters
     //     * @return
-    //     * @see SqlExecutor#queryForSingleResult(Class, String, Object...).
+    //     * @see SqlExecutor#queryForSingleValue(Class, String, Object...).
     //     */
     //    @SafeVarargs
     //    public final Nullable<Timestamp> queryForTimestamp(final String sql, final Object... parameters) {
@@ -2883,8 +2883,8 @@ final class SqlExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final String sql, final Object... parameters) {
-    //        return queryForSingleResult(targetClass, sql, StatementSetter.DEFAULT, parameters);
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final String sql, final Object... parameters) {
+    //        return queryForSingleValue(targetClass, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
     //    /**
@@ -2898,9 +2898,9 @@ final class SqlExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
     //            final Object... parameters) {
-    //        return queryForSingleResult(targetClass, sql, statementSetter, null, parameters);
+    //        return queryForSingleValue(targetClass, sql, statementSetter, null, parameters);
     //    }
     //
     //    /**
@@ -2914,9 +2914,9 @@ final class SqlExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final String sql, final JdbcSettings jdbcSettings,
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final String sql, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
-    //        return queryForSingleResult(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
+    //        return queryForSingleValue(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -2931,9 +2931,9 @@ final class SqlExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
     //            final JdbcSettings jdbcSettings, final Object... parameters) {
-    //        return queryForSingleResult(targetClass, null, sql, statementSetter, jdbcSettings, parameters);
+    //        return queryForSingleValue(targetClass, null, sql, statementSetter, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -2947,8 +2947,8 @@ final class SqlExecutor {
     //     * @return
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final Connection conn, final String sql, final Object... parameters) {
-    //        return queryForSingleResult(targetClass, conn, sql, StatementSetter.DEFAULT, parameters);
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final Connection conn, final String sql, final Object... parameters) {
+    //        return queryForSingleValue(targetClass, conn, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
     //    /**
@@ -2962,9 +2962,9 @@ final class SqlExecutor {
     //     * @param parameters
     //     * @return
     //     */
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final Connection conn, final String sql,
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final Connection conn, final String sql,
     //            final StatementSetter statementSetter, final Object... parameters) {
-    //        return queryForSingleResult(targetClass, conn, sql, statementSetter, null, parameters);
+    //        return queryForSingleValue(targetClass, conn, sql, statementSetter, null, parameters);
     //    }
     //
     //    /**
@@ -2978,9 +2978,9 @@ final class SqlExecutor {
     //     * @param parameters
     //     * @return
     //     */
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
     //            final Object... parameters) {
-    //        return queryForSingleResult(targetClass, conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
+    //        return queryForSingleValue(targetClass, conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -3006,7 +3006,7 @@ final class SqlExecutor {
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetClass, final Connection conn, final String sql,
+    //    public final <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetClass, final Connection conn, final String sql,
     //            final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) {
     //        return query(conn, sql, statementSetter, createSingleResultExtractor(targetClass), jdbcSettings, parameters);
     //    }
@@ -3054,9 +3054,9 @@ final class SqlExecutor {
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final Object... parameters)
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final String sql, final Object... parameters)
     //            throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, sql, StatementSetter.DEFAULT, parameters);
+    //        return queryForUniqueValue(targetClass, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
     //    /**
@@ -3072,9 +3072,9 @@ final class SqlExecutor {
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
     //            final Object... parameters) throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, sql, statementSetter, null, parameters);
+    //        return queryForUniqueValue(targetClass, sql, statementSetter, null, parameters);
     //    }
     //
     //    /**
@@ -3090,9 +3090,9 @@ final class SqlExecutor {
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final String sql, final JdbcSettings jdbcSettings, final Object... parameters)
     //            throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
+    //        return queryForUniqueValue(targetClass, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -3109,9 +3109,9 @@ final class SqlExecutor {
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final String sql, final StatementSetter statementSetter,
     //            final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, null, sql, statementSetter, jdbcSettings, parameters);
+    //        return queryForUniqueValue(targetClass, null, sql, statementSetter, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -3127,9 +3127,9 @@ final class SqlExecutor {
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql, final Object... parameters)
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final Connection conn, final String sql, final Object... parameters)
     //            throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, conn, sql, StatementSetter.DEFAULT, parameters);
+    //        return queryForUniqueValue(targetClass, conn, sql, StatementSetter.DEFAULT, parameters);
     //    }
     //
     //    /**
@@ -3145,9 +3145,9 @@ final class SqlExecutor {
     //     * @return
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql,
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final Connection conn, final String sql,
     //            final StatementSetter statementSetter, final Object... parameters) throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, conn, sql, statementSetter, null, parameters);
+    //        return queryForUniqueValue(targetClass, conn, sql, statementSetter, null, parameters);
     //    }
     //
     //    /**
@@ -3163,9 +3163,9 @@ final class SqlExecutor {
     //     * @return
     //     * @throws DuplicateResultException if two or more records are found.
     //     */
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final Connection conn, final String sql, final JdbcSettings jdbcSettings,
     //            final Object... parameters) throws DuplicateResultException {
-    //        return queryForUniqueResult(targetClass, conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
+    //        return queryForUniqueValue(targetClass, conn, sql, StatementSetter.DEFAULT, jdbcSettings, parameters);
     //    }
     //
     //    /**
@@ -3193,7 +3193,7 @@ final class SqlExecutor {
     //     */
     //    @SuppressWarnings("unchecked")
     //    @SafeVarargs
-    //    public final <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetClass, final Connection conn, final String sql,
+    //    public final <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetClass, final Connection conn, final String sql,
     //            final StatementSetter statementSetter, final JdbcSettings jdbcSettings, final Object... parameters) throws DuplicateResultException {
     //        return query(conn, sql, statementSetter, createUniqueResultExtractor(targetClass), jdbcSettings, parameters);
     //    }

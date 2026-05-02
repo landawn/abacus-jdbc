@@ -1410,7 +1410,7 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testConfigStmt() throws SQLException {
-        PreparedQuery result = query.configStmt(stmt -> {
+        PreparedQuery result = query.configureStatement(stmt -> {
             stmt.setFetchSize(100);
             stmt.setQueryTimeout(60);
         });
@@ -1421,7 +1421,7 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testConfigStmtBiConsumer() throws SQLException {
-        PreparedQuery result = query.configStmt((q, stmt) -> {
+        PreparedQuery result = query.configureStatement((q, stmt) -> {
             q.setFetchSize(100);
             stmt.setPoolable(false);
         });
@@ -1628,7 +1628,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true);
         when(mockResultSet.getString(1)).thenReturn("test");
 
-        Nullable<String> result = query.queryForSingleResult(String.class);
+        Nullable<String> result = query.queryForSingleValue(String.class);
 
         assertTrue(result.isPresent());
         assertEquals("test", result.orElse(null));
@@ -1640,7 +1640,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true);
         when(mockResultSet.getObject(1)).thenReturn(42);
 
-        Nullable<Integer> result = query.queryForSingleResult(Type.of(Integer.class));
+        Nullable<Integer> result = query.queryForSingleValue(Type.of(Integer.class));
 
         assertTrue(result.isPresent());
         assertEquals(42, result.orElse(-1));
@@ -1676,7 +1676,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getString(1)).thenReturn("unique");
 
-        Nullable<String> result = query.queryForUniqueResult(String.class);
+        Nullable<String> result = query.queryForUniqueValue(String.class);
 
         assertTrue(result.isPresent());
         assertEquals("unique", result.orElse(null));
@@ -1688,7 +1688,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true);
         when(mockResultSet.getString(1)).thenReturn("first", "second");
 
-        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueResult(String.class));
+        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueValue(String.class));
         verify(mockResultSet).close();
     }
 
@@ -1697,7 +1697,7 @@ public class PreparedQueryTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getBigDecimal(1)).thenReturn(new BigDecimal("123.45"));
 
-        Nullable<BigDecimal> result = query.queryForUniqueResult(Type.of(BigDecimal.class));
+        Nullable<BigDecimal> result = query.queryForUniqueValue(Type.of(BigDecimal.class));
 
         assertTrue(result.isPresent());
         assertEquals(new BigDecimal("123.45"), result.orElse(null));
@@ -3132,7 +3132,7 @@ public class PreparedQueryTest extends TestBase {
     @Test
     public void testNullParameterValidation() {
         assertThrows(IllegalArgumentException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.queryForSingleResult((Class<?>) null));
+        assertThrows(IllegalArgumentException.class, () -> query.queryForSingleValue((Class<?>) null));
         assertThrows(IllegalArgumentException.class, () -> query.query((Jdbc.ResultExtractor<?>) null));
         assertThrows(IllegalArgumentException.class, () -> query.list((Jdbc.RowMapper<?>) null));
         assertThrows(IllegalArgumentException.class, () -> query.forEach((Jdbc.RowConsumer) null));

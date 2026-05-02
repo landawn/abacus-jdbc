@@ -2621,11 +2621,11 @@ public final class JdbcUtil {
      *         "SELECT COUNT(*) FROM products WHERE category = ?").closeAfterExecution(false)) {
      *
      *     long electronicsCount = query.setString(1, "Electronics")
-     *                                  .queryForSingleResult(Long.class)
+     *                                  .queryForSingleValue(Long.class)
      *                                  .orElse(0L);
      *
      *     long clothingCount = query.setString(1, "Clothing")
-     *                               .queryForSingleResult(Long.class)
+     *                               .queryForSingleValue(Long.class)
      *                               .orElse(0L);
      *
      *     System.out.println("Electronics: " + electronicsCount);
@@ -3124,7 +3124,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql) throws SQLException {
-        return prepareQuery(ds, sql).configStmt(stmtSetterForBigQueryResult);
+        return prepareQuery(ds, sql).configureStatement(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -3156,7 +3156,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static PreparedQuery prepareQueryForLargeResult(final Connection conn, final String sql) throws SQLException {
-        return prepareQuery(conn, sql).configStmt(stmtSetterForBigQueryResult);
+        return prepareQuery(conn, sql).configureStatement(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -3990,7 +3990,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql) throws SQLException {
-        return prepareNamedQuery(ds, namedSql).configStmt(stmtSetterForBigQueryResult);
+        return prepareNamedQuery(ds, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -4011,7 +4011,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws SQLException {
-        return prepareNamedQuery(ds, namedSql).configStmt(stmtSetterForBigQueryResult);
+        return prepareNamedQuery(ds, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -4027,7 +4027,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws SQLException {
-        return prepareNamedQuery(conn, namedSql).configStmt(stmtSetterForBigQueryResult);
+        return prepareNamedQuery(conn, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
     /**
@@ -7974,7 +7974,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<ContinuableFuture<String>, ContinuableFuture<List<String>>> futures = JdbcUtil.asyncCall(
-     *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT name FROM users WHERE id = ?").setLong(1, userId).queryForSingleResult(String.class).orElse(null),
+     *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT name FROM users WHERE id = ?").setLong(1, userId).queryForSingleValue(String.class).orElse(null),
      *     () -> JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE age > ?").setInt(1, 18).list(String.class)
      * );
      *
@@ -8007,8 +8007,8 @@ public final class JdbcUtil {
      * <pre>{@code
      * Tuple3<ContinuableFuture<Long>, ContinuableFuture<BigDecimal>, ContinuableFuture<List<Product>>> futures =
      *     JdbcUtil.asyncCall(
-     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM orders").queryForSingleResult(Long.class).orElse(0L),
-     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT SUM(total) FROM orders").queryForSingleResult(BigDecimal.class).orElse(BigDecimal.ZERO),
+     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM orders").queryForSingleValue(Long.class).orElse(0L),
+     *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT SUM(total) FROM orders").queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO),
      *         () -> JdbcUtil.prepareQuery(dataSource, "SELECT * FROM products WHERE stock < ?").setInt(1, 10).list(Product.class)
      *     );
      * 
@@ -8108,7 +8108,7 @@ public final class JdbcUtil {
      *     (start, end, cat) -> JdbcUtil.prepareQuery(dataSource,
      *         "SELECT SUM(amount) FROM sales WHERE date BETWEEN ? AND ? AND category = ?")
      *         .setDate(1, start).setDate(2, end).setString(3, cat)
-     *         .queryForSingleResult(BigDecimal.class).orElse(BigDecimal.ZERO)
+     *         .queryForSingleValue(BigDecimal.class).orElse(BigDecimal.ZERO)
      * );
      * 
      * future.thenAccept(total -> System.out.println("Total sales: " + total));

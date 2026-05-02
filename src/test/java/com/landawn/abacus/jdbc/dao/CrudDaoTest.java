@@ -40,10 +40,21 @@ public class CrudDaoTest extends TestBase {
         private Long id;
         private String name;
 
-        public Long getId() { return id; }
-        public void setId(final Long id) { this.id = id; }
-        public String getName() { return name; }
-        public void setName(final String name) { this.name = name; }
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
     }
 
     static final class IdentifiedEntity {
@@ -346,8 +357,14 @@ public class CrudDaoTest extends TestBase {
     // and copies all fields (lines 1142-1143).
     static final class NoIdEntity {
         private String name;
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 
     interface NoIdCrudDao extends CrudDao<NoIdEntity, Long, PSC, NoIdCrudDao> {

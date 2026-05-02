@@ -560,8 +560,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> salary = userDao.queryForSingleResult("salary", userId, BigDecimal.class);
-     * Nullable<UserStatus> status = userDao.queryForSingleResult("status", userId, UserStatus.class);
+     * Nullable<BigDecimal> salary = userDao.queryForSingleValue("salary", userId, BigDecimal.class);
+     * Nullable<UserStatus> status = userDao.queryForSingleValue("status", userId, UserStatus.class);
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
@@ -570,9 +570,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param targetValueType the class of the value type to convert to
      * @return a Nullable containing the value if found, or Nullable.empty() if no record exists
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleValue(Class)
      */
-    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
@@ -623,7 +623,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class);
+     * Nullable<String> email = userDao.queryForUniqueValue("email", userId, String.class);
      * // Throws DuplicateResultException if multiple records found
      * }</pre>
      *
@@ -634,9 +634,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @return a Nullable containing the unique value if found, or Nullable.empty() if no record exists
      * @throws DuplicateResultException if more than one record found by the specified {@code id}
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueValue(Class)
      */
-    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
+    <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
             throws DuplicateResultException, SQLException;
 
     /**

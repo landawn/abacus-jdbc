@@ -1,7 +1,7 @@
-# abacus-jdbc API Index (v4.6.4)
+# abacus-jdbc API Index (v4.6.7)
 - Build: unknown
 - Java: 17
-- Generated: 2026-03-15
+- Generated: 2026-05-02
 
 ## Packages
 - com.landawn.abacus.jdbc
@@ -1373,8 +1373,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** java.sql.Statement#setQueryTimeout(int)
-##### configStmt(...) -> This
-- **Signature:** `@Beta public This configStmt(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException`
+##### configureStatement(...) -> This
+- **Signature:** `@Beta public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Configures this statement using a custom configuration function.
 - **Parameters:**
   - `stmtSetter` (`Throwables.Consumer<? super Stmt, ? extends SQLException>`) — the function to configure the statement
@@ -1382,7 +1382,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalArgumentException` — If stmtSetter is null
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `@Beta public This configStmt(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException`
+- **Signature:** `@Beta public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Configures this statement using a BiConsumer that has access to both the query and statement.
 - **Parameters:**
   - `stmtSetter` (`Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException>`) — the function to configure the statement
@@ -1555,8 +1555,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Throws:**
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.sql.SQLException` — if a database access error occurs
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `public <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException`
 - **Summary:** Executes this query and returns the first column of the first row as the specified type.
 - **Contract:**
   - <p> If the query produces no rows, an empty {@code Nullable<V>} is returned.
@@ -1567,7 +1567,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.lang.IllegalArgumentException` — If targetValueType is null
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException`
+- **Signature:** `public <V> Nullable<V> queryForSingleValue(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException`
 - **Summary:** Executes the query and returns the first value from the result set using a custom Type handler.
 - **Parameters:**
   - `targetValueType` (`Type<? extends V>`) — the Type handler for converting the result
@@ -1601,8 +1601,8 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.lang.IllegalStateException` — if this query is closed
   - `java.sql.SQLException` — if a database access error occurs
   - `java.lang.NullPointerException` — if a null value is encountered in the result set
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `public <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException`
 - **Summary:** Executes the query and returns the unique result value from the result set as the specified type.
 - **Contract:**
   - Throws DuplicateResultException if more than one row is found.
@@ -1615,7 +1615,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.lang.IllegalStateException` — if this query is closed
   - `com.landawn.abacus.exception.DuplicateResultException` — If more than one row is found
   - `java.sql.SQLException` — if a database access error occurs
-- **Signature:** `public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException`
+- **Signature:** `public <V> Nullable<V> queryForUniqueValue(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException`
 - **Summary:** Executes the query and returns the unique result value from the result set using a custom Type handler.
 - **Contract:**
   - Throws DuplicateResultException if more than one row is found.
@@ -1787,14 +1787,15 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
 - **Contract:**
   - Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.
-  - If no rows or multiple rows are found, it throws an appropriate exception.
+  - <p> If the query returns no rows, the result is an empty {@code Optional} .
+  - If the query returns more than one row, {@link DuplicateResultException} is thrown.
 - **Parameters:**
   - (none)
 - **Returns:** An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** #queryForUniqueResult(Class), #queryForUniqueNonNull(Class)
+- **See also:** #queryForUniqueValue(Class), #queryForUniqueNonNull(Class)
 - **Signature:** `public <T> Optional<T> findOnlyOne(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns an {@code Optional} containing a single result of the specified type if exactly one record is found.
 - **Contract:**
@@ -1806,7 +1807,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `java.lang.NullPointerException` — if the mapped object for the found row is {@code null}
   - `com.landawn.abacus.exception.DuplicateResultException` — If the query finds more than one record
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** #queryForUniqueResult(Class), #queryForUniqueNonNull(Class)
+- **See also:** #queryForUniqueValue(Class), #queryForUniqueNonNull(Class)
 - **Signature:** `public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException`
 - **Summary:** Executes a query and returns an {@code Optional} containing a single result extracted by the specified {@code RowMapper} if exactly one record is found.
 - **Contract:**
@@ -6685,7 +6686,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query using a custom {@link PreparedStatement} creator.
 - **Contract:**
-  - This method provides an extension point to customize the creation of the {@code PreparedStatement} , <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
+  - <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.
   - Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to get the connection from.
@@ -7555,44 +7556,46 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** a Stream of the extracted results
 ##### doesTableExist(...) -> boolean
 - **Signature:** `public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName)`
-- **Summary:** Checks if a table exists in the database.
+- **Summary:** Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .
 - **Contract:**
-  - Checks if a table exists in the database.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(ds, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
+  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} \\u2014 a SQL state from that query matching a known "table not found" code returns {@code false} ; any other SQL error is propagated.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(ds, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — The data source to get the connection from
-  - `tableName` (`String`) — The name of the table to check
+  - `ds` (`javax.sql.DataSource`) — the data source to get the connection from
+  - `tableName` (`String`) — the table name (optionally qualified); must not be blank
 - **Returns:** {@code true} if the table exists, {@code false} otherwise
 - **Signature:** `public static boolean doesTableExist(final Connection conn, final String tableName)`
-- **Summary:** Checks if a table exists in the database.
+- **Summary:** Checks whether a table exists on the given {@link Connection} .
 - **Contract:**
-  - Checks if a table exists in the database.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(connection, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
+  - If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} \\u2014 a SQL state from that query matching a known "table not found" code returns {@code false} ; any other SQL error is propagated.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(connection, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
 - **Parameters:**
-  - `conn` (`Connection`) — The database connection to use for checking table existence
-  - `tableName` (`String`) — The name of the table to check
+  - `conn` (`Connection`) — the database connection to use for checking table existence
+  - `tableName` (`String`) — the table name (optionally qualified); must not be blank
 - **Returns:** {@code true} if the table exists, {@code false} otherwise
 ##### createTableIfNotExists(...) -> boolean
 - **Signature:** `public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema)`
-- **Summary:** Creates a table if it does not already exist in the database.
+- **Summary:** Creates a table if it does not already exist.
 - **Contract:**
-  - Creates a table if it does not already exist in the database.
-  - This method first checks if the table exists, and if not, executes the provided schema to create it.
+  - Creates a table if it does not already exist.
+  - <p> The method first checks for existence via {@link #doesTableExist(Connection, String)} and only executes the supplied {@code schema} statement when the table is missing.
+  - If the {@code CREATE} fails because the table was created concurrently by another process, this method returns {@code false} rather than rethrowing; any other SQL error is wrapped as {@link UncheckedSQLException} .
 - **Parameters:**
-  - `conn` (`Connection`) — The database connection to use for creating the table
-  - `tableName` (`String`) — The name of the table to create
-  - `schema` (`String`) — The SQL schema definition (CREATE TABLE statement) for the table
-- **Returns:** {@code true} if the table was created, {@code false} if the table already exists
+  - `conn` (`Connection`) — the database connection to use for creating the table
+  - `tableName` (`String`) — the name of the table to create (optionally qualified); must not be blank
+  - `schema` (`String`) — the SQL DDL statement (typically {@code CREATE TABLE ...} ) used to create the table
+- **Returns:** {@code true} if this call created the table; {@code false} if the table already existed when checked, or was created concurrently while this call was running
 ##### dropTableIfExists(...) -> boolean
 - **Signature:** `public static boolean dropTableIfExists(final Connection conn, final String tableName)`
-- **Summary:** Drops the specified table if it exists in the database.
+- **Summary:** Drops the specified table if it exists.
 - **Contract:**
-  - Drops the specified table if it exists in the database.
-  - This method first checks if the table exists before attempting to drop it, preventing errors from trying to drop a non-existent table.
+  - Drops the specified table if it exists.
+  - <p> The method first checks for existence via {@link #doesTableExist(Connection, String)} and only issues a {@code DROP TABLE} if the table is found.
+  - If the drop itself fails because the table no longer exists (for example, a concurrent drop), the method returns {@code false} ; any other SQL error is wrapped and rethrown as {@link UncheckedSQLException} .
 - **Parameters:**
-  - `conn` (`Connection`) — The database connection to use for dropping the table
-  - `tableName` (`String`) — The name of the table to drop
-- **Returns:** {@code true} if the table was dropped, {@code false} if the table did not exist or could not be dropped
+  - `conn` (`Connection`) — the database connection to use for dropping the table
+  - `tableName` (`String`) — the name of the table to drop (optionally qualified); must not be blank
+- **Returns:** {@code true} if the table was dropped by this call; {@code false} if the table did not exist (either at the time of the existence check or by the time the {@code DROP} executed)
 ##### getDBLock(...) -> DBLock
 - **Signature:** `public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName)`
 - **Summary:** Returns a new instance of {@code DBLock} for implementing global locks using a database table.
@@ -8004,150 +8007,170 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given callable within a transaction and returns its result.
 - **Contract:**
-  - If the callable completes successfully, the transaction is committed.
-  - If an exception occurs, the transaction is rolled back.
+  - The transaction is committed if the callable completes normally; it is rolled back if the callable throws any exception.
+  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread when this method is invoked, the callable participates in that existing transaction (the reference count is incremented).
+  - </p> <p> <b> Spring integration: </b> When Spring's transaction management is active, this method automatically participates in an existing Spring-managed transaction rather than creating a new one, in the same way as {@link #beginTransaction(javax.sql.DataSource)} .
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
-  - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute within the transaction
-- **Returns:** the result of the callable execution
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+  - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute within the transaction, must not be {@code null}
+- **Returns:** the result returned by {@code cmd}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the callable throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+- **See also:** #runInTransaction(javax.sql.DataSource, Throwables.Runnable), #beginTransaction(javax.sql.DataSource)
 - **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given function within a transaction, providing the transaction's connection.
+- **Summary:** Executes the given function within a transaction, passing the transaction's {@link Connection} as an argument, and returns its result.
 - **Contract:**
-  - If the function completes successfully, the transaction is committed.
-  - If an exception occurs, the transaction is rolled back.
+  - The transaction is committed if the function completes normally; it is rolled back if the function throws any exception.
+  - <p> Use this overload when the callable logic needs direct access to the {@link Connection} (e.g., to create {@link java.sql.PreparedStatement} s manually or call APIs that require a {@link Connection} parameter).
+  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the function participates in that existing transaction.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
-  - `cmd` (`Throwables.Function<Connection, T, E>`) — the function to execute with the transaction's connection
-- **Returns:** the result of the function execution
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+  - `cmd` (`Throwables.Function<Connection, T, E>`) — the function to execute with the transaction's {@link Connection} , must not be {@code null} ; the connection must not be closed by the caller
+- **Returns:** the result returned by {@code cmd}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the function throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+- **See also:** #runInTransaction(javax.sql.DataSource, Throwables.Consumer), #callInTransaction(javax.sql.DataSource, Throwables.Callable)
 ##### runInTransaction(...) -> void
 - **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given runnable within a transaction.
 - **Contract:**
-  - If the runnable completes successfully, the transaction is committed.
-  - If an exception occurs, the transaction is rolled back.
+  - The transaction is committed if the runnable completes normally; it is rolled back if the runnable throws any exception.
+  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the runnable participates in that existing transaction (the reference count is incremented).
+  - </p> <p> <b> Spring integration: </b> When Spring's transaction management is active, this method automatically participates in an existing Spring-managed transaction.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
-  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute within the transaction
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute within the transaction, must not be {@code null}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the runnable throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+- **See also:** #callInTransaction(javax.sql.DataSource, Throwables.Callable), #beginTransaction(javax.sql.DataSource)
 - **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given consumer within a transaction, providing the transaction's connection.
+- **Summary:** Executes the given consumer within a transaction, passing the transaction's {@link Connection} as an argument.
 - **Contract:**
-  - If the consumer completes successfully, the transaction is committed.
-  - If an exception occurs, the transaction is rolled back.
+  - The transaction is committed if the consumer completes normally; it is rolled back if the consumer throws any exception.
+  - <p> Use this overload when the transactional logic needs direct access to the {@link Connection} (e.g., to call APIs that require a {@link Connection} parameter).
+  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the consumer participates in that existing transaction.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource for the transaction
-  - `cmd` (`Throwables.Consumer<Connection, E>`) — the consumer to execute with the transaction's connection
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} for the transaction, must not be {@code null}
+  - `cmd` (`Throwables.Consumer<Connection, E>`) — the consumer to execute with the transaction's {@link Connection} , must not be {@code null} ; the connection must not be closed by the caller
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the consumer throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating)
+- **See also:** #callInTransaction(javax.sql.DataSource, Throwables.Function), #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
 ##### callOutsideTransaction(...) -> T
 - **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given callable outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given callable outside any active transaction bound to {@code ds} on the current thread, and returns its result.
 - **Contract:**
-  - If a transaction is active in the current thread, a new connection (not part of the transaction) will be used to execute the callable.
+  - When {@code cmd} finishes (normally or exceptionally) the original transaction is restored.
+  - If another transaction is opened and not closed inside {@code cmd} , an {@link IllegalStateException} is thrown.
+  - </li> </ul> <p> This is useful for operations that must be committed immediately and independently of any surrounding transaction \\u2014 for example, writing an audit log entry or updating a status flag that should survive even if the outer transaction is later rolled back.
+  - </p> <p> <b> Spring integration: </b> When running inside a Spring-managed transaction context, Spring's transaction participation is also temporarily disabled for the duration of {@code cmd} , so the callable does not join any Spring {@code @Transactional} transaction either.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Persist an audit record that must not be rolled back with the main transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { orderDao.save(order); // part of tran String auditId = JdbcUtil.callOutsideTransaction(dataSource, () -> { // Runs on a separate connection; committed independently of 'tran' return auditDao.insertAndReturnId("ORDER_CREATED", order.getId()); }); tran.commit(); } finally { tran.rollbackIfNotCommitted(); } // No active transaction \\u2014 runs directly with a fresh connection String token = JdbcUtil.callOutsideTransaction(dataSource, () -> tokenStore.generateAndPersist(userId)); } </pre>
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute outside any transaction
-- **Returns:** the result of the callable execution
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}
+  - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute outside any active transaction, must not be {@code null}
+- **Returns:** the result returned by {@code cmd}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the callable throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
+- **See also:** #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), SqlTransaction#callOutsideTransaction(Throwables.Callable)
 - **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given function outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given function outside any active transaction bound to {@code ds} on the current thread, passing {@code ds} as an argument, and returns its result.
 - **Contract:**
-  - <p> <b> Note: </b> When obtaining a raw {@link Connection} from the DataSource within the function, the caller is responsible for closing the connection to avoid resource leaks.
+  - The original transaction is restored when {@code cmd} finishes.
+  - </li> </ul> <p> <b> Note: </b> Any {@link Connection} obtained directly from {@code ds} inside {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid connection-pool leaks.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any transaction
-- **Returns:** the result of the function execution
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}
+  - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any active transaction, must not be {@code null}
+- **Returns:** the result returned by {@code cmd}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the function throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
+- **See also:** #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable), #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)
 ##### runOutsideTransaction(...) -> void
 - **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given runnable outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given runnable outside any active transaction bound to {@code ds} on the current thread.
 - **Contract:**
-  - If a transaction is active in the current thread, a new connection (not part of the transaction) will be used to execute the runnable.
+  - The original transaction is restored when {@code cmd} finishes (normally or exceptionally).
+  - </li> </ul> <p> Typical use cases include writing records that must survive a potential outer rollback (e.g., error logs, audit events, distributed-lock releases) and refreshing caches or external systems that should not be deferred until the outer transaction commits.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Log an event that should persist even if the enclosing transaction rolls back SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { inventoryDao.reserve(itemId, qty); // part of tran JdbcUtil.runOutsideTransaction(dataSource, () -> { // Committed immediately on a separate connection; survives 'tran' rollback eventBus.persistEvent("RESERVATION_ATTEMPTED", itemId); }); tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } </pre>
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any transaction
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}
+  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any active transaction, must not be {@code null}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the runnable throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
+- **See also:** #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable), SqlTransaction#runOutsideTransaction(Throwables.Runnable)
 - **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given consumer outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given consumer outside any active transaction bound to {@code ds} on the current thread, passing {@code ds} as an argument.
 - **Contract:**
-  - <p> <b> Note: </b> When obtaining a raw {@link Connection} from the DataSource within the consumer, the caller is responsible for closing the connection to avoid resource leaks.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.runOutsideTransaction(dataSource, ds -> { // Use the DataSource for non-transactional operations try (Connection conn = ds.getConnection()) { // Perform operations that should not be part of current transaction } }); } </pre>
+  - </li> </ul> <p> <b> Note: </b> Any {@link Connection} obtained directly from {@code ds} inside {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid connection-pool leaks.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any transaction
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}
+  - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any active transaction, must not be {@code null}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the consumer throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
+- **See also:** #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
 ##### callNotInStartedTransaction(...) -> T
 - **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Callable<T, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given callable outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given callable outside any active transaction for the specified DataSource and returns its result.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute outside any transaction
-- **Returns:** the result of the callable execution
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}
+  - `cmd` (`Throwables.Callable<T, E>`) — the callable to execute outside any active transaction, must not be {@code null}
+- **Returns:** the result returned by {@code cmd}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the callable throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
 - **Signature:** `@Deprecated @Beta public static <T, E extends Throwable> T callNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given function outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given function outside any active transaction for the specified DataSource, passing {@code ds} as an argument, and returns its result.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any transaction
-- **Returns:** the result of the function execution
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}
+  - `cmd` (`Throwables.Function<javax.sql.DataSource, T, E>`) — the function to execute outside any active transaction, must not be {@code null}
+- **Returns:** the result returned by {@code cmd}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the function throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
 ##### runNotInStartedTransaction(...) -> void
 - **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E`
 - **Summary:** Executes the given runnable outside any active transaction for the specified DataSource.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any transaction
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}
+  - `cmd` (`Throwables.Runnable<E>`) — the runnable to execute outside any active transaction, must not be {@code null}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the runnable throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
 - **Signature:** `@Deprecated @Beta public static <E extends Throwable> void runNotInStartedTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E`
-- **Summary:** Executes the given consumer outside any active transaction for the specified DataSource.
+- **Summary:** Executes the given consumer outside any active transaction for the specified DataSource, passing {@code ds} as an argument.
 - **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — the DataSource to use
-  - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any transaction
+  - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}
+  - `cmd` (`Throwables.Consumer<javax.sql.DataSource, E>`) — the consumer to execute outside any active transaction, must not be {@code null}
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if dataSource or cmd is null
-  - `E` — if the consumer throws an exception
+  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null}
+  - `E` — if {@code cmd} throws an exception
 ##### runWithoutUsingSpringTransaction(...) -> void
 - **Signature:** `public static <E extends Exception> void runWithoutUsingSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E`
-- **Summary:** Executes the given runnable without using Spring transaction management.
+- **Summary:** Executes the given runnable with Spring's transaction management temporarily disabled for the current thread.
 - **Contract:**
-  - Note: The action should not be executed in another thread as the flag is thread-local.
+  - <p> When this library is used inside a Spring application, JDBC connections are normally obtained via {@code DataSourceUtils.getConnection()} , which participates in any Spring-managed ( {@code @Transactional} ) transaction that is active on the calling thread.
+  - </p> <p> <b> No-op when Spring is absent: </b> if Spring's framework classes are not on the classpath, or if Spring transaction management is already disabled on this thread, the runnable is executed directly without any flag manipulation.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Inside a Spring @Transactional service method, perform one operation // that must use its own fresh connection rather than the Spring-managed one @Transactional public void processOrder(Order order) { orderRepository.save(order); // uses Spring transaction JdbcUtil.runWithoutUsingSpringTransaction(() -> { // Acquires a fresh connection; NOT part of the Spring transaction above auditDao.recordImmediately("ORDER_PROCESSING_STARTED", order.getId()); }); } } </pre>
 - **Parameters:**
-  - `sqlAction` (`Throwables.Runnable<E>`) — the runnable to execute without Spring transaction
+  - `sqlAction` (`Throwables.Runnable<E>`) — the runnable to execute with Spring transaction participation disabled, must not be {@code null} ; must not be dispatched to another thread
 - **Throws:**
-  - `E` — if the runnable throws an exception
+  - `E` — if {@code sqlAction} throws an exception
+- **See also:** #callWithoutUsingSpringTransaction(Throwables.Callable), #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
 ##### callWithoutUsingSpringTransaction(...) -> R
 - **Signature:** `public static <R, E extends Exception> R callWithoutUsingSpringTransaction(final Throwables.Callable<R, E> sqlAction) throws E`
-- **Summary:** Executes the given callable without using Spring transaction management and returns its result.
-- **Contract:**
-  - Note: The action should not be executed in another thread as the flag is thread-local.
+- **Summary:** Executes the given callable with Spring's transaction management temporarily disabled for the current thread, and returns its result.
 - **Parameters:**
-  - `sqlAction` (`Throwables.Callable<R, E>`) — the callable to execute without Spring transaction
-- **Returns:** the result of the callable
+  - `sqlAction` (`Throwables.Callable<R, E>`) — the callable to execute with Spring transaction participation disabled, must not be {@code null} ; must not be dispatched to another thread
+- **Returns:** the result returned by {@code sqlAction}
 - **Throws:**
-  - `E` — if the callable throws an exception
+  - `E` — if {@code sqlAction} throws an exception
+- **See also:** #runWithoutUsingSpringTransaction(Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
 ##### setIdExtractorForDao(...) -> void
 - **Signature:** `public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao( final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException`
 - **Summary:** Sets the ID extractor for the specified DAO interface.
@@ -8171,7 +8194,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `@SuppressWarnings("rawtypes") public static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds)`
 - **Summary:** Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.
 - **Contract:**
-  - ORDER BY created_at DESC") List<User> findByStatus(String status); @NamedSelect("SELECT * FROM users WHERE age >= :minAge AND city = :city") Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User("john@example.com", "John Doe"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail("john@example.com"); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus("ACTIVE"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) { long count = stream .filter(u -> u.getEmail().endsWith("@company.com")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus("INACTIVE"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> { // Aggregate queries @Select("SELECT COUNT(*) FROM orders WHERE status = ?") long countByStatus(String status); @Select("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @NamedSelect("findOrdersWithCustomerDetails") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start); // Async operations @Select("SELECT * FROM orders WHERE id = ?") CompletableFuture<Optional<Order>> findByIdAsync(Long id); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus("PENDING"); // Async operations CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId); future.thenAccept(order -> { order.ifPresent(o -> System.out.println("Order: " + o.getId())); }); } </pre>
+  - ORDER BY created_at DESC") List<User> findByStatus(String status); @Query("SELECT * FROM users WHERE age >= :minAge AND city = :city") Stream<User> findByAgeAndCity(@Bind("minAge") int minAge, @Bind("city") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User("john@example.com", "John Doe"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail("john@example.com"); if (user.isPresent()) { System.out.println("Found: " + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus("ACTIVE"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, "New York")) { long count = stream .filter(u -> u.getEmail().endsWith("@company.com")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus("INACTIVE"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> { // Aggregate queries @Query("SELECT COUNT(*) FROM orders WHERE status = ?") long countByStatus(String status); @Query("SELECT SUM(total_amount) FROM orders WHERE customer_id = ?") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @Query(id = "findOrdersWithCustomerDetails") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind("startDate") Date start); // Async operations @Query("SELECT * FROM orders WHERE id = ?") CompletableFuture<Optional<Order>> findByIdAsync(Long id); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus("PENDING"); // Async operations CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId); future.thenAccept(order -> { order.ifPresent(o -> System.out.println("Order: " + o.getId())); }); } </pre>
 - **Parameters:**
   - `daoInterface` (`Class<TD>`) — the DAO interface class to implement, must not be {@code null} . The interface should extend {@link Dao} or {@link CrudDao} and define the entity type and ID type
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
@@ -10127,7 +10150,7 @@ A JDBC wrapper class that provides named parameter support for SQL queries, simi
 - **See also:** #setParameters(Object), #addBatchParameters(Collection), #addBatch()
 
 ### Enum OP (com.landawn.abacus.jdbc.OP)
-Enum representing various database operations that can be performed through {@link AbstractQuery} .
+Execution modes understood by {@link AbstractQuery} and {@link com.landawn.abacus.jdbc.annotation.Query} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10142,7 +10165,7 @@ Enum representing various database operations that can be performed through {@li
 - (none)
 
 ### Enum OnDeleteAction (com.landawn.abacus.jdbc.OnDeleteAction)
-Represents foreign key constraint actions that can be performed when a referenced row is deleted.
+Deprecated enum mirroring common database {@code ON DELETE} actions.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10169,7 +10192,7 @@ Represents foreign key constraint actions that can be performed when a reference
 - **Returns:** the integer value representing this delete action: {@code NO_ACTION=0} , {@code SET_NULL=1} , or {@code CASCADE=2}
 
 ### Class PreparedQuery (com.landawn.abacus.jdbc.PreparedQuery)
-A wrapper class for {@link PreparedStatement} that provides a fluent API for executing parameterized SQL queries.
+Fluent wrapper around a {@link PreparedStatement} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10184,7 +10207,7 @@ A wrapper class for {@link PreparedStatement} that provides a fluent API for exe
 - (none)
 
 ### Enum Propagation (com.landawn.abacus.jdbc.Propagation)
-Enumeration that represents transaction propagation behaviors.
+Transaction participation policies used by {@link com.landawn.abacus.jdbc.annotation.Transactional} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10198,8 +10221,42 @@ Enumeration that represents transaction propagation behaviors.
 #### Public Instance Methods
 - (none)
 
+### Class SpringApplicationContext (com.landawn.abacus.jdbc.SpringApplicationContext)
+A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- (none)
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+##### <init>(...) -> void
+- **Signature:** `public SpringApplicationContext()`
+- **Summary:** Constructs a new {@code SpringApplicationContext} .
+- **Parameters:**
+  - (none)
+##### getBean(...) -> Object
+- **Signature:** `public Object getBean(final String name)`
+- **Summary:** Retrieves a bean from the Spring ApplicationContext by its name.
+- **Parameters:**
+  - `name` (`String`) — the name of the bean to retrieve
+- **Returns:** the bean instance, or {@code null} if the ApplicationContext is not initialized
+- **See also:** ApplicationContext#getBean(String)
+- **Signature:** `public <T> T getBean(final Class<T> requiredType)`
+- **Summary:** Retrieves a bean from the Spring ApplicationContext by its type.
+- **Contract:**
+  - This method returns a single bean of the specified type if exactly one exists in the context.
+- **Parameters:**
+  - `requiredType` (`Class<T>`) — the class object representing the type of bean to retrieve
+- **Returns:** the bean instance, or {@code null} if the ApplicationContext is not initialized
+- **See also:** ApplicationContext#getBean(Class)
+
 ### Class SqlTransaction (com.landawn.abacus.jdbc.SqlTransaction)
-Represents a SQL transaction that manages database transaction lifecycle and connection state.
+Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10347,7 +10404,7 @@ Represents a SQL transaction that manages database transaction lifecycle and con
 - **Returns:** a string representation of this transaction
 
 ### Interface Transaction (com.landawn.abacus.jdbc.Transaction)
-Represents a database transaction that provides methods for managing transactional operations.
+Minimal contract for a JDBC transaction managed by this library.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10660,7 +10717,7 @@ Provides DAO-level configuration options that affect query generation and execut
 - **Summary:** Controls whether to automatically add LIMIT clause to single-result query methods.
 - **Contract:**
   - When {@code true} , methods that return a single result will have {@code LIMIT 1} (or equivalent) added to their SQL queries for better performance.
-  - <p> Single query methods include: </p> <ul> <li> {@code queryForSingleXxx()} methods </li> <li> {@code queryForUniqueResult()} </li> <li> {@code findFirst()} </li> <li> {@code findOnlyOne()} </li> <li> {@code exists()} </li> <li> {@code count()} (when not using COUNT in SQL) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(addLimitForSingleQuery = true) public interface ProductDao extends CrudDao<Product, Long> { @Query("SELECT * FROM products WHERE code = :code") Product findByCode(@Bind("code") String code); // Executed as: SELECT * FROM products WHERE code = ?
+  - <p> Single query methods include: </p> <ul> <li> {@code queryForSingleXxx()} methods </li> <li> {@code queryForUniqueValue()} </li> <li> {@code findFirst()} </li> <li> {@code findOnlyOne()} </li> <li> {@code exists()} </li> <li> {@code count()} (when not using COUNT in SQL) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(addLimitForSingleQuery = true) public interface ProductDao extends CrudDao<Product, Long> { @Query("SELECT * FROM products WHERE code = :code") Product findByCode(@Bind("code") String code); // Executed as: SELECT * FROM products WHERE code = ?
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} to auto-add LIMIT clause, {@code false} otherwise
@@ -10871,7 +10928,7 @@ Marks methods in DAO interfaces that should not be treated as database operation
 - (none)
 
 ### Annotation OnDelete (com.landawn.abacus.jdbc.annotation.OnDelete)
-Specifies cascading delete behavior for entity relationships.
+Deprecated metadata placeholder for delete-cascade behavior.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10894,7 +10951,7 @@ Specifies cascading delete behavior for entity relationships.
 - **Returns:** the delete action, defaults to {@link OnDeleteAction#NO_ACTION}
 
 ### Annotation OutParameter (com.landawn.abacus.jdbc.annotation.OutParameter)
-Declares an output parameter for stored procedure calls.
+Declares an {@code OUT} or {@code INOUT} parameter for a stored-procedure DAO method.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10937,7 +10994,7 @@ Declares an output parameter for stored procedure calls.
 - **See also:** Types
 
 ### Annotation OutParameterList (com.landawn.abacus.jdbc.annotation.OutParameterList)
-Container annotation for multiple {@link OutParameter} annotations on a single method.
+Container annotation for repeatable {@link OutParameter} declarations.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10959,7 +11016,7 @@ Container annotation for multiple {@link OutParameter} annotations on a single m
 - **Returns:** array of OutParameter annotations defining the output parameters
 
 ### Annotation PerfLog (com.landawn.abacus.jdbc.annotation.PerfLog)
-Enables performance logging for SQL operations and DAO methods.
+Enables SQL and DAO-method performance logging.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -10993,16 +11050,15 @@ Enables performance logging for SQL operations and DAO methods.
 - **Returns:** the minimum execution time in milliseconds for DAO operation logging
 ##### filter(...) -> String\[\]
 - **Signature:** `String[] filter() default { ".*" }`
-- **Summary:** Specifies filter patterns for methods when the annotation is applied at the class level.
+- **Summary:** Specifies the type-level method-name filter.
 - **Contract:**
-  - Specifies filter patterns for methods when the annotation is applied at the class level.
-  - </p> <p> This filter is ignored when the annotation is applied at the method level.
+  - <p> Each entry matches when it is contained in the method name ignoring case, or when it matches the full method name as a regular expression.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns (default matches all methods)
 
 ### Annotation PrefixFieldMapping (com.landawn.abacus.jdbc.annotation.PrefixFieldMapping)
-Maps database column prefixes to object field paths for result set mapping.
+Maps prefixed column aliases to nested target paths during row mapping.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11024,7 +11080,7 @@ Maps database column prefixes to object field paths for result set mapping.
 - **Returns:** the prefix-to-field mapping string, or empty string if using default mapping
 
 ### Annotation Query (com.landawn.abacus.jdbc.annotation.Query)
-Defines a generic SQL query operation for a DAO method.
+Declares how a DAO method should execute SQL.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11142,7 +11198,7 @@ Defines a generic SQL query operation for a DAO method.
 - **See also:** #isBatch(), JdbcUtil#DEFAULT_BATCH_SIZE
 
 ### Annotation RefreshCache (com.landawn.abacus.jdbc.annotation.RefreshCache)
-Controls cache refresh behavior for DAO methods that modify data.
+Triggers cache invalidation after matching DAO methods complete.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11162,17 +11218,15 @@ Controls cache refresh behavior for DAO methods that modify data.
 - **Returns:** {@code true} to disable cache refresh, {@code false} to enable it (default)
 ##### filter(...) -> String\[\]
 - **Signature:** `String[] filter() default { "update", "delete", "deleteById", "insert", "save", "add", "remove", "upsert", "batchUpdate", "batchDelete", "batchDeleteByIds", "batchInsert", "batchSave", "batchAdd", "batchRemove", "batchUpsert", "execute" }`
-- **Summary:** Specifies filter patterns for methods when the annotation is applied at the class level.
+- **Summary:** Specifies the type-level method-name filter.
 - **Contract:**
-  - Specifies filter patterns for methods when the annotation is applied at the class level.
-  - A method matches if its name starts with a filter entry, or if the entry matches the full method name as a regex.
-  - </p> <p> This filter is ignored when the annotation is applied at the method level.
+  - <p> Each entry matches when the method name starts with that entry or when the entry matches the full method name as a regular expression.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns for method names that should trigger cache refresh
 
 ### Annotation SqlFragment (com.landawn.abacus.jdbc.annotation.SqlFragment)
-Defines a query template variable for dynamic query construction.
+Performs SQL template substitution for one query fragment.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11195,7 +11249,7 @@ Defines a query template variable for dynamic query construction.
 - **Returns:** the query template variable name, or empty string if using the parameter name
 
 ### Annotation SqlFragmentList (com.landawn.abacus.jdbc.annotation.SqlFragmentList)
-Defines a named query template variable from a collection or array parameter.
+Joins a collection or array into a comma-separated SQL fragment.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11218,7 +11272,7 @@ Defines a named query template variable from a collection or array parameter.
 - **Returns:** the name of the query template variable, or empty string if using the parameter name
 
 ### Annotation SqlLogEnabled (com.landawn.abacus.jdbc.annotation.SqlLogEnabled)
-Controls SQL statement logging for DAO methods or classes.
+Enables or disables SQL logging for a DAO method or DAO type.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11249,16 +11303,15 @@ Controls SQL statement logging for DAO methods or classes.
 - **Returns:** the maximum number of characters to include from SQL statements in logs
 ##### filter(...) -> String\[\]
 - **Signature:** `String[] filter() default { ".*" }`
-- **Summary:** Specifies filter patterns for methods when the annotation is applied at the class level.
+- **Summary:** Specifies the type-level method-name filter.
 - **Contract:**
-  - Specifies filter patterns for methods when the annotation is applied at the class level.
-  - </p> <p> This filter is ignored when the annotation is applied at the method level.
+  - <p> Each entry matches when it is contained in the method name ignoring case, or when it matches the full method name as a regular expression.
 - **Parameters:**
   - (none)
 - **Returns:** array of filter patterns (default matches all methods)
 
 ### Annotation SqlScript (com.landawn.abacus.jdbc.annotation.SqlScript)
-Marks a {@code static final String} field (typically inside a DAO interface's nested helper class) as an embeddable SQL script that can be referenced by {@code @Query(id = "...")} .
+Marks a {@code static final String} field as a named SQL script.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11281,7 +11334,7 @@ Marks a {@code static final String} field (typically inside a DAO interface's ne
 - **Returns:** the identifier used by {@link Query#id()} ; empty means the annotated field name is used
 
 ### Annotation SqlSource (com.landawn.abacus.jdbc.annotation.SqlSource)
-Associates a DAO interface with an external SQL mapper XML file.
+Associates a DAO interface with an external SQL mapper resource.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11304,7 +11357,7 @@ Associates a DAO interface with an external SQL mapper XML file.
 - **Returns:** the classpath-relative path to the SQL mapper XML file.
 
 ### Annotation Transactional (com.landawn.abacus.jdbc.annotation.Transactional)
-Declares transaction boundaries for DAO methods.
+Declares transaction settings for a DAO method managed by the Abacus JDBC proxy.
 
 **Thread-safety:** unspecified
 **Nullability:** unspecified
@@ -11373,7 +11426,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
   - `entityToInsert` (`T`) — the entity to insert (must not be null)
 - **Returns:** the ID of the inserted entity (either database-generated or entity-provided)
 - **Throws:**
-  - `java.sql.SQLException` — if a database access error occurs or the entity is null
+  - `java.sql.SQLException` — if a database access error occurs
 - **Signature:** `ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws SQLException`
 - **Summary:** Inserts the specified entity with only the specified properties.
 - **Contract:**
@@ -11601,8 +11654,8 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForBytes()
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `<V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `<V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single value of the specified type from a property of the entity with the specified ID.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -11611,7 +11664,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Returns:** a Nullable containing the value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleResult(Class)
+- **See also:** AbstractQuery#queryForSingleValue(Class)
 ##### queryForSingleNonNull(...) -> Optional<V>
 - **Signature:** `<V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single non-null value of the specified type from a property of the entity.
@@ -11635,12 +11688,12 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForSingleNonNull(Class)
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `<V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single result of the specified type.
 - **Contract:**
   - Throws DuplicateResultException if more than one record is found.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class); // Throws DuplicateResultException if multiple records found } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueValue("email", userId, String.class); // Throws DuplicateResultException if multiple records found } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
@@ -11649,7 +11702,7 @@ The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete)
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record found by the specified {@code id}
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueResult(Class)
+- **See also:** AbstractQuery#queryForUniqueValue(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
 - **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null result of the specified type.
@@ -12186,8 +12239,8 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
 - **Returns:** a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws SQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single value of the specified type from a property of the entity with the specified ID.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -12217,12 +12270,12 @@ A specialized CrudDao interface that uses {@code Long} as the ID type.
 - **Returns:** an Optional containing the mapped non-null value if found, otherwise empty
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single result of the specified type.
 - **Contract:**
   - Throws DuplicateResultException if more than one record is found.
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult("email", 123L, String.class); // Throws DuplicateResultException if multiple records found } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueValue("email", 123L, String.class); // Throws DuplicateResultException if multiple records found } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`long`) — the primitive long ID of the entity
@@ -13332,8 +13385,8 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** Nullable containing the byte array
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `<V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `<V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single value of the specified type from a column.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -13342,7 +13395,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** Nullable containing the value
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleResult(Class)
+- **See also:** AbstractQuery#queryForSingleValue(Class)
 ##### queryForSingleNonNull(...) -> Optional<V>
 - **Signature:** `<V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException`
 - **Summary:** Queries for a single non-null value of the specified type.
@@ -13366,12 +13419,12 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Throws:**
   - `java.sql.SQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForSingleNonNull(Class)
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `<V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique single value, throwing if multiple rows found.
 - **Contract:**
   - Queries for a unique single value, throwing if multiple rows found.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueResult( "email", Filters.eq("username", "john_doe"), String.class ); // Throws DuplicateResultException if multiple users have this username } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueValue( "email", Filters.eq("username", "john_doe"), String.class ); // Throws DuplicateResultException if multiple users have this username } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `cond` (`Condition`) — the search condition
@@ -13380,7 +13433,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one row matches
   - `java.sql.SQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueResult(Class)
+- **See also:** AbstractQuery#queryForUniqueValue(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
 - **Signature:** `<V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException`
 - **Summary:** Queries for a unique non-null single value, throwing if multiple rows found.
@@ -14821,7 +14874,6 @@ DAO that disables update and delete operations while allowing read and insert op
 - **Summary:** Prepares a SQL query with support for auto-generated keys retrieval.
 - **Contract:**
   - <p> When {@code generateKeys} is {@code true} , the prepared statement is configured to return auto-generated keys after executing an {@code INSERT} .
-  - </p> <p> <b> Usage Example: </b> </p> <pre> {@code Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", true) .setString(1, "John Doe") .setString(2, "john@example.com") .insert() .orElse(null); if (generated != null) { long generatedId = generated.getLong(1); } } </pre>
 - **Parameters:**
   - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
   - `generateKeys` (`boolean`) — {@code true} to enable retrieval of auto-generated keys
@@ -14844,7 +14896,6 @@ DAO that disables update and delete operations while allowing read and insert op
 - **Summary:** Prepares a SQL query with specific column names for auto-generated key retrieval.
 - **Contract:**
   - This is the most readable approach for specifying which auto-generated columns should be returned after an {@code INSERT} operation.
-  - </p> <p> <b> Usage Example: </b> </p> <pre> {@code Row generated = dao.prepareQuery("INSERT INTO users (name, email) VALUES (?, ?)", new String\[\] {"id", "created_timestamp"}) .setString(1, "Jane Doe") .setString(2, "jane@example.com") .insert() .orElse(null); if (generated != null) { long id = generated.getLong("id"); Timestamp created = generated.getTimestamp("created_timestamp"); } } </pre>
 - **Parameters:**
   - `query` (`String`) — the SQL query string to prepare (must be {@code SELECT} or {@code INSERT} )
   - `returnColumnNames` (`String[]`) — an array of column names indicating which auto-generated columns should be returned from the inserted row
@@ -15567,7 +15618,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
   - `entityToInsert` (`T`) — the entity to insert (must not be null)
 - **Returns:** the generated ID of the inserted entity
 - **Throws:**
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs or the entity is null
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **Signature:** `@Override ID insert(final T entityToInsert, final Collection<String> propNamesToInsert) throws UncheckedSQLException`
 - **Summary:** Inserts the specified entity with only the specified properties.
 - **Contract:**
@@ -15795,11 +15846,11 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForBytes()
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `@Override <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `@Override <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable<V>} describing the value of a single property for the entity with the specified ID, converted to the specified target type.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<BigDecimal> price = userDao.queryForSingleResult("price", productId, BigDecimal.class); if (price.isPresent()) { applyDiscount(price.get()); } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<BigDecimal> price = userDao.queryForSingleValue("price", productId, BigDecimal.class); if (price.isPresent()) { applyDiscount(price.get()); } } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
@@ -15807,7 +15858,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Returns:** a Nullable containing the converted value, or Nullable.empty() if no record exists
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleResult(Class)
+- **See also:** AbstractQuery#queryForSingleValue(Class)
 ##### queryForSingleNonNull(...) -> Optional<V>
 - **Signature:** `@Override <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
@@ -15829,12 +15880,12 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** #queryForSingleNonNull(String, Object, Class)
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `@Override <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
 - **Contract:**
   - Throws {@code DuplicateResultException} if more than one record is found.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Assuming email should be unique per user Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class); } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code // Assuming email should be unique per user Nullable<String> email = userDao.queryForUniqueValue("email", userId, String.class); } </pre>
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
   - `id` (`ID`) — the entity ID
@@ -15843,7 +15894,7 @@ The UncheckedCrudDao interface provides comprehensive CRUD (Create, Read, Update
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueResult(Class)
+- **See also:** AbstractQuery#queryForUniqueValue(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
 - **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
@@ -16388,8 +16439,8 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
 - **Returns:** a Nullable containing the byte array value if found, or Nullable.empty() if no record exists
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `@Override default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws UncheckedSQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `@Override default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws UncheckedSQLException`
 - **Summary:** Queries for a single value of the specified type from a property of the entity with the specified ID.
 - **Parameters:**
   - `singleSelectPropName` (`String`) — the property name to select
@@ -16419,8 +16470,8 @@ A specialized CrudDao interface that uses {@code Long} as the ID type with unche
 - **Returns:** an Optional containing the mapped non-null value if found, otherwise empty
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `@Override default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `@Override default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Queries for a unique single result of the specified type.
 - **Contract:**
   - Throws DuplicateResultException if more than one record is found.
@@ -17263,8 +17314,8 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** AbstractQuery#queryForBytes()
-##### queryForSingleResult(...) -> Nullable<V>
-- **Signature:** `@Override <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws UncheckedSQLException`
+##### queryForSingleValue(...) -> Nullable<V>
+- **Signature:** `@Override <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, converted to the specified target type.
 - **Contract:**
   - Returns a {@code Nullable<V>} describing the value in the first row/column if it exists, converted to the specified target type.
@@ -17275,7 +17326,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Returns:** a Nullable containing the converted value, or empty if no match found
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForSingleResult(Class)
+- **See also:** AbstractQuery#queryForSingleValue(Class)
 ##### queryForSingleNonNull(...) -> Optional<V>
 - **Signature:** `@Override <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the non-null value in the first row/column if it exists.
@@ -17299,8 +17350,8 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Throws:**
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
 - **See also:** #queryForSingleNonNull(String, Condition, Class)
-##### queryForUniqueResult(...) -> Nullable<V>
-- **Signature:** `@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
+##### queryForUniqueValue(...) -> Nullable<V>
+- **Signature:** `@Override <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns a {@code Nullable} describing the value in the first row/column if it exists.
 - **Contract:**
   - Returns a {@code Nullable} describing the value in the first row/column if it exists.
@@ -17313,7 +17364,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base DAO in
 - **Throws:**
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record is found
   - `com.landawn.abacus.exception.UncheckedSQLException` — if a database access error occurs
-- **See also:** AbstractQuery#queryForUniqueResult(Class)
+- **See also:** AbstractQuery#queryForUniqueValue(Class)
 ##### queryForUniqueNonNull(...) -> Optional<V>
 - **Signature:** `@Override <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException`
 - **Summary:** Returns an {@code Optional} describing the unique non-null value in the first row/column.

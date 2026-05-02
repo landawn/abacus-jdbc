@@ -558,7 +558,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", productId, BigDecimal.class);
+     * Nullable<BigDecimal> price = userDao.queryForSingleValue("price", productId, BigDecimal.class);
      * if (price.isPresent()) {
      *     applyDiscount(price.get());
      * }
@@ -570,15 +570,15 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param targetValueClass the class of the target value type
      * @return a Nullable containing the converted value, or Nullable.empty() if no record exists
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleResult(Class)
+     * @see AbstractQuery#queryForSingleValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
             throws UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
-     * Unlike queryForSingleResult, this method returns empty Optional for {@code null} values.
+     * Unlike queryForSingleValue, this method returns empty Optional for {@code null} values.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -629,7 +629,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Assuming email should be unique per user
-     * Nullable<String> email = userDao.queryForUniqueResult("email", userId, String.class);
+     * Nullable<String> email = userDao.queryForUniqueValue("email", userId, String.class);
      * }</pre>
      *
      * @param <V> the value type
@@ -639,10 +639,10 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return a Nullable containing the unique result value, or empty if no entity found
      * @throws DuplicateResultException if more than one record is found
      * @throws UncheckedSQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueResult(Class)
+     * @see AbstractQuery#queryForUniqueValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
+    <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
             throws DuplicateResultException, UncheckedSQLException;
 
     /**

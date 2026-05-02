@@ -288,10 +288,10 @@ public class DaoTest extends TestBase {
         final List<String> props = List.of("id", "name");
 
         Mockito.doReturn(pq).when(dao).prepareQuery(props, cond);
-        when(pq.configStmt(Mockito.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(pq);
+        when(pq.configureStatement(Mockito.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(pq);
 
         assertSame(pq, dao.prepareQueryForLargeResult(props, cond));
-        verify(pq).configStmt((Throwables.Consumer<? super PreparedStatement, ? extends SQLException>) DaoUtil.stmtSetterForBigQueryResult);
+        verify(pq).configureStatement((Throwables.Consumer<? super PreparedStatement, ? extends SQLException>) DaoUtil.stmtSetterForBigQueryResult);
     }
 
     @Test
@@ -455,10 +455,10 @@ public class DaoTest extends TestBase {
         final List<String> props = List.of("id");
 
         Mockito.doReturn(nq).when(dao).prepareNamedQuery(props, cond);
-        when(nq.configStmt(Mockito.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(nq);
+        when(nq.configureStatement(Mockito.<Throwables.Consumer<? super PreparedStatement, ? extends SQLException>> any())).thenReturn(nq);
 
         assertSame(nq, dao.prepareNamedQueryForLargeResult(props, cond));
-        verify(nq).configStmt((Throwables.Consumer<? super PreparedStatement, ? extends SQLException>) DaoUtil.stmtSetterForBigQueryResult);
+        verify(nq).configureStatement((Throwables.Consumer<? super PreparedStatement, ? extends SQLException>) DaoUtil.stmtSetterForBigQueryResult);
     }
 
     @Test

@@ -1,8 +1,8 @@
 {
   "library": {
     "name": "abacus-jdbc",
-    "version": "4.6.4",
-    "generated_at": "2026-03-15",
+    "version": "4.6.7",
+    "generated_at": "2026-05-02",
     "java_target": "17",
     "source": {
       "git_sha": "unknown"
@@ -5499,12 +5499,12 @@
               ]
             },
             {
-              "name": "configStmt",
+              "name": "configureStatement",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta public This configStmt(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException",
+              "signature": "@Beta public This configureStatement(final Throwables.Consumer<? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5531,12 +5531,12 @@
               "see_also": []
             },
             {
-              "name": "configStmt",
+              "name": "configureStatement",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Beta public This configStmt(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException",
+              "signature": "@Beta public This configureStatement(final Throwables.BiConsumer<? super This, ? super Stmt, ? extends SQLException> stmtSetter) throws IllegalArgumentException, SQLException",
               "return_type": "This",
               "type_params": [],
               "params": [
@@ -5968,12 +5968,12 @@
               "see_also": []
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Nullable<V> queryForSingleResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException",
+              "signature": "public <V> Nullable<V> queryForSingleValue(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -6013,12 +6013,12 @@
               "see_also": []
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Nullable<V> queryForSingleResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException",
+              "signature": "public <V> Nullable<V> queryForSingleValue(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -6154,12 +6154,12 @@
               "see_also": []
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Nullable<V> queryForUniqueResult(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException",
+              "signature": "public <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -6204,12 +6204,12 @@
               "see_also": []
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "public <V> Nullable<V> queryForUniqueResult(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException",
+              "signature": "public <V> Nullable<V> queryForUniqueValue(final Type<? extends V> targetValueType) throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -6945,11 +6945,12 @@
               "javadoc_summary": "Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.",
               "contract": [
                 "Executes a query and returns an {@code Optional} containing a map of column names to values if exactly one record is found.",
-                "If no rows or multiple rows are found, it throws an appropriate exception."
+                "<p> If the query returns no rows, the result is an empty {@code Optional} .",
+                "If the query returns more than one row, {@link DuplicateResultException} is thrown."
               ],
               "examples": [],
               "see_also": [
-                "#queryForUniqueResult(Class)",
+                "#queryForUniqueValue(Class)",
                 "#queryForUniqueNonNull(Class)"
               ]
             },
@@ -6997,7 +6998,7 @@
               ],
               "examples": [],
               "see_also": [
-                "#queryForUniqueResult(Class)",
+                "#queryForUniqueValue(Class)",
                 "#queryForUniqueNonNull(Class)"
               ]
             },
@@ -27002,7 +27003,7 @@
               ],
               "javadoc_summary": "Prepares a SQL query using a custom {@link PreparedStatement} creator.",
               "contract": [
-                "This method provides an extension point to customize the creation of the {@code PreparedStatement} , <p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.",
+                "<p> This method intelligently manages connections: if a transaction is active on the current thread (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support), the transactional connection is used.",
                 "Otherwise, a new connection is obtained from the {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed."
               ],
               "examples": [],
@@ -30495,21 +30496,21 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "The data source to get the connection from",
+                  "javadoc": "the data source to get the connection from",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "tableName",
                   "type": "String",
-                  "javadoc": "The name of the table to check",
+                  "javadoc": "the table name (optionally qualified); must not be blank",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [],
-              "javadoc_summary": "Checks if a table exists in the database.",
+              "javadoc_summary": "Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .",
               "contract": [
-                "Checks if a table exists in the database.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(ds, \"users\")) { System.out.println(\"Users table exists\"); } else { System.out.println(\"Users table does not exist\"); } } </pre>"
+                "If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} \\u2014 a SQL state from that query matching a known \"table not found\" code returns {@code false} ; any other SQL error is propagated.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(ds, \"users\")) { System.out.println(\"Users table exists\"); } else { System.out.println(\"Users table does not exist\"); } } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -30528,21 +30529,21 @@
                 {
                   "name": "conn",
                   "type": "Connection",
-                  "javadoc": "The database connection to use for checking table existence",
+                  "javadoc": "the database connection to use for checking table existence",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "tableName",
                   "type": "String",
-                  "javadoc": "The name of the table to check",
+                  "javadoc": "the table name (optionally qualified); must not be blank",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [],
-              "javadoc_summary": "Checks if a table exists in the database.",
+              "javadoc_summary": "Checks whether a table exists on the given {@link Connection} .",
               "contract": [
-                "Checks if a table exists in the database.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(connection, \"users\")) { System.out.println(\"Users table exists\"); } else { System.out.println(\"Users table does not exist\"); } } </pre>"
+                "If metadata lookup yields no match, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 &gt; 2} \\u2014 a SQL state from that query matching a known \"table not found\" code returns {@code false} ; any other SQL error is propagated.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.doesTableExist(connection, \"users\")) { System.out.println(\"Users table exists\"); } else { System.out.println(\"Users table does not exist\"); } } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -30561,27 +30562,28 @@
                 {
                   "name": "conn",
                   "type": "Connection",
-                  "javadoc": "The database connection to use for creating the table",
+                  "javadoc": "the database connection to use for creating the table",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "tableName",
                   "type": "String",
-                  "javadoc": "The name of the table to create",
+                  "javadoc": "the name of the table to create (optionally qualified); must not be blank",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "schema",
                   "type": "String",
-                  "javadoc": "The SQL schema definition (CREATE TABLE statement) for the table",
+                  "javadoc": "the SQL DDL statement (typically {@code CREATE TABLE ...} ) used to create the table",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [],
-              "javadoc_summary": "Creates a table if it does not already exist in the database.",
+              "javadoc_summary": "Creates a table if it does not already exist.",
               "contract": [
-                "Creates a table if it does not already exist in the database.",
-                "This method first checks if the table exists, and if not, executes the provided schema to create it."
+                "Creates a table if it does not already exist.",
+                "<p> The method first checks for existence via {@link #doesTableExist(Connection, String)} and only executes the supplied {@code schema} statement when the table is missing.",
+                "If the {@code CREATE} fails because the table was created concurrently by another process, this method returns {@code false} rather than rethrowing; any other SQL error is wrapped as {@link UncheckedSQLException} ."
               ],
               "examples": [],
               "see_also": []
@@ -30600,21 +30602,22 @@
                 {
                   "name": "conn",
                   "type": "Connection",
-                  "javadoc": "The database connection to use for dropping the table",
+                  "javadoc": "the database connection to use for dropping the table",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "tableName",
                   "type": "String",
-                  "javadoc": "The name of the table to drop",
+                  "javadoc": "the name of the table to drop (optionally qualified); must not be blank",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [],
-              "javadoc_summary": "Drops the specified table if it exists in the database.",
+              "javadoc_summary": "Drops the specified table if it exists.",
               "contract": [
-                "Drops the specified table if it exists in the database.",
-                "This method first checks if the table exists before attempting to drop it, preventing errors from trying to drop a non-existent table."
+                "Drops the specified table if it exists.",
+                "<p> The method first checks for existence via {@link #doesTableExist(Connection, String)} and only issues a {@code DROP TABLE} if the table is found.",
+                "If the drop itself fails because the table no longer exists (for example, a concurrent drop), the method returns {@code false} ; any other SQL error is wrapped and rethrown as {@link UncheckedSQLException} ."
               ],
               "examples": [],
               "see_also": []
@@ -32347,33 +32350,37 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource for the transaction",
+                  "javadoc": "the {@link javax.sql.DataSource} for the transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Callable<T, E>",
-                  "javadoc": "the callable to execute within the transaction",
+                  "javadoc": "the callable to execute within the transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the callable throws an exception"
+                  "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)"
                 }
               ],
               "javadoc_summary": "Executes the given callable within a transaction and returns its result.",
               "contract": [
-                "If the callable completes successfully, the transaction is committed.",
-                "If an exception occurs, the transaction is rolled back."
+                "The transaction is committed if the callable completes normally; it is rolled back if the callable throws any exception.",
+                "</p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread when this method is invoked, the callable participates in that existing transaction (the reference count is incremented).",
+                "</p> <p> <b> Spring integration: </b> When Spring's transaction management is active, this method automatically participates in an existing Spring-managed transaction rather than creating a new one, in the same way as {@link #beginTransaction(javax.sql.DataSource)} ."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#runInTransaction(javax.sql.DataSource, Throwables.Runnable)",
+                "#beginTransaction(javax.sql.DataSource)"
+              ]
             },
             {
               "name": "callInTransaction",
@@ -32402,33 +32409,37 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource for the transaction",
+                  "javadoc": "the {@link javax.sql.DataSource} for the transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Function<Connection, T, E>",
-                  "javadoc": "the function to execute with the transaction's connection",
+                  "javadoc": "the function to execute with the transaction's {@link Connection} , must not be {@code null} ; the connection must not be closed by the caller",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the function throws an exception"
+                  "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)"
                 }
               ],
-              "javadoc_summary": "Executes the given function within a transaction, providing the transaction's connection.",
+              "javadoc_summary": "Executes the given function within a transaction, passing the transaction's {@link Connection} as an argument, and returns its result.",
               "contract": [
-                "If the function completes successfully, the transaction is committed.",
-                "If an exception occurs, the transaction is rolled back."
+                "The transaction is committed if the function completes normally; it is rolled back if the function throws any exception.",
+                "<p> Use this overload when the callable logic needs direct access to the {@link Connection} (e.g., to create {@link java.sql.PreparedStatement} s manually or call APIs that require a {@link Connection} parameter).",
+                "</p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the function participates in that existing transaction."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#runInTransaction(javax.sql.DataSource, Throwables.Consumer)",
+                "#callInTransaction(javax.sql.DataSource, Throwables.Callable)"
+              ]
             },
             {
               "name": "runInTransaction",
@@ -32451,33 +32462,37 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource for the transaction",
+                  "javadoc": "the {@link javax.sql.DataSource} for the transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Runnable<E>",
-                  "javadoc": "the runnable to execute within the transaction",
+                  "javadoc": "the runnable to execute within the transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the runnable throws an exception"
+                  "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)"
                 }
               ],
               "javadoc_summary": "Executes the given runnable within a transaction.",
               "contract": [
-                "If the runnable completes successfully, the transaction is committed.",
-                "If an exception occurs, the transaction is rolled back."
+                "The transaction is committed if the runnable completes normally; it is rolled back if the runnable throws any exception.",
+                "</p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the runnable participates in that existing transaction (the reference count is incremented).",
+                "</p> <p> <b> Spring integration: </b> When Spring's transaction management is active, this method automatically participates in an existing Spring-managed transaction."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#callInTransaction(javax.sql.DataSource, Throwables.Callable)",
+                "#beginTransaction(javax.sql.DataSource)"
+              ]
             },
             {
               "name": "runInTransaction",
@@ -32500,33 +32515,37 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource for the transaction",
+                  "javadoc": "the {@link javax.sql.DataSource} for the transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Consumer<Connection, E>",
-                  "javadoc": "the consumer to execute with the transaction's connection",
+                  "javadoc": "the consumer to execute with the transaction's {@link Connection} , must not be {@code null} ; the connection must not be closed by the caller",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the consumer throws an exception"
+                  "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)"
                 }
               ],
-              "javadoc_summary": "Executes the given consumer within a transaction, providing the transaction's connection.",
+              "javadoc_summary": "Executes the given consumer within a transaction, passing the transaction's {@link Connection} as an argument.",
               "contract": [
-                "If the consumer completes successfully, the transaction is committed.",
-                "If an exception occurs, the transaction is rolled back."
+                "The transaction is committed if the consumer completes normally; it is rolled back if the consumer throws any exception.",
+                "<p> Use this overload when the transactional logic needs direct access to the {@link Connection} (e.g., to call APIs that require a {@link Connection} parameter).",
+                "</p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the consumer participates in that existing transaction."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#callInTransaction(javax.sql.DataSource, Throwables.Function)",
+                "#runInTransaction(javax.sql.DataSource, Throwables.Runnable)"
+              ]
             },
             {
               "name": "callOutsideTransaction",
@@ -32555,32 +32574,39 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Callable<T, E>",
-                  "javadoc": "the callable to execute outside any transaction",
+                  "javadoc": "the callable to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the callable throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
-              "javadoc_summary": "Executes the given callable outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given callable outside any active transaction bound to {@code ds} on the current thread, and returns its result.",
               "contract": [
-                "If a transaction is active in the current thread, a new connection (not part of the transaction) will be used to execute the callable."
+                "When {@code cmd} finishes (normally or exceptionally) the original transaction is restored.",
+                "If another transaction is opened and not closed inside {@code cmd} , an {@link IllegalStateException} is thrown.",
+                "</li> </ul> <p> This is useful for operations that must be committed immediately and independently of any surrounding transaction \\u2014 for example, writing an audit log entry or updating a status flag that should survive even if the outer transaction is later rolled back.",
+                "</p> <p> <b> Spring integration: </b> When running inside a Spring-managed transaction context, Spring's transaction participation is also temporarily disabled for the duration of {@code cmd} , so the callable does not join any Spring {@code @Transactional} transaction either.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Persist an audit record that must not be rolled back with the main transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { orderDao.save(order); // part of tran String auditId = JdbcUtil.callOutsideTransaction(dataSource, () -> { // Runs on a separate connection; committed independently of 'tran' return auditDao.insertAndReturnId(\"ORDER_CREATED\", order.getId()); }); tran.commit(); } finally { tran.rollbackIfNotCommitted(); } // No active transaction \\u2014 runs directly with a fresh connection String token = JdbcUtil.callOutsideTransaction(dataSource, () -> tokenStore.generateAndPersist(userId)); } </pre>"
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)",
+                "SqlTransaction#callOutsideTransaction(Throwables.Callable)"
+              ]
             },
             {
               "name": "callOutsideTransaction",
@@ -32609,32 +32635,36 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Function<javax.sql.DataSource, T, E>",
-                  "javadoc": "the function to execute outside any transaction",
+                  "javadoc": "the function to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the function throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
-              "javadoc_summary": "Executes the given function outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given function outside any active transaction bound to {@code ds} on the current thread, passing {@code ds} as an argument, and returns its result.",
               "contract": [
-                "<p> <b> Note: </b> When obtaining a raw {@link Connection} from the DataSource within the function, the caller is responsible for closing the connection to avoid resource leaks."
+                "The original transaction is restored when {@code cmd} finishes.",
+                "</li> </ul> <p> <b> Note: </b> Any {@link Connection} obtained directly from {@code ds} inside {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid connection-pool leaks."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)",
+                "#runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)"
+              ]
             },
             {
               "name": "runOutsideTransaction",
@@ -32657,32 +32687,37 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Runnable<E>",
-                  "javadoc": "the runnable to execute outside any transaction",
+                  "javadoc": "the runnable to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the runnable throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
-              "javadoc_summary": "Executes the given runnable outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given runnable outside any active transaction bound to {@code ds} on the current thread.",
               "contract": [
-                "If a transaction is active in the current thread, a new connection (not part of the transaction) will be used to execute the runnable."
+                "The original transaction is restored when {@code cmd} finishes (normally or exceptionally).",
+                "</li> </ul> <p> Typical use cases include writing records that must survive a potential outer rollback (e.g., error logs, audit events, distributed-lock releases) and refreshing caches or external systems that should not be deferred until the outer transaction commits.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Log an event that should persist even if the enclosing transaction rolls back SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { inventoryDao.reserve(itemId, qty); // part of tran JdbcUtil.runOutsideTransaction(dataSource, () -> { // Committed immediately on a separate connection; survives 'tran' rollback eventBus.persistEvent(\"RESERVATION_ATTEMPTED\", itemId); }); tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } </pre>"
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)",
+                "SqlTransaction#runOutsideTransaction(Throwables.Runnable)"
+              ]
             },
             {
               "name": "runOutsideTransaction",
@@ -32705,33 +32740,35 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Consumer<javax.sql.DataSource, E>",
-                  "javadoc": "the consumer to execute outside any transaction",
+                  "javadoc": "the consumer to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the consumer throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
-              "javadoc_summary": "Executes the given consumer outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given consumer outside any active transaction bound to {@code ds} on the current thread, passing {@code ds} as an argument.",
               "contract": [
-                "<p> <b> Note: </b> When obtaining a raw {@link Connection} from the DataSource within the consumer, the caller is responsible for closing the connection to avoid resource leaks.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code JdbcUtil.runOutsideTransaction(dataSource, ds -> { // Use the DataSource for non-transactional operations try (Connection conn = ds.getConnection()) { // Perform operations that should not be part of current transaction } }); } </pre>"
+                "</li> </ul> <p> <b> Note: </b> Any {@link Connection} obtained directly from {@code ds} inside {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid connection-pool leaks."
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)",
+                "#callOutsideTransaction(javax.sql.DataSource, Throwables.Function)"
+              ]
             },
             {
               "name": "callNotInStartedTransaction",
@@ -32760,32 +32797,32 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Callable<T, E>",
-                  "javadoc": "the callable to execute outside any transaction",
+                  "javadoc": "the callable to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the callable throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "replaced by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}",
+                "message": "Use {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} instead.",
                 "for_removal": false
               },
-              "javadoc_summary": "Executes the given callable outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given callable outside any active transaction for the specified DataSource and returns its result.",
               "contract": [],
               "examples": [],
               "see_also": []
@@ -32817,32 +32854,32 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Function<javax.sql.DataSource, T, E>",
-                  "javadoc": "the function to execute outside any transaction",
+                  "javadoc": "the function to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the function throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "replaced by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)}",
+                "message": "Use {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)} instead.",
                 "for_removal": false
               },
-              "javadoc_summary": "Executes the given function outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given function outside any active transaction for the specified DataSource, passing {@code ds} as an argument, and returns its result.",
               "contract": [],
               "examples": [],
               "see_also": []
@@ -32868,29 +32905,29 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Runnable<E>",
-                  "javadoc": "the runnable to execute outside any transaction",
+                  "javadoc": "the runnable to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the runnable throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "replaced by {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)}",
+                "message": "Use {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)} instead.",
                 "for_removal": false
               },
               "javadoc_summary": "Executes the given runnable outside any active transaction for the specified DataSource.",
@@ -32919,32 +32956,32 @@
                 {
                   "name": "ds",
                   "type": "javax.sql.DataSource",
-                  "javadoc": "the DataSource to use",
+                  "javadoc": "the {@link javax.sql.DataSource} whose active transaction (if any) should be suspended, and which is passed as the argument to {@code cmd} ; must not be {@code null}",
                   "nullability": "unspecified"
                 },
                 {
                   "name": "cmd",
                   "type": "Throwables.Consumer<javax.sql.DataSource, E>",
-                  "javadoc": "the consumer to execute outside any transaction",
+                  "javadoc": "the consumer to execute outside any active transaction, must not be {@code null}",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if dataSource or cmd is null"
+                  "condition": "if {@code ds} or {@code cmd} is {@code null}"
                 },
                 {
                   "type": "E",
-                  "condition": "if the consumer throws an exception"
+                  "condition": "if {@code cmd} throws an exception"
                 }
               ],
               "deprecated": {
                 "is_deprecated": true,
-                "message": "replaced by {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)}",
+                "message": "Use {@link #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)} instead.",
                 "for_removal": false
               },
-              "javadoc_summary": "Executes the given consumer outside any active transaction for the specified DataSource.",
+              "javadoc_summary": "Executes the given consumer outside any active transaction for the specified DataSource, passing {@code ds} as an argument.",
               "contract": [],
               "examples": [],
               "see_also": []
@@ -32970,22 +33007,27 @@
                 {
                   "name": "sqlAction",
                   "type": "Throwables.Runnable<E>",
-                  "javadoc": "the runnable to execute without Spring transaction",
+                  "javadoc": "the runnable to execute with Spring transaction participation disabled, must not be {@code null} ; must not be dispatched to another thread",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "E",
-                  "condition": "if the runnable throws an exception"
+                  "condition": "if {@code sqlAction} throws an exception"
                 }
               ],
-              "javadoc_summary": "Executes the given runnable without using Spring transaction management.",
+              "javadoc_summary": "Executes the given runnable with Spring's transaction management temporarily disabled for the current thread.",
               "contract": [
-                "Note: The action should not be executed in another thread as the flag is thread-local."
+                "<p> When this library is used inside a Spring application, JDBC connections are normally obtained via {@code DataSourceUtils.getConnection()} , which participates in any Spring-managed ( {@code @Transactional} ) transaction that is active on the calling thread.",
+                "</p> <p> <b> No-op when Spring is absent: </b> if Spring's framework classes are not on the classpath, or if Spring transaction management is already disabled on this thread, the runnable is executed directly without any flag manipulation.",
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Inside a Spring @Transactional service method, perform one operation // that must use its own fresh connection rather than the Spring-managed one @Transactional public void processOrder(Order order) { orderRepository.save(order); // uses Spring transaction JdbcUtil.runWithoutUsingSpringTransaction(() -> { // Acquires a fresh connection; NOT part of the Spring transaction above auditDao.recordImmediately(\"ORDER_PROCESSING_STARTED\", order.getId()); }); } } </pre>"
               ],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#callWithoutUsingSpringTransaction(Throwables.Callable)",
+                "#runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)"
+              ]
             },
             {
               "name": "callWithoutUsingSpringTransaction",
@@ -33014,22 +33056,23 @@
                 {
                   "name": "sqlAction",
                   "type": "Throwables.Callable<R, E>",
-                  "javadoc": "the callable to execute without Spring transaction",
+                  "javadoc": "the callable to execute with Spring transaction participation disabled, must not be {@code null} ; must not be dispatched to another thread",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "E",
-                  "condition": "if the callable throws an exception"
+                  "condition": "if {@code sqlAction} throws an exception"
                 }
               ],
-              "javadoc_summary": "Executes the given callable without using Spring transaction management and returns its result.",
-              "contract": [
-                "Note: The action should not be executed in another thread as the flag is thread-local."
-              ],
+              "javadoc_summary": "Executes the given callable with Spring's transaction management temporarily disabled for the current thread, and returns its result.",
+              "contract": [],
               "examples": [],
-              "see_also": []
+              "see_also": [
+                "#runWithoutUsingSpringTransaction(Throwables.Runnable)",
+                "#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)"
+              ]
             },
             {
               "name": "setIdExtractorForDao",
@@ -33189,7 +33232,7 @@
               "throws": [],
               "javadoc_summary": "Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.",
               "contract": [
-                "ORDER BY created_at DESC\") List<User> findByStatus(String status); @NamedSelect(\"SELECT * FROM users WHERE age >= :minAge AND city = :city\") Stream<User> findByAgeAndCity(@Bind(\"minAge\") int minAge, @Bind(\"city\") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User(\"john@example.com\", \"John Doe\"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail(\"john@example.com\"); if (user.isPresent()) { System.out.println(\"Found: \" + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus(\"ACTIVE\"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, \"New York\")) { long count = stream .filter(u -> u.getEmail().endsWith(\"@company.com\")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus(\"INACTIVE\"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> { // Aggregate queries @Select(\"SELECT COUNT(*) FROM orders WHERE status = ?\") long countByStatus(String status); @Select(\"SELECT SUM(total_amount) FROM orders WHERE customer_id = ?\") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @NamedSelect(\"findOrdersWithCustomerDetails\") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind(\"startDate\") Date start); // Async operations @Select(\"SELECT * FROM orders WHERE id = ?\") CompletableFuture<Optional<Order>> findByIdAsync(Long id); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus(\"PENDING\"); // Async operations CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId); future.thenAccept(order -> { order.ifPresent(o -> System.out.println(\"Order: \" + o.getId())); }); } </pre>"
+                "ORDER BY created_at DESC\") List<User> findByStatus(String status); @Query(\"SELECT * FROM users WHERE age >= :minAge AND city = :city\") Stream<User> findByAgeAndCity(@Bind(\"minAge\") int minAge, @Bind(\"city\") String city); } // Create and use the DAO UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource); // Use inherited CRUD operations User newUser = new User(\"john@example.com\", \"John Doe\"); userDao.save(newUser); // Use custom query methods Optional<User> user = userDao.findByEmail(\"john@example.com\"); if (user.isPresent()) { System.out.println(\"Found: \" + user.get().getName()); } // List all active users List<User> activeUsers = userDao.findByStatus(\"ACTIVE\"); // Stream results for large datasets try (Stream<User> stream = userDao.findByAgeAndCity(25, \"New York\")) { long count = stream .filter(u -> u.getEmail().endsWith(\"@company.com\")) .count(); } // Batch operations List<User> users = Arrays.asList(user1, user2, user3); userDao.batchSave(users); // Update operations user.get().setStatus(\"INACTIVE\"); userDao.update(user.get()); // Delete operations userDao.deleteById(userId); } </pre> <p> <b> Advanced DAO Features: </b> </p> <pre> {@code // Define a DAO with complex queries public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> { // Aggregate queries @Query(\"SELECT COUNT(*) FROM orders WHERE status = ?\") long countByStatus(String status); @Query(\"SELECT SUM(total_amount) FROM orders WHERE customer_id = ?\") Optional<BigDecimal> getTotalByCustomer(Long customerId); // Complex joins (SQL defined externally in SQL mapper file) @Query(id = \"findOrdersWithCustomerDetails\") List<OrderWithCustomer> findOrdersWithCustomerDetails(@Bind(\"startDate\") Date start); // Async operations @Query(\"SELECT * FROM orders WHERE id = ?\") CompletableFuture<Optional<Order>> findByIdAsync(Long id); } OrderDao orderDao = JdbcUtil.createDao(OrderDao.class, dataSource); // Use aggregate queries long pendingCount = orderDao.countByStatus(\"PENDING\"); // Async operations CompletableFuture<Optional<Order>> future = orderDao.findByIdAsync(orderId); future.thenAccept(order -> { order.ifPresent(o -> System.out.println(\"Order: \" + o.getId())); }); } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -41439,7 +41482,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Enum representing various database operations that can be performed through {@link AbstractQuery} .",
+          "javadoc_summary": "Execution modes understood by {@link AbstractQuery} and {@link com.landawn.abacus.jdbc.annotation.Query} .",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -41622,10 +41665,10 @@
           ],
           "deprecated": {
             "is_deprecated": true,
-            "message": "Foreign key actions should be defined and implemented at the database server level, not in application code. Use proper database schema definitions instead.",
+            "message": "Define foreign-key delete actions in the database schema instead.",
             "for_removal": false
           },
-          "javadoc_summary": "Represents foreign key constraint actions that can be performed when a referenced row is deleted.",
+          "javadoc_summary": "Deprecated enum mirroring common database {@code ON DELETE} actions.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -41728,7 +41771,7 @@
             "public",
             "final"
           ],
-          "javadoc_summary": "A wrapper class for {@link PreparedStatement} that provides a fluent API for executing parameterized SQL queries.",
+          "javadoc_summary": "Fluent wrapper around a {@link PreparedStatement} .",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -41743,7 +41786,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Enumeration that represents transaction propagation behaviors.",
+          "javadoc_summary": "Transaction participation policies used by {@link com.landawn.abacus.jdbc.annotation.Transactional} .",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -41819,6 +41862,98 @@
           ]
         },
         {
+          "fqn": "com.landawn.abacus.jdbc.SpringApplicationContext",
+          "name": "SpringApplicationContext",
+          "kind": "class",
+          "modifiers": [
+            "public",
+            "final"
+          ],
+          "javadoc_summary": "A utility class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.",
+          "thread_safety": "unspecified",
+          "nullability": "unspecified",
+          "type_params": [],
+          "constructors": [],
+          "methods": [
+            {
+              "name": "<init>",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public SpringApplicationContext()",
+              "return_type": "void",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "javadoc_summary": "Constructs a new {@code SpringApplicationContext} .",
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "getBean",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public Object getBean(final String name)",
+              "return_type": "Object",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "name",
+                  "type": "String",
+                  "javadoc": "the name of the bean to retrieve",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "javadoc_summary": "Retrieves a bean from the Spring ApplicationContext by its name.",
+              "contract": [],
+              "examples": [],
+              "see_also": [
+                "ApplicationContext#getBean(String)"
+              ]
+            },
+            {
+              "name": "getBean",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public <T> T getBean(final Class<T> requiredType)",
+              "return_type": "T",
+              "type_params": [
+                {
+                  "name": "T",
+                  "bounds": [
+                    "java.lang.Object"
+                  ]
+                }
+              ],
+              "params": [
+                {
+                  "name": "requiredType",
+                  "type": "Class<T>",
+                  "javadoc": "the class object representing the type of bean to retrieve",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "javadoc_summary": "Retrieves a bean from the Spring ApplicationContext by its type.",
+              "contract": [
+                "This method returns a single bean of the specified type if exactly one exists in the context."
+              ],
+              "examples": [],
+              "see_also": [
+                "ApplicationContext#getBean(Class)"
+              ]
+            }
+          ],
+          "fields": []
+        },
+        {
           "fqn": "com.landawn.abacus.jdbc.SqlTransaction",
           "name": "SqlTransaction",
           "kind": "class",
@@ -41826,7 +41961,7 @@
             "public",
             "final"
           ],
-          "javadoc_summary": "Represents a SQL transaction that manages database transaction lifecycle and connection state.",
+          "javadoc_summary": "Default {@link Transaction} implementation backed by a JDBC {@link Connection} .",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -42256,7 +42391,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Represents a database transaction that provides methods for managing transactional operations.",
+          "javadoc_summary": "Minimal contract for a JDBC transaction managed by this library.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -43817,7 +43952,7 @@
               "javadoc_summary": "Controls whether to automatically add LIMIT clause to single-result query methods.",
               "contract": [
                 "When {@code true} , methods that return a single result will have {@code LIMIT 1} (or equivalent) added to their SQL queries for better performance.",
-                "<p> Single query methods include: </p> <ul> <li> {@code queryForSingleXxx()} methods </li> <li> {@code queryForUniqueResult()} </li> <li> {@code findFirst()} </li> <li> {@code findOnlyOne()} </li> <li> {@code exists()} </li> <li> {@code count()} (when not using COUNT in SQL) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(addLimitForSingleQuery = true) public interface ProductDao extends CrudDao<Product, Long> { @Query(\"SELECT * FROM products WHERE code = :code\") Product findByCode(@Bind(\"code\") String code); // Executed as: SELECT * FROM products WHERE code = ?"
+                "<p> Single query methods include: </p> <ul> <li> {@code queryForSingleXxx()} methods </li> <li> {@code queryForUniqueValue()} </li> <li> {@code findFirst()} </li> <li> {@code findOnlyOne()} </li> <li> {@code exists()} </li> <li> {@code count()} (when not using COUNT in SQL) </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code @DaoConfig(addLimitForSingleQuery = true) public interface ProductDao extends CrudDao<Product, Long> { @Query(\"SELECT * FROM products WHERE code = :code\") Product findByCode(@Bind(\"code\") String code); // Executed as: SELECT * FROM products WHERE code = ?"
               ],
               "examples": [],
               "see_also": []
@@ -44199,10 +44334,10 @@
           ],
           "deprecated": {
             "is_deprecated": true,
-            "message": "This annotation won't be implemented. Define ON DELETE behavior in database schema instead.",
+            "message": "This annotation is not implemented. Define {@code ON DELETE} behavior in the database schema instead.",
             "for_removal": false
           },
-          "javadoc_summary": "Specifies cascading delete behavior for entity relationships.",
+          "javadoc_summary": "Deprecated metadata placeholder for delete-cascade behavior.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44242,7 +44377,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Declares an output parameter for stored procedure calls.",
+          "javadoc_summary": "Declares an {@code OUT} or {@code INOUT} parameter for a stored-procedure DAO method.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44320,7 +44455,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Container annotation for multiple {@link OutParameter} annotations on a single method.",
+          "javadoc_summary": "Container annotation for repeatable {@link OutParameter} declarations.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44354,7 +44489,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Enables performance logging for SQL operations and DAO methods.",
+          "javadoc_summary": "Enables SQL and DAO-method performance logging.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44421,10 +44556,9 @@
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Specifies filter patterns for methods when the annotation is applied at the class level.",
+              "javadoc_summary": "Specifies the type-level method-name filter.",
               "contract": [
-                "Specifies filter patterns for methods when the annotation is applied at the class level.",
-                "</p> <p> This filter is ignored when the annotation is applied at the method level."
+                "<p> Each entry matches when it is contained in the method name ignoring case, or when it matches the full method name as a regular expression."
               ],
               "examples": [],
               "see_also": []
@@ -44439,7 +44573,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Maps database column prefixes to object field paths for result set mapping.",
+          "javadoc_summary": "Maps prefixed column aliases to nested target paths during row mapping.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44473,7 +44607,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Defines a generic SQL query operation for a DAO method.",
+          "javadoc_summary": "Declares how a DAO method should execute SQL.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44712,7 +44846,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Controls cache refresh behavior for DAO methods that modify data.",
+          "javadoc_summary": "Triggers cache invalidation after matching DAO methods complete.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44745,11 +44879,9 @@
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Specifies filter patterns for methods when the annotation is applied at the class level.",
+              "javadoc_summary": "Specifies the type-level method-name filter.",
               "contract": [
-                "Specifies filter patterns for methods when the annotation is applied at the class level.",
-                "A method matches if its name starts with a filter entry, or if the entry matches the full method name as a regex.",
-                "</p> <p> This filter is ignored when the annotation is applied at the method level."
+                "<p> Each entry matches when the method name starts with that entry or when the entry matches the full method name as a regular expression."
               ],
               "examples": [],
               "see_also": []
@@ -44764,7 +44896,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Defines a query template variable for dynamic query construction.",
+          "javadoc_summary": "Performs SQL template substitution for one query fragment.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44799,7 +44931,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Defines a named query template variable from a collection or array parameter.",
+          "javadoc_summary": "Joins a collection or array into a comma-separated SQL fragment.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44834,7 +44966,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Controls SQL statement logging for DAO methods or classes.",
+          "javadoc_summary": "Enables or disables SQL logging for a DAO method or DAO type.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44888,10 +45020,9 @@
               "type_params": [],
               "params": [],
               "throws": [],
-              "javadoc_summary": "Specifies filter patterns for methods when the annotation is applied at the class level.",
+              "javadoc_summary": "Specifies the type-level method-name filter.",
               "contract": [
-                "Specifies filter patterns for methods when the annotation is applied at the class level.",
-                "</p> <p> This filter is ignored when the annotation is applied at the method level."
+                "<p> Each entry matches when it is contained in the method name ignoring case, or when it matches the full method name as a regular expression."
               ],
               "examples": [],
               "see_also": []
@@ -44906,7 +45037,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Marks a {@code static final String} field (typically inside a DAO interface's nested helper class) as an embeddable SQL script that can be referenced by {@code @Query(id = \"...\")} .",
+          "javadoc_summary": "Marks a {@code static final String} field as a named SQL script.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44941,7 +45072,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Associates a DAO interface with an external SQL mapper XML file.",
+          "javadoc_summary": "Associates a DAO interface with an external SQL mapper resource.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -44976,7 +45107,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Declares transaction boundaries for DAO methods.",
+          "javadoc_summary": "Declares transaction settings for a DAO method managed by the Abacus JDBC proxy.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -45138,7 +45269,7 @@
               "throws": [
                 {
                   "type": "java.sql.SQLException",
-                  "condition": "if a database access error occurs or the entity is null"
+                  "condition": "if a database access error occurs"
                 }
               ],
               "javadoc_summary": "Inserts the specified entity into the database and returns the generated ID.",
@@ -45927,12 +46058,12 @@
               ]
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException",
+              "signature": "<V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -45972,7 +46103,7 @@
               "contract": [],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForSingleResult(Class)"
+                "AbstractQuery#queryForSingleValue(Class)"
               ]
             },
             {
@@ -46076,12 +46207,12 @@
               ]
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
+              "signature": "<V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -46124,11 +46255,11 @@
               "javadoc_summary": "Queries for a unique single result of the specified type.",
               "contract": [
                 "Throws DuplicateResultException if more than one record is found.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult(\"email\", userId, String.class); // Throws DuplicateResultException if multiple records found } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueValue(\"email\", userId, String.class); // Throws DuplicateResultException if multiple records found } </pre>"
               ],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForUniqueResult(Class)"
+                "AbstractQuery#queryForUniqueValue(Class)"
               ]
             },
             {
@@ -48051,13 +48182,13 @@
               "see_also": []
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws SQLException",
+              "signature": "default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -48197,13 +48328,13 @@
               "see_also": []
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
+              "signature": "default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -48246,7 +48377,7 @@
               "javadoc_summary": "Queries for a unique single result of the specified type.",
               "contract": [
                 "Throws DuplicateResultException if more than one record is found.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueResult(\"email\", 123L, String.class); // Throws DuplicateResultException if multiple records found } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> email = userDao.queryForUniqueValue(\"email\", 123L, String.class); // Throws DuplicateResultException if multiple records found } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -52491,12 +52622,12 @@
               "see_also": []
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException",
+              "signature": "<V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -52536,7 +52667,7 @@
               "contract": [],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForSingleResult(Class)"
+                "AbstractQuery#queryForSingleValue(Class)"
               ]
             },
             {
@@ -52640,12 +52771,12 @@
               ]
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "<V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
+              "signature": "<V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, SQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -52688,11 +52819,11 @@
               "javadoc_summary": "Queries for a unique single value, throwing if multiple rows found.",
               "contract": [
                 "Queries for a unique single value, throwing if multiple rows found.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueResult( \"email\", Filters.eq(\"username\", \"john_doe\"), String.class ); // Throws DuplicateResultException if multiple users have this username } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<String> uniqueEmail = dao.queryForUniqueValue( \"email\", Filters.eq(\"username\", \"john_doe\"), String.class ); // Throws DuplicateResultException if multiple users have this username } </pre>"
               ],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForUniqueResult(Class)"
+                "AbstractQuery#queryForUniqueValue(Class)"
               ]
             },
             {
@@ -59105,8 +59236,7 @@
               ],
               "javadoc_summary": "Prepares a SQL query with support for auto-generated keys retrieval.",
               "contract": [
-                "<p> When {@code generateKeys} is {@code true} , the prepared statement is configured to return auto-generated keys after executing an {@code INSERT} .",
-                "</p> <p> <b> Usage Example: </b> </p> <pre> {@code Row generated = dao.prepareQuery(\"INSERT INTO users (name, email) VALUES (?, ?)\", true) .setString(1, \"John Doe\") .setString(2, \"john@example.com\") .insert() .orElse(null); if (generated != null) { long generatedId = generated.getLong(1); } } </pre>"
+                "<p> When {@code generateKeys} is {@code true} , the prepared statement is configured to return auto-generated keys after executing an {@code INSERT} ."
               ],
               "examples": [],
               "see_also": []
@@ -59188,8 +59318,7 @@
               ],
               "javadoc_summary": "Prepares a SQL query with specific column names for auto-generated key retrieval.",
               "contract": [
-                "This is the most readable approach for specifying which auto-generated columns should be returned after an {@code INSERT} operation.",
-                "</p> <p> <b> Usage Example: </b> </p> <pre> {@code Row generated = dao.prepareQuery(\"INSERT INTO users (name, email) VALUES (?, ?)\", new String[] {\"id\", \"created_timestamp\"}) .setString(1, \"Jane Doe\") .setString(2, \"jane@example.com\") .insert() .orElse(null); if (generated != null) { long id = generated.getLong(\"id\"); Timestamp created = generated.getTimestamp(\"created_timestamp\"); } } </pre>"
+                "This is the most readable approach for specifying which auto-generated columns should be returned after an {@code INSERT} operation."
               ],
               "examples": [],
               "see_also": []
@@ -62320,7 +62449,7 @@
               "throws": [
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
-                  "condition": "if a database access error occurs or the entity is null"
+                  "condition": "if a database access error occurs"
                 }
               ],
               "javadoc_summary": "Inserts the specified entity into the database and returns the generated ID.",
@@ -63109,12 +63238,12 @@
               ]
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException",
+              "signature": "@Override <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -63152,11 +63281,11 @@
               ],
               "javadoc_summary": "Returns a {@code Nullable<V>} describing the value of a single property for the entity with the specified ID, converted to the specified target type.",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<BigDecimal> price = userDao.queryForSingleResult(\"price\", productId, BigDecimal.class); if (price.isPresent()) { applyDiscount(price.get()); } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code Nullable<BigDecimal> price = userDao.queryForSingleValue(\"price\", productId, BigDecimal.class); if (price.isPresent()) { applyDiscount(price.get()); } } </pre>"
               ],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForSingleResult(Class)"
+                "AbstractQuery#queryForSingleValue(Class)"
               ]
             },
             {
@@ -63258,12 +63387,12 @@
               ]
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException",
+              "signature": "@Override <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -63306,11 +63435,11 @@
               "javadoc_summary": "Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.",
               "contract": [
                 "Throws {@code DuplicateResultException} if more than one record is found.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code // Assuming email should be unique per user Nullable<String> email = userDao.queryForUniqueResult(\"email\", userId, String.class); } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code // Assuming email should be unique per user Nullable<String> email = userDao.queryForUniqueValue(\"email\", userId, String.class); } </pre>"
               ],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForUniqueResult(Class)"
+                "AbstractQuery#queryForUniqueValue(Class)"
               ]
             },
             {
@@ -65267,13 +65396,13 @@
               "see_also": []
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws UncheckedSQLException",
+              "signature": "@Override default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -65413,13 +65542,13 @@
               "see_also": []
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "default",
                 "public"
               ],
-              "signature": "@Override default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
+              "signature": "@Override default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -68652,12 +68781,12 @@
               ]
             },
             {
-              "name": "queryForSingleResult",
+              "name": "queryForSingleValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws UncheckedSQLException",
+              "signature": "@Override <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -68699,7 +68828,7 @@
               ],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForSingleResult(Class)"
+                "AbstractQuery#queryForSingleValue(Class)"
               ]
             },
             {
@@ -68803,12 +68932,12 @@
               ]
             },
             {
-              "name": "queryForUniqueResult",
+              "name": "queryForUniqueValue",
               "kind": "instance",
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
+              "signature": "@Override <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws DuplicateResultException, UncheckedSQLException",
               "return_type": "Nullable<V>",
               "type_params": [
                 {
@@ -68855,7 +68984,7 @@
               ],
               "examples": [],
               "see_also": [
-                "AbstractQuery#queryForUniqueResult(Class)"
+                "AbstractQuery#queryForUniqueValue(Class)"
               ]
             },
             {

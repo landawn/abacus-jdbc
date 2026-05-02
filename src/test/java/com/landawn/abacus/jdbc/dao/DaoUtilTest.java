@@ -319,8 +319,7 @@ public class DaoUtilTest extends TestBase {
     }
 
     // UncheckedCrudJoinEntityHelper without UncheckedCrudDao — exercises throw branch (line 386-387).
-    interface OnlyUncheckedCrudJoinHelper
-            extends UncheckedCrudJoinEntityHelper<Object, Long, PSC, TestUncheckedCrudJoinDao> {
+    interface OnlyUncheckedCrudJoinHelper extends UncheckedCrudJoinEntityHelper<Object, Long, PSC, TestUncheckedCrudJoinDao> {
     }
 
     @Test
@@ -360,18 +359,32 @@ public class DaoUtilTest extends TestBase {
         private long id;
         private String name;
 
-        public long getId() { return id; }
-        public void setId(long id) { this.id = id; }
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
+        public long getId() {
+            return id;
+        }
+
+        public void setId(long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 
     interface PscDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PSC, PscDao> {
     }
+
     interface PacDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PAC, PacDao> {
     }
+
     interface PlcDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PLC, PlcDao> {
     }
+
     interface PsbDao extends Dao<DemoBean, com.landawn.abacus.query.SqlBuilder.PSB, PsbDao> {
     }
 

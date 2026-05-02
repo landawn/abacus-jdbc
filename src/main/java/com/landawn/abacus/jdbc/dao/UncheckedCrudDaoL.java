@@ -344,7 +344,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<BigDecimal> price = userDao.queryForSingleResult("price", 123L, BigDecimal.class);
+     * Nullable<BigDecimal> price = userDao.queryForSingleValue("price", 123L, BigDecimal.class);
      * }</pre>
      *
      * @param <V> the type of the property value to retrieve
@@ -355,9 +355,9 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default <V> Nullable<V> queryForSingleResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
+    default <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws UncheckedSQLException {
-        return queryForSingleResult(singleSelectPropName, Long.valueOf(id), targetValueType);
+        return queryForSingleValue(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**
@@ -418,7 +418,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Nullable<String> uniqueCode = userDao.queryForUniqueResult("code", 123L, String.class);
+     * Nullable<String> uniqueCode = userDao.queryForUniqueValue("code", 123L, String.class);
      * }</pre>
      *
      * @param <V> the type of the property value to retrieve
@@ -430,9 +430,9 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default <V> Nullable<V> queryForUniqueResult(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
+    default <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final long id, final Class<? extends V> targetValueType)
             throws DuplicateResultException, UncheckedSQLException {
-        return queryForUniqueResult(singleSelectPropName, Long.valueOf(id), targetValueType);
+        return queryForUniqueValue(singleSelectPropName, Long.valueOf(id), targetValueType);
     }
 
     /**

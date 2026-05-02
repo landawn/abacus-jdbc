@@ -111,10 +111,10 @@ public class CrudDaoLTest extends TestBase {
         TestEntity entity = new TestEntity();
         Jdbc.RowMapper<String> rowMapper = rs -> "mapped";
 
-        when(dao.queryForSingleResult("score", Long.valueOf(13L), Integer.class)).thenReturn(Nullable.of(99));
+        when(dao.queryForSingleValue("score", Long.valueOf(13L), Integer.class)).thenReturn(Nullable.of(99));
         when(dao.queryForSingleNonNull("name", Long.valueOf(14L), String.class)).thenReturn(Optional.of("alice"));
         when(dao.queryForSingleNonNull("name", Long.valueOf(15L), rowMapper)).thenReturn(Optional.of("mapped"));
-        when(dao.queryForUniqueResult("email", Long.valueOf(16L), String.class)).thenReturn(Nullable.of("a@x"));
+        when(dao.queryForUniqueValue("email", Long.valueOf(16L), String.class)).thenReturn(Nullable.of("a@x"));
         when(dao.queryForUniqueNonNull("email", Long.valueOf(17L), String.class)).thenReturn(Optional.of("b@x"));
         when(dao.queryForUniqueNonNull("email", Long.valueOf(18L), rowMapper)).thenReturn(Optional.of("mapped-unique"));
         when(dao.get(Long.valueOf(19L), List.of("name"))).thenReturn(Optional.of(entity));
@@ -122,10 +122,10 @@ public class CrudDaoLTest extends TestBase {
         when(dao.update(Map.of("status", "active"), Long.valueOf(21L))).thenReturn(2);
         when(dao.deleteById(Long.valueOf(22L))).thenReturn(1);
 
-        assertEquals(99, dao.queryForSingleResult("score", 13L, Integer.class).get());
+        assertEquals(99, dao.queryForSingleValue("score", 13L, Integer.class).get());
         assertEquals("alice", dao.queryForSingleNonNull("name", 14L, String.class).orElseNull());
         assertEquals("mapped", dao.queryForSingleNonNull("name", 15L, rowMapper).orElseNull());
-        assertEquals("a@x", dao.queryForUniqueResult("email", 16L, String.class).get());
+        assertEquals("a@x", dao.queryForUniqueValue("email", 16L, String.class).get());
         assertEquals("b@x", dao.queryForUniqueNonNull("email", 17L, String.class).orElseNull());
         assertEquals("mapped-unique", dao.queryForUniqueNonNull("email", 18L, rowMapper).orElseNull());
         assertSame(entity, dao.get(19L, List.of("name")).orElseNull());

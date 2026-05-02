@@ -16,8 +16,8 @@ package com.landawn.abacus.samples.dao;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
-import com.landawn.abacus.samples.entity.Employee;
 import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.samples.entity.Employee;
 
 @SqlLogEnabled
 public interface EmployeeDao extends CrudDao<Employee, Integer, SqlBuilder.PSC, EmployeeDao>, JoinEntityHelper<Employee, SqlBuilder.PSC, EmployeeDao> {

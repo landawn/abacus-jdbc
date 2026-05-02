@@ -22,6 +22,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
@@ -660,18 +661,16 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("connection failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateEntityClass(dataSource, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(dataSource, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
     }
 
     // generateEntityClass(Connection, entityName, query, config) wraps SQLException from prepareStatement (L385-386)
     @Test
     public void testGenerateEntityClass_ConnectionEntityNameQueryConfig_WrapsSQLException() throws SQLException {
         final Connection conn = Mockito.mock(Connection.class);
-        when(conn.prepareStatement(Mockito.anyString())).thenThrow(new SQLException("prepare failed"));
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenThrow(new SQLException("prepare failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateEntityClass(conn, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(conn, "MyEntity", "SELECT * FROM t WHERE 1=2", null));
     }
 
     // generateEntityClass with custom tableAnnotationClass and columnAnnotationClass (L418, L421)
@@ -684,8 +683,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .columnAnnotationClass(jakarta.persistence.Column.class)
                 .build();
 
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
     }
 
@@ -698,8 +696,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .additionalFieldsOrLines("private String extraField; // extra\nprivate int extraCount;")
                 .build();
 
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
     }
 
@@ -735,8 +732,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .classNamesToImport(Arrays.asList("com.example.MyAnnotation"))
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("import com.example.MyAnnotation;"));
     }
@@ -751,8 +747,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .columnAnnotationClass(jakarta.persistence.Column.class)
                 .idAnnotationClass(jakarta.persistence.Id.class)
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("jakarta.persistence"));
     }
@@ -764,8 +759,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .tableAnnotationClass(org.junit.jupiter.api.Test.class) // non-jakarta, non-abacus annotation
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
     }
 
@@ -776,8 +770,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .nonUpdatableFields(Arrays.asList("status"))
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("@NonUpdatable"));
     }
@@ -789,8 +782,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .customizedFieldDbTypes(Arrays.asList(Tuple.of("status", "VARCHAR(255)")))
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
     }
 
@@ -802,8 +794,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .generateCopyMethod(true)
                 .additionalFieldsOrLines("private String extra; // extra")
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("copy()"));
     }
@@ -812,11 +803,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_WithFieldNameTable() throws SQLException {
         setupFullGenerateEntityClassMock();
-        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .generateFieldNameTable(true)
-                .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().generateFieldNameTable(true).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("public interface "));
     }
@@ -825,19 +813,15 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_WithJsonXmlConfig() throws SQLException {
         setupFullGenerateEntityClassMock();
-        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jsonXmlConfig =
-                new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
+        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jsonXmlConfig = new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
         jsonXmlConfig.setNamingPolicy(NamingPolicy.CAMEL_CASE);
         jsonXmlConfig.setIgnoredFields("createdAt");
         jsonXmlConfig.setDateFormat("yyyy-MM-dd");
         jsonXmlConfig.setTimeZone("UTC");
         jsonXmlConfig.setNumberFormat("#.##");
 
-        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .jsonXmlConfig(jsonXmlConfig)
-                .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().jsonXmlConfig(jsonXmlConfig).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("@JsonXmlConfig"));
     }
@@ -852,8 +836,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource ds = Mockito.mock(DataSource.class);
         when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateSelectSql(ds, "t", List.of("x"), "id = 1"));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(ds, "t", List.of("x"), "id = 1"));
     }
 
     @Test
@@ -869,8 +852,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource ds = Mockito.mock(DataSource.class);
         when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateInsertSql(ds, "t", List.of("x")));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(ds, "t", List.of("x")));
     }
 
     @Test
@@ -886,8 +868,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource ds = Mockito.mock(DataSource.class);
         when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "t", List.of("x")));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "t", List.of("x")));
     }
 
     @Test
@@ -911,8 +892,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource ds = Mockito.mock(DataSource.class);
         when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateUpdateSql(ds, "t", List.of("x"), List.of("id"), null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(ds, "t", List.of("x"), List.of("id"), null));
     }
 
     @Test
@@ -936,8 +916,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource ds = Mockito.mock(DataSource.class);
         when(ds.getConnection()).thenThrow(new SQLException("ds failed"));
 
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "t", List.of("x"), List.of("id"), null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "t", List.of("x"), List.of("id"), null));
     }
 
     // Tests for the Connection-based catch blocks (lines 930-931, 1001-1002, 1060-1061,
@@ -952,7 +931,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("MySQL");
         when(md.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenThrow(new SQLException("execute failed"));
         return conn;
     }
@@ -966,8 +945,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateSelectSql_ConnectionWithExcluded_WrapsSQLException() throws SQLException {
         final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateSelectSql(conn, "t", List.of("x"), null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(conn, "t", List.of("x"), null));
     }
 
     @Test
@@ -979,8 +957,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateInsertSql_ConnectionWithExcluded_WrapsSQLException() throws SQLException {
         final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateInsertSql(conn, "t", List.of("x")));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(conn, "t", List.of("x")));
     }
 
     @Test
@@ -992,8 +969,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateNamedInsertSql_ConnectionWithExcluded_WrapsSQLException() throws SQLException {
         final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "t", List.of("x")));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "t", List.of("x")));
     }
 
     @Test
@@ -1011,8 +987,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateUpdateSql_ConnectionWithExcludedAndKeys_WrapsSQLException() throws SQLException {
         final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateUpdateSql(conn, "t", List.of("x"), List.of("id"), null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(conn, "t", List.of("x"), List.of("id"), null));
     }
 
     @Test
@@ -1024,15 +999,13 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateNamedUpdateSql_ConnectionWithKey_WrapsSQLException() throws SQLException {
         final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t", "id"));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t", "id"));
     }
 
     @Test
     public void testGenerateNamedUpdateSql_ConnectionWithExcludedAndKeys_WrapsSQLException() throws SQLException {
         final Connection conn = mockConnectionThatThrowsOnExecuteQuery();
-        assertThrows(UncheckedSQLException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t", List.of("x"), List.of("id"), null));
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "t", List.of("x"), List.of("id"), null));
     }
 
     // convertInsertSqlToUpdateSql edge cases (lines 1816-1817 column/value count mismatch
@@ -1044,8 +1017,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(ds.getConnection()).thenReturn(connection);
 
         // Two columns, one value -> should throw IllegalArgumentException.
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a,b) VALUES (1)"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a,b) VALUES (1)"));
     }
 
     @Test
@@ -1054,8 +1026,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(ds.getConnection()).thenReturn(connection);
 
         // Malformed SQL — missing parentheses/values — exercises the catch-all wrapper.
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "garbage sql"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "garbage sql"));
     }
 
     // generateEntityClass — excludedFields filters out a column (lines 475-476).
@@ -1065,8 +1036,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .excludedFields(Arrays.asList("status"))
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         // 'status' field should be filtered out
         assertTrue(!result.contains("private String status"));
@@ -1080,8 +1050,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .additionalFieldsOrLines("private List<String> tags;")
                 .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("import java.util.List;"));
     }
@@ -1090,15 +1059,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_JsonXmlConfigWithEnumerated() throws SQLException {
         setupFullGenerateEntityClassMock();
-        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jx =
-                new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
+        final JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig jx = new JdbcCodeGenerationUtil.EntityCodeConfig.JsonXmlConfig();
         jx.setEnumerated(com.landawn.abacus.util.EnumType.ORDINAL);
 
-        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .jsonXmlConfig(jx)
-                .build();
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history",
-                "SELECT * FROM order_history WHERE 1 > 2", config);
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().jsonXmlConfig(jx).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("enumerated = "));
     }

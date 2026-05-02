@@ -16,8 +16,8 @@ package com.landawn.abacus.samples.dao;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
-import com.landawn.abacus.samples.entity.Project;
 import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.samples.entity.Project;
 
 @SqlLogEnabled(true)
 public interface ProjectDao extends CrudDao<Project, Integer, SqlBuilder.PSC, ProjectDao>, JoinEntityHelper<Project, SqlBuilder.PSC, ProjectDao> {
