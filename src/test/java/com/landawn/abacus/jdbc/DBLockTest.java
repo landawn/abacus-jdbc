@@ -312,6 +312,19 @@ public class DBLockTest extends TestBase {
         assertNotNull(code);
     }
 
+    // Passing Long.MAX_VALUE as timeout must not overflow endTime to a negative value.
+    // Before the fix, now.getTime() + Long.MAX_VALUE overflowed to a large negative number,
+    // making the do-while condition false immediately so the lock was never acquired.
+    @Test
+    public void testLock_MaxValueTimeout_DoesNotOverflow_LockAcquired() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+
+        final String code = fixture.lock.lock("resource-maxvalue-timeout", 200L, Long.MAX_VALUE, 0L);
+
+        assertNotNull(code);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+    }
+
     private static Unsafe unsafe() throws Exception {
         final Field field = Unsafe.class.getDeclaredField("theUnsafe");
         field.setAccessible(true);

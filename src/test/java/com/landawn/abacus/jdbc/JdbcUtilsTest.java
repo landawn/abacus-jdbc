@@ -1122,6 +1122,49 @@ public class JdbcUtilsTest extends TestBase {
         assertTrue(csv.contains("age"));
     }
 
+    /**
+     * Regression test for the loop-condition bug in
+     * {@code importData(Dataset, Predicate, PreparedStatement, int, long, BiConsumer)}.
+     *
+     * <p>Before the fix the loop condition was {@code result < size && i < size}.
+     * Because {@code result} counts only accepted rows, the {@code result < size} guard
+     * could never fire (result &lt;= i always), but it was semantically wrong: if future
+     * refactoring made {@code result} skip ahead the guard would terminate the scan early,
+     * causing rows at the end of the dataset to be silently skipped.  The fix removes the
+     * redundant {@code result < size} clause so the loop always visits every row.</p>
+     *
+     * <p>This test verifies that when a filter rejects some rows in a dataset all rows
+     * are still examined (moveToRow is called for every index) and only the accepted rows
+     * are batched.</p>
+     */
+    @Test
+    public void testImportDataWithFilterAndStmtSetterExaminesAllRows() throws SQLException, Exception {
+        // Setup: 4-row single-column dataset; filter accepts rows whose value equals "keep"
+        // row 0 -> "keep" (accepted), row 1 -> "skip", row 2 -> "skip", row 3 -> "keep" (accepted)
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+        when(mockDataset.size()).thenReturn(4);
+        // get(0) is called once per iteration (column index 0 in the inner loop)
+        when(mockDataset.get(0)).thenReturn("keep", "skip", "skip", "keep");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
+
+        Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter =
+                (pq, row) -> pq.setString(1, (String) row[0]);
+        Throwables.Predicate<Object[], Exception> filter = row -> "keep".equals(row[0]);
+
+        // Execute: batchSize=1 so executeBatch is called after every accepted row
+        int result = JdbcUtils.importData(mockDataset, filter, mockPreparedStatement, 1, 0L, stmtSetter);
+
+        // Verify: exactly 2 rows accepted
+        assertEquals(2, result);
+        // addBatch must be called exactly twice (once per accepted row)
+        verify(mockPreparedStatement, times(2)).addBatch();
+        // moveToRow must be called for every row index (0, 1, 2, 3) — proves all rows were examined
+        verify(mockDataset).moveToRow(0);
+        verify(mockDataset).moveToRow(1);
+        verify(mockDataset).moveToRow(2);
+        verify(mockDataset).moveToRow(3);
+    }
+
     // copy(Connection, String, Connection, String) - delegates to full copy with default sizes (line 3007-3008)
     @Test
     public void testCopyBetweenConnectionsWithCustomSql() throws SQLException {

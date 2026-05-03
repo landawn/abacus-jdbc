@@ -454,6 +454,7 @@ public class NamedQueryTest extends TestBase {
         assertSame(namedQuery, result);
     }
 
+    @Test
     public void testSetBigDecimalBigIntegerNull() throws SQLException {
         String paramName = "param1";
         BigInteger value = null;

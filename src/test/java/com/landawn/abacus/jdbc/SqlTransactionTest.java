@@ -14,6 +14,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -428,6 +429,22 @@ public class SqlTransactionTest extends TestBase {
                 transaction1.rollbackIfNotCommitted();
             }
         }
+    }
+
+    // rollbackIfNotCommitted() when status is FAILED_COMMIT should proceed with rollback (not early-return).
+    // Before the fix, FAILED_COMMIT was included in the early-return guard, silently skipping the rollback.
+    @Test
+    public void testRollbackIfNotCommitted_WhenStatusIsFailedCommit_ProceedsWithRollback() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        // Force status to FAILED_COMMIT via reflection to simulate the transient state
+        final Field statusField = SqlTransaction.class.getDeclaredField("_status");
+        statusField.setAccessible(true);
+        statusField.set(transaction, Transaction.Status.FAILED_COMMIT);
+
+        transaction.rollbackIfNotCommitted();
+
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
     }
 
     // rollback() on a nested transaction (refCount > 0) marks status as MARKED_ROLLBACK without executing actual rollback

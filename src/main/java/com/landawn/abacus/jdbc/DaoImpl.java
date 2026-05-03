@@ -409,18 +409,18 @@ final class DaoImpl {
 
             // Check if return type is generic List type.
             if (method.getGenericReturnType() instanceof final ParameterizedType parameterizedReturnType) {
-                final Class<?> paramClassInReturnType = parameterizedReturnType.getActualTypeArguments()[0] instanceof Class
-                        ? (Class<?>) parameterizedReturnType.getActualTypeArguments()[0]
-                        : (Class<?>) ((ParameterizedType) parameterizedReturnType.getActualTypeArguments()[0]).getRawType();
+                final java.lang.reflect.Type returnTypeArg = parameterizedReturnType.getActualTypeArguments()[0];
+                final Class<?> paramClassInReturnType = returnTypeArg instanceof Class ? (Class<?>) returnTypeArg
+                        : (returnTypeArg instanceof ParameterizedType ? (Class<?>) ((ParameterizedType) returnTypeArg).getRawType() : null);
 
                 if (paramLen > 0
                         && (Jdbc.RowMapper.class.isAssignableFrom(paramTypes[paramLen - 1])
                                 || Jdbc.BiRowMapper.class.isAssignableFrom(paramTypes[paramLen - 1]))
                         && method.getGenericParameterTypes()[paramLen - 1] instanceof final ParameterizedType rowMapperType) {
 
-                    final Class<?> paramClassInRowMapper = rowMapperType.getActualTypeArguments()[0] instanceof Class
-                            ? (Class<?>) rowMapperType.getActualTypeArguments()[0]
-                            : (Class<?>) ((ParameterizedType) rowMapperType.getActualTypeArguments()[0]).getRawType();
+                    final java.lang.reflect.Type mapperTypeArg = rowMapperType.getActualTypeArguments()[0];
+                    final Class<?> paramClassInRowMapper = mapperTypeArg instanceof Class ? (Class<?>) mapperTypeArg
+                            : (mapperTypeArg instanceof ParameterizedType ? (Class<?>) ((ParameterizedType) mapperTypeArg).getRawType() : null);
 
                     if (paramClassInReturnType != null && paramClassInRowMapper != null && paramClassInReturnType.isAssignableFrom(paramClassInRowMapper)) {
                         return true;
@@ -943,9 +943,10 @@ final class DaoImpl {
                     final java.lang.reflect.Type resultExtractorReturnType = ((ParameterizedType) method.getGenericParameterTypes()[paramLen - 1])
                             .getActualTypeArguments()[0];
                     final Class<?> resultExtractorReturnClass = resultExtractorReturnType instanceof Class ? (Class<?>) resultExtractorReturnType
-                            : (Class<?>) ((ParameterizedType) resultExtractorReturnType).getRawType();
+                            : (resultExtractorReturnType instanceof ParameterizedType ? (Class<?>) ((ParameterizedType) resultExtractorReturnType).getRawType()
+                                    : null);
 
-                    if (!ClassUtil.wrap(returnType).isAssignableFrom(ClassUtil.wrap(resultExtractorReturnClass))) {
+                    if (resultExtractorReturnClass != null && !ClassUtil.wrap(returnType).isAssignableFrom(ClassUtil.wrap(resultExtractorReturnClass))) {
                         throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + method.getName()
                                 + " is not assignable from the return type of ResultExtractor: " + resultExtractorReturnClass);
                     }

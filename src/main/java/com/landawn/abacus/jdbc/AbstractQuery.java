@@ -8689,6 +8689,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Beta
     public void foreach(final Class<?> entityClass, final Consumer<DisposableObjArray> rowConsumer) throws SQLException { //NOSONAR
+        checkArgNotNull(entityClass, cs.entityClass);
         checkArgNotNull(rowConsumer, cs.rowConsumer);
 
         forEach(Jdbc.RowConsumer.oneOff(entityClass, rowConsumer));

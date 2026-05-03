@@ -573,8 +573,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     @Override
-    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass)
-            throws UncheckedSQLException;
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueClass) throws UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.

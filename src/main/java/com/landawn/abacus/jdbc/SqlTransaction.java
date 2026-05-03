@@ -432,7 +432,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             return;
         }
 
-        if (_status == Status.COMMITTED || _status == Status.FAILED_COMMIT || _status == Status.ROLLED_BACK || _status == Status.FAILED_ROLLBACK) {
+        if (_status == Status.COMMITTED || _status == Status.ROLLED_BACK || _status == Status.FAILED_ROLLBACK) {
             return;
         }
 
@@ -443,7 +443,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             return;
         }
 
-        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK)) {
+        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK || _status == Status.FAILED_COMMIT)) {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be rolled back");
         }
 

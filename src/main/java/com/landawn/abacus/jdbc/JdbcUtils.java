@@ -923,7 +923,7 @@ public final class JdbcUtils {
         final Object[] row = new Object[columnCount];
         int result = 0;
 
-        for (int i = 0, size = dataset.size(); result < size && i < size; i++) {
+        for (int i = 0, size = dataset.size(); i < size; i++) {
             dataset.moveToRow(i);
 
             for (int j = 0; j < columnCount; j++) {

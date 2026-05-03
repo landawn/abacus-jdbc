@@ -816,6 +816,13 @@ public class AbstractQueryTest extends TestBase {
         });
     }
 
+    // foreach(Class, Consumer<DisposableObjArray>) — null entityClass must throw IllegalArgumentException (bug fix)
+    @Test
+    public void testForeach_NullEntityClass_ThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> query.foreach(null, arr -> {
+        }));
+    }
+
     @Test
     public void testSetNString_NonNull() throws SQLException {
         TestQuery result = query.setNString(1, (CharSequence) "hello");

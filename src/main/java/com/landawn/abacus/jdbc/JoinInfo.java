@@ -223,7 +223,7 @@ public final class JoinInfo {
                     "Property '" + joinPropInfo.name + "' in class: " + ClassUtil.getCanonicalClassName(entityClass) + " cannot be annotated with @Column");
         }
 
-        referencedEntityType = joinPropInfo.type.isMap() ? joinPropInfo.type.parameterTypes()[1]
+        referencedEntityType = joinPropInfo.type.isMap() ? joinPropInfo.type.parameterTypes().get(1)
                 : (joinPropInfo.type.isCollection() ? joinPropInfo.type.elementType() : joinPropInfo.type);
 
         if (!referencedEntityType.isBean()) {

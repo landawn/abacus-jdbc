@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -95,6 +96,20 @@ public class DaoImplTest extends TestBase {
         String existsAsString();
 
         boolean existsWithMapper(Jdbc.RowMapper<TestEntity> mapper);
+    }
+
+    // Interface with a method returning List<T> (TypeVariable) — triggers the ClassCastException bug before fix.
+    interface GenericListDao<T> {
+        List<T> listAll();
+
+        // List<? extends TestEntity> — WildcardType argument — also triggered the bug.
+        List<? extends TestEntity> listWildcard();
+    }
+
+    // Interface where the ResultExtractor parameter carries a TypeVariable type argument (e.g., ResultExtractor<T>).
+    // Before the fix, createQueryFunctionByMethod threw ClassCastException trying to cast TypeVariable to ParameterizedType.
+    interface GenericExtractorDao<T> {
+        List<T> listWithExtractor(Jdbc.ResultExtractor<T> extractor);
     }
 
     static final class StubQuery extends AbstractQuery<PreparedStatement, StubQuery> {
@@ -299,6 +314,50 @@ public class DaoImplTest extends TestBase {
     void testQueryInfo_FragmentContainsNamedParameters_PositionalSql_Throws() {
         assertThrows(IllegalArgumentException.class,
                 () -> new DaoImpl.QueryInfo("SELECT * FROM t WHERE id = ?", null, 0, 0, false, 0, OP.DEFAULT, false, false, true, false, false, true));
+    }
+
+    /**
+     * Regression test: isListQuery must not throw ClassCastException when the collection's
+     * type argument is a TypeVariable (e.g., List&lt;T&gt;) rather than a Class or ParameterizedType.
+     */
+    @Test
+    void testIsListQuery_TypeVariableArgument_DoesNotThrow() throws Exception {
+        Method method = GenericListDao.class.getMethod("listAll");
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        // Should not throw ClassCastException — returns false because paramClassInReturnType is null
+        assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, OP.DEFAULT, "GenericListDao.listAll"));
+    }
+
+    /**
+     * Regression test: createQueryFunctionByMethod must not throw ClassCastException when the ResultExtractor
+     * parameter has a TypeVariable type argument (e.g., ResultExtractor&lt;T&gt;).
+     */
+    @Test
+    void testCreateQueryFunctionByMethod_ResultExtractorWithTypeVariable_DoesNotThrow() throws Exception {
+        Method method = GenericExtractorDao.class.getMethod("listWithExtractor", Jdbc.ResultExtractor.class);
+        Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, OP.class, boolean.class, String.class);
+        factory.setAccessible(true);
+
+        // Should not throw ClassCastException when ResultExtractor<T> (TypeVariable) is the last param.
+        assertDoesNotThrow(() -> factory.invoke(null, TestEntity.class, method, null, null, null, true, false, true, OP.DEFAULT, false,
+                "GenericExtractorDao.listWithExtractor"));
+    }
+
+    /**
+     * Regression test: isListQuery must not throw ClassCastException when the collection's
+     * type argument is a WildcardType (e.g., List&lt;? extends TestEntity&gt;) rather than a Class or ParameterizedType.
+     */
+    @Test
+    void testIsListQuery_WildcardTypeArgument_DoesNotThrow() throws Exception {
+        Method method = GenericListDao.class.getMethod("listWildcard");
+        Method classifier = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        classifier.setAccessible(true);
+
+        // Should not throw ClassCastException — returns false because paramClassInReturnType is null
+        assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, OP.DEFAULT, "GenericListDao.listWildcard"));
     }
 
     private static DataSource mockDataSourceForDaoCreation() throws SQLException {

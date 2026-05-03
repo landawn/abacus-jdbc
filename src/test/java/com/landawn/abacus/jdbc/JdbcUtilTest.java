@@ -836,6 +836,44 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testStreamAllResultSets_multipleResultSets() throws SQLException {
+        // Simulate a stored procedure returning two result sets.
+        // The second ResultSet is a separate mock.
+        ResultSet mockResultSet2 = mock(ResultSet.class);
+        ResultSetMetaData mockResultSetMetaData2 = mock(ResultSetMetaData.class);
+
+        // First result set: one row with column "a"
+        when(mockResultSet.getMetaData()).thenReturn(mockResultSetMetaData);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("a");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("row1");
+
+        // Second result set: one row with column "b"
+        when(mockResultSet2.getMetaData()).thenReturn(mockResultSetMetaData2);
+        when(mockResultSetMetaData2.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData2.getColumnLabel(1)).thenReturn("b");
+        when(mockResultSet2.next()).thenReturn(true, false);
+        when(mockResultSet2.getObject(1)).thenReturn("row2");
+
+        // First call: getResultSet() returns mockResultSet (first result set is current)
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        // After next() consumes the first RS, getMoreResults(KEEP_CURRENT_RESULT) returns true (second RS available)
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, false);
+        // When hasNext() is called for the second RS, getResultSet() returns mockResultSet2
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet, mockResultSet2);
+        // After consuming the second RS, getMoreResults(KEEP_CURRENT_RESULT) returns false; getUpdateCount() == -1
+        when(mockStatement.getUpdateCount()).thenReturn(-1);
+
+        Stream<Dataset> stream = JdbcUtil.streamAllResultSets(mockStatement);
+        List<Dataset> list = stream.toList();
+
+        assertEquals(2, list.size(), "should yield two Datasets for two result sets");
+        assertEquals(1, list.get(0).size(), "first Dataset should have one row");
+        assertEquals(1, list.get(1).size(), "second Dataset should have one row");
+    }
+
+    @Test
     public void testQueryByPage() throws SQLException {
         String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 10";
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);

@@ -16,9 +16,9 @@ Use multiple agents to perform a thorough, line-by-line review of the Javadocs i
 Use multiple agents to perform a thorough deep line by line review for javadocs in Multiset.java to improve/correct existing javadocs
 
 
-Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and unit tests for the fixes
+Use multiple agents to perform a thorough deep line by line review for all the classes under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes
 
-Use multiple agents to perform a thorough deep line by line review for all the classes in package com.landawn.abacus.util under folder: ./src/main/java to find bugs and fix them, and unit tests for the fixes
+Use multiple agents to perform a thorough deep line by line review for all the classes in package com.landawn.abacus.util under folder: ./src/main/java to find bugs and fix them, and add unit tests for the fixes to existing test classes
 
 Are you sure you have identified and fixed all the bugs? Perform a thorough deep review again.
 

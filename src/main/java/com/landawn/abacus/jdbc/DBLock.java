@@ -456,7 +456,8 @@ public final class DBLock {
         final String code = Strings.uuid();
 
         Timestamp now = DateUtil.currentTimestamp();
-        final long endTime = now.getTime() + timeout;
+        final long nowTime = now.getTime();
+        final long endTime = (timeout > Long.MAX_VALUE - nowTime) ? Long.MAX_VALUE : nowTime + timeout;
         int attempts = 0;
         final long maxAttemptsLong = timeout / Math.max(retryInterval, 1);
         final long maxAttemptsWithBuffer = maxAttemptsLong >= (Integer.MAX_VALUE - 1000L) ? Integer.MAX_VALUE : maxAttemptsLong + 1000L; // Safeguard against infinite loop
