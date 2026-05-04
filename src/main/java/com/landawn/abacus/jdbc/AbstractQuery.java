@@ -5088,6 +5088,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * {@link #closeAfterExecution(boolean)} has been set to {@code false}.</p>
      *
      * @return A {@code Dataset} containing all rows from the query result
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Dataset
      */
@@ -5112,6 +5113,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param entityClassForExtractor the class used to provide metadata for mapping columns in the result set
      * @return A {@code Dataset} containing the results with entity-aware column mapping
+     * @throws IllegalArgumentException if entityClassForExtractor is null
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
@@ -5352,6 +5355,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return A list of {@code Dataset} objects, one for each ResultSet returned by the query
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #queryAllResultSets(ResultExtractor)
      * @see #streamAllResultSets()
@@ -5597,6 +5601,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
+     * @throws IllegalStateException if this query is closed
      * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueValue(Class)
@@ -5715,6 +5720,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return A {@code Map<String, Object>} containing the result if exactly one record is found, otherwise {@code null}
+     * @throws IllegalStateException if this query is closed
      * @throws DuplicateResultException If the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
@@ -5880,6 +5886,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * {@link #closeAfterExecution(boolean)} has been set to {@code false}.</p>
      *
      * @return An {@code Optional} containing the first result as a map, or empty if no result is found
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
     public Optional<Map<String, Object>> findFirst() throws SQLException {
@@ -6043,6 +6050,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return A {@code Map<String, Object>} containing the first result, or {@code null} if no result is found
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
     public Map<String, Object> findFirstOrNull() throws SQLException {
@@ -6269,6 +6277,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * {@link #closeAfterExecution(boolean)} has been set to {@code false}.</p>
      *
      * @return A list of maps, where each map represents a row with column names as keys
+     * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
     public List<Map<String, Object>> list() throws SQLException {

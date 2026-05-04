@@ -1079,7 +1079,6 @@ public final class JdbcUtils {
      * @param insertSql the SQL insert statement with placeholders
      * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception

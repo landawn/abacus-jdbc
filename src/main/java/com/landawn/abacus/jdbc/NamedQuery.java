@@ -52,18 +52,18 @@ import com.landawn.abacus.util.N;
 
 /**
  * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's NamedParameterJdbcTemplate.
- * This class wraps a {@link PreparedStatement} and allows you to use named parameters (e.g., :name, :age) instead of 
+ * This class wraps a {@link PreparedStatement} and allows you to use named parameters (e.g., :name, :age) instead of
  * positional parameters (?) in your SQL queries.
- * 
+ *
  * <p>The backing {@code PreparedStatement} is closed by default
- * after any execution methods (which will trigger the backing {@code PreparedStatement} to be executed,
- * for example: query/queryForInt/Long/../findFirst/findOnlyOne/list/execute/...),
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
+ * after any execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
+ * {@code findFirst}, {@code findOnlyOne}, {@code list}, {@code execute}, and similar),
+ * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  *
- * <p>Generally, don't cache or reuse the instance of this class,
- * unless the {@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
+ * <p>In general, do not cache or reuse the instance of this class,
+ * unless the {@code closeAfterExecution} flag is set to {@code false} by calling {@link #closeAfterExecution(boolean)}.
  *
- * <p>The {@code ResultSet} returned by query will always be closed after execution, even if {@code 'closeAfterExecution'} flag is set to {@code false}.
+ * <p>The {@code ResultSet} returned by query will always be closed after execution, even if {@code closeAfterExecution} flag is set to {@code false}.
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
  *
@@ -3633,7 +3633,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.setObject("user_id", 12345, JDBCType.INTEGER)
      *      .setObject("email", "user@example.com", JDBCType.VARCHAR)
      *      .setObject("balance", new BigDecimal("1000.00"), JDBCType.DECIMAL);
@@ -3704,7 +3703,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * // Set a decimal with specific scale
      * query.setObject("price", new BigDecimal("99.999"), JDBCType.DECIMAL, 2);
      * // Set a varchar with maximum length
@@ -4100,23 +4098,23 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * UserSearchCriteria criteria = new UserSearchCriteria();
      * criteria.setMinAge(25);
      * criteria.setMaxAge(35);
-     * criteria.setActive(true);
-     * 
+     * criteria.setActive(Boolean.TRUE);   // nullable Boolean for optional filter
+     *
      * query.setParameters(criteria, (sql, q, c) -> {
      *     q.setInt("min_age", c.getMinAge());
      *     q.setInt("max_age", c.getMaxAge());
-     *     if (c.isActive() != null) {
-     *         q.setBoolean("is_active", c.isActive());
+     *     if (c.getActive() != null) {
+     *         q.setBoolean("is_active", c.getActive());
      *     }
      * });
      * }</pre>
      *
-     * @param <T> parameters object type
+     * @param <T> the type of the parameters object
      * @param parameters the parameters object to pass to the setter
-     * @param parametersSetter a function that sets parameters on the query
+     * @param parametersSetter a tri-function that receives the parsed SQL, this NamedQuery instance, and the parameters object
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if parametersSetter is null
-     * @throws SQLException if a database access error occurs 
+     * @throws SQLException if a database access error occurs
      */
     public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {

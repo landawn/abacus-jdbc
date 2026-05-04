@@ -470,7 +470,7 @@ public final class Jdbc {
          * @param <R> result type of the {@code after} function
          * @param after the function to apply after this extractor is applied
          * @return a composed {@code ResultExtractor}
-         * @throws IllegalArgumentException if {@code after} is null
+         * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> ResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1215,7 +1215,7 @@ public final class Jdbc {
          * @param <R> result type of the {@code after} function
          * @param after the function to apply after this extractor is applied
          * @return a composed {@code BiResultExtractor}
-         * @throws IllegalArgumentException if {@code after} is null
+         * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> BiResultExtractor<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1715,7 +1715,7 @@ public final class Jdbc {
          * @param <R> result type of the {@code after} function
          * @param after the function to apply to the result of this mapper; must not be null
          * @return a composed {@code RowMapper}
-         * @throws IllegalArgumentException if {@code after} is null
+         * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> RowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -1751,7 +1751,7 @@ public final class Jdbc {
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @return a new {@code RowMapper} that produces a {@code Tuple2}
-         * @throws IllegalArgumentException if either mapper is null
+         * @throws IllegalArgumentException if either mapper is {@code null}
          */
         static <T, U> RowMapper<Tuple2<T, U>> combine(final RowMapper<? extends T> rowMapper1, final RowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, cs.rowMapper1);
@@ -1779,7 +1779,7 @@ public final class Jdbc {
          * @param rowMapper2 the second mapper; must not be null
          * @param rowMapper3 the third mapper; must not be null
          * @return a new {@code RowMapper} that produces a {@code Tuple3}
-         * @throws IllegalArgumentException if any mapper is null
+         * @throws IllegalArgumentException if any mapper is {@code null}
          */
         static <A, B, C> RowMapper<Tuple3<A, B, C>> combine(final RowMapper<? extends A> rowMapper1, final RowMapper<? extends B> rowMapper2,
                 final RowMapper<? extends C> rowMapper3) {
@@ -1972,7 +1972,7 @@ public final class Jdbc {
          *
          * @param entityClass the class used to infer the data type for each column based on matching property names
          * @return a stateful {@code RowMapper} for high-performance, type-aware, single-threaded row processing
-         * @throws IllegalArgumentException if {@code entityClass} is null
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -2067,7 +2067,7 @@ public final class Jdbc {
          *
          * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns
          * @return a new {@code RowMapperBuilder}
-         * @throws IllegalArgumentException if {@code defaultColumnGetter} is null
+         * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
          */
         static RowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowMapperBuilder(defaultColumnGetter);
@@ -2103,7 +2103,7 @@ public final class Jdbc {
              * This getter will be applied to any column index for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-             * @throws IllegalArgumentException if {@code defaultColumnGetter} is null
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -2258,9 +2258,9 @@ public final class Jdbc {
              *     .getObject(2);
              * }</pre>
              *
-             * @param columnIndex the 1-based index of the column.
-             * @return this builder instance for method chaining.
-             * @throws IllegalArgumentException if {@code columnIndex} is not positive.
+             * @param columnIndex the 1-based index of the column
+             * @return this builder instance for method chaining
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive
              * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
@@ -2300,7 +2300,7 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column
              * @param columnGetter the custom {@code ColumnGetter} to use
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnIndex} is not positive or {@code columnGetter} is null
+             * @throws IllegalArgumentException if {@code columnIndex} is not positive or {@code columnGetter} is {@code null}
              */
             public RowMapperBuilder get(final int columnIndex, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, cs.columnIndex);
@@ -2735,7 +2735,7 @@ public final class Jdbc {
          * @param <R> result type of the {@code after} function
          * @param after the function to apply to the result of this mapper; must not be null
          * @return a composed {@code BiRowMapper}
-         * @throws IllegalArgumentException if {@code after} is null
+         * @throws IllegalArgumentException if {@code after} is {@code null}
          */
         default <R> BiRowMapper<R> andThen(final Throwables.Function<? super T, ? extends R, SQLException> after) {
             N.checkArgNotNull(after);
@@ -2790,7 +2790,7 @@ public final class Jdbc {
          * @param rowMapper1 the first mapper; must not be null
          * @param rowMapper2 the second mapper; must not be null
          * @return a new {@code BiRowMapper} that produces a {@code Tuple2}
-         * @throws IllegalArgumentException if either mapper is null
+         * @throws IllegalArgumentException if either mapper is {@code null}
          */
         static <T, U> BiRowMapper<Tuple2<T, U>> combine(final BiRowMapper<? extends T> rowMapper1, final BiRowMapper<? extends U> rowMapper2) {
             N.checkArgNotNull(rowMapper1, cs.rowMapper1);
@@ -2818,7 +2818,7 @@ public final class Jdbc {
          * @param rowMapper2 the second mapper; must not be null
          * @param rowMapper3 the third mapper; must not be null
          * @return a new {@code BiRowMapper} that produces a {@code Tuple3}
-         * @throws IllegalArgumentException if any mapper is null
+         * @throws IllegalArgumentException if any mapper is {@code null}
          */
         static <A, B, C> BiRowMapper<Tuple3<A, B, C>> combine(final BiRowMapper<? extends A> rowMapper1, final BiRowMapper<? extends B> rowMapper2,
                 final BiRowMapper<? extends C> rowMapper3) {
@@ -4061,7 +4061,7 @@ public final class Jdbc {
              *
              * @param columnName the name of the column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnName} is null.
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}.
              * @deprecated The default behavior already uses {@code ColumnGetter.GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
@@ -4095,7 +4095,7 @@ public final class Jdbc {
              * @param columnName the name of the column
              * @param columnGetter the custom {@code ColumnGetter} to use for this column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnName} is null/empty or {@code columnGetter} is null
+             * @throws IllegalArgumentException if {@code columnName} is {@code null}/empty or {@code columnGetter} is {@code null}
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, cs.columnName);
@@ -5156,7 +5156,7 @@ public final class Jdbc {
          *
          * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns; must not be null.
          * @return a new {@code RowExtractorBuilder}.
-         * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+         * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}.
          */
         static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
             return new RowExtractorBuilder(defaultColumnGetter);
@@ -6473,6 +6473,7 @@ public final class Jdbc {
          *
          * @param map the map to use for caching.
          * @return a new {@code DaoCache} instance backed by the provided map.
+         * @throws IllegalArgumentException if {@code map} is {@code null}.
          */
         static DaoCache createByMap(Map<String, Object> map) {
             N.checkArgNotNull(map, "map");
@@ -6649,6 +6650,7 @@ public final class Jdbc {
          * Creates a {@code DaoCacheByMap} backed by a provided map instance.
          *
          * @param cache the map to be used for caching.
+         * @throws IllegalArgumentException if {@code cache} is {@code null}.
          */
         DaoCacheByMap {
             N.checkArgNotNull(cache, "cache");

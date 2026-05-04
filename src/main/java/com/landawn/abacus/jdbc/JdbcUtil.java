@@ -3416,7 +3416,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL string, or stmtCreator is {@code null} or empty
+     * @throws IllegalArgumentException If the DataSource or named SQL string is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3621,7 +3621,7 @@ public final class JdbcUtil {
      * @param namedSql The named SQL string to prepare
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL string, or stmtCreator is {@code null} or empty
+     * @throws IllegalArgumentException If the Connection or named SQL string is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
@@ -3833,7 +3833,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the DataSource, named SQL, or stmtCreator is {@code null} or empty
+     * @throws IllegalArgumentException If the DataSource or named SQL is {@code null}, or if {@code stmtCreator} is {@code null}
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -3959,7 +3959,7 @@ public final class JdbcUtil {
      * @param namedSql The ParsedSql object containing the named SQL
      * @param stmtCreator A function to create a PreparedStatement with custom configuration
      * @return A NamedQuery object representing the prepared named SQL query
-     * @throws IllegalArgumentException If the Connection, named SQL, or stmtCreator is {@code null} or empty
+     * @throws IllegalArgumentException If the Connection or named SQL is {@code null}, or if {@code stmtCreator} is {@code null}
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
@@ -4134,7 +4134,7 @@ public final class JdbcUtil {
      *                    Receives the Connection and SQL string, and returns a configured CallableStatement.
      *                    Must not be {@code null}.
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If {@code ds}, {@code sql}, or {@code stmtCreator} is {@code null} or empty
+     * @throws IllegalArgumentException If {@code ds} or {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException If a SQL exception occurs while preparing the query
      * @see #prepareCallableQuery(javax.sql.DataSource, String)
      * @see #getConnection(javax.sql.DataSource)
@@ -4194,7 +4194,7 @@ public final class JdbcUtil {
      * @param sql The SQL string for the stored procedure call
      * @param stmtCreator A function to create a CallableStatement with custom configuration
      * @return A CallableQuery object representing the prepared callable SQL query
-     * @throws IllegalArgumentException If the Connection, SQL string, or stmtCreator is {@code null} or empty
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty, or if {@code stmtCreator} is {@code null}
      * @throws SQLException If a SQL exception occurs while preparing the query
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
@@ -8478,7 +8478,6 @@ public final class JdbcUtil {
      * @return a collection of property names suitable for INSERT operations
      * @throws IllegalArgumentException if the entity is not supported by QueryUtil introspection
      */
-    @SuppressWarnings("deprecation")
     public static Collection<String> getInsertPropNames(final Object entity, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entity, excludedPropNames);
     }
@@ -8516,7 +8515,6 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for INSERT operations
      */
-    @SuppressWarnings("deprecation")
     public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getInsertPropNames(entityClass, excludedPropNames);
     }
@@ -8574,7 +8572,6 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for SELECT operations
      */
-    @SuppressWarnings("deprecation")
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
             final Set<String> excludedPropNames) {
         return QueryUtil.getSelectPropNames(entityClass, includeSubEntityProperties, excludedPropNames);
@@ -8613,7 +8610,6 @@ public final class JdbcUtil {
      * @param excludedPropNames property names to exclude from the result
      * @return a collection of property names suitable for UPDATE operations
      */
-    @SuppressWarnings("deprecation")
     public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
         return QueryUtil.getUpdatePropNames(entityClass, excludedPropNames);
     }

@@ -846,7 +846,6 @@ final class DaoUtil {
      *
      * @param sql the SQL statement to check. Must not be {@code null}
      * @return {@code true} if the SQL is a SELECT query, {@code false} otherwise
-     * @throws UnsupportedOperationException if the operation is not supported
      */
     static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
         return "SELECT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
@@ -882,7 +881,6 @@ final class DaoUtil {
      *
      * @param sql the SQL statement to check. Must not be {@code null}
      * @return {@code true} if the SQL is an INSERT query, {@code false} otherwise
-     * @throws UnsupportedOperationException if the operation is not supported
      */
     static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {
         return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));

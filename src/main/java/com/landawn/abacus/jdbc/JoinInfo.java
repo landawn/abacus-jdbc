@@ -196,10 +196,10 @@ public final class JoinInfo {
      * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
      *                                         if {@code false}, throws IllegalArgumentException for null/default join values.
      *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class
-     * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid
-     * @throws IllegalArgumentException if the referenced entity type is not a valid bean/entity class
-     * @throws IllegalArgumentException if join column types are incompatible between source and referenced entities
-     * @throws IllegalArgumentException if the many-to-many intermediate entity class is not found or improperly configured
+     * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid;
+     *                                   if the referenced entity type is not a valid bean/entity class;
+     *                                   if join column types are incompatible between source and referenced entities;
+     *                                   or if the many-to-many intermediate entity class is not found or improperly configured
      *
      * @see JoinedBy
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig

@@ -2644,11 +2644,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <R> The type of object that each result set will be converted to
+     * @param <R> the type of object that each result set will be converted to
      * @param resultExtractor the {@code BiResultExtractor} used to convert each result set to type R.
      *                        Must not be {@code null}. The extractor receives the ResultSet and column labels.
      *                        Warning: Do not save or return the ResultSet reference as it will be closed.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of extracted results (one per result set)</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -2719,11 +2719,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <R1> The type for the first result set
-     * @param <R2> The type for the second result set
+     * @param <R1> the type for the first result set
+     * @param <R2> the type for the second result set
      * @param resultExtractor1 the extractor for the first result set. Must not be {@code null}.
      * @param resultExtractor2 the extractor for the second result set. Must not be {@code null}.
-     * @return A {@code Tuple3} containing:
+     * @return a {@code Tuple3} containing:
      *         <ul>
      *           <li>First element: Extracted result from the first result set (or null)</li>
      *           <li>Second element: Extracted result from the second result set (or null)</li>
@@ -2802,13 +2802,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <R1> The type for the first result set
-     * @param <R2> The type for the second result set
-     * @param <R3> The type for the third result set
+     * @param <R1> the type for the first result set
+     * @param <R2> the type for the second result set
+     * @param <R3> the type for the third result set
      * @param resultExtractor1 the extractor for the first result set. Must not be {@code null}.
      * @param resultExtractor2 the extractor for the second result set. Must not be {@code null}.
      * @param resultExtractor3 the extractor for the third result set. Must not be {@code null}.
-     * @return A {@code Tuple4} containing:
+     * @return a {@code Tuple4} containing:
      *         <ul>
      *           <li>First element: Extracted result from the first result set (or null)</li>
      *           <li>Second element: Extracted result from the second result set (or null)</li>
@@ -2896,10 +2896,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping
+     * @param <T> the target type for row mapping
      * @param targetType the class of type T to map each row to. Must not be {@code null}.
      *                   The class must have a default constructor.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -2947,10 +2947,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping
+     * @param <T> the target type for row mapping
      * @param rowMapper the {@code RowMapper} to convert each row to type T. Must not be {@code null}.
      *                  The mapper is called once per row with the ResultSet positioned at that row.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3011,11 +3011,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping
+     * @param <T> the target type for row mapping
      * @param rowFilter the {@code RowFilter} to test each row. Must not be {@code null}.
      *                  Only rows where the filter returns {@code true} are mapped.
      * @param rowMapper the {@code RowMapper} to convert filtered rows to type T. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from filtered rows</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3079,9 +3079,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping
+     * @param <T> the target type for row mapping
      * @param rowMapper the {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3157,10 +3157,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping
+     * @param <T> the target type for row mapping
      * @param rowFilter the {@code BiRowFilter} that receives ResultSet and column labels. Must not be {@code null}.
      * @param rowMapper the {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from filtered rows</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3224,10 +3224,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping across all result sets
+     * @param <T> the target type for row mapping across all result sets
      * @param targetType the class to map each row to. Must not be {@code null}.
      *                   Applied to all result sets.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3300,9 +3300,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping across all result sets
+     * @param <T> the target type for row mapping across all result sets
      * @param rowMapper the {@code RowMapper} to apply to each row in all result sets. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3377,10 +3377,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping across all result sets
+     * @param <T> the target type for row mapping across all result sets
      * @param rowFilter the {@code RowFilter} to apply to each row in all result sets. Must not be {@code null}.
      * @param rowMapper the {@code RowMapper} to apply to filtered rows. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists of filtered and mapped objects</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3461,9 +3461,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping across all result sets
+     * @param <T> the target type for row mapping across all result sets
      * @param rowMapper the {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists, one per result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
@@ -3557,10 +3557,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }
      * }</pre>
      *
-     * @param <T> The target type for row mapping across all result sets
+     * @param <T> the target type for row mapping across all result sets
      * @param rowFilter the {@code BiRowFilter} that receives ResultSet and column labels. Must not be {@code null}.
      * @param rowMapper the {@code BiRowMapper} that receives ResultSet and column labels. Must not be {@code null}.
-     * @return A {@code Tuple2} containing:
+     * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of lists of filtered and mapped objects</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
