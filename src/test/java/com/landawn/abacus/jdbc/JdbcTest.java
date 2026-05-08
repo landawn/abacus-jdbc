@@ -1605,13 +1605,39 @@ public class JdbcTest extends TestBase {
     @Test
     public void testColumnGetterGet() throws SQLException {
         when(mockResultSet.getString(1)).thenReturn("test");
-        when(mockResultSet.getInt(1)).thenReturn(42);
+        // ColumnGetter.get(Integer.class) flows through Type<Integer>.get which uses rs.getObject for null preservation.
+        when(mockResultSet.getObject(1)).thenReturn(42);
 
         Jdbc.ColumnGetter<String> stringGetter = Jdbc.ColumnGetter.get(String.class);
         Jdbc.ColumnGetter<Integer> intGetter = Jdbc.ColumnGetter.get(Integer.class);
 
         assertEquals("test", stringGetter.apply(mockResultSet, 1));
         assertEquals(42, intGetter.apply(mockResultSet, 1));
+    }
+
+    @Test
+    public void testColumnGetterGet_WrapperTypes_PreserveSqlNull() throws SQLException {
+        // Regression: ColumnGetter.get(Wrapper.class) MUST preserve SQL NULL as Java null,
+        // unlike the primitive-style ColumnGetter.GET_* constants which return 0 / false for null.
+        // Previously the static initializer cached Boolean/Integer/Long/etc. as the primitive ResultSet::getXxx
+        // getters, which silently converted SQL NULL to 0 / false. That has now been fixed.
+        // Most wrapper Type.get() implementations call rs.getObject(); ShortType uses rs.getShort()+wasNull().
+        when(mockResultSet.getObject(1)).thenReturn(null);
+        when(mockResultSet.wasNull()).thenReturn(true);
+
+        assertNull(Jdbc.ColumnGetter.get(Boolean.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.get(Byte.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.get(Short.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.get(Integer.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.get(Long.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.get(Float.class).apply(mockResultSet, 1));
+        assertNull(Jdbc.ColumnGetter.get(Double.class).apply(mockResultSet, 1));
+
+        // Sanity check: the primitive-class lookup still maps to the primitive ResultSet::getXxx getters
+        // (which is the only valid behavior for primitive types).
+        assertSame(Jdbc.ColumnGetter.GET_INT, Jdbc.ColumnGetter.get(int.class));
+        assertSame(Jdbc.ColumnGetter.GET_BOOLEAN, Jdbc.ColumnGetter.get(boolean.class));
+        assertSame(Jdbc.ColumnGetter.GET_LONG, Jdbc.ColumnGetter.get(long.class));
     }
 
     // Columns.ColumnOne Tests

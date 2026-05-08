@@ -572,7 +572,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         final int res = _refCount.decrementAndGet();
 
         if (res == 0) {
-            threadTransactionMap.remove(_id);
+            threadTransactionMap.computeIfPresent(_id, (k, v) -> v == this ? null : v);
 
             logger.info("Finishing transaction(id={})", _timedId);
 

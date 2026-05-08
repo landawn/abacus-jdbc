@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -587,5 +588,51 @@ public class SqlTransactionTest extends TestBase {
                 remaining.rollbackIfNotCommitted();
             }
         }
+    }
+
+    // After runOutsideTransaction throws ISE because a different transaction was opened in cmd,
+    // cleaning up the original transaction (rollbackIfNotCommitted) must not remove the OTHER
+    // transaction from the registry. Before the fix, decrementAndGetRef called
+    // threadTransactionMap.remove(_id) unconditionally, evicting the unrelated transaction.
+    @Test
+    public void testCleanupAfterRunOutsideTransactionConflictDoesNotEvictOtherTransaction() throws Exception {
+        clearThreadTransactionMap();
+
+        final Connection connection2 = Mockito.mock(Connection.class);
+        when(connection2.getAutoCommit()).thenReturn(true);
+        when(connection2.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        when(dataSource.getConnection()).thenReturn(connection, connection2);
+
+        final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        SqlTransaction innerTx = null;
+
+        try {
+            assertThrows(IllegalStateException.class, () -> outerTx.runOutsideTransaction(() -> {
+                JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+            }));
+
+            // The inner transaction must be the one currently registered for this thread/ds.
+            innerTx = SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL);
+            assertNotNull(innerTx);
+            assertNotSame(outerTx, innerTx);
+
+            final SqlTransaction expectedInner = innerTx;
+
+            // Cleaning up outerTx must not evict innerTx from the registry.
+            outerTx.rollbackIfNotCommitted();
+
+            assertSame(expectedInner, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+        } finally {
+            if (innerTx != null) {
+                innerTx.rollbackIfNotCommitted();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void clearThreadTransactionMap() throws Exception {
+        final Field mapField = SqlTransaction.class.getDeclaredField("threadTransactionMap");
+        mapField.setAccessible(true);
+        ((java.util.Map<String, SqlTransaction>) mapField.get(null)).clear();
     }
 }

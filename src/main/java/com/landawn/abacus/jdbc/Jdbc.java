@@ -110,20 +110,20 @@ public final class Jdbc {
     static final ObjectPool<Type<?>, ColumnGetter<?>> COLUMN_GETTER_POOL = new ObjectPool<>(1024);
 
     static {
+        // Primitive types: rs.getXxx() returns 0/false for SQL NULL, which is the only valid behavior for primitives.
         COLUMN_GETTER_POOL.put(N.typeOf(boolean.class), ColumnGetter.GET_BOOLEAN);
-        COLUMN_GETTER_POOL.put(N.typeOf(Boolean.class), ColumnGetter.GET_BOOLEAN);
         COLUMN_GETTER_POOL.put(N.typeOf(byte.class), ColumnGetter.GET_BYTE);
-        COLUMN_GETTER_POOL.put(N.typeOf(Byte.class), ColumnGetter.GET_BYTE);
         COLUMN_GETTER_POOL.put(N.typeOf(short.class), ColumnGetter.GET_SHORT);
-        COLUMN_GETTER_POOL.put(N.typeOf(Short.class), ColumnGetter.GET_SHORT);
         COLUMN_GETTER_POOL.put(N.typeOf(int.class), ColumnGetter.GET_INT);
-        COLUMN_GETTER_POOL.put(N.typeOf(Integer.class), ColumnGetter.GET_INT);
         COLUMN_GETTER_POOL.put(N.typeOf(long.class), ColumnGetter.GET_LONG);
-        COLUMN_GETTER_POOL.put(N.typeOf(Long.class), ColumnGetter.GET_LONG);
         COLUMN_GETTER_POOL.put(N.typeOf(float.class), ColumnGetter.GET_FLOAT);
-        COLUMN_GETTER_POOL.put(N.typeOf(Float.class), ColumnGetter.GET_FLOAT);
         COLUMN_GETTER_POOL.put(N.typeOf(double.class), ColumnGetter.GET_DOUBLE);
-        COLUMN_GETTER_POOL.put(N.typeOf(Double.class), ColumnGetter.GET_DOUBLE);
+        // Numeric/boolean wrapper types (Boolean, Byte, Short, Integer, Long, Float, Double) intentionally are NOT
+        // cached here. They flow through ColumnGetter.get(Type) -> computeIfAbsent and use the Type<Wrapper>.get
+        // implementations which preserve SQL NULL as Java null. Caching them as the primitive ResultSet::getXxx
+        // getters would lose null information (e.g. SQL NULL -> 0 / false), which is incorrect for wrapper types.
+        // Reference types where rs.getXxx() naturally preserves null can stay cached as the corresponding
+        // ColumnGetter.GET_* constant.
         COLUMN_GETTER_POOL.put(N.typeOf(BigDecimal.class), ColumnGetter.GET_BIG_DECIMAL);
         COLUMN_GETTER_POOL.put(N.typeOf(String.class), ColumnGetter.GET_STRING);
         COLUMN_GETTER_POOL.put(N.typeOf(java.sql.Date.class), ColumnGetter.GET_DATE);
