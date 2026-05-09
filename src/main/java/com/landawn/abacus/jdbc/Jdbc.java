@@ -3923,6 +3923,7 @@ public final class Jdbc {
              * This getter will be applied to any column name for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -4912,8 +4913,9 @@ public final class Jdbc {
          * <p>This method should execute quickly to avoid holding database connections longer than necessary.</p>
          *
          * @param rs the {@code ResultSet} positioned at the current row. Must not be {@code null}.
-         * @param columnLabels an unmodifiable list of column labels from the result set metadata, fetched once per query.
+         * @param columnLabels the list of column labels from the result set metadata, fetched once per query.
          *                     The list is 0-based (i.e., the label at index {@code i} corresponds to column index {@code i + 1} in the {@code ResultSet}).
+         *                     Implementations should not modify this list.
          * @return {@code true} if the current row should be included in the result; {@code false} to skip it.
          * @throws SQLException if a database access error occurs while reading from the {@code ResultSet}.
          */
@@ -5010,6 +5012,7 @@ public final class Jdbc {
          *
          * @param entityClassForFetch the entity class whose properties guide the type mapping.
          * @return a new stateful {@code RowExtractor}.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
         @SequentialOnly
         @Stateful
@@ -5027,6 +5030,7 @@ public final class Jdbc {
          * @param entityClassForFetch the entity class for type mapping.
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding entity field prefixes.
          * @return a new stateful {@code RowExtractor}.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
         @SequentialOnly
         @Stateful
@@ -5044,6 +5048,7 @@ public final class Jdbc {
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels the explicit list of column labels to use for mapping.
          * @return a new stateful {@code RowExtractor}.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
         @SequentialOnly
         @Stateful
@@ -5060,9 +5065,10 @@ public final class Jdbc {
          * or in parallel streams.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
-         * @param columnLabels an optional list of column labels to use for mapping. If {@code null}, they are discovered from the {@code ResultSet}.
+         * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
          * @param prefixAndFieldNameMap an optional map for mapping column prefixes to field name prefixes.
          * @return a new stateful {@code RowExtractor}.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
          */
         @SequentialOnly
         @Stateful
@@ -5188,6 +5194,13 @@ public final class Jdbc {
         class RowExtractorBuilder {
             private final Map<Integer, ColumnGetter<?>> columnGetterMap;
 
+            /**
+             * Constructs a new {@code RowExtractorBuilder} with a specified default column getter.
+             * This getter will be applied to any column index for which a specific getter has not been configured.
+             *
+             * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+             */
             RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
 
@@ -5364,15 +5377,15 @@ public final class Jdbc {
              * Builds a stateful {@code RowExtractor} that fills a supplied output array with the mapped row values.
              *
              * <p>
-             * The extractor initializes its internal column getter cache on first use. If the output array
-             * is shorter than the number of result set columns, an {@link IllegalArgumentException} is thrown.
+             * The extractor initializes its internal column getter cache on first use. When invoked, if the
+             * output array is shorter than the number of result set columns, an {@link IllegalArgumentException}
+             * is thrown by the extractor's {@code accept} method.
              * </p>
              *
              * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It should be built for each
              * execution context and must not be cached or shared across incompatible queries.</p>
              *
              * @return a new stateful {@code RowExtractor}.
-             * @throws IllegalArgumentException if the supplied output array length is smaller than the result set column count.
              */
             @SequentialOnly
             @Stateful
@@ -5960,7 +5973,6 @@ public final class Jdbc {
              * @param <T> parameter type
              * @param type the {@code Type} of the parameter.
              * @return a {@code BiParametersSetter} for the specified type.
-             * @throws NullPointerException if {@code type} is {@code null}.
              */
             @SuppressWarnings("rawtypes")
             public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
@@ -6116,12 +6128,14 @@ public final class Jdbc {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Handler<UserDao> loggingHandler = new Handler<>() {
-     * public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) {
-     * System.out.println("Calling method: " + sig._1.getName());
-     * }
-     * public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ..., ...> sig) {
-     * System.out.println("Method returned: " + result);
-     * }
+     *     public void beforeInvoke(UserDao proxy, Object[] args,
+     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         System.out.println("Calling method: " + methodSignature._1.getName());
+     *     }
+     *     public void afterInvoke(Object result, UserDao proxy, Object[] args,
+     *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *         System.out.println("Method returned: " + result);
+     *     }
      * };
      * }</pre>
      *
@@ -6146,7 +6160,8 @@ public final class Jdbc {
          * This method is invoked after the DAO method completes, whether successfully or with an exception.
          * It can be used for logging results, result transformation, or resource cleanup.
          *
-         * @param result the value returned by the method. If the method's return type is void, this will be {@code null}.
+         * @param result the value returned by the method. Will be {@code null} if the method's return type is void
+         *               or if the method threw an exception.
          * @param proxy the proxy instance on which the method was invoked.
          * @param args the arguments passed to the method.
          * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type.
@@ -6447,7 +6462,8 @@ public final class Jdbc {
     public interface DaoCache {
 
         /**
-         * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@code LocalCache}.
+         * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@link DefaultDaoCache}
+         * which uses a {@link KeyedObjectPool} for in-memory caching with TTL and idle time-based eviction.
          *
          * @param capacity the maximum number of entries in the cache.
          * @param evictDelay the interval in milliseconds for the eviction scheduler to run.

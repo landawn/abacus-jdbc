@@ -25,21 +25,18 @@ package com.landawn.abacus.jdbc;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Create from JDBC metadata
- * Connection conn = dataSource.getConnection();
- * DatabaseMetaData metaData = conn.getMetaData();
- * String productName = metaData.getDatabaseProductName();
- * String productVersion = metaData.getDatabaseProductVersion();
- * DBVersion version = parseVersion(productName, productVersion);
- * DBProductInfo dbInfo = new DBProductInfo(productName, productVersion, version);
+ * // Obtain DBProductInfo from a JDBC Connection or DataSource
+ * try (Connection conn = dataSource.getConnection()) {
+ *     DBProductInfo dbInfo = JdbcUtil.getDBProductInfo(conn);
  *
- * // Access product information
- * System.out.println("Database: " + dbInfo.productName());   // "MySQL"
- * System.out.println("Version: " + dbInfo.productVersion());   // "8.0.33"
+ *     // Access product information
+ *     System.out.println("Database: " + dbInfo.productName());     // e.g. "MySQL"
+ *     System.out.println("Version: " + dbInfo.productVersion());   // e.g. "8.0.33"
  *
- * // Use parsed version for logic
- * if (dbInfo.version().isMySQL()) {
- *     // MySQL-specific operations
+ *     // Use the parsed version enum for branching logic
+ *     if (dbInfo.version().isMySQL()) {
+ *         // MySQL-specific operations
+ *     }
  * }
  * }</pre>
  *

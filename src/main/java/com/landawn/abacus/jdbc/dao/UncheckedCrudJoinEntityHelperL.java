@@ -38,16 +38,21 @@ import com.landawn.abacus.util.u.Optional;
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * UncheckedCrudJoinEntityHelperL<User, SqlBuilder, ?> userDao = daoFactory.createJoinDaoL(User.class);
- * 
+ * public interface UserDao extends UncheckedCrudDaoL<User, SqlBuilder.PSC, UserDao>,
+ *         UncheckedCrudJoinEntityHelperL<User, SqlBuilder.PSC, UserDao> {
+ *     // Inherits both CRUD operations and join entity helpers with primitive long ID convenience
+ * }
+ *
+ * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
+ *
  * // Fetch user with primitive long ID and load associated orders
  * Optional<User> user = userDao.get(123L, Order.class);
- * 
+ *
  * // Fetch user with specific properties and multiple join entities
- * User userWithDetails = userDao.gett(123L, 
+ * User userWithDetails = userDao.gett(123L,
  *     Arrays.asList("id", "name", "email"),
  *     Arrays.asList(Order.class, Address.class));
- * 
+ *
  * // Load all join entities for a user
  * Optional<User> fullUser = userDao.get(123L, true);   // includeAllJoinEntities = true
  * }</pre>

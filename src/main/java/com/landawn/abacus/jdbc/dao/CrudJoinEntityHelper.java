@@ -42,17 +42,18 @@ import com.landawn.abacus.util.u.Optional;
  *     @Id
  *     private Long id;
  *     private String name;
- *     
- *     @JoinedBy("userId")
+ *
+ *     @JoinedBy("id=Order.userId")
  *     private List<Order> orders;
- *     
- *     @JoinedBy("userId") 
+ *
+ *     @JoinedBy("id=UserProfile.userId")
  *     private UserProfile profile;
- *     
- *     @JoinedBy({"user_roles", "userId"})
+ *
+ *     // many-to-many through join table
+ *     @JoinedBy({"id=UserRole.userId", "UserRole.roleId=id"})
  *     private List<Role> roles;
  * }
- * 
+ *
  * public interface UserDao extends CrudJoinEntityHelper<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Inherits methods for loading joined entities
  * }
@@ -83,8 +84,9 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
 
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities.
-     * Only the join entities of the specified class will be loaded.
-     * 
+     * Only the join properties of the specified class will be loaded; if multiple properties in the entity
+     * class are joined to that type, all of them are loaded.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // User has @JoinedBy orders, profile, and roles
@@ -102,6 +104,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -140,14 +143,14 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties and loads the specified join entities.
+     * Retrieves an entity by its ID with only selected properties and loads the specified type of join entities.
      * This method allows for optimized queries by selecting only needed columns from the main entity.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Load only id, name, and email from user, plus all orders
-     * Optional<User> user = userDao.get(userId, 
-     *                                  Arrays.asList("id", "name", "email"), 
+     * Optional<User> user = userDao.get(userId,
+     *                                  Arrays.asList("id", "name", "email"),
      *                                  Order.class);
      * }</pre>
      *
@@ -158,6 +161,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
@@ -222,7 +226,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
     /**
      * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Class)}.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId, Order.class);
@@ -237,6 +241,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return the entity with specified join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -281,7 +286,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties and loads the specified join entities, returning {@code null} if not found.
+     * Retrieves an entity by its ID with only selected properties and loads the specified type of join entities, returning {@code null} if not found.
      * This is the null-returning variant of {@link #get(Object, Collection, Class)}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -300,6 +305,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -403,6 +409,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return a list of entities with the specified join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -451,6 +458,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
@@ -533,6 +541,7 @@ public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends C
      * @return a list of entities with selected properties and join entities loaded
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad,

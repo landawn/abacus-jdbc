@@ -52,19 +52,20 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 
 /**
- * Interface for an unchecked Data Access Object (DAO) that extends the base DAO interface.
- * Its methods throw {@code UncheckedSQLException} instead of {@code SQLException}, providing a more convenient
- * API for developers who prefer unchecked exceptions.
- * 
- * <p>This interface provides basic CRUD operations and query methods without the need to handle checked exceptions.
- * All operations that would normally throw {@code SQLException} will throw {@code UncheckedSQLException} instead.</p>
- * 
+ * Interface for an unchecked Data Access Object (DAO) that extends the base {@link Dao} interface.
+ * Its methods throw {@link UncheckedSQLException} instead of {@link java.sql.SQLException}, providing a more
+ * convenient API for developers who prefer unchecked exceptions.
+ *
+ * <p>This interface provides condition-based save, query, update, and delete operations without the need to
+ * handle checked exceptions. All operations that would normally throw {@code SQLException} in the parent
+ * {@link Dao} interface will throw {@link UncheckedSQLException} instead.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * UncheckedDao<User, SqlBuilder.PSC, UserDao> userDao = ...;
  * User user = new User("John", "Doe");
  * userDao.save(user);
- * 
+ *
  * Optional<User> foundUser = userDao.findFirst(Filters.eq("firstName", "John"));
  * }</pre>
  *
@@ -79,7 +80,9 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Saves (inserts) the specified entity to the database.
-     * All non-null properties of the entity will be included in the INSERT statement.
+     * All insertable properties of the entity (i.e., excluding {@code @ReadOnly}, {@code @NonInsertable}, etc.)
+     * are included in the INSERT statement. The ID property is included only when it has been set
+     * (i.e., is not the default value), allowing the database to generate it otherwise.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -425,8 +428,8 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * Finds exactly one record matching the condition. Throws an exception if multiple records are found.
-     * 
+     * Finds exactly one record matching the condition. Throws {@code DuplicateResultException} if more than one record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(Filters.eq("email", "unique@example.com"));
@@ -442,7 +445,8 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds exactly one record matching the condition and maps it using the row mapper.
-     * 
+     * Throws {@code DuplicateResultException} if more than one record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> name = userDao.findOnlyOne(
@@ -463,7 +467,8 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds exactly one record matching the condition and maps it using the bi-row mapper.
-     * 
+     * Throws {@code DuplicateResultException} if more than one record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserDTO> user = userDao.findOnlyOne(
@@ -484,7 +489,8 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds exactly one record matching the condition, selecting only the specified properties.
-     * 
+     * Throws {@code DuplicateResultException} if more than one record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.findOnlyOne(
@@ -504,7 +510,8 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds exactly one record with selected properties and maps it using the row mapper.
-     * 
+     * Throws {@code DuplicateResultException} if more than one record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Long> userId = userDao.findOnlyOne(
@@ -528,7 +535,8 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
     /**
      * Finds exactly one record with selected properties and maps it using the bi-row mapper.
-     * 
+     * Throws {@code DuplicateResultException} if more than one record is found.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<UserSummary> summary = userDao.findOnlyOne(
@@ -1617,9 +1625,11 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
 
     /**
-     * Updates all records matching the condition with values from the specified entity.
-     * All non-null properties in the entity will be used for the update.
-     * 
+     * Updates all records matching the condition using all updatable properties from the entity.
+     * This updates every property of the entity that is considered updatable
+     * (i.e., excluding {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id}, etc.),
+     * regardless of whether the value is {@code null}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User template = new User();
@@ -1681,9 +1691,9 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * User result = userDao.upsert(user, Arrays.asList("email"));
      * }</pre>
      *
-     * @param entity the entity to add or update
+     * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the list of property names that uniquely identify the record
-     * @return the added or updated entity from the database
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1713,9 +1723,9 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * ));
      * }</pre>
      *
-     * @param entity the entity to add or update
+     * @param entity the entity to insert or update
      * @param cond the condition to verify if the record exists
-     * @return the added or updated entity from the database
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

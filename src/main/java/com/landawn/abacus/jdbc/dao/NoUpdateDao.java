@@ -47,9 +47,11 @@ import com.landawn.abacus.util.Throwables;
  *   <li>Implementing the Command Query Responsibility Segregation (CQRS) pattern</li>
  * </ul>
  *
- * <p>All methods that would typically perform {@code UPDATE}, {@code DELETE}, or {@code CALL}
- * operations throw {@link UnsupportedOperationException} when invoked. Only {@code SELECT}
- * queries for reading data and {@code INSERT} queries for adding new records are permitted.</p>
+ * <p>All methods that would typically perform {@code UPDATE}, {@code DELETE}, {@code UPSERT}, or
+ * stored procedure ({@code CALL}) operations throw {@link UnsupportedOperationException} when
+ * invoked. Only {@code SELECT} queries for reading data and {@code INSERT} queries for adding
+ * new records are permitted via {@link #prepareQuery(String)} and {@link #prepareNamedQuery(String)};
+ * any other SQL kind passed to those methods also raises {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Supported Operations:</b></p>
  * <ul>
@@ -258,6 +260,9 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Custom {@link PreparedStatement} creators bypass the SQL-kind check enforced by
+     * {@code NoUpdateDao}, so this overload is disallowed entirely to preserve the
+     * read/insert-only contract.
      *
      * @param query the SQL query string
      * @param stmtCreator custom statement creator function
@@ -275,6 +280,12 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Prepares a SQL query optimized for large result sets, restricted to {@code SELECT} and {@code INSERT} statements.
+     * The returned {@link PreparedQuery} is configured with statement settings (such as fetch size
+     * and a forward-only, read-only cursor where supported) suitable for streaming a large
+     * number of rows without exhausting memory.
+     *
+     * <p>Any attempt to prepare an {@code UPDATE}, {@code DELETE}, or other modification query
+     * results in an {@link UnsupportedOperationException}.</p>
      *
      * @param query the SQL query string to prepare (must be {@code SELECT} or {@code INSERT})
      * @return a {@link PreparedQuery} configured for large result sets
@@ -425,6 +436,9 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Custom {@link PreparedStatement} creators bypass the SQL-kind check enforced by
+     * {@code NoUpdateDao}, so this overload is disallowed entirely to preserve the
+     * read/insert-only contract.
      *
      * @param namedQuery the SQL query string with named parameters
      * @param stmtCreator custom statement creator function
@@ -442,6 +456,12 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Prepares a named parameter SQL query optimized for large result sets, restricted to {@code SELECT} and {@code INSERT} statements.
+     * The returned {@link NamedQuery} is configured with statement settings (such as fetch size
+     * and a forward-only, read-only cursor where supported) suitable for streaming a large
+     * number of rows without exhausting memory.
+     *
+     * <p>Any attempt to prepare an {@code UPDATE}, {@code DELETE}, or other modification query
+     * results in an {@link UnsupportedOperationException}.</p>
      *
      * @param namedQuery the SQL query string with named parameters (must be {@code SELECT} or {@code INSERT})
      * @return a {@link NamedQuery} configured for large result sets
@@ -461,6 +481,12 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Prepares a parsed named query optimized for large result sets, restricted to {@code SELECT} and {@code INSERT} statements.
+     * The returned {@link NamedQuery} is configured with statement settings (such as fetch size
+     * and a forward-only, read-only cursor where supported) suitable for streaming a large
+     * number of rows without exhausting memory.
+     *
+     * <p>Any attempt to prepare an {@code UPDATE}, {@code DELETE}, or other modification query
+     * results in an {@link UnsupportedOperationException}.</p>
      *
      * @param namedQuery the pre-parsed SQL query object (must represent {@code SELECT} or {@code INSERT})
      * @return a {@link NamedQuery} configured for large result sets
@@ -612,6 +638,9 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Custom {@link PreparedStatement} creators bypass the SQL-kind check enforced by
+     * {@code NoUpdateDao}, so this overload is disallowed entirely to preserve the
+     * read/insert-only contract.
      *
      * @param namedQuery the pre-parsed SQL query object
      * @param stmtCreator custom statement creator function
@@ -629,6 +658,9 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Stored-procedure ({@code CALL}) execution may have arbitrary side effects, including
+     * updates and deletes, so it is disallowed by {@code NoUpdateDao} to preserve the
+     * read/insert-only contract.
      *
      * @param query the stored procedure call string
      * @return never returns normally
@@ -644,6 +676,9 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Stored-procedure ({@code CALL}) execution may have arbitrary side effects, including
+     * updates and deletes, so it is disallowed by {@code NoUpdateDao} to preserve the
+     * read/insert-only contract.
      *
      * @param query the stored procedure call string
      * @param stmtCreator custom callable statement creator function
@@ -661,6 +696,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Single-property condition-based updates are disallowed by {@code NoUpdateDao} because
+     * they would mutate existing records, violating the read/insert-only contract.
      *
      * @param propName the name of the property to update
      * @param propValue the new value for the property
@@ -677,6 +714,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Multi-property condition-based updates are disallowed by {@code NoUpdateDao} because
+     * they would mutate existing records, violating the read/insert-only contract.
      *
      * @param updateProps a map of property names to their new values
      * @param cond the condition to identify records to update
@@ -692,6 +731,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Entity-based condition updates are disallowed by {@code NoUpdateDao} because they
+     * would mutate existing records, violating the read/insert-only contract.
      *
      * @param entity the entity containing values to update
      * @param cond the condition to identify records to update
@@ -707,6 +748,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Selective entity-based condition updates are disallowed by {@code NoUpdateDao} because
+     * they would mutate existing records, violating the read/insert-only contract.
      *
      * @param entity the entity containing values to update
      * @param propNamesToUpdate collection of property names to update from the entity
@@ -723,6 +766,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the
+     * read/insert-only contract of {@code NoUpdateDao}.
      *
      * @param entity the entity to be upserted
      * @param uniquePropNamesForQuery the list of property names to determine uniqueness
@@ -738,6 +783,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the
+     * read/insert-only contract of {@code NoUpdateDao}.
      *
      * @param entity the entity to be upserted
      * @param cond the condition to check whether the record exists
@@ -753,6 +800,8 @@ public interface NoUpdateDao<T, SB extends SqlBuilder, TD extends NoUpdateDao<T,
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Condition-based deletes are disallowed by {@code NoUpdateDao} because they would
+     * remove existing records, violating the read/insert-only contract.
      *
      * @param cond the condition to identify records to delete
      * @return never returns normally

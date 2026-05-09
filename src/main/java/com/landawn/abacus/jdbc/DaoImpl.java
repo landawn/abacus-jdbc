@@ -159,10 +159,14 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 /**
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
  *
- * <p>This class serves as the {@link InvocationHandler} for DAO proxies created by {@link JdbcUtil#createDao(Class, javax.sql.DataSource)},
- * implementing the method interception and execution logic for SQL operations defined through annotations such as {@code @Query}
- * (which covers SELECT/INSERT/UPDATE/DELETE/stored-procedure calls) together with helpers like {@code @Bind}, {@code @BindList},
- * {@code @SqlScript}, and {@code @SqlSource}.</p>
+ * <p>This class is the {@link InvocationHandler} backing DAO proxies created by
+ * {@link JdbcUtil#createDao(Class, javax.sql.DataSource)} and its overloads. It implements the method interception
+ * and execution logic for SQL operations defined through annotations such as {@code @Query}
+ * (which covers SELECT/INSERT/UPDATE/DELETE and stored-procedure calls) together with helpers like {@code @Bind},
+ * {@code @BindList}, {@code @SqlScript}, {@code @SqlFragment}, and {@code @SqlSource}. The actual SQL operation type
+ * is conveyed by the {@link OP} value supplied in the {@code @Query} annotation, by the SQL keyword (e.g., {@code SELECT},
+ * {@code INSERT}) detected from the SQL text itself, or by built-in CRUD methods inherited from {@link Dao} and
+ * {@link CrudDao}.</p>
  *
  * <p>The DaoImpl class is responsible for:</p>
  * <ul>
@@ -178,8 +182,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * <p><b>Key Features:</b></p>
  * <ul>
- *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query} for inline or named SQL (covering SELECT/INSERT/UPDATE/DELETE
- *       and stored-procedure calls) with flexible parameter binding via {@code @Bind}, {@code @BindList}, and {@code @SqlScript}</li>
+ *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query} for inline or referenced SQL (covering SELECT/INSERT/UPDATE/DELETE
+ *       and stored-procedure calls) with flexible parameter binding via {@code @Bind} and {@code @BindList},
+ *       and reusable SQL snippets through {@code @SqlFragment}/{@code @SqlScript}</li>
  *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., :paramName)</li>
  *   <li><b>Collection Parameter Expansion:</b> Handles IN clauses by expanding collection parameters</li>
  *   <li><b>Entity Mapping:</b> Automatic mapping between database result sets and entity classes</li>
@@ -192,9 +197,10 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * </ul>
  *
  * <p><b>Design Pattern:</b></p>
- * <p>This class implements the Proxy pattern combined with the Template Method pattern, where each DAO method
- * invocation is intercepted and processed according to its annotation metadata. The implementation uses method
- * handle caching, prepared SQL parsing, and type-safe result mapping to achieve high performance.</p>
+ * <p>The DAO proxies produced by this class apply the Proxy pattern: each method invocation is intercepted by an
+ * {@link InvocationHandler} and dispatched to a pre-built handler that was determined from the method's annotation
+ * metadata at proxy creation time. Method-handle caching, prepared SQL parsing, and type-safe result mapping are
+ * used to keep per-call overhead low.</p>
  *
  * <p><b>Thread Safety:</b></p>
  * <p>This class is thread-safe. Method metadata and SQL parsing results are cached in concurrent maps.
@@ -376,13 +382,22 @@ final class DaoImpl {
             "exist", "notExist", "has", "is");
 
     /**
-     * Checks if the specified method is a list query based on its return type, operation type, and naming convention.
+     * Checks whether the specified method should be dispatched as a list-style query based on its return type,
+     * its declared {@link OP}, the presence of {@code @MappedByKey}/{@code @MergedById} annotations, and the method's
+     * name prefix.
+     *
+     * <p>If {@code op} is {@link OP#list} or {@link OP#listAll}, the return type must be a {@link Collection}
+     * subtype; otherwise an {@link UnsupportedOperationException} is raised. For {@link OP#DEFAULT}, a method is
+     * considered a list query when its return type is a {@code Collection} and its name does not start with one
+     * of the single-result prefixes (e.g., {@code get}, {@code findFirst}, {@code findOnlyOne}, {@code exists}).</p>
      *
      * @param method the DAO method to check
      * @param returnType the return type of the method
      * @param op the operation type specified for the method
-     * @param fullClassMethodName the fully qualified class and method name for error reporting
-     * @return {@code true} if the method is a list query, {@code false} otherwise
+     * @param fullClassMethodName the fully qualified class and method name used for error reporting
+     * @return {@code true} if the method should be dispatched as a list query, {@code false} otherwise
+     * @throws UnsupportedOperationException if {@code op} is {@link OP#list}/{@link OP#listAll} but the return type is
+     *         not a {@link Collection} subtype
      */
     private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();
@@ -1694,16 +1709,16 @@ final class DaoImpl {
     /**
      * Creates a dynamic proxy implementation of the specified DAO interface backed by the given {@link javax.sql.DataSource}.
      *
-     * <p>This is the core factory method for DAO proxy creation. It processes all annotations (e.g., {@code @Query},
-     * {@code @Insert}, {@code @Update}, {@code @Delete}, {@code @Transactional}, {@code @CacheResult}) defined on
-     * the DAO interface methods and builds an {@link InvocationHandler} that intercepts each method call to execute
-     * the corresponding SQL operation.</p>
+     * <p>This is the core factory method for DAO proxy creation. It processes the supported annotations
+     * (e.g., {@code @Query}, {@code @Transactional}, {@code @CacheResult}, {@code @RefreshCache}, {@code @Handler},
+     * {@code @PerfLog}, {@code @SqlLogEnabled}) declared on the DAO interface and its methods, and builds an
+     * {@link InvocationHandler} that intercepts each method call to execute the corresponding SQL operation.</p>
      *
      * <p>Created DAO instances are cached by a composite key derived from the interface class, target table name,
      * data source identity, SQL mapper identity, DAO cache identity, and executor identity. Subsequent calls with
      * the same parameters return the cached instance.</p>
      *
-     * <p>The method also processes:</p>
+     * <p>In addition to method-level annotations, the method also processes type-level configuration:</p>
      * <ul>
      *   <li>{@code @SqlSource} annotations to load external SQL mapper files</li>
      *   <li>{@code @SqlScript} annotated fields for embedded SQL definitions</li>
@@ -1722,8 +1737,9 @@ final class DaoImpl {
      *        {@code @CacheResult}; may be {@code null}
      * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
      * @return a proxy instance implementing the specified DAO interface
-     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}, is not an interface, or if
-     *         {@code ds} is {@code null}; also thrown for duplicate SQL keys or invalid annotation configurations
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
+     *         is {@code null}, if duplicate SQL keys are defined, or if the DAO interface has invalid annotation
+     *         configurations or generic type arguments
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SqlMapper sqlMapper,

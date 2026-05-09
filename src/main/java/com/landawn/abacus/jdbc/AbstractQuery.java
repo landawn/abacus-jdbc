@@ -778,7 +778,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
-     * @throws ArithmeticException If the BigInteger value is too large for a long
+     * @throws ArithmeticException if the BigInteger value does not fit in a {@code long} (i.e., exceeds {@code Long.MIN_VALUE}/{@code Long.MAX_VALUE}). When this is thrown the underlying statement is also closed.
      */
     public This setLong(final int parameterIndex, final BigInteger x) throws SQLException {
         if (x == null) {
@@ -3184,6 +3184,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlType the SQL type to set, as defined in {@link java.sql.Types}
      * @param parameterIndices the parameter positions to set to NULL
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      * @see java.sql.Types
      */
@@ -3209,6 +3210,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Boolean value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3234,6 +3236,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Integer value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3297,6 +3300,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Long value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3321,6 +3325,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Double value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3345,6 +3350,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the String value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3370,6 +3376,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Date value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3395,6 +3402,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Date value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3420,6 +3428,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Time value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3445,6 +3454,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Date value to set as Time
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3470,6 +3480,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Timestamp value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3495,6 +3506,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Date value to set as Timestamp
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3520,6 +3532,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterValue the Object value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if a database access error occurs
      */
     @Beta

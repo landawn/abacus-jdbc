@@ -22,16 +22,19 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A no-update CRUD DAO interface that uses {@code Long} as the ID type with unchecked exception handling.
- * This interface provides convenience methods that accept primitive {@code long} values
- * in addition to the {@code Long} object methods inherited from {@link UncheckedNoUpdateCrudDao}.
+ * A no-update CRUD DAO interface specialized for entities whose primary key type is {@link Long},
+ * with unchecked exception handling. This interface provides convenience method overrides that accept
+ * primitive {@code long} values in addition to the {@code Long} object methods inherited from
+ * {@link UncheckedNoUpdateCrudDao}.
  *
- * <p>This interface combines the restrictions of no-update DAO (no update or delete operations allowed)
- * with the convenience of primitive long ID methods. It's useful for append-only data stores
+ * <p>This interface combines the restrictions of a no-update DAO (no update or delete operations allowed)
+ * with the convenience of primitive {@code long} ID methods. It's useful for append-only data stores
  * where records can be added and read, but never modified.</p>
  *
- * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
- * making it easier to work with in functional programming contexts.</p>
+ * <p>Read and insert methods throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ * making it easier to work with in functional programming contexts. All update and delete operations
+ * (including the primitive {@code long} ID variants declared on this interface) throw
+ * {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -53,8 +56,9 @@ import com.landawn.abacus.query.SqlBuilder;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the self-type of the DAO for method chaining
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
+ * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
  * @see UncheckedNoUpdateCrudDao
  * @see UncheckedCrudDaoL
  */
@@ -64,14 +68,14 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends 
 
     /**
      * This operation is not supported in a no-update DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     * <p>Even though this method accepts a convenient primitive long ID,
+     * <p>Even though this method accepts a convenient primitive {@code long} ID,
      * update operations are not allowed in no-update DAOs.</p>
      *
-     * @param propName the property name to update (operation will fail)
-     * @param propValue the new value (operation will fail)
-     * @param id the entity ID as primitive long (operation will fail)
+     * @param propName the name of the property to update (unused; method always throws)
+     * @param propValue the new value for the property (unused; method always throws)
+     * @param id the entity ID as a primitive {@code long} (unused; method always throws)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -84,13 +88,13 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends 
 
     /**
      * This operation is not supported in a no-update DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     * <p>Even though this method accepts a convenient primitive long ID,
+     * <p>Even though this method accepts a convenient primitive {@code long} ID,
      * update operations are not allowed in no-update DAOs.</p>
      *
-     * @param updateProps the properties to update (operation will fail)
-     * @param id the entity ID as primitive long (operation will fail)
+     * @param updateProps map of property names to their new values (unused; method always throws)
+     * @param id the entity ID as a primitive {@code long} (unused; method always throws)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as update operations are not supported
      * @deprecated This operation is not supported and will always throw an exception
@@ -103,12 +107,12 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends 
 
     /**
      * This operation is not supported in a no-update DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * Always throws {@link UnsupportedOperationException}.
      *
-     * <p>Even though this method accepts a convenient primitive long ID,
+     * <p>Even though this method accepts a convenient primitive {@code long} ID,
      * delete operations are not allowed in this no-update DAO variant.</p>
      *
-     * @param id the entity ID as primitive long (operation will fail)
+     * @param id the entity ID as a primitive {@code long} (unused; method always throws)
      * @return never returns normally
      * @throws UnsupportedOperationException always thrown as delete operations are not supported
      * @deprecated This operation is not supported and will always throw an exception

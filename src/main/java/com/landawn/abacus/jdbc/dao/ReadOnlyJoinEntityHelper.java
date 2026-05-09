@@ -78,7 +78,8 @@ import com.landawn.abacus.query.SqlBuilder;
  * @param <T> the entity type that this helper manages
  * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
  *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
- * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
+ * @param <TD> the companion {@link Dao} type that owns this helper (used for fluent
+ *             method chaining and access to DAO operations)
  * @see JoinEntityHelper
  * @see Dao
  * @see com.landawn.abacus.annotation.JoinedBy

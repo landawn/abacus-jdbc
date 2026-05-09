@@ -60,16 +60,17 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 /**
  * The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity management.
  * This interface is designed to work with entity classes that have an ID field annotated with {@code @Id}.
- * 
- * <p>The interface supports batch operations, unique result queries, and various data type conversions.
- * It extends the base {@link Dao} interface and adds entity-specific CRUD functionality.</p>
- * 
+ *
+ * <p>It supports batch operations, single-property queries by ID, unique-result queries, upsert,
+ * refresh, and various primitive/Date/byte[] type conversions on top of the base {@link Dao}
+ * interface.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
  *     // Custom query methods can be added here
  * }
- * 
+ *
  * // Usage
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * User user = new User("John", "Doe");
@@ -78,14 +79,16 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <ID> the ID type of the entity
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+ * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC})
  * @param <TD> the self-type of the DAO for fluent interface support
- * 
+ *
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see Dao
+ * @see CrudDaoL
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see com.landawn.abacus.query.Filters
  */
@@ -93,20 +96,23 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> extends Dao<T, SB, TD> {
 
     /**
-     * Returns the functional interface of {@code Jdbc.BiRowMapper} that extracts the ID from a database row.
-     * This mapper is used internally to extract ID values from query results.
+     * Returns a {@link Jdbc.BiRowMapper} that extracts the ID from a database row.
+     * This mapper is used internally to extract ID values from query results (for example,
+     * after an insert returns generated keys).
      *
-     * <p>Override this method to provide a custom ID extractor if the default behavior doesn't suit your needs.</p>
+     * <p>Override this method to provide a custom ID extractor if the default behavior doesn't suit your needs.
+     * The default implementation returns {@code null}, which signals that the framework should use its
+     * default ID extraction strategy.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Override
      * public Jdbc.BiRowMapper<Long> idExtractor() {
-     *     return (rs, columnNames) -> rs.getLong("id");
+     *     return (rs, columnLabels) -> rs.getLong("id");
      * }
      * }</pre>
      *
-     * @return a BiRowMapper that extracts the ID from a row, or {@code null} to use default extraction
+     * @return a {@link Jdbc.BiRowMapper} that extracts the ID from a row, or {@code null} to use default extraction
      */
     @SuppressWarnings("SameReturnValue")
     @NonDBOperation
@@ -132,6 +138,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if the operation is not supported (default behavior)
      * @deprecated This operation is deprecated as ID generation should typically be handled by the database
+     *             (e.g., via auto-increment columns or sequences). Override this method only if a client-side
+     *             ID generation strategy is required.
      */
     @Deprecated
     @NonDBOperation
@@ -140,8 +148,11 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Inserts the specified entity into the database and returns the generated ID.
-     * All non-null properties of the entity will be included in the INSERT statement.
+     * Inserts the specified entity into the database and returns its ID.
+     * All insertable properties of the entity will be included in the INSERT statement.
+     *
+     * <p>If the database generates the ID (for example via an auto-increment column), the generated
+     * ID is also written back to the entity's ID property where applicable.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -150,7 +161,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * System.out.println("Created user with ID: " + userId);
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be null)
+     * @param entityToInsert the entity to insert (must not be {@code null})
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
@@ -196,9 +207,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     ID insert(final String namedInsertSql, final T entityToInsert) throws SQLException;
 
     /**
-     * Performs batch insert of multiple entities using the default batch size.
+     * Performs batch insert of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * This method is more efficient than inserting entities one by one.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = Arrays.asList(
@@ -209,7 +221,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
@@ -235,9 +247,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
     /**
-     * Performs batch insert with only specified properties for all entities.
-     * Uses the default batch size.
-     * 
+     * Performs batch insert with only the specified properties for all entities.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsers();
@@ -246,8 +258,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @param propNamesToInsert the property names to include in the INSERT statement
-     * @return a list of generated IDs in the same order as the input entities
+     * @param propNamesToInsert the property names to include in the INSERT statement.
+     *                          If {@code null} or empty, all properties will be inserted
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
@@ -275,9 +288,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws SQLException;
 
     /**
-     * Performs batch insert using a custom named SQL statement with default batch size.
+     * Performs batch insert using a custom named SQL statement with the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * This is useful for complex insert scenarios that require custom SQL.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String sql = "INSERT INTO users (name, email, status) VALUES (:name, :email, 'PENDING')";
@@ -287,7 +301,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -597,18 +611,18 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Queries for a single non-null value using a custom row mapper.
      * This allows for complex transformations of the result.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<String> fullName = userDao.queryForSingleNonNull("firstName", userId, 
-     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     * Optional<String> upperFirstName = userDao.queryForSingleNonNull("firstName", userId,
+     *     rs -> rs.getString(1).toUpperCase());
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @param rowMapper the custom mapper to transform the result
-     * @return an Optional containing the mapped non-null value if found, otherwise empty
+     * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
+     * @return an {@link Optional} containing the mapped non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
@@ -665,21 +679,21 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
-     * Throws DuplicateResultException if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> upperName = userDao.queryForUniqueNonNull("name", userId,
-     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     *     rs -> rs.getString(1).toUpperCase());
      * upperName.ifPresent(name -> System.out.println("Name: " + name));
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
-     * @param rowMapper the custom mapper to transform the result
-     * @return an Optional containing the mapped unique non-null value if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
+     * @return an {@link Optional} containing the mapped unique non-null value if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
@@ -689,17 +703,17 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Retrieves an entity by its ID.
-     * Returns an Optional containing the entity if found, otherwise empty.
-     * 
+     * This is a convenience default method that wraps the result of {@link #gett(Object)} in an {@link Optional}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<User> user = userDao.get(userId);
      * user.ifPresent(u -> System.out.println("Found user: " + u.getName()));
      * }</pre>
      *
-     * @param id the entity ID to retrieve
-     * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @param id the ID of the entity to retrieve
+     * @return an {@link Optional} containing the entity if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final ID id) throws DuplicateResultException, SQLException {
@@ -707,20 +721,22 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties populated.
-     * Properties not in the select list will have their default values.
-     * 
+     * Retrieves an entity by its ID with only the selected properties populated.
+     * Properties not in the select list will have their default (un-set) values.
+     * This is a convenience default method that wraps the result of {@link #gett(Object, Collection)}
+     * in an {@link Optional}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only load id, name, and email fields
      * Optional<User> user = userDao.get(userId, Arrays.asList("id", "name", "email"));
      * }</pre>
      *
-     * @param id the entity ID to retrieve
-     * @param selectPropNames the properties to select, excluding properties of joining entities. 
-     *                        All properties will be selected if null
-     * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
+     * @return an {@link Optional} containing the entity if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
@@ -729,8 +745,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Retrieves an entity by its ID, returning {@code null} if not found.
-     * This is a convenience method that returns the entity directly instead of wrapped in Optional.
-     * 
+     * Unlike {@link #get(Object)}, the entity is returned directly rather than wrapped in an {@link Optional}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -739,15 +755,15 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the entity ID to retrieve
-     * @return the entity if found, otherwise null
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @param id the ID of the entity to retrieve
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     T gett(final ID id) throws DuplicateResultException, SQLException;
 
     /**
-     * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
+     * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
      * This is useful for performance optimization when you only need specific fields.
      *
      * <p><b>Usage Examples:</b></p>
@@ -759,19 +775,20 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the entity ID to retrieve
+     * @param id the ID of the entity to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
-     *                        All properties will be selected if null
-     * @return the entity if found, otherwise null
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     *                        All properties will be selected if {@code null}
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException;
 
     /**
-     * Retrieves multiple entities by their IDs using the default batch size.
+     * Retrieves multiple entities by their IDs using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}). All properties are loaded for the matching entities.
      * The returned list may be smaller than the input ID collection if some entities are not found.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
@@ -779,7 +796,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @return a list of found entities
+     * @return a list of found entities (order is not guaranteed to match the input IDs)
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -789,6 +806,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Retrieves multiple entities by their IDs with a specified batch size.
+     * All properties are loaded for the matching entities.
      * Large ID collections will be processed in batches to avoid database query size limits.
      *
      * <p><b>Usage Examples:</b></p>
@@ -799,9 +817,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param batchSize the number of entities to process in each batch. The operation will split
-     *                     large collections into chunks of this size for optimal performance.
-     * @return a list of found entities
+     * @param batchSize the number of IDs to query for in each batch. The operation will split
+     *                  large collections into chunks of this size.
+     * @return a list of found entities (order is not guaranteed to match the input IDs)
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -811,8 +829,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Retrieves multiple entities by their IDs with only selected properties populated.
-     * Uses the default batch size.
-     * 
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L);
@@ -820,9 +838,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param ids the collection of IDs to retrieve
-     * @param selectPropNames the properties to select, excluding properties of joining entities. 
-     *                        All properties will be selected if null
-     * @return a list of found entities
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
+     * @return a list of found entities (order is not guaranteed to match the input IDs)
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */
@@ -876,8 +894,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Checks if an entity with the specified ID does not exist in the database.
-     * This is a convenience method that negates the result of exists().
-     * 
+     * This is a convenience default method that negates the result of {@link #exists(Object)}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.notExists(userId)) {
@@ -898,7 +916,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Counts how many of the specified IDs exist in the database.
      * This is useful for validating bulk operations.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);
@@ -907,16 +925,16 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param ids the collection of IDs to count
-     * @return the number of existing entities with the given IDs
+     * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws SQLException if a database access error occurs
      */
     @Beta
     int count(final Collection<? extends ID> ids) throws SQLException;
 
     /**
-     * Updates an existing entity in the database.
-     * All non-null properties of the entity will be updated.
-     * 
+     * Updates an existing entity in the database, locating the row by its ID property(ies).
+     * All updatable properties of the entity will be written; the entity's ID must be populated.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -925,7 +943,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * int updatedRows = userDao.update(user);
      * }</pre>
      *
-     * @param entityToUpdate the entity with updated values
+     * @param entityToUpdate the entity with updated values (must have its ID populated)
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws SQLException if a database access error occurs
      */
@@ -954,8 +972,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Updates a single property of an entity identified by ID.
-     * This is a convenience method for updating one field.
-     * 
+     * This is a convenience default method for updating one field; it builds a single-entry
+     * map and delegates to {@link #update(Map, Object)}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.update("lastLoginTime", new Date(), userId);
@@ -964,7 +983,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
-     * @param id the entity ID to update
+     * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
      */
@@ -976,9 +995,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Updates multiple properties of an entity identified by ID.
-     * This allows updating multiple fields without loading the entire entity.
-     * 
+     * Updates multiple properties of an entity identified by ID without loading the entire entity.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> updates = new HashMap<>();
@@ -989,16 +1007,17 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param updateProps a map of property names to their new values
-     * @param id the entity ID to update
+     * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws SQLException if a database access error occurs
      */
     int update(final Map<String, Object> updateProps, final ID id) throws SQLException;
 
     /**
-     * Performs batch update of multiple entities using the default batch size.
+     * Performs batch update of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * All non-null properties of each entity will be updated.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsersToUpdate();
@@ -1035,9 +1054,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
     /**
-     * Performs batch update of multiple entities updating only specified properties.
-     * Uses the default batch size.
-     * 
+     * Performs batch update of multiple entities updating only the specified properties.
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsers();
@@ -1082,8 +1101,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 
     /**
-     * Performs an upsert operation: inserts the entity if it doesn't exist based on ID fields, otherwise updates the existing entity.
-     * If an entity with the same ID exists, it will be updated; otherwise, a new entity will be inserted.
+     * Performs an upsert operation, matching existing records by the entity's ID property(ies):
+     * inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record
+     * with the values from {@code entity}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1094,9 +1114,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * User savedUser = userDao.upsert(user);   // Insert if new, update if exists
      * }</pre>
      *
-     * @param entity the entity to insert or update
+     * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (either newly inserted or updated)
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     default T upsert(final T entity) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
@@ -1109,7 +1130,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Performs an upsert operation: inserts the entity if it doesn't exist based on the specified condition, otherwise updates the existing entity.
+     * Performs an upsert operation: inserts {@code entity} if no record matches the specified
+     * condition; otherwise copies non-id properties from {@code entity} into the existing record
+     * (loaded via {@link #findOnlyOne(Condition)}) and updates it.
      * This allows for upsert logic based on any criteria, not just ID fields.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1119,10 +1142,12 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * User saved = userDao.upsert(user, Filters.eq("email", user.getEmail()));
      * }</pre>
      *
-     * @param entity the entity to insert or update
-     * @param cond the condition to check if the entity exists
-     * @return the saved entity (either newly inserted or updated)
+     * @param entity the entity to insert or update (must not be {@code null})
+     * @param cond the condition used to look up an existing record (must not be {@code null})
+     * @return the saved entity: the inserted {@code entity} when no existing record was found,
+     *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @see Filters
      */
     @Override
@@ -1152,9 +1177,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Performs batch upsert of multiple entities using the default batch size.
-     * Each entity will be inserted if new or updated if it already exists based on ID fields.
-     * 
+     * Performs batch upsert of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     * Each entity will be inserted if new or updated if it already exists, matching by ID fields.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsersFromImport();
@@ -1162,7 +1188,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @return a list of saved entities (both inserted and updated)
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
@@ -1170,7 +1196,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Performs batch upsert of multiple entities with a specified batch size.
+     * Performs batch upsert of multiple entities with a specified batch size,
+     * matching existing records by ID fields.
      * Large collections will be processed in batches of the specified size.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1184,8 +1211,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param entities the collection of entities to upsert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of saved entities (both inserted and updated)
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -1203,9 +1231,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Performs batch upsert based on specified unique properties for matching.
+     * Performs batch upsert based on the specified unique properties for matching.
      * This allows upsert logic based on properties other than the ID fields.
-     * 
+     * Uses the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = loadUsers();
@@ -1214,17 +1243,25 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param uniquePropNamesForQuery the property names that uniquely identify each entity
-     * @return a list of saved entities (both inserted and updated)
+     * @param uniquePropNamesForQuery the property names that uniquely identify each entity (must not be empty)
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null} or empty
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery) throws SQLException {
         return batchUpsert(entities, uniquePropNamesForQuery, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
-     * Performs batch upsert based on specified unique properties with custom batch size.
+     * Performs batch upsert based on the specified unique properties with a custom batch size.
      * This provides the most flexibility for batch upsert operations.
+     *
+     * <p>Internally, the entities are partitioned into those that already exist (matched by the
+     * supplied unique properties) and those that do not. New entities are inserted via
+     * {@link #batchInsert(Collection, int)}; existing entities are updated by copying non-id
+     * (and non-unique-key) properties from the input entity into the loaded database entity and
+     * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed
+     * (or either set is large), the operation is wrapped in a transaction.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1234,11 +1271,14 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to upsert
-     * @param uniquePropNamesForQuery the property names that uniquely identify each entity
+     * @param uniquePropNamesForQuery the property names that uniquely identify each entity (must not be empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of saved entities (both inserted and updated)
+     * @return a list of saved entities (both inserted and updated); an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code uniquePropNamesForQuery} is {@code null}/empty,
+     *                                  if {@code batchSize} is not positive,
+     *                                  or if any name in {@code uniquePropNamesForQuery} is not a property of the entity class
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final List<String> uniquePropNamesForQuery, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -1341,9 +1381,11 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Refreshes an entity by reloading all its properties from the database.
+     * Refreshes the given entity by reloading all of its (non-join) properties from the database
+     * and copying them into the entity in place. The ID property of {@code entity} is used to
+     * locate the database record.
      * This is useful when you want to ensure an entity has the latest values from the database.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getCachedUser();
@@ -1354,9 +1396,11 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param entity the entity to refresh (must have ID populated)
-     * @return {@code true} if the entity was successfully refreshed, {@code false} if not found
+     * @param entity the entity to refresh (must not be {@code null} and must have its ID populated)
+     * @return {@code true} if the matching database row was found and {@code entity} was updated;
+     *         {@code false} if no matching row exists
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      */
     default boolean refresh(final T entity) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
@@ -1368,9 +1412,11 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Refreshes specific properties of an entity from the database.
-     * Only the specified properties will be updated with database values.
-     * 
+     * Refreshes specific properties of the given entity from the database.
+     * Only the specified properties will be reloaded and copied into {@code entity} in place;
+     * other properties are left untouched. The ID property of {@code entity} is used to locate
+     * the database record.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = getUser();
@@ -1378,10 +1424,12 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * userDao.refresh(user, Arrays.asList("balance", "status"));
      * }</pre>
      *
-     * @param entity the entity to refresh (must have ID populated)
-     * @param propNamesToRefresh the properties to refresh from the database
-     * @return {@code true} if the entity was successfully refreshed, {@code false} if not found
+     * @param entity the entity to refresh (must not be {@code null} and must have its ID populated)
+     * @param propNamesToRefresh the properties to refresh from the database (must not be {@code null} or empty)
+     * @return {@code true} if the matching database row was found and {@code entity} was updated;
+     *         {@code false} if no matching row exists
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
      */
     @SuppressWarnings("deprecation")
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
@@ -1407,9 +1455,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Refreshes multiple entities from the database using the default batch size.
+     * Refreshes multiple entities from the database using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}). All non-join properties are reloaded.
      * Returns the count of entities that were successfully refreshed.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
@@ -1418,7 +1467,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to refresh
-     * @return the number of entities successfully refreshed
+     * @return the number of entities (input elements) that were updated from a matching database row.
+     *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities) throws SQLException {
@@ -1427,6 +1477,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Refreshes multiple entities from the database with a specified batch size.
+     * All non-join properties are reloaded.
      * Large collections will be processed in batches of the specified size.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1439,7 +1490,8 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param entities the collection of entities to refresh
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return the number of entities successfully refreshed
+     * @return the number of entities (input elements) that were updated from a matching database row.
+     *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws SQLException if a database access error occurs
      */
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
@@ -1455,9 +1507,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Refreshes specific properties of multiple entities using the default batch size.
-     * Only the specified properties will be updated with database values.
-     * 
+     * Refreshes specific properties of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
+     * Only the specified properties will be reloaded and copied into the input entities in place.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = getCachedUsers();
@@ -1466,9 +1519,11 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to refresh
-     * @param propNamesToRefresh the properties to refresh from the database
-     * @return the number of entities successfully refreshed
+     * @param propNamesToRefresh the properties to refresh from the database (must not be {@code null} or empty)
+     * @return the number of entities (input elements) that were updated from a matching database row.
+     *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty
      */
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -1488,11 +1543,13 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }</pre>
      *
      * @param entities the collection of entities to refresh
-     * @param propNamesToRefresh the properties to refresh from the database
+     * @param propNamesToRefresh the properties to refresh from the database (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return the number of entities successfully refreshed
+     * @return the number of entities (input elements) that were updated from a matching database row.
+     *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null}/empty or {@code batchSize} is not positive
      */
     @SuppressWarnings("deprecation")
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
@@ -1533,9 +1590,9 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     }
 
     /**
-     * Deletes an entity from the database.
+     * Deletes an entity from the database, identifying it by its ID property(ies).
      * The entity must have its ID field(s) populated.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -1545,7 +1602,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param entity the entity to delete (must have ID populated)
+     * @param entity the entity to delete (must have its ID populated)
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws SQLException if a database access error occurs
      */
@@ -1554,7 +1611,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Deletes an entity by its ID.
      * This is more efficient than loading the entity first and then deleting it.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int deletedRows = userDao.deleteById(userId);
@@ -1563,16 +1620,17 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * }
      * }</pre>
      *
-     * @param id the entity ID to delete
+     * @param id the ID of the entity to delete
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws SQLException if a database access error occurs
      */
     int deleteById(final ID id) throws SQLException;
 
     /**
-     * Performs batch delete of multiple entities using the default batch size.
+     * Performs batch delete of multiple entities using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * Each entity must have its ID field(s) populated.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> usersToDelete = getInactiveUsers();
@@ -1631,9 +1689,10 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     //    int batchDelete(final Collection<? extends T> entities, final OnDeleteAction onDeleteAction, final int batchSize) throws SQLException;
 
     /**
-     * Deletes multiple entities by their IDs using the default batch size.
+     * Deletes multiple entities by their IDs using the default batch size
+     * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * This is more efficient than deleting entities one by one.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> userIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);

@@ -81,7 +81,7 @@ package com.landawn.abacus.jdbc;
  *
  * <p>For current JDBC operations, use:</p>
  * <ul>
- *   <li>{@link JdbcUtil#prepareQuery} - for SELECT/UPDATE/DELETE queries</li>
+ *   <li>{@link JdbcUtil#prepareQuery} - for preparing SELECT/INSERT/UPDATE/DELETE statements</li>
  *   <li>{@link JdbcUtil#createDao} - for DAO-based data access</li>
  *   <li>{@link JdbcUtil#beginTransaction} - for transaction management</li>
  * </ul>
@@ -95,6 +95,11 @@ package com.landawn.abacus.jdbc;
 @Deprecated
 // Archive for history. Replaced by PreparedQuery and Dao.
 final class SqlExecutor {
+    /**
+     * Private constructor to prevent instantiation of this archived class.
+     *
+     * @throws IllegalArgumentException declared for historical signature compatibility; never actually thrown
+     */
     private SqlExecutor() throws IllegalArgumentException {
         // archived class - prevent instantiation.
     }

@@ -77,6 +77,22 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     private volatile boolean _isMarkedByCommitOrRollbackPreviously = false; //NOSONAR
 
+    /**
+     * Constructs a new {@code SqlTransaction} backed by the given JDBC {@link Connection}.
+     *
+     * <p>The connection's original auto-commit mode and transaction isolation level are captured
+     * so they can be restored when the transaction completes. Auto-commit is disabled and, if the
+     * given {@code isolationLevel} is not {@link IsolationLevel#DEFAULT}, the connection's
+     * transaction isolation is updated accordingly.</p>
+     *
+     * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}
+     * @param conn the JDBC connection that backs this transaction, must not be {@code null}
+     * @param isolationLevel the isolation level for this transaction, must not be {@code null}
+     * @param creator the source that created this transaction; used to compute the transaction ID
+     * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
+     * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
+     * @throws IllegalArgumentException if {@code conn} or {@code isolationLevel} is {@code null}
+     */
     SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
             final boolean closeConnection) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -190,7 +206,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     /**
      * Checks if this transaction is currently active.
-     * A transaction is active if it has not been committed, rolled back, or marked for rollback.
+     * A transaction is active only when its status is {@link Status#ACTIVE} (i.e. it has not been
+     * committed, rolled back, marked for rollback, or transitioned to {@code FAILED_COMMIT}/{@code FAILED_ROLLBACK}).
      *
      * <p>This is a convenience method equivalent to checking if the status
      * equals {@link Status#ACTIVE}.</p>
@@ -424,6 +441,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
+     * @throws IllegalStateException if the transaction is in an unexpected status (other than {@link Status#ACTIVE},
+     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}) when the rollback is actually performed
      */
     @Override
     public void rollbackIfNotCommitted() throws UncheckedSQLException {

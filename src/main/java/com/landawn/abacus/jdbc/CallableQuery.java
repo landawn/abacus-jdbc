@@ -85,8 +85,7 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * try (CallableQuery query = JdbcUtil.prepareCallableQuery(connection, "{call get_employee_info(?, ?, ?)}")) {
  *     query.setInt(1, 1001)  // IN parameter: employee ID
  *          .registerOutParameter(2, Types.VARCHAR)  // OUT parameter: employee name
- *          .registerOutParameter(3, Types.DECIMAL)  // OUT parameter: salary
- *          .closeAfterExecution(false);
+ *          .registerOutParameter(3, Types.DECIMAL); // OUT parameter: salary
  *
  *     Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
  *     String name = outParams.getOutParamValue(2);
@@ -408,10 +407,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a BigInteger value as a long for the specified parameter.
-     * The BigInteger must be within the range of a long value.
-     * If the value is {@code null}, the parameter will be set to SQL {@code NULL}.
-     * 
+     * Sets the specified named parameter to a long value derived from a {@link BigInteger}.
+     * The {@code BigInteger} is converted to a {@code long} via {@link BigInteger#longValueExact()},
+     * which throws {@link ArithmeticException} if the value does not fit in a {@code long}.
+     * If the value is {@code null}, the parameter will be set to SQL {@code NULL} (BIGINT).
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigId = new BigInteger("9876543210");
@@ -740,9 +740,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a java.util.Date value as a java.sql.Date for the specified parameter.
-     * The time portion of the date will be truncated.
-     * 
+     * Sets a {@code java.util.Date} value as a {@code java.sql.Date} for the specified parameter.
+     * If {@code x} is already a {@code java.sql.Date}, it is passed to the driver as-is; otherwise
+     * a new {@code java.sql.Date} is constructed from {@code x.getTime()}. Whether the time portion
+     * is preserved depends on the JDBC driver and target column type.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilDate = new java.util.Date();
@@ -801,9 +803,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Sets a java.util.Date value as a java.sql.Time for the specified parameter.
-     * Only the time portion of the date will be used.
-     * 
+     * Sets a {@code java.util.Date} value as a {@code java.sql.Time} for the specified parameter.
+     * If {@code x} is already a {@code java.sql.Time}, it is passed to the driver as-is; otherwise
+     * a new {@code java.sql.Time} is constructed from {@code x.getTime()}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * java.util.Date utilTime = new java.util.Date();
@@ -1413,8 +1416,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to an object value.
-     * The JDBC driver will attempt to map the object to the appropriate SQL type.
-     * 
+     * The appropriate SQL type is automatically inferred from the runtime class of {@code x}
+     * via the registered type system. If {@code x} is {@code null}, the parameter will be
+     * set to SQL {@code NULL}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("value", 123);           // Integer
@@ -1423,7 +1428,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param parameterName the name of the parameter
-     * @param x the object containing the input parameter value
+     * @param x the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
      */
@@ -1539,9 +1544,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterNames a list of parameter names corresponding to properties in the entity.
      *                       Each name should match a property name in the entity class.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the entity or parameterNames is null
-     * @throws SQLException if a database access error occurs or if a parameter name doesn't
-     *                      correspond to a valid property in the entity
+     * @throws IllegalArgumentException if {@code entity} or {@code parameterNames} is {@code null},
+     *                                  or if any name in {@code parameterNames} does not correspond
+     *                                  to a property of the entity class
+     * @throws SQLException if a database access error occurs while binding the parameters
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#namedParameters(String)
@@ -1584,11 +1590,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * query.setInt(1, 100)  // IN parameter
      *      .registerOutParameter(2, Types.VARCHAR)  // OUT parameter
-     *      .registerOutParameter(3, Types.INTEGER)  // OUT parameter
-     *      .execute();
-     * 
-     * String result = query.getString(2);
-     * int count = query.getInt(3);
+     *      .registerOutParameter(3, Types.INTEGER); // OUT parameter
+     *
+     * Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
+     * String result = outParams.getOutParamValue(2);
+     * int count = outParams.getOutParamValue(3);
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
@@ -1617,10 +1623,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setInt(1, 1001)
-     *      .registerOutParameter(2, Types.DECIMAL, 2)  // For monetary values
-     *      .execute();
-     * 
-     * BigDecimal price = query.getBigDecimal(2);   // e.g., 123.45
+     *      .registerOutParameter(2, Types.DECIMAL, 2);  // For monetary values
+     *
+     * Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
+     * BigDecimal price = outParams.getOutParamValue(2);   // e.g., 123.45
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
@@ -1652,12 +1658,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For a user-defined type
-     * query.registerOutParameter(1, Types.STRUCT, "SCHEMA.ADDRESS_TYPE")
-     *      .execute();
-     * 
+     * query.registerOutParameter(1, Types.STRUCT, "SCHEMA.ADDRESS_TYPE");
+     *
      * // For database-specific types
-     * query.registerOutParameter(2, Types.OTHER, "XMLTYPE")
-     *      .execute();
+     * query.registerOutParameter(2, Types.OTHER, "XMLTYPE");
      * }</pre>
      *
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
@@ -1688,11 +1692,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * query.setString("employeeName", "John Doe")
      *      .registerOutParameter("employeeId", Types.INTEGER)
-     *      .registerOutParameter("salary", Types.DECIMAL)
-     *      .execute();
-     * 
-     * int id = query.getInt("employeeId");
-     * BigDecimal salary = query.getBigDecimal("salary");
+     *      .registerOutParameter("salary", Types.DECIMAL);
+     *
+     * Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
+     * int id = outParams.getOutParamValue("employeeId");
+     * BigDecimal salary = outParams.getOutParamValue("salary");
      * }</pre>
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
@@ -1719,11 +1723,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <pre>{@code
      * query.setInt("productId", 100)
      *      .registerOutParameter("price", Types.DECIMAL, 2)
-     *      .registerOutParameter("taxAmount", Types.DECIMAL, 4)
-     *      .execute();
-     * 
-     * BigDecimal price = query.getBigDecimal("price");
-     * BigDecimal tax = query.getBigDecimal("taxAmount");
+     *      .registerOutParameter("taxAmount", Types.DECIMAL, 4);
+     *
+     * Jdbc.OutParamResult outParams = query.executeAndGetOutParameters();
+     * BigDecimal price = outParams.getOutParamValue("price");
+     * BigDecimal tax = outParams.getOutParamValue("taxAmount");
      * }</pre>
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
@@ -1751,12 +1755,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // For Oracle object types
-     * query.registerOutParameter("address", Types.STRUCT, "HR.ADDRESS_TYPE")
-     *      .execute();
-     * 
+     * query.registerOutParameter("address", Types.STRUCT, "HR.ADDRESS_TYPE");
+     *
      * // For SQL Server XML type
-     * query.registerOutParameter("xmlData", Types.SQLXML, "XML")
-     *      .execute();
+     * query.registerOutParameter("xmlData", Types.SQLXML, "XML");
      * }</pre>
      *
      * @param parameterName the name of the parameter as defined in the stored procedure
@@ -1782,7 +1784,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.setString(1, "input_value")
      *      .registerOutParameter(2, JDBCType.VARCHAR)
      *      .registerOutParameter(3, JDBCType.TIMESTAMP)
@@ -1810,7 +1811,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.registerOutParameter(1, JDBCType.DECIMAL, 2)  // For money
      *      .registerOutParameter(2, JDBCType.NUMERIC, 4)   // For precise calculations
      *      .execute();
@@ -1839,7 +1839,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.registerOutParameter(1, JDBCType.STRUCT, "SCHEMA.CUSTOM_TYPE")
      *      .registerOutParameter(2, JDBCType.ARRAY, "VARCHAR_ARRAY")
      *      .execute();
@@ -1868,7 +1867,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.setString("inputParam", "value")
      *      .registerOutParameter("resultCode", JDBCType.INTEGER)
      *      .registerOutParameter("message", JDBCType.VARCHAR)
@@ -1896,7 +1894,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.setInt("orderId", 12345)
      *      .registerOutParameter("totalAmount", JDBCType.DECIMAL, 2)
      *      .registerOutParameter("taxRate", JDBCType.NUMERIC, 4)
@@ -1926,7 +1923,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * 
      * query.setInt("customerId", 100)
      *      .registerOutParameter("customerData", JDBCType.STRUCT, "CUSTOMER_TYPE")
      *      .registerOutParameter("orderHistory", JDBCType.ARRAY, "ORDER_ARRAY")
@@ -2052,8 +2048,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Adds an OUT parameter to the internal tracking list.
-     * This is an internal method used by all the public registerOutParameter methods.
+     * Adds (or replaces) an OUT parameter in the internal tracking list. If an entry
+     * already exists with the same parameter index (when {@code outParameter} is
+     * index-based) or parameter name (when name-based), it is replaced; otherwise
+     * the new entry is appended. This is an internal helper used by all of the
+     * public {@code registerOutParameter} methods.
      *
      * @param outParameter the OUT parameter metadata to track
      */
@@ -2493,7 +2492,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <R> the type of object the result set will be converted to
      * @param resultExtractor the {@link Jdbc.BiResultExtractor} to process the result set
-     * @return a {@link Tuple2} containing the extracted result and OUT parameters
+     * @return a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element).
+     *         The first element may be {@code null} if no result set is returned.
      * @throws IllegalArgumentException if resultExtractor is null
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs
@@ -3605,18 +3605,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Closes the underlying {@code CallableStatement} after clearing its parameters.
      * This method is called automatically after query execution unless
      * {@code closeAfterExecution(false)} has been set.
-     * 
+     *
      * <p>The method performs the following cleanup operations:</p>
      * <ol>
-     *   <li>Clears all parameters from the CallableStatement</li>
-     *   <li>Logs a warning if parameter clearing fails</li>
-     *   <li>Closes the statement and releases resources</li>
+     *   <li>Calls {@code clearParameters()} on the {@code CallableStatement}; a warning is
+     *       logged if this fails (the failure is not propagated)</li>
+     *   <li>Delegates to {@code super.closeStatement()} to close the statement and release resources</li>
      * </ol>
-     * 
+     *
      * <p>This method is idempotent - calling it multiple times has no additional effect.</p>
-     * 
+     *
      * @see #closeAfterExecution(boolean)
-     * @see JdbcUtil#clearParameters(PreparedStatement)
      */
     @Override
     protected void closeStatement() {

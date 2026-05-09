@@ -36,16 +36,14 @@ import java.lang.annotation.Target;
 public @interface SqlFragment {
 
     /**
-     * Specifies the name of the query template variable to be replaced.
-     * If not specified (empty string), the parameter name will be used.
-     * 
-     * <p>The value can be:</p>
-     * <ul>
-     *   <li>A simple placeholder name (e.g., "tableName")</li>
-     *   <li>A custom placeholder with default value syntax (e.g., "{where -> WHERE active = true}")</li>
-     * </ul>
-     * 
-     * <p>Simple placeholder example:</p>
+     * Specifies the name of the query template variable that this parameter replaces.
+     * If empty (the default), the actual method parameter name is used; this requires compiling
+     * with the {@code -parameters} javac flag, otherwise initialization fails with
+     * {@code UnsupportedOperationException}.
+     *
+     * <p>Template variables are referenced in the SQL using curly braces: {@code {variableName}}.</p>
+     *
+     * <p>Example:</p>
      * <pre>{@code
      * @Query("SELECT * FROM {schema}.{table} WHERE id = :id")
      * User findById(
@@ -54,26 +52,15 @@ public @interface SqlFragment {
      *     @Bind("id") long id
      * );
      * }</pre>
-     * 
-     * <p>Custom placeholder with default:</p>
-     * <pre>{@code
-     * // Custom syntax allows for more complex replacements
-     * @Query("SELECT * FROM users {filter -> WHERE active = true}")
-     * List<User> findUsers(@SqlFragment("{filter -> WHERE active = true}") String customFilter);
-     * 
-     * // Usage:
-     * findUsers("WHERE role = 'ADMIN'");   // Replaces the entire {filter -> ...} block
-     * findUsers(null);                     // Uses the default "WHERE active = true"
-     * }</pre>
-     * 
-     * <p>Using parameter name when value is empty:</p>
+     *
+     * <p>Using the method parameter name (requires {@code -parameters}):</p>
      * <pre>{@code
      * @Query("SELECT {columns} FROM users")
      * List<Map<String, Object>> findWithColumns(@SqlFragment String columns);
-     * // The parameter name "columns" is used as the placeholder name
+     * // The parameter name "columns" is used as the template-variable name
      * }</pre>
      *
-     * @return the query template variable name, or empty string if using the parameter name
+     * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
      */
     String value() default "";
 }

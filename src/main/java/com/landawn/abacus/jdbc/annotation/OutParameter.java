@@ -44,24 +44,26 @@ public @interface OutParameter {
     /**
      * Specifies the name of the output parameter.
      * Use this for named parameters in the stored procedure call.
-     * 
-     * <p>Either {@code name} or {@code position} must be specified, but not both.
-     * Named parameters are generally preferred for readability and maintainability.</p>
-     * 
+     *
+     * <p>Exactly one of {@code name} or {@code position} should be specified for a given
+     * {@code @OutParameter}. Named parameters are generally preferred for readability and
+     * maintainability when the JDBC driver and procedure support them.</p>
+     *
      * <p>The parameter name should match the name used in the stored procedure call syntax.</p>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}", isProcedure = true)
+     * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
+     *        isProcedure = true, op = OP.executeAndGetOutParameters)
      * @OutParameter(name = "discount", sqlType = Types.DECIMAL)
      * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
-     * Map<String, Object> calculateDiscount(
+     * Jdbc.OutParamResult calculateDiscount(
      *     @Bind("price") BigDecimal price,
      *     @Bind("customerId") long customerId
      * );
      * }</pre>
      *
-     * @return the parameter name, or empty string if using {@link #position()}
+     * @return the parameter name; empty string when {@link #position()} is used instead
      * @see CallableStatement#registerOutParameter(String, int)
      */
     String name() default "";
@@ -69,27 +71,28 @@ public @interface OutParameter {
     /**
      * Specifies the position of the output parameter.
      * Use this for positional parameters in the stored procedure call.
-     * 
-     * <p>Positions start from 1, following JDBC convention. Either {@code name} or
-     * {@code position} must be specified, but not both.</p>
-     * 
+     *
+     * <p>Positions start from 1, following JDBC convention. Exactly one of {@code name} or
+     * {@code position} should be specified for a given {@code @OutParameter}.</p>
+     *
      * <p>Position-based parameters are useful when:</p>
      * <ul>
      *   <li>The stored procedure doesn't support named parameters</li>
      *   <li>You're working with legacy procedures</li>
      *   <li>The database doesn't support named parameters</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Query(value = "{call sp_analyze_customer(?, ?, ?, ?)}", isProcedure = true)
+     * @Query(value = "{call sp_analyze_customer(?, ?, ?, ?)}",
+     *        isProcedure = true, op = OP.executeAndGetOutParameters)
      * @OutParameter(position = 2, sqlType = Types.VARCHAR)  // status
      * @OutParameter(position = 3, sqlType = Types.DECIMAL)  // credit_score
      * @OutParameter(position = 4, sqlType = Types.DATE)     // last_purchase
-     * Map<String, Object> analyzeCustomer(@Bind long customerId);
+     * Jdbc.OutParamResult analyzeCustomer(long customerId);
      * }</pre>
      *
-     * @return the parameter position (1-based), or -1 if using {@link #name()}
+     * @return the parameter position (1-based); {@code -1} (default) when {@link #name()} is used instead
      * @see CallableStatement#registerOutParameter(int, int)
      */
     int position() default -1;

@@ -118,6 +118,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Updating an existing entity by ID is disallowed by {@code NoUpdateCrudDao} because
+     * it would mutate an existing record, violating the read/insert-only contract.
      *
      * @param entityToUpdate the entity with updated values
      * @return never returns normally
@@ -132,9 +134,11 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Selective property updates by ID are disallowed by {@code NoUpdateCrudDao} because
+     * they would mutate an existing record, violating the read/insert-only contract.
      *
      * @param entityToUpdate the entity containing the values to update
-     * @param propNamesToUpdate the property names to update; if {@code null} or empty, all properties would be updated
+     * @param propNamesToUpdate the property names to update; if {@code null} or empty, all properties will be updated
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
      * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
@@ -147,6 +151,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Single-property updates by ID are disallowed by {@code NoUpdateCrudDao} because they
+     * would mutate an existing record, violating the read/insert-only contract.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
@@ -163,6 +169,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Multi-property updates by ID are disallowed by {@code NoUpdateCrudDao} because they
+     * would mutate an existing record, violating the read/insert-only contract.
      *
      * @param updateProps a map of property names to their new values
      * @param id the entity ID to update
@@ -178,6 +186,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch updates are disallowed by {@code NoUpdateCrudDao} because they would mutate
+     * existing records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @return never returns normally
@@ -192,6 +202,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Sized batch updates are disallowed by {@code NoUpdateCrudDao} because they would
+     * mutate existing records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @param batchSize the number of entities to process per batch
@@ -207,6 +219,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Selective batch updates are disallowed by {@code NoUpdateCrudDao} because they would
+     * mutate existing records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
@@ -222,6 +236,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Sized selective batch updates are disallowed by {@code NoUpdateCrudDao} because they
+     * would mutate existing records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities
@@ -239,6 +255,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entity the entity to upsert
      * @return never returns normally
@@ -253,6 +271,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entity the entity to insert or update
      * @param cond the condition to check whether the entity already exists
@@ -268,6 +288,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Upserts perform an update when a matching record exists, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the property names that uniquely identify the entity
@@ -283,6 +305,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch upserts perform updates when matching records exist, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entities the collection of entities to upsert
      * @return never returns normally
@@ -297,6 +321,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Sized batch upserts perform updates when matching records exist, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entities the collection of entities to upsert
      * @param batchSize the number of entities to process per batch
@@ -312,6 +338,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch upserts perform updates when matching records exist, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
@@ -327,6 +355,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Sized batch upserts perform updates when matching records exist, which violates the
+     * read/insert-only contract of {@code NoUpdateCrudDao}.
      *
      * @param entities the collection of entities to upsert
      * @param uniquePropNamesForQuery the property names that uniquely identify each entity
@@ -344,6 +374,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Deleting an entity by its populated ID is disallowed by {@code NoUpdateCrudDao}
+     * because it would remove an existing record, violating the read/insert-only contract.
      *
      * @param entity the entity to delete (must have its ID populated)
      * @return never returns normally
@@ -358,6 +390,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Deleting by ID is disallowed by {@code NoUpdateCrudDao} because it would remove
+     * an existing record, violating the read/insert-only contract.
      *
      * @param id the entity ID to delete
      * @return never returns normally
@@ -372,6 +406,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch deletes are disallowed by {@code NoUpdateCrudDao} because they would remove
+     * existing records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to delete
      * @return never returns normally
@@ -386,6 +422,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Sized batch deletes are disallowed by {@code NoUpdateCrudDao} because they would
+     * remove existing records, violating the read/insert-only contract.
      *
      * @param entities the collection of entities to delete
      * @param batchSize the number of entities to process per batch
@@ -401,6 +439,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Batch deletes by ID are disallowed by {@code NoUpdateCrudDao} because they would
+     * remove existing records, violating the read/insert-only contract.
      *
      * @param ids the collection of entity IDs to delete
      * @return never returns normally
@@ -415,6 +455,8 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * Sized batch deletes by ID are disallowed by {@code NoUpdateCrudDao} because they
+     * would remove existing records, violating the read/insert-only contract.
      *
      * @param ids the collection of entity IDs to delete
      * @param batchSize the number of IDs to process per batch

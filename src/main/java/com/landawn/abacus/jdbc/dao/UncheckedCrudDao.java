@@ -636,7 +636,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
      * @return a Nullable containing the unique result value, or empty if no entity found
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
@@ -662,7 +662,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param id the entity ID
      * @param targetValueClass the class of the target value type
      * @return an Optional containing the unique non-null value, or empty if no entity found or value is null
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
@@ -688,7 +688,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param id the entity ID
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the unique non-null mapped value, or empty if no entity found
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Object, Class)
      */
@@ -707,7 +707,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param id the entity ID
      * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -727,7 +727,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return an Optional containing the entity with selected properties if found, otherwise empty
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -737,7 +737,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Retrieves the entity with the specified ID. Returns the entity directly or {@code null} if not found.
-     * The 'gett' naming convention indicates this method returns T directly.
+     * Unlike {@link #get(Object)}, this method returns the entity directly instead of wrapping it in an {@code Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -749,7 +749,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param id the entity ID
      * @return the entity if found, otherwise null
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -770,7 +770,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param id the entity ID
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return the entity with selected properties if found, otherwise null
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -787,7 +787,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param ids the collection of entity IDs
      * @return a list of found entities
-     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -808,7 +808,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param ids the collection of entity IDs
      * @param batchSize the size of each batch
      * @return a list of found entities
-     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -830,7 +830,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param ids the collection of entity IDs
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @return a list of found entities with selected properties
-     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -855,7 +855,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param selectPropNames the properties to select, or {@code null} to select all
      * @param batchSize the size of each batch
      * @return a list of found entities with selected properties
-     * @throws DuplicateResultException if the size of result is bigger than the size of input IDs
+     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -886,7 +886,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Checks if an entity with the specified ID does not exist in the database.
-     * This is the logical opposite of {@link #exists(ID)}.
+     * This is the logical opposite of {@link #exists(Object)}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -908,9 +908,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * Counts the number of entities with the specified IDs.
+     * Counts how many of the specified IDs exist in the database.
      * This is a beta API that can be used to check how many of the given IDs actually exist.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Long> requestedIds = Arrays.asList(1L, 2L, 3L, 4L, 5L);
@@ -920,8 +920,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * }
      * }</pre>
      *
-     * @param ids the collection of entity IDs to count
-     * @return the count of existing entities
+     * @param ids the collection of IDs to count
+     * @return the count of existing entities matching the given IDs
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Beta

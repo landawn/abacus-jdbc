@@ -129,9 +129,9 @@ public interface Transaction {
      * }
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the commit,
-     *         or if the transaction is not in an active state
-     * @throws IllegalStateException if the transaction has already been committed or rolled back
+     * @throws UncheckedSQLException if an SQL error occurs during the commit
+     * @throws IllegalStateException if the transaction is not in a valid state for committing
+     *         (e.g., already committed or rolled back)
      */
     void commit() throws UncheckedSQLException;
 
@@ -153,9 +153,9 @@ public interface Transaction {
      * }
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the rollback,
-     *         or if the transaction is not in an active state
-     * @throws IllegalStateException if the transaction has already been committed or rolled back
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback
+     * @throws IllegalStateException if the transaction is not in a valid state for rollback
+     *         (e.g., already committed or rolled back)
      */
     void rollback() throws UncheckedSQLException;
 

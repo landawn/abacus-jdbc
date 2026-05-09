@@ -112,10 +112,10 @@ public final class JdbcCodeGenerationUtil {
     public static final String X = "x";
 
     /**
-     * Pre-defined function for generating MIN SQL aggregate function.
-     * This function takes entity class, property class, and property name as parameters
-     * and returns a MIN SQL expression if the property class implements Comparable.
-     * 
+     * Pre-defined function for generating a MIN SQL aggregate expression.
+     * The function takes (entityClass, propClass, propName) and returns {@code "min(propName)"}
+     * when {@code propClass} implements {@link Comparable}; otherwise it returns {@code null}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String minExpr = MIN_FUNC.apply(User.class, Integer.class, "age");
@@ -131,10 +131,10 @@ public final class JdbcCodeGenerationUtil {
     };
 
     /**
-     * Pre-defined function for generating MAX SQL aggregate function.
-     * This function takes entity class, property class, and property name as parameters
-     * and returns a MAX SQL expression if the property class implements Comparable.
-     * 
+     * Pre-defined function for generating a MAX SQL aggregate expression.
+     * The function takes (entityClass, propClass, propName) and returns {@code "max(propName)"}
+     * when {@code propClass} implements {@link Comparable}; otherwise it returns {@code null}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String maxExpr = MAX_FUNC.apply(User.class, BigDecimal.class, "salary");
@@ -1272,7 +1272,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
-     * // Returns (example): "UPDATE employee SET id = ?, name = ?, department = ?, salary = ?, ... = ?"
+     * // Returns (example): "UPDATE employee SET id = ?, name = ?, department = ?, salary = ?"
      * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
@@ -1298,7 +1298,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
-     *     // Returns (example): "UPDATE product SET id = ?, name = ?, description = ?, price = ?, ... = ?"
+     *     // Returns (example): "UPDATE product SET id = ?, name = ?, description = ?, price = ?"
      *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE id = ?";
      * }
@@ -1509,7 +1509,7 @@ public final class JdbcCodeGenerationUtil {
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
      * // Returns (example): "UPDATE user_profile SET user_id = :userId, first_name = :firstName,
-     * //           last_name = :lastName, email = :email, ... = :..."
+     * //           last_name = :lastName, email = :email"
      * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
@@ -1536,7 +1536,7 @@ public final class JdbcCodeGenerationUtil {
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
      *     // Returns (example): "UPDATE order_status SET order_id = :orderId, status = :status,
-     *     //           updated_by = :updatedBy, updated_date = :updatedDate, ... = :..."
+     *     //           updated_by = :updatedBy, updated_date = :updatedDate"
      *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE order_id = :orderId";
      * }

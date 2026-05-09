@@ -128,8 +128,8 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the self-type parameter for fluent API support
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
+ * @param <TD> the self-type parameter for fluent API support; must be the concrete sub-DAO interface
  *
  * @see JdbcUtil#createDao(Class, DataSource)
  * @see JdbcUtil#createDao(Class, DataSource, SqlMapper)
@@ -172,7 +172,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * This is used internally for reflection-based operations.
      *
      * @return the class of the target entity type T
-     * @deprecated Internal use only
+     * @deprecated for internal framework use only; not intended to be called by application code.
      */
     @Deprecated
     @NonDBOperation
@@ -184,7 +184,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * This is typically derived from the entity class name or specified via annotations.
      *
      * @return the name of the target table
-     * @deprecated Internal use only
+     * @deprecated for internal framework use only; not intended to be called by application code.
      */
     @Deprecated
     @NonDBOperation
@@ -196,7 +196,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * This executor is used when async methods are called without specifying a custom executor.
      *
      * @return the default executor for asynchronous operations
-     * @deprecated Internal use only
+     * @deprecated for internal framework use only; not intended to be called by application code.
      */
     @Deprecated
     @NonDBOperation
@@ -208,7 +208,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * This provides additional functionality over the standard Executor interface.
      *
      * @return the async executor instance
-     * @deprecated Internal use only
+     * @deprecated for internal framework use only; not intended to be called by application code.
      */
     @Deprecated
     @NonDBOperation
@@ -320,7 +320,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * List<User> activeUsers = query.list(User.class);
      * }</pre>
      *
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance for the SELECT statement
      * @throws SQLException if a database access error occurs
      * @see Filters
@@ -344,7 +345,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * }</pre>
      *
      * @param selectPropNames the property names to select, or {@code null} to select all
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -373,7 +375,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a SELECT query optimized for large result sets based on the specified condition.
      * All columns will be selected with cursor-based fetching enabled.
      *
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
@@ -389,7 +392,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Combines column selection with cursor-based fetching for memory-efficient processing.
      *
      * @param selectPropNames the property names to select, or {@code null} to select all
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
      */
@@ -559,7 +563,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a named SELECT query based on the specified condition.
      * All columns will be selected using named parameter syntax.
      *
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -571,10 +576,11 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Creates a named SELECT query for specific columns based on the specified condition.
-     * Generates a named parameter query with selected columns and WHERE clause.
+     * Generates a named-parameter query with the selected columns and the supplied condition appended.
      *
      * @param selectPropNames the property names to select, or {@code null} for all
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
@@ -615,7 +621,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a named SELECT query optimized for large result sets based on condition.
      * All columns will be selected with cursor-based fetching.
      *
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
      */
@@ -630,7 +637,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Combines column selection with cursor-based fetching and named parameters.
      *
      * @param selectPropNames the property names to select, or {@code null} for all
-     * @param cond the condition for the WHERE clause
+     * @param cond the condition appended to the generated SELECT statement
+     *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
      */
@@ -680,7 +688,9 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Saves (inserts) the specified entity to the database.
-     * All non-null properties of the entity will be included in the INSERT statement.
+     * All insertable properties of the entity (i.e., excluding {@code @ReadOnly}, {@code @NonInsertable}, etc.)
+     * are included in the INSERT statement. The ID property is included only when it has been set
+     * (i.e., is not the default value), allowing the database to generate it otherwise.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -832,7 +842,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
 
     /**
      * Checks if no records exist that match the specified condition.
-     * Convenience method that returns the opposite of exists().
+     * Convenience method equivalent to {@code !}{@link #exists(Condition)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -844,6 +854,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond the condition to check
      * @return {@code true} if no matching records exist
      * @throws SQLException if a database access error occurs
+     * @see #exists(Condition)
      */
     @Beta
     default boolean notExists(final Condition cond) throws SQLException {
@@ -899,7 +910,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper the function to map the result row
      * @return Optional containing the mapped result
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
@@ -912,7 +923,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper the bi-function to map the result row
      * @return Optional containing the mapped result
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException, IllegalArgumentException;
 
@@ -945,7 +956,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper the function to map the result
      * @return Optional containing the mapped result
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws SQLException, IllegalArgumentException;
@@ -960,7 +971,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param rowMapper the bi-function to map the result
      * @return Optional containing the mapped result
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws SQLException, IllegalArgumentException;
@@ -992,7 +1003,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the mapped result
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -1007,7 +1018,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the mapped result
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -1035,7 +1046,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the mapped result
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -1051,7 +1062,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @return Optional containing the mapped result
      * @throws DuplicateResultException if more than one record matches
      * @throws SQLException if a database access error occurs
-     * @throws IllegalArgumentException if rowMapper returns null
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
             throws DuplicateResultException, SQLException, IllegalArgumentException;
@@ -1944,7 +1955,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Stream<Dataset> pages = dao.paginate(
-     *     Filters.criteria().where(Filters.gt("id", 0)).orderBy("id"),
+     *     Criteria.builder().where(Filters.gt("id", 0)).orderBy("id").build(),
      *     100,
      *     (query, lastPageResult) -> {
      *         if (lastPageResult != null && lastPageResult.size() > 0) {
@@ -1955,9 +1966,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * );
      * }</pre>
      *
-     * @param cond the condition with required orderBy clause
+     * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
-     * @param paramSetter function to set parameters for next page based on previous results
+     * @param paramSetter function to set parameters for the next page based on the previous page's result
+     *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages
      */
     @Beta
@@ -1969,9 +1981,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Each page is processed by the result extractor.
      *
      * @param <R> the result type
-     * @param cond the condition with required orderBy clause
+     * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
-     * @param paramSetter function to set parameters for next page
+     * @param paramSetter function to set parameters for the next page based on the previous page's result
+     *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page's ResultSet
      * @return stream of processed page results
      */
@@ -1985,9 +1998,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * The extractor receives both ResultSet and column labels for each page.
      *
      * @param <R> the result type
-     * @param cond the condition with required orderBy clause
+     * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
-     * @param paramSetter function to set parameters for next page
+     * @param paramSetter function to set parameters for the next page based on the previous page's result
+     *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
      * @return stream of processed page results
      */
@@ -2001,9 +2015,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Only specified properties are included in each page.
      *
      * @param selectPropNames the properties to select, {@code null} for all
-     * @param cond the condition with required orderBy clause
+     * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
-     * @param paramSetter function to set parameters for next page
+     * @param paramSetter function to set parameters for the next page based on the previous page's result
+     *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages with selected properties
      */
     @Beta
@@ -2017,9 +2032,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
-     * @param cond the condition with required orderBy clause
+     * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
-     * @param paramSetter function to set parameters for next page
+     * @param paramSetter function to set parameters for the next page based on the previous page's result
+     *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page
      * @return stream of processed page results
      */
@@ -2034,9 +2050,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
-     * @param cond the condition with required orderBy clause
+     * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
-     * @param paramSetter function to set parameters for next page
+     * @param paramSetter function to set parameters for the next page based on the previous page's result
+     *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
      * @return stream of processed page results
      */
@@ -2230,8 +2247,10 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
     /**
-     * Updates records matching the condition with all non-null properties from the entity.
-     * This updates all properties except those with {@code null} values.
+     * Updates records matching the condition using all updatable properties from the entity.
+     * This updates every property of the entity that is considered updatable
+     * (i.e., excluding {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id}, etc.),
+     * regardless of whether the value is {@code null}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

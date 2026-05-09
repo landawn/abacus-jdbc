@@ -69,31 +69,30 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 public @interface DaoConfig {
 
     /**
-     * Controls whether to automatically add LIMIT clause to single-result query methods.
-     * When {@code true}, methods that return a single result will have {@code LIMIT 1}
-     * (or equivalent) added to their SQL queries for better performance.
-     * 
-     * <p>Single query methods include:</p>
+     * Controls whether to automatically add a LIMIT clause (or its database equivalent) to
+     * single-result {@link com.landawn.abacus.condition.Condition Condition}-based query
+     * methods declared by {@code Dao}/{@code CrudDao}.
+     *
+     * <p>When {@code true}, the framework appends:</p>
      * <ul>
-     *   <li>{@code queryForSingleXxx()} methods</li>
-     *   <li>{@code queryForUniqueValue()}</li>
-     *   <li>{@code findFirst()}</li>
-     *   <li>{@code findOnlyOne()}</li>
-     *   <li>{@code exists()}</li>
-     *   <li>{@code count()} (when not using COUNT in SQL)</li>
+     *   <li>{@code LIMIT 1} for {@code exists(Condition)} and {@code findFirst(...)} variants</li>
+     *   <li>{@code LIMIT 2} for {@code findOnlyOne(...)} variants (so duplicates can still be detected)</li>
      * </ul>
-     * 
+     *
+     * <p>The LIMIT is <em>not</em> added for {@code count(Condition)} (which already issues a
+     * {@code SELECT COUNT(*)}) or for arbitrary user-supplied SQL in {@link Query @Query} methods.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(addLimitForSingleQuery = true)
      * public interface ProductDao extends CrudDao<Product, Long> {
-     *     @Query("SELECT * FROM products WHERE code = :code")
-     *     Product findByCode(@Bind("code") String code);
-     *     // Executed as: SELECT * FROM products WHERE code = ? LIMIT 1
+     *     // Built-in Condition-based methods will have LIMIT 1 appended
+     *     // when invoked through the proxy.
      * }
      * }</pre>
      *
-     * @return {@code true} to auto-add LIMIT clause, {@code false} otherwise
+     * @return {@code true} to auto-append the LIMIT clause to built-in single-result methods,
+     *         {@code false} (default) otherwise
      */
     boolean addLimitForSingleQuery() default false;
 

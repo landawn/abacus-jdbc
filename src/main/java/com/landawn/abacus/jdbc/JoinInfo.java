@@ -168,33 +168,16 @@ public final class JoinInfo {
      *   <li>For many-to-many joins, both main entity and intermediate table SQL statements are generated</li>
      * </ul>
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * // One-to-many join example
-     * // Entity: Employee has a property annotated with @JoinedBy("employeeId")
-     * JoinInfo oneToManyJoinInfo = new JoinInfo(
-     *     Employee.class,
-     *     "employees",
-     *     "projects",
-     *     false  // Don't allow null join values
-     * );
-     *
-     * // Many-to-many join example
-     * // Entity: Employee has a property annotated with
-     * // @JoinedBy("employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")
-     * JoinInfo manyToManyJoinInfo = new JoinInfo(
-     *     Employee.class,
-     *     "employees",
-     *     "projects",
-     *     true  // Allow null join values
-     * );
-     * }</pre>
+     * <p>This constructor is package-private and intended for internal use. Application code should
+     * obtain {@code JoinInfo} instances through {@link #getEntityJoinInfo(Class, Class, String)} or
+     * {@link #getPropJoinInfo(Class, Class, String, String)}.</p>
      *
      * @param entityClass the entity class containing the join property, must not be {@code null}
      * @param tableName the database table name for the entity, must not be {@code null}
      * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}
      * @param allowJoiningByNullOrDefaultValue if {@code true}, allows join operations when join property values are {@code null} or default;
-     *                                         if {@code false}, throws IllegalArgumentException for null/default join values.
+     *                                         if {@code false}, an {@code IllegalArgumentException} is thrown later from the parameter setter
+     *                                         when a null or default join value is encountered.
      *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class
      * @throws IllegalArgumentException if the join property is not found, not properly annotated, or the join configuration is invalid;
      *                                   if the referenced entity type is not a valid bean/entity class;
@@ -831,7 +814,9 @@ public final class JoinInfo {
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL, optional middle table delete SQL (null if not many-to-many), and parameter setter
+     * @return a tuple containing the delete SQL, the optional middle (join) table delete SQL
+     *         (which is {@code null} for one-to-many joins, and also {@code null} for many-to-many
+     *         joins when cascade-delete is configured at the database level), and the parameter setter
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
      * @see SqlBuilder.PSC
@@ -878,7 +863,9 @@ public final class JoinInfo {
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing SQL builders for delete operations (main and optional middle table) and a parameter setter
+     * @return a tuple of (main delete SQL builder, optional middle/join table delete SQL builder, parameter setter).
+     *         The middle SQL builder is {@code null} for one-to-many joins, and also {@code null} for many-to-many
+     *         joins when cascade-delete is configured at the database level
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
      * @see SqlBuilder.PSC
@@ -930,7 +917,8 @@ public final class JoinInfo {
      * }</pre>
      *
      * @param entities the source entities to populate with joined entities
-     * @param joinPropEntities the joined entities to be set on the source entities
+     * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities
+     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
@@ -943,8 +931,10 @@ public final class JoinInfo {
      * Sets join property entities for a collection of source entities using pre-grouped entities.
      * This method populates the join properties of the source entities with the provided grouped entities.
      *
-     * <p>The method handles both collection properties (List, Set, etc.) and single entity properties,
-     * automatically adapting the assignment based on the property type.</p>
+     * <p>The method handles collection properties (List, Set, etc.), map properties, and single entity
+     * properties, automatically adapting the assignment based on the declared property type. For map
+     * properties, only one joined entity is allowed per source key; multiple matches will result in an
+     * {@link IllegalArgumentException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -958,7 +948,9 @@ public final class JoinInfo {
      * }</pre>
      *
      * @param entities the source entities to populate with joined entities
-     * @param groupedPropEntities a map of grouped entities keyed by their join keys
+     * @param groupedPropEntities a map of grouped joined entities keyed by their referenced join key (the value extracted
+     *                            via the {@code @JoinedBy} target property on the joined entity)
+     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();

@@ -29,7 +29,8 @@ import java.util.Map;
  * 
  * <p>The annotation extracts the value of the specified key field from each result row
  * and uses it as the map key. If multiple rows have the same key value, the last row
- * will overwrite previous ones (unless using a multi-value map implementation).</p>
+ * will overwrite previous ones; use {@link MergedById} when you need to combine
+ * one-to-many rows into a single entity instead.</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -78,7 +79,7 @@ public @interface MappedByKey {
      * Legacy attribute for specifying the key field name.
      *
      * <p><strong>Deprecated:</strong> Use {@link #keyName()} instead for better clarity and consistency.
-     * This method is maintained for backward compatibility only.</p>
+     * This attribute is retained for backward compatibility only.</p>
      *
      * <p>Example migration:</p>
      * <pre>{@code

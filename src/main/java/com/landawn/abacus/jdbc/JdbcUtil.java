@@ -1717,7 +1717,15 @@ public final class JdbcUtil {
 
     /**
      * Returns an ordered list of column names for a specified table.
-     * This method retrieves metadata by executing a query that returns no rows (e.g., {@code SELECT * FROM ... WHERE 1 > 2}).
+     *
+     * <p>This method first consults {@link DatabaseMetaData#getColumns} (trying the connection's
+     * catalog/schema with the table name as supplied, and upper- and lower-case variants). If the
+     * metadata lookup yields no match, it falls back to running an empty-result query of the form
+     * {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set
+     * metadata.</p>
+     *
+     * <p>The {@code tableName} may be a simple identifier or a qualified name like
+     * {@code schema.table} or {@code catalog.schema.table}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1734,6 +1742,7 @@ public final class JdbcUtil {
      * @param tableName The name of the table for which to retrieve column names.
      * @return A {@link List} of column names in the order they are defined in the table.
      * @throws SQLException If a database access error occurs or the table does not exist.
+     * @throws IllegalArgumentException If {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
      * @see #getColumnLabelList(ResultSet)
      */
     public static List<String> getColumnNameList(final Connection conn, final String tableName) throws SQLException {
@@ -2528,7 +2537,7 @@ public final class JdbcUtil {
      * // op2 is SqlOperation.INSERT
      *
      * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (...)");
-     * // op3 might be SqlOperation.CREATE or SqlOperation.UNKNOWN depending on the implementation
+     * // op3 is SqlOperation.CREATE if that constant is defined in {@link SqlOperation}, otherwise SqlOperation.UNKNOWN
      * }</pre>
      *
      * @param sql The SQL statement to analyze.
@@ -4863,12 +4872,17 @@ public final class JdbcUtil {
      * Executes a batch SQL update using the provided Connection with specified batch size.
      * This method does not close the provided Connection after the batch update is executed.
      *
+     * <p>If the connection is in auto-commit mode and the number of parameter sets exceeds {@code batchSize},
+     * auto-commit is temporarily disabled so that all batches execute as a single transaction. The original
+     * auto-commit setting is restored after execution, with the changes either committed (on success) or
+     * rolled back (on failure).</p>
+     *
      * @param conn The Connection to use for the batch update
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
-     * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
+     * @return The total number of rows affected by the batch update across all batches
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeBatch()
      */
@@ -5025,12 +5039,17 @@ public final class JdbcUtil {
      * Executes a large batch SQL update using the provided Connection with specified batch size.
      * This method does not close the provided Connection after the batch update is executed.
      *
+     * <p>If the connection is in auto-commit mode and the number of parameter sets exceeds {@code batchSize},
+     * auto-commit is temporarily disabled so that all batches execute as a single transaction. The original
+     * auto-commit setting is restored after execution, with the changes either committed (on success) or
+     * rolled back (on failure).</p>
+     *
      * @param conn The Connection to use for the batch update
      * @param sql The SQL string to execute
      * @param listOfParameters A list of parameter sets for the batch update
      * @param batchSize The size of each batch
-     * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty
+     * @return The total number of rows affected by the batch update across all batches, as a long value
+     * @throws IllegalArgumentException If the Connection or SQL string is {@code null} or empty, or if {@code batchSize} is not positive
      * @throws SQLException If a SQL exception occurs while executing the batch update
      * @see PreparedStatement#executeLargeBatch()
      */
@@ -6507,7 +6526,7 @@ public final class JdbcUtil {
      * @param ds the DataSource to get the connection from
      * @param query the SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses
      * @param pageSize the number of rows to fetch per page
-     * @param paramSetter the BiParametersSetter to set parameters for the query; the second parameter is the result set for the previous page (null for first page)
+     * @param paramSetter the BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page)
      * @return a Stream of Dataset, each representing a page of results
      */
     @SuppressWarnings("rawtypes")
@@ -8460,8 +8479,8 @@ public final class JdbcUtil {
      * the provided property names.
      *
      * <p>This method delegates to
-     * {@link com.landawn.abacus.query.QueryUtil#getInsertPropNames(Object, Set)} and removes names
-     * explicitly listed in {@code excludedPropNames} when present.</p>
+     * {@link com.landawn.abacus.query.QueryUtil#getInsertPropNames(Object, Set)}, which omits any
+     * names explicitly listed in {@code excludedPropNames}.</p>
      *
      * <p>Pass {@code null} to include all supported properties (subject to the entity-level rules).</p>
      *
@@ -8898,10 +8917,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables/Disables SQL logging in the current thread.
+     * Enables or disables SQL logging in the current thread.
      *
      * @param b {@code true} to enable SQL logging, {@code false} to disable it.
-     * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
+     * @deprecated Use {@link #enableSqlLog()} or {@link #disableSqlLog()} instead.
      */
     @Deprecated
     static void enableSqlLog(final boolean b) {
@@ -8909,11 +8928,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables/Disables SQL logging in the current thread.
+     * Enables or disables SQL logging in the current thread, with a configurable maximum log length.
      *
      * @param b {@code true} to enable SQL logging, {@code false} to disable it.
      * @param maxSqlLogLength The maximum length of the SQL log. Default value is 1024.
-     * @deprecated replaced by {@code enableSqlLog/disableSqlLog}.
+     * @deprecated Use {@link #enableSqlLog(int)} or {@link #disableSqlLog()} instead.
      */
     @Deprecated
     static void enableSqlLog(final boolean b, final int maxSqlLogLength) {
@@ -9128,16 +9147,19 @@ public final class JdbcUtil {
 
     /**
      * Sets the minimum execution time threshold for SQL performance logging in the current thread.
-     * Only SQL statements that take longer than this threshold will be logged for performance monitoring.
-     * Uses the default maximum SQL log length of 1024 characters.
+     * Only SQL statements that take at least this long to execute will be logged for performance monitoring.
+     * Uses the default maximum SQL log length of {@value #DEFAULT_MAX_SQL_LOG_LENGTH} characters.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Log SQL statements that take more than 500ms
+     * // Log SQL statements that take 500ms or longer
      * JdbcUtil.setMinExecutionTimeForSqlPerfLog(500);
+     *
+     * // Disable performance logging
+     * JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
      * }</pre>
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds
+     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use a negative value to disable)
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog) {
         setMinExecutionTimeForSqlPerfLog(minExecutionTimeForSqlPerfLog, DEFAULT_MAX_SQL_LOG_LENGTH);
@@ -9156,7 +9178,7 @@ public final class JdbcUtil {
      * JdbcUtil.setMinExecutionTimeForSqlPerfLog(-1);
      * }</pre>
      *
-     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use -1 to disable)
+     * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds (use a negative value to disable)
      * @param maxSqlLogLength the maximum length of SQL statements in performance logs
      */
     public static void setMinExecutionTimeForSqlPerfLog(final long minExecutionTimeForSqlPerfLog, final int maxSqlLogLength) {
@@ -9234,7 +9256,7 @@ public final class JdbcUtil {
      * String result = JdbcUtil.callWithSqlLogDisabled(() -> {
      *     // Execute sensitive query without logging
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE id = ?")
-     *                    .setString(1, userId)
+     *                    .setLong(1, userId)
      *                    .queryForString()
      *                    .orElse(null);
      * });
@@ -10792,7 +10814,8 @@ public final class JdbcUtil {
      * @param daoCache the cache for DAO operations (should not be shared between DAOs)
      * @return a DAO instance implementing the specified interface
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @deprecated Use version without explicit cache parameter
+     * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper)} or
+     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
@@ -10861,7 +10884,8 @@ public final class JdbcUtil {
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @deprecated Use version without explicit cache parameter
+     * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper, Executor)} or
+     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
@@ -10927,7 +10951,8 @@ public final class JdbcUtil {
      * @param daoCache the cache for DAO operations
      * @return a DAO instance implementing the specified interface
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
-     * @deprecated Use version without explicit cache parameter
+     * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper)} or
+     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
     @Deprecated
     @SuppressWarnings("rawtypes")
@@ -10999,7 +11024,8 @@ public final class JdbcUtil {
      * @param executor the executor for asynchronous operations
      * @return a DAO instance implementing the specified interface
      * @throws IllegalArgumentException if required parameters are invalid
-     * @deprecated Use version without explicit cache parameter
+     * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Executor)} or
+     *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
      */
     @Deprecated
     @SuppressWarnings("rawtypes")

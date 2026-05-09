@@ -260,9 +260,10 @@ public final class JdbcUtils {
      * @param selectColumnNames the collection of column names to be selected for import
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql,
@@ -297,9 +298,10 @@ public final class JdbcUtils {
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -373,10 +375,11 @@ public final class JdbcUtils {
      * @param dataset the Dataset containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
@@ -416,10 +419,11 @@ public final class JdbcUtils {
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -479,10 +483,11 @@ public final class JdbcUtils {
      * @param dataset the Dataset containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
@@ -601,9 +606,10 @@ public final class JdbcUtils {
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt, final int batchSize,
@@ -639,9 +645,11 @@ public final class JdbcUtils {
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -720,10 +728,11 @@ public final class JdbcUtils {
      *
      * @param dataset the Dataset containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
@@ -762,11 +771,13 @@ public final class JdbcUtils {
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
+     * @param columnTypeMap a map specifying the types of the columns for type conversion;
+     *                      every key must match a column name in the dataset
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if batchSize is not greater than 0 or batchIntervalInMillis is negative
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -867,10 +878,11 @@ public final class JdbcUtils {
      *
      * @param dataset the Dataset containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -902,11 +914,11 @@ public final class JdbcUtils {
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if batchSize is not greater than 0 or batchIntervalInMillis is negative
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -1010,10 +1022,11 @@ public final class JdbcUtils {
      * @param file the file containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
@@ -1043,10 +1056,11 @@ public final class JdbcUtils {
      * @param <E> exception type that function might throw
      * @param file the file containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
@@ -1117,10 +1131,11 @@ public final class JdbcUtils {
      * @param reader the Reader containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      * @throws E if the function throws an exception
@@ -1157,8 +1172,8 @@ public final class JdbcUtils {
      * @param <E> exception type that function might throw
      * @param reader the Reader containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param func a function to process each line and convert it to an array of objects for insertion; returns {@code null} to skip the line
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
@@ -1242,7 +1257,7 @@ public final class JdbcUtils {
      * @param <T> iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections from
-     * @param insertSql the SQL insert statement with parameter placeholders (?)
+     * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
      * @param stmtSetter a BiConsumer to map iterator elements to PreparedStatement parameters
      * @return the total number of rows successfully inserted
      * @throws SQLException if a database access error occurs
@@ -1292,11 +1307,12 @@ public final class JdbcUtils {
      * @param <T> iterator element type
      * @param iter the Iterator containing the data to be imported
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param insertSql the SQL insert statement with parameter placeholders (?)
-     * @param batchSize the number of rows to accumulate before executing a batch insert
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions
+     * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
+     * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to map iterator elements to PreparedStatement parameters
      * @return the total number of rows successfully inserted
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
@@ -1365,10 +1381,10 @@ public final class JdbcUtils {
      * @param iter the Iterator containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (0 for no pause)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to map iterator elements to PreparedStatement parameters
      * @return the total number of rows successfully inserted
-     * @throws IllegalArgumentException if batchSize is not positive or batchIntervalInMillis is negative
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
@@ -1404,10 +1420,11 @@ public final class JdbcUtils {
 
     /**
      * Imports data from a CSV file to the database using the specified DataSource.
-     * This method uses default batch processing settings and expects the CSV column order to match the SQL parameter order.
+     * This method uses default batch processing settings.
      *
-     * <p>The first line of the CSV file is treated as headers and will be skipped during import.
-     * The statement setter is responsible for parsing and setting each CSV row value to the appropriate PreparedStatement parameter.</p>
+     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.
+     * The provided statement setter is responsible for parsing each CSV row value and binding it to
+     * the appropriate {@link PreparedStatement} parameter.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1428,8 +1445,8 @@ public final class JdbcUtils {
      *
      * @param file the CSV file containing the data to be imported
      * @param targetDataSource the DataSource to obtain database connections from
-     * @param insertSql the SQL insert statement (column order must match CSV column order)
-     * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
+     * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
+     * @param stmtSetter a BiConsumer to set PreparedStatement parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
@@ -1478,11 +1495,12 @@ public final class JdbcUtils {
      *
      * @param file the CSV file containing the data to be imported
      * @param conn the Connection to the database (will not be closed by this method)
-     * @param insertSql the SQL insert statement (column order must match CSV column order)
-     * @param batchSize the number of rows to accumulate before executing a batch insert
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions
-     * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
+     * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
+     * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
+     * @param stmtSetter a BiConsumer to set PreparedStatement parameters from each CSV row's values
      * @return the total number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
@@ -1565,10 +1583,11 @@ public final class JdbcUtils {
      *
      * @param file the CSV file containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
-     * @param batchSize the number of rows to accumulate before executing a batch insert
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions
+     * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
      * @return the total number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      */
@@ -1609,10 +1628,11 @@ public final class JdbcUtils {
      * @param file the CSV file containing the data to be imported
      * @param filter a predicate to filter rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
-     * @param batchSize the number of rows to accumulate before executing a batch insert
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions
+     * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
      * @return the total number of rows successfully imported (after filtering)
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading the file
      * @throws E if the filter throws an exception
@@ -1652,8 +1672,8 @@ public final class JdbcUtils {
      *
      * @param reader the Reader to read the CSV data from
      * @param targetDataSource the DataSource to obtain database connections from
-     * @param insertSql the SQL insert statement (column order must match CSV column order)
-     * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
+     * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
+     * @param stmtSetter a BiConsumer to set PreparedStatement parameters from each CSV row's values
      * @return the total number of rows successfully imported
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
@@ -1734,10 +1754,11 @@ public final class JdbcUtils {
      *
      * @param reader the Reader to read the CSV data from
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
-     * @param batchSize the number of rows to accumulate before executing a batch insert
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions
+     * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
      * @return the total number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
      */
@@ -1798,10 +1819,10 @@ public final class JdbcUtils {
      * @param filter a predicate to filter rows; only rows returning {@code true} will be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed)
      * @param batchSize the number of rows to accumulate before executing a batch insert (must be greater than 0)
-     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be >= 0)
+     * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set PreparedStatement parameters from CSV row values
      * @return the total number of rows successfully imported (after filtering)
-     * @throws IllegalArgumentException if batchSize is not positive or batchIntervalInMillis is negative
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while reading from the reader
      * @throws E if the filter throws an exception
@@ -2057,8 +2078,8 @@ public final class JdbcUtils {
      * Exports data from a ResultSet to a CSV file.
      * This method writes all columns from the current position of the ResultSet to the file.
      *
-     * <p>This is the lowest-level export method, useful when you already have a ResultSet
-     * from a complex operation or need maximum control over the export process.</p>
+     * <p>This overload accepts a ResultSet directly, useful when you already have a ResultSet
+     * from a complex operation or need fine-grained control over the export process.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2240,18 +2261,18 @@ public final class JdbcUtils {
      * }
      * }</pre>
      *
-     * @param rs the ResultSet containing the data to be exported
-     * @param output the Writer to write the CSV data to 
+     * @param rs the ResultSet containing the data to be exported (will not be closed by this method)
+     * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs while writing
      */
     public static long exportCsv(final ResultSet rs, final Writer output) throws SQLException, IOException {
         return exportCsv(rs, null, output);
     }
 
     /**
-     * Exports data from a ResultSet to a CSV file with column selection.
+     * Exports data from a ResultSet to a Writer in CSV format with column selection.
      * This method writes the specified columns from the ResultSet to the Writer in CSV format.
      * The first line contains column headers, and each subsequent line represents a row of data.
      *
@@ -2275,13 +2296,13 @@ public final class JdbcUtils {
      * }
      * }</pre>
      *
-     * @param rs the ResultSet containing the data to be exported
+     * @param rs the ResultSet containing the data to be exported (will not be closed by this method)
      * @param selectColumnNames the collection of column names to be selected for export; if {@code null}, all columns are exported
-     * @param output the Writer to write the CSV data to
+     * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws IllegalArgumentException if any specified column name is not found in the ResultSet
      * @throws SQLException if a database access error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs while writing
      */
     public static long exportCsv(final ResultSet rs, final Collection<String> selectColumnNames, final Writer output)
             throws IllegalArgumentException, SQLException, IOException {
@@ -2462,6 +2483,7 @@ public final class JdbcUtils {
      * @param targetTableName the name of the table in the target data source
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
@@ -2536,6 +2558,7 @@ public final class JdbcUtils {
      * @param selectColumnNames the collection of column names to copy
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
@@ -2612,6 +2635,7 @@ public final class JdbcUtils {
      * @param insertSql the SQL query to insert data into the target data source
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
@@ -2688,9 +2712,10 @@ public final class JdbcUtils {
      * @param targetDataSource the data source to which to copy data
      * @param insertSql the SQL query to insert data into the target data source
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
      * @param stmtSetter a bi-consumer to set parameters on the prepared statement
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
@@ -2794,6 +2819,7 @@ public final class JdbcUtils {
      * @param targetTableName the name of the target table to copy data to
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
@@ -2863,6 +2889,7 @@ public final class JdbcUtils {
      * @param selectColumnNames the collection of column names to be copied
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
@@ -3022,6 +3049,7 @@ public final class JdbcUtils {
      * @param insertSql the SQL query to insert data into the target database
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
@@ -3102,9 +3130,10 @@ public final class JdbcUtils {
      * @param targetConn the connection to the target database
      * @param insertSql the SQL query to insert data into the target database
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
      * @param stmtSetter the custom statement setter to set the parameters of the prepared statement
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
@@ -3159,9 +3188,11 @@ public final class JdbcUtils {
      * @param selectStmt the PreparedStatement used to select data from the source
      * @param insertStmt the PreparedStatement used to insert data into the target
      * @param batchSize the number of rows to process in each batch (must be greater than 0)
-     * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay)
-     * @param stmtSetter a BiConsumer that sets the parameters for the PreparedStatement from the ResultSet
+     * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
+     * @param stmtSetter a BiConsumer that sets the parameters for the PreparedStatement from the ResultSet;
+     *                   if {@code null}, a default setter copies all columns by index
      * @return the number of rows copied
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      */
     public static long copy(final PreparedStatement selectStmt, final PreparedStatement insertStmt, final int batchSize, final long batchIntervalInMillis,
@@ -3800,8 +3831,8 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param columnGetterForAll the ColumnGetter to apply to each column index in every row
-     * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
-     * @throws NullPointerException if {@code columnGetterForAll} is {@code null}
+     * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions;
+     *         a {@code NullPointerException} will be raised on first use if {@code columnGetterForAll} is {@code null}
      * @see #copy(Connection, String, Connection, String, Throwables.BiConsumer)
      */
     @Beta

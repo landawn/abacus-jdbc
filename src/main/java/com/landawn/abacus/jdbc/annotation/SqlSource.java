@@ -36,17 +36,16 @@ public @interface SqlSource {
 
     /**
      * Specifies the path to the SQL mapper XML file.
-     * The path is relative to the classpath root and should include the file extension.
+     * The path is loaded by {@code SqlMapper.load(...)} at DAO initialization time and is
+     * typically interpreted as classpath-relative; the value should include the file extension.
      *
-     * <p>If not specified (empty string), the default mapper file location will be used.</p>
-     * 
      * <p>Common conventions:</p>
      * <ul>
      *   <li>Place mapper files in a resources directory mirroring the package structure</li>
      *   <li>Name mapper files after the DAO interface (e.g., UserDao.xml for UserDao interface)</li>
      *   <li>Use a dedicated directory like "sql/" or "mappers/" for organization</li>
      * </ul>
-     * 
+     *
      * <p>Example paths:</p>
      * <pre>{@code
      * @SqlSource("sql/UserDao.xml")              // In sql directory
@@ -54,7 +53,7 @@ public @interface SqlSource {
      * @SqlSource("mappers/user-queries.xml")     // Custom naming
      * }</pre>
      *
-     * @return the classpath-relative path to the SQL mapper XML file.
+     * @return the path to the SQL mapper XML file passed to {@code SqlMapper.load}; empty by default
      */
     String value() default "";
 }

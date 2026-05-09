@@ -25,14 +25,16 @@ import com.landawn.abacus.query.SqlBuilder;
  * in addition to the {@code Long} object methods inherited from {@link UncheckedReadOnlyCrudDao}.
  *
  * <p>This interface is particularly useful for entities that use numeric long IDs,
- * which is a common pattern in many database schemas. All methods delegate to their
- * corresponding UncheckedReadOnlyCrudDao methods after boxing the primitive long to Long.</p>
+ * which is a common pattern in many database schemas. The primitive-{@code long} convenience methods
+ * inherited from {@link UncheckedNoUpdateCrudDaoL} delegate to their corresponding {@code Long}
+ * counterparts after boxing.</p>
  *
- * <p>This interface throws {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ * <p>Query methods throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
  * making it easier to work with in functional programming contexts.</p>
  *
- * <p>All mutation operations (insert, update, delete) inherited from parent interfaces will throw
- * {@link UnsupportedOperationException}, while read operations (get, exists, list, count) remain fully functional.</p>
+ * <p>All mutation operations (insert, update, delete and their batch variants) inherited from parent
+ * interfaces throw {@link UnsupportedOperationException}, while read operations (get, exists, list, count)
+ * remain fully functional.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

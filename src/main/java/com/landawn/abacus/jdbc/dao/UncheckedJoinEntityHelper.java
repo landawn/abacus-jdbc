@@ -38,15 +38,17 @@ import com.landawn.abacus.util.stream.Stream;
 
 /**
  * The UncheckedJoinEntityHelper interface provides advanced functionality for handling entity relationships
- * and join operations in DAOs with unchecked exceptions. It enables loading of related entities, 
- * managing one-to-one, one-to-many, and many-to-many relationships.
- * 
- * <p>This interface throws {@code UncheckedSQLException} instead of {@code SQLException}, making it
- * easier to work with in functional programming contexts and reducing boilerplate exception handling.</p>
- * 
+ * and join operations in DAOs with unchecked exceptions. It enables loading of related entities and
+ * managing one-to-one and one-to-many relationships declared via the {@code @JoinedBy} annotation.
+ *
+ * <p>This interface is the unchecked counterpart of {@link JoinEntityHelper}: every operation that would
+ * throw {@link java.sql.SQLException} in the parent interface throws {@link UncheckedSQLException} here
+ * instead, making it easier to work with in functional programming contexts and reducing boilerplate
+ * exception handling.</p>
+ *
  * <p>Key features:</p>
  * <ul>
- *   <li>Lazy loading of related entities</li>
+ *   <li>On-demand loading of related entities</li>
  *   <li>Batch loading for performance optimization</li>
  *   <li>Conditional loading (loadJoinEntitiesIfNull)</li>
  *   <li>Parallel loading support for multiple join properties</li>
@@ -59,24 +61,24 @@ import com.landawn.abacus.util.stream.Stream;
  *     @Id
  *     private Long id;
  *     private String name;
- *     
+ *
  *     @JoinedBy("userId")
  *     private List<Order> orders;
- *     
- *     @JoinedBy("userId")  
+ *
+ *     @JoinedBy("userId")
  *     private UserProfile profile;
  *     // getters/setters
  * }
- * 
+ *
  * UserDao userDao = ...;
- * 
+ *
  * // Load user with related entities
- * Optional<User> user = userDao.findFirst(
+ * Optional<User> userOpt = userDao.findFirst(
  *     Arrays.asList("id", "name"),
  *     Order.class,  // Load orders automatically
  *     Filters.eq("id", 1)
  * );
- * 
+ *
  * // Load join entities manually
  * User user = userDao.gett(1);
  * userDao.loadJoinEntities(user, "orders");
@@ -86,6 +88,7 @@ import com.landawn.abacus.util.stream.Stream;
  * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the self-type of the DAO for method chaining
+ * @see com.landawn.abacus.jdbc.dao.JoinEntityHelper
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("resource")
@@ -551,15 +554,15 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * Loads join entities for a specific property name with selected properties for a single entity.
      * This is the core implementation method for loading join entities in unchecked mode.
      *
-     * <p>This method is the core implementation for loading join entities. It queries the database
-     * for related entities based on the join relationship defined in the {@code @JoinedBy} annotation
-     * and populates the specified property in the entity. Unlike the checked version in {@link JoinEntityHelper},
-     * this method throws {@link UncheckedSQLException} instead of {@link java.sql.SQLException}, making it
-     * suitable for use in functional programming contexts and lambda expressions.</p>
+     * <p>It queries the database for related entities based on the join relationship defined in the
+     * {@code @JoinedBy} annotation and populates the specified property in the entity. Unlike the
+     * checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
+     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming
+     * contexts and lambda expressions.</p>
      *
-     * <p>The implementation should handle both collection-type properties (List, Set, etc.) and
+     * <p>The implementation handles both collection-type properties (List, Set, etc.) and
      * single-entity properties. For collection types, all matching join entities are loaded into
-     * the collection. For single entities, only one matching entity is loaded.</p>
+     * the collection. For single-entity properties, only one matching entity is loaded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -614,10 +617,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * Loads join entities for a specific property name with selected properties for multiple entities.
      * This is the core batch implementation method for loading join entities in unchecked mode.
      *
-     * <p>This method is the core batch implementation for loading join entities. It efficiently loads
-     * related entities for multiple parent entities in a single operation, avoiding the N+1 query problem.
-     * The implementation typically uses an IN clause to fetch all related entities in one query, then
-     * distributes them to the appropriate parent entities based on the foreign key relationship.</p>
+     * <p>It efficiently loads related entities for multiple parent entities in a single operation,
+     * avoiding the N+1 query problem. The implementation typically uses an IN clause to fetch all
+     * related entities in one query, then distributes them to the appropriate parent entities based
+     * on the foreign key relationship.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
@@ -633,16 +636,16 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.batchGet(userIds);
-     * // Load address property with selected fields for all users
+     * // Load address property with selected fields for all users in a single batched query
      * userDao.loadJoinEntities(
      *     users,
      *     "addresses",
      *     Arrays.asList("street", "city", "country", "isPrimary")
      * );
      *
-     * // Use in stream operations without try-catch
+     * // Load orders for all users without try-catch (UncheckedSQLException is unchecked)
+     * userDao.loadJoinEntities(users, "orders", null);
      * users.stream()
-     *     .peek(u -> userDao.loadJoinEntities(u, "orders", null))
      *     .filter(u -> u.getOrders().size() > 5)
      *     .collect(Collectors.toList());
      * }</pre>
@@ -855,8 +858,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Loads all join entities defined in the entity class for a single entity.
-     * This loads all properties annotated with relationship annotations like @JoinedBy.
-     * 
+     * This loads every property annotated with {@code @JoinedBy}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(userId);
@@ -1650,10 +1653,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * Deletes join entities for a specific property name of a single entity.
      * This is the core implementation method for deleting join entities in unchecked mode.
      *
-     * <p>This method deletes all related entities for the specified join property. The deletion
-     * is based on the foreign key relationship defined in the {@code @JoinedBy} annotation. The
-     * method constructs and executes a DELETE statement targeting the join entity table with a
-     * WHERE clause matching the foreign key value(s) from the parent entity.</p>
+     * <p>It deletes all related entities for the specified join property. The deletion is based on
+     * the foreign key relationship defined in the {@code @JoinedBy} annotation. The method
+     * constructs and executes a DELETE statement targeting the join entity table with a WHERE
+     * clause matching the foreign key value(s) from the parent entity.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
@@ -1695,10 +1698,10 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * Deletes join entities for a specific property name for multiple entities.
      * This is the core batch implementation method for deleting join entities in unchecked mode.
      *
-     * <p>This method efficiently deletes all related entities for multiple parent entities in a batch operation.
-     * The implementation typically uses an IN clause to delete all related records in one or more SQL statements,
-     * avoiding the N+1 delete problem. For large collections, the deletion may be automatically batched to
-     * prevent SQL statement size limits from being exceeded.</p>
+     * <p>It efficiently deletes all related entities for multiple parent entities in a batch operation.
+     * The implementation typically uses an IN clause to delete all related records in one or more SQL
+     * statements, avoiding the N+1 delete problem. For large collections, the deletion may be
+     * automatically batched to prevent SQL statement size limits from being exceeded.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityHelper}, this method throws {@link UncheckedSQLException}
      * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
@@ -1747,7 +1750,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     @Override
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException;
 
-    /**     
+    /**
      * Deletes join entities for multiple property names of a single entity.
      * The deletions are performed in a single transaction.
      * 
@@ -1813,7 +1816,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
+     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
+     *             prefer the sequential {@link #deleteJoinEntities(Object, Collection)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -1830,7 +1834,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
         return DaoUtil.uncheckedCompleteSum(futures);
     }
 
-    /**     
+    /**
      * Deletes join entities for multiple property names of a single entity in parallel (deprecated).
      * Note: Parallel deletion may not complete in a single transaction.
      * 
@@ -1850,7 +1854,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
+     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
+     *             prefer the sequential {@link #deleteJoinEntities(Object, Collection)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -1927,7 +1932,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
+     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
+     *             prefer the sequential {@link #deleteJoinEntities(Collection, Collection)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -1962,7 +1968,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
+     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
+     *             prefer the sequential {@link #deleteJoinEntities(Collection, Collection)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -2016,7 +2023,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
+     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
+     *             prefer the sequential {@link #deleteAllJoinEntities(Object)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -2045,7 +2053,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
+     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
+     *             prefer the sequential {@link #deleteAllJoinEntities(Object)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -2094,7 +2103,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param inParallel if {@code true}, entities are deleted in parallel; if {@code false}, deleted sequentially
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction if {@code inParallel} is {@code true}
+     * @deprecated this operation may not complete in a single transaction if {@code inParallel} is {@code true};
+     *             prefer the sequential {@link #deleteAllJoinEntities(Collection)} for transactional deletion
      */
     @Beta
     @Deprecated
@@ -2123,7 +2133,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param executor the {@code Executor} to use for parallel execution
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated This operation may not complete in a single transaction when executed in multiple threads
+     * @deprecated this operation may not complete in a single transaction when executed in multiple threads;
+     *             prefer the sequential {@link #deleteAllJoinEntities(Collection)} for transactional deletion
      */
     @Beta
     @Deprecated

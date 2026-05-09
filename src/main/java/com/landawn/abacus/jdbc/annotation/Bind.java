@@ -47,25 +47,24 @@ import java.lang.annotation.Target;
  *     // Binding entity properties
  *     @Query("SELECT * FROM users WHERE first_name = :user.firstName AND last_name = :user.lastName")
  *     List<User> findByName(@Bind("user") User user);
- *     
- *     // Parameter name inference (when value is not specified)
- *     @Query("SELECT * FROM users WHERE department = :department")
- *     List<User> findByDepartment(@Bind String department);
- *     
+ *
  *     // Nested property access
  *     @Query("UPDATE users SET address = :addr.street, city = :addr.city WHERE id = :userId")
  *     void updateAddress(@Bind("userId") Long userId, @Bind("addr") Address address);
  * }
  * }</pre>
  * 
- * <p>When binding entity objects, all accessible properties can be referenced
- * in the SQL using dot notation:</p>
+ * <p>When the method has a single bean/record/Map parameter, named placeholders are bound directly
+ * to its properties without {@code @Bind}. When there are multiple parameters in a named query,
+ * each parameter must carry an {@code @Bind} (or another binding annotation):</p>
  * <pre>{@code
+ * // Single bean parameter: properties auto-bound, no @Bind required
  * @Query("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
- * void insertUser(User user);   // Properties bound automatically without @Bind
- * 
+ * void insertUser(User user);
+ *
+ * // Explicit prefix binding when you need property paths in SQL
  * @Query("INSERT INTO users (name, email, age) VALUES (:u.name, :u.email, :u.age)")
- * void insertUser(@Bind("u") User user);   // Explicit binding with prefix
+ * void insertUser(@Bind("u") User user);
  * }</pre>
  *
  * <p>Best practices:</p>
@@ -86,27 +85,29 @@ import java.lang.annotation.Target;
 public @interface Bind {
 
     /**
-     * Specifies the parameter name to be used in the SQL query.
-     * If not specified (empty string), the parameter name will be used.
-     * 
+     * Specifies the named-parameter token (the part after {@code :}) that this method parameter
+     * should be bound to in the SQL.
+     *
+     * <p>An explicit value is normally required: when a named-query method has more than one
+     * statement parameter, every such parameter must carry an {@code @Bind} (or another binding
+     * annotation) with a non-empty {@code value}. The empty default is only useful for single-bean
+     * scenarios where the framework auto-binds by entity property names without inspecting
+     * {@code value}.</p>
+     *
      * <p>The parameter is referenced in SQL using colon notation: {@code :paramName}</p>
-     * 
+     *
      * <p>Examples:</p>
      * <pre>{@code
      * // Explicit parameter name
      * @Query("SELECT * FROM users WHERE id = :userId")
      * User findById(@Bind("userId") Long id);
-     * 
-     * // Using method parameter name (requires -parameters compiler flag)
-     * @Query("SELECT * FROM users WHERE email = :email")
-     * User findByEmail(@Bind String email);
-     * 
+     *
      * // Binding object with property access
      * @Query("SELECT * FROM orders WHERE customer_id = :customer.id AND status = :orderStatus")
      * List<Order> findOrders(@Bind("customer") Customer customer, @Bind("orderStatus") String status);
      * }</pre>
-     * 
-     * @return the parameter name, or empty string if using the actual parameter name
+     *
+     * @return the named-parameter token to bind to (without the leading colon); empty by default
      */
     String value() default "";
 }

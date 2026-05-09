@@ -46,9 +46,13 @@ import com.landawn.abacus.util.RegExUtil;
 public @interface Query {
 
     /**
-     * Specifies inline SQL statement lines to execute.
+     * Specifies the inline SQL statement(s) to execute.
      * This can contain any valid SQL including SELECT, INSERT, UPDATE, DELETE, or stored procedure calls.
-     * Multiple array entries are concatenated in declaration order to form the final SQL text.
+     *
+     * <p>For ordinary abstract DAO methods only the first entry is used (additional entries are ignored).
+     * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
+     * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
+     * applicable, and passed to that {@code String[]} parameter at runtime.</p>
      *
      * <p>The SQL can include:</p>
      * <ul>
@@ -103,8 +107,8 @@ public @interface Query {
      * List<Employee> rankEmployeesByDepartment(@Bind("dept") String department);
      * }</pre>
      *
-     * <p>Note: Either {@code value} or {@link #id()} should be specified, but not both.
-     * If neither is specified, the framework may attempt to derive the SQL based on the method name and entity mapping.</p>
+     * <p>Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both
+     * or neither causes initialization to fail with an {@code IllegalArgumentException}.</p>
      *
      * @return inline SQL statement lines; empty by default when using {@link #id()}
      */
@@ -152,7 +156,8 @@ public @interface Query {
      * // </sql>
      * }</pre>
      *
-     * <p>Note: Either {@link #value()} or {@code id} should be specified, but not both.</p>
+     * <p>Note: Exactly one of {@link #value()} or {@code id} must be non-empty; specifying both
+     * or neither causes initialization to fail with an {@code IllegalArgumentException}.</p>
      *
      * @return SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
      * @see RegExUtil#JAVA_IDENTIFIER_MATCHER

@@ -220,17 +220,17 @@ final class DaoUtil {
      * Collection<String> result = DaoUtil.getRefreshSelectPropNames(propsToRefresh, idProps);
      * // result == propsToRefresh (same reference)
      *
-     * // ID properties not included - creates new collection with IDs added
+     * // ID properties not included - creates a new HashSet containing the union
      * Collection<String> propsToRefresh = Arrays.asList("name", "email");
      * List<String> idProps = Arrays.asList("id");
      * Collection<String> result = DaoUtil.getRefreshSelectPropNames(propsToRefresh, idProps);
-     * // result contains: "name", "email", "id"
+     * // result contains: "name", "email", "id" (HashSet, iteration order not guaranteed)
      * }</pre>
      *
      * @param propNamesToRefresh the collection of property names to refresh
      * @param idPropNameList the list of ID property names that must be included
-     * @return the original collection if it contains all ID properties, otherwise a new collection
-     *         containing both the requested properties and all ID properties
+     * @return the original collection if it contains all ID properties, otherwise a new
+     *         {@link HashSet} containing both the requested properties and all ID properties
      */
     static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
         if (propNamesToRefresh.containsAll(idPropNameList)) {
@@ -265,7 +265,7 @@ final class DaoUtil {
      *
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to CrudDao
@@ -301,7 +301,7 @@ final class DaoUtil {
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the JoinEntityHelper instance to cast
      * @return the DAO instance cast to Dao
@@ -337,7 +337,7 @@ final class DaoUtil {
      * }</pre>
      *
      * @param <T> the entity type managed by this DAO
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedDao
@@ -374,7 +374,7 @@ final class DaoUtil {
      *
      * @param <T> the entity type managed by this DAO
      * @param <ID> the ID type of the entity
-     * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+     * @param <SB> the SqlBuilder type used to generate SQL scripts (one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityHelper instance to cast
      * @return the DAO instance cast to UncheckedCrudDao
@@ -389,12 +389,13 @@ final class DaoUtil {
     }
 
     /**
-     * A consumer that converts exceptions to {@link UncheckedSQLException}.
+     * A consumer that converts an exception to {@link UncheckedSQLException} (or another runtime exception) and throws it.
      * <p>
-     * This consumer is used to handle exceptions in asynchronous operations, converting SQL-related
-     * exceptions into unchecked exceptions. If the exception is a {@link SQLException} or has a
-     * SQLException as its cause, it wraps it in an UncheckedSQLException. Otherwise, it converts
-     * the exception to a runtime exception.
+     * Used by {@link #uncheckedComplete(List)} and {@link #uncheckedCompleteSum(List)} to surface
+     * failures from completed futures. If the exception is a {@link SQLException} or has a
+     * SQLException as its cause, it is wrapped in an {@link UncheckedSQLException}. Otherwise, the
+     * exception is converted to a runtime exception via {@link ExceptionUtil#toRuntimeException}.
+     * This consumer never returns normally when invoked — it always throws.
      * </p>
      */
     static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> {
@@ -408,11 +409,13 @@ final class DaoUtil {
     };
 
     /**
-     * A consumer that throws {@link SQLException} or converts exceptions to runtime exceptions.
+     * A consumer that re-throws an exception as a checked {@link SQLException} when possible, or as a runtime exception otherwise.
      * <p>
-     * This consumer is used to handle exceptions in synchronous operations. If the exception is a
-     * {@link SQLException} or has a SQLException as its cause, it re-throws the SQLException.
-     * Otherwise, it converts the exception to a runtime exception.
+     * Used by {@link #complete(List)} and {@link #completeSum(List)} to surface failures from
+     * completed futures. If the exception is a {@link SQLException} or has a SQLException as its
+     * cause, the SQLException is re-thrown. Otherwise, the exception is converted to a runtime
+     * exception via {@link ExceptionUtil#toRuntimeException}. This consumer never returns normally
+     * when invoked — it always throws.
      * </p>
      */
     static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
@@ -437,9 +440,9 @@ final class DaoUtil {
      * <pre>{@code
      * // Execute multiple async operations and wait for completion
      * List<ContinuableFuture<Void>> futures = new ArrayList<>();
-     * futures.add(asyncExecutor.execute(() -> dao.insert(entity1)));
-     * futures.add(asyncExecutor.execute(() -> dao.insert(entity2)));
-     * futures.add(asyncExecutor.execute(() -> dao.insert(entity3)));
+     * futures.add(asyncExecutor.execute(() -> dao.save(entity1)));
+     * futures.add(asyncExecutor.execute(() -> dao.save(entity2)));
+     * futures.add(asyncExecutor.execute(() -> dao.save(entity3)));
      *
      * // Wait for all operations to complete
      * DaoUtil.uncheckedComplete(futures);
@@ -511,9 +514,9 @@ final class DaoUtil {
      * <pre>{@code
      * // Execute multiple async operations and wait for completion (checked exception)
      * List<ContinuableFuture<Void>> futures = new ArrayList<>();
-     * futures.add(asyncExecutor.execute(() -> dao.insert(entity1)));
-     * futures.add(asyncExecutor.execute(() -> dao.insert(entity2)));
-     * futures.add(asyncExecutor.execute(() -> dao.insert(entity3)));
+     * futures.add(asyncExecutor.execute(() -> dao.save(entity1)));
+     * futures.add(asyncExecutor.execute(() -> dao.save(entity2)));
+     * futures.add(asyncExecutor.execute(() -> dao.save(entity3)));
      *
      * // Wait for all operations to complete
      * DaoUtil.complete(futures);
@@ -819,9 +822,9 @@ final class DaoUtil {
     /**
      * Checks if the given SQL statement is a SELECT query.
      * <p>
-     * This method performs a case-insensitive check to determine if the SQL statement starts
-     * with the "SELECT" keyword, allowing for leading whitespace. It checks for "select " prefix
-     * in lowercase, uppercase, and mixed case formats.
+     * This method performs a case-insensitive check on the leading SQL keyword (after skipping
+     * any leading whitespace and SQL comments). For statements that start with a {@code WITH}
+     * (CTE) clause, the keyword that follows the CTE definitions is examined instead.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -844,7 +847,7 @@ final class DaoUtil {
      * // result5 = false
      * }</pre>
      *
-     * @param sql the SQL statement to check. Must not be {@code null}
+     * @param sql the SQL statement to check; may be empty or {@code null}
      * @return {@code true} if the SQL is a SELECT query, {@code false} otherwise
      */
     static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
@@ -854,9 +857,9 @@ final class DaoUtil {
     /**
      * Checks if the given SQL statement is an INSERT query.
      * <p>
-     * This method performs a case-insensitive check to determine if the SQL statement starts
-     * with the "INSERT" keyword, allowing for leading whitespace. It checks for "insert " prefix
-     * in lowercase, uppercase, and mixed case formats.
+     * This method performs a case-insensitive check on the leading SQL keyword (after skipping
+     * any leading whitespace and SQL comments). For statements that start with a {@code WITH}
+     * (CTE) clause, the keyword that follows the CTE definitions is examined instead.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -879,7 +882,7 @@ final class DaoUtil {
      * // result5 = false
      * }</pre>
      *
-     * @param sql the SQL statement to check. Must not be {@code null}
+     * @param sql the SQL statement to check; may be empty or {@code null}
      * @return {@code true} if the SQL is an INSERT query, {@code false} otherwise
      */
     static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {

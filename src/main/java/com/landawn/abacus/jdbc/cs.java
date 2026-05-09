@@ -17,26 +17,30 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Constants container class providing standardized parameter and field names used throughout the Abacus JDBC framework.
- * 
- * <p>This utility class centralizes commonly used string literals to ensure consistency across the framework
- * and reduce the risk of typos in parameter names, SQL column names, and configuration keys.</p>
- * 
+ * Internal constants container providing the standardized parameter-name string literals
+ * used by argument-validation calls (e.g., {@code N.checkArgNotNull(arg, cs.handler)})
+ * throughout the Abacus JDBC framework.
+ *
+ * <p>This utility class centralizes the textual identifiers that appear in error messages
+ * and diagnostics, ensuring that the parameter name reported when a validation fails
+ * matches the actual method-parameter name in the source code, and reducing the risk
+ * of typos when the same name is referenced across many call sites.</p>
+ *
  * <p>The constants are primarily used in:</p>
  * <ul>
- *   <li>SQL parameter binding and named queries</li>
- *   <li>Method annotations and configuration</li>
- *   <li>Data access object implementations</li>
- *   <li>Result set processing and mapping</li>
+ *   <li>{@code N.checkArgNotNull / checkArgNotEmpty / ...} validation calls inside framework methods</li>
+ *   <li>Argument labels for exception messages thrown by framework methods</li>
+ *   <li>Internal logging and diagnostic output</li>
  * </ul>
- * 
- * <p><b>Usage Examples:</b></p>
+ *
+ * <p><b>Usage Example (framework-internal):</b></p>
  * <pre>{@code
- * // Using cs constants for parameter names
- * String sql = "SELECT * FROM users WHERE " + cs.columnName + " = ?";
- * query.setObject(cs.entity, userEntity);
+ * void register(final Class<?> daoInterface, final Jdbc.Handler<?> handler) {
+ *     N.checkArgNotNull(daoInterface, cs.daoInterface);
+ *     N.checkArgNotNull(handler, cs.handler);
+ *     // ...
+ * }
  * }</pre>
- * 
  */
 public final class cs { // NOSONAR
     /**

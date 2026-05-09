@@ -39,8 +39,8 @@ import com.landawn.abacus.util.u.Optional;
  *     @Id
  *     private long id;
  *     private String name;
- *     
- *     @JoinedBy("userId")
+ *
+ *     @JoinedBy("id=Order.userId")
  *     private List<Order> orders;
  * }
  * 
@@ -68,9 +68,9 @@ import com.landawn.abacus.util.u.Optional;
 public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudJoinEntityHelper<T, Long, SB, TD> {
 
     /**
-     * Retrieves an entity by its ID and loads the specified join entities.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Retrieves an entity by its ID and loads the specified type of join entities.
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders loaded
@@ -81,11 +81,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * });
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the retrieved entity with the specified join entities loaded, or an empty Optional if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -94,8 +95,8 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
 
     /**
      * Retrieves an entity by its ID and optionally loads all join entities.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with all related entities loaded
@@ -108,10 +109,10 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * });
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
+     * @return an Optional containing the retrieved entity with join entities loaded as specified, or an empty Optional if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -121,22 +122,23 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
-     * Retrieves an entity by its ID with selected properties and loads the specified join entities.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Retrieves an entity by its ID with selected properties and loads the specified type of join entities.
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with only id and name fields, plus orders
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name"), Order.class);
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
@@ -145,16 +147,16 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
-     * Retrieves an entity by its ID with selected properties and loads multiple join entity types.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Retrieves an entity by its ID with selected properties and loads multiple types of join entities.
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses loaded
      * Optional<User> user = userDao.get(123L, null, Arrays.asList(Order.class, Address.class));
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
@@ -170,20 +172,20 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
 
     /**
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with only essential fields and all related entities
      * Optional<User> user = userDao.get(123L, Arrays.asList("id", "name", "email"), true);
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
+     * @return an Optional containing the retrieved entity with join entities loaded as specified, or an empty Optional if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -194,9 +196,9 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
-     * Retrieves an entity by its ID and loads the specified join entities, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(123L, Order.class);
@@ -206,11 +208,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * }
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -225,8 +228,8 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
 
     /**
      * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = userDao.gett(123L, true);
@@ -236,10 +239,10 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * }
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the retrieved entity with join entities loaded, or {@code null} if not found
+     * @return the retrieved entity with join entities loaded as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
@@ -255,9 +258,9 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
-     * Retrieves an entity by its ID with selected properties and loads the specified join entities, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Retrieves an entity by its ID with selected properties and loads the specified type of join entities, returning {@code null} if not found.
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal fields plus orders
@@ -267,13 +270,14 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * }
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the class of the join entities to load
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
@@ -287,9 +291,9 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
-     * Retrieves an entity by its ID with selected properties and loads multiple join entity types, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * Retrieves an entity by its ID with selected properties and loads multiple types of join entities, returning {@code null} if not found.
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses
@@ -299,7 +303,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * }
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntitiesToLoad the collection of join entity classes to load
@@ -323,8 +327,8 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
 
     /**
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * This is a convenience method that accepts a primitive {@code long} ID.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with essential fields and all relations
@@ -334,12 +338,12 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * }
      * }</pre>
      *
-     * @param id the primitive long ID of the entity to retrieve
+     * @param id the primitive {@code long} ID of the entity to retrieve
      * @param selectPropNames the properties to select from the main entity, excluding join entity properties.
      *                        If {@code null}, all properties of the main entity are selected
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
-     * @return the retrieved entity with join entities loaded, or {@code null} if not found
+     * @return the retrieved entity with join entities loaded as specified, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */

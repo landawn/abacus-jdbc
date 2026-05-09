@@ -430,10 +430,12 @@ public final class DBLock {
      * @param liveTime the duration in milliseconds for which the lock is valid. Must be positive.
      * @param timeout the maximum time in milliseconds to wait for the lock. Must be non-negative.
      * @param retryInterval the time in milliseconds to wait between retry attempts. A value of 0 means
-     *        immediate retry without delay. Must be non-negative.
+     *        an internal minimum (1 ms) delay is used to avoid a tight spin loop. Must be non-negative.
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the specified timeout.
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
+     * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
+     *         {@code liveTime} is not positive, or {@code timeout} or {@code retryInterval} is negative.
      */
     public String lock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
         assertNotClosed();
@@ -531,8 +533,10 @@ public final class DBLock {
      * }</pre>
      *
      * @param target the unique identifier of the resource whose lock is to be released. Must not be {@code null} or empty.
-     * @param code the unique code obtained during lock acquisition. Must not be {@code null}.
+     * @param code the unique code obtained during lock acquisition. Must not be {@code null} or empty.
      * @return {@code true} if the lock was successfully released; {@code false} otherwise (e.g., lock not found, code mismatch).
+     * @throws IllegalStateException if this {@code DBLock} instance has been closed.
+     * @throws IllegalArgumentException if {@code target} or {@code code} is {@code null} or empty.
      * @throws UncheckedSQLException if a database access error occurs during the unlock operation.
      */
     public boolean unlock(final String target, final String code) {

@@ -27,6 +27,11 @@ import com.landawn.abacus.query.SqlBuilder;
  * cannot be modified through this DAO. It maintains data integrity by preventing cascading updates
  * or deletes on joined entities while avoiding checked exception handling.</p>
  *
+ * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityHelper} and
+ * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
+ * instead of the checked {@link java.sql.SQLException}. All delete operations on join entities throw
+ * {@link UnsupportedOperationException}.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a read-only CRUD DAO with join entity support
@@ -64,7 +69,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the self-referential type parameter for the DAO, extending {@link UncheckedCrudDao}
+ * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDao}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelper
  * @see UncheckedCrudDao

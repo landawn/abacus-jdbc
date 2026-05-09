@@ -76,36 +76,9 @@ import com.landawn.abacus.util.Throwables;
  * {@code getString()}, {@code getInt()}, {@code close()}, and all other standard ResultSet operations
  * are transparently forwarded to the wrapped ResultSet.</p>
  *
- * <p>This class is marked as {@link Internal} and is intended for framework use only.</p>
- *
- * <p><b>Usage Examples:</b></p>
- * <pre>{@code
- * // Wrap a ResultSet with ResultSetProxy for optimized Oracle type handling
- * PreparedStatement stmt = connection.prepareStatement("SELECT id, name, created_date FROM users");
- * ResultSet originalRs = stmt.executeQuery();
- * ResultSet proxiedRs = ResultSetProxy.wrap(originalRs);
- *
- * // Use the proxied ResultSet like a normal ResultSet
- * // Oracle TIMESTAMP/DATE types are automatically converted to java.sql types
- * while (proxiedRs.next()) {
- *     int id = proxiedRs.getInt(1);
- *     String name = proxiedRs.getString(2);
- *     // If created_date is oracle.sql.TIMESTAMP, it will be automatically
- *     // converted to java.sql.Timestamp
- *     Object dateValue = proxiedRs.getObject(3);
- *     System.out.println("ID: " + id + ", Name: " + name + ", Date: " + dateValue);
- * }
- * proxiedRs.close();
- *
- * // The proxy caches getter strategies for improved performance on subsequent rows
- * // This is particularly beneficial when processing large result sets
- * ResultSet largeRs = ResultSetProxy.wrap(stmt.executeQuery());
- * while (largeRs.next()) {
- *     // First row: determines and caches getter strategies
- *     // Subsequent rows: uses cached strategies for better performance
- *     Object value = largeRs.getObject("column_name");
- * }
- * }</pre>
+ * <p>This class is marked as {@link Internal} and is intended for framework use only;
+ * it is package-private and not part of the public API. Application code should not
+ * reference this class directly.</p>
  *
  * @see ResultSet
  * @see ColumnGetter
@@ -256,7 +229,11 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getDouble(columnIndex);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * @deprecated Use {@link #getBigDecimal(int)} instead.
+     */
     @Deprecated(since = "1.2")
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
@@ -297,7 +274,11 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getAsciiStream(columnIndex);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * @deprecated Use {@link #getCharacterStream(int)} instead.
+     */
     @Deprecated(since = "1.2")
     @Override
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
@@ -364,7 +345,11 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getDouble(columnLabel);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * @deprecated Use {@link #getBigDecimal(String)} instead.
+     */
     @Deprecated(since = "1.2")
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
@@ -405,7 +390,11 @@ final class ResultSetProxy implements ResultSet {
         return delegate.getAsciiStream(columnLabel);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * @deprecated Use {@link #getCharacterStream(String)} instead.
+     */
     @Deprecated(since = "1.2")
     @Override
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {

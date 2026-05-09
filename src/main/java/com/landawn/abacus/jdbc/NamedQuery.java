@@ -51,9 +51,11 @@ import com.landawn.abacus.util.IntList;
 import com.landawn.abacus.util.N;
 
 /**
- * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's NamedParameterJdbcTemplate.
- * This class wraps a {@link PreparedStatement} and allows you to use named parameters (e.g., :name, :age) instead of
- * positional parameters (?) in your SQL queries.
+ * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's
+ * {@code NamedParameterJdbcTemplate}. This class wraps a {@link PreparedStatement} and lets you bind
+ * values using named parameters (e.g. {@code :name}, {@code :age}) instead of positional placeholders
+ * ({@code ?}). The same named parameter may appear multiple times in the SQL; every occurrence is
+ * bound to the same value.
  *
  * <p>The backing {@code PreparedStatement} is closed by default
  * after any execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
@@ -65,7 +67,8 @@ import com.landawn.abacus.util.N;
  *
  * <p>The {@code ResultSet} returned by query will always be closed after execution, even if {@code closeAfterExecution} flag is set to {@code false}.
  *
- * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.
+ * <p>Remember: when using positional methods inherited from {@link AbstractQuery}, parameter/column
+ * indexes in {@link PreparedStatement}/{@link java.sql.ResultSet} start from 1, not 0.
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -622,7 +625,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      * @see #setString(String, char)
-     * @deprecated generally {@code char} should be saved as {@code String} in db. Use {@link #setString(String, char)} instead.
+     * @deprecated Generally {@code char} should be saved as {@code String} in DB. Use {@link #setString(String, char)} instead.
      */
     @Deprecated
     public NamedQuery setInt(final String parameterName, final char x) throws IllegalArgumentException, SQLException {
@@ -647,7 +650,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      * @see #setString(String, Character)
-     * @deprecated generally {@code char} should be saved as {@code String} in db. Use {@link #setString(String, Character)} instead.
+     * @deprecated Generally {@code char} should be saved as {@code String} in DB. Use {@link #setString(String, Character)} instead.
      */
     @Deprecated
     public NamedQuery setInt(final String parameterName, final Character x) throws IllegalArgumentException, SQLException {
@@ -749,12 +752,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified named parameter to a BigInteger value by converting it to a long.
-     * 
-     * <p>This method converts the BigInteger to a long using {@link BigInteger#longValueExact()}.
-     * If the BigInteger value is too large to fit in a long, an ArithmeticException will be thrown.
-     * Consider using {@link #setBigDecimal(String, BigInteger)} or {@link #setBigIntegerAsString(String, BigInteger)} 
-     * for values that might exceed long range.
+     * Sets the specified named parameter to a {@code long} converted from the given {@link BigInteger}.
+     *
+     * <p>This method converts the BigInteger to a {@code long} using {@link BigInteger#longValueExact()}.
+     * If the BigInteger value is too large (or too small) to fit in a {@code long}, an
+     * {@link ArithmeticException} will be thrown. Consider using
+     * {@link #setBigDecimal(String, BigInteger)} or {@link #setBigIntegerAsString(String, BigInteger)}
+     * for values that might exceed the {@code long} range.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1019,9 +1023,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified named parameter to a BigInteger value by converting it to BigDecimal.
-     * 
-     * <p>This method converts the BigInteger to a BigDecimal and stores it as a DECIMAL type.
+     * Sets the specified named parameter to the value of the given {@link BigInteger}, stored as a {@link BigDecimal}.
+     *
+     * <p>This method wraps the BigInteger into a BigDecimal (with scale 0) and binds it as a SQL {@code DECIMAL}.
+     * If {@code x} is {@code null}, the parameter is set to SQL {@code NULL} with type {@link Types#DECIMAL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1414,8 +1419,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a java.util.Date value.
      * 
-     * <p>This method converts java.util.Date to java.sql.Date, truncating time information.
-     * For preserving time information, use {@link #setTimestamp(String, java.util.Date)}.
+     * <p>This method converts {@code java.util.Date} to {@code java.sql.Date} (when the input is not already a {@code java.sql.Date}).
+     * For preserving time information, use {@link #setTimestamp(String, java.util.Date)} instead, since SQL {@code DATE}
+     * columns typically store only the date portion.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3401,9 +3407,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets an Object parameter for the specified parameter name, using the default SQL type mapping.
-     * 
-     * <p>This is a generic method that can handle any Java object. The JDBC driver will attempt to 
-     * convert the Java object to the appropriate SQL type. Common mappings include:
+     *
+     * <p>This is a generic method that can handle any Java object. The Abacus type system (and
+     * the underlying JDBC driver) will convert the Java object to an appropriate SQL value.
+     * Common mappings include:
      * <ul>
      * <li>String → VARCHAR/CHAR</li>
      * <li>Integer/Long → INTEGER/BIGINT</li>
@@ -3412,7 +3419,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>Boolean → BOOLEAN/BIT</li>
      * <li>byte[] → BINARY/VARBINARY</li>
      * </ul>
-     * 
+     *
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      * 
      * <p><b>Usage Examples:</b></p>
@@ -3548,29 +3555,29 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets an Object parameter with a specified SQL type and scale/length for the parameter name.
      * 
-     * <p>This method provides the most control over parameter setting, allowing specification of both 
+     * <p>This method provides the most control over parameter setting, allowing specification of both
      * SQL type and additional type-specific information:
      * <ul>
      * <li>For numeric types (DECIMAL, NUMERIC): scaleOrLength represents the number of digits after the decimal point</li>
-     * <li>For character types (CHAR, VARCHAR): scaleOrLength represents the length of the string</li>
-     * <li>For binary types (BINARY, VARBINARY): scaleOrLength represents the length in bytes</li>
+     * <li>For Java types {@link java.io.InputStream} and {@link java.io.Reader}: scaleOrLength represents the length of the data in the stream/reader</li>
+     * <li>For all other types: this value is ignored (per the JDBC specification)</li>
      * </ul>
-     * 
+     *
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Set a decimal with 2 decimal places
      * query.setObject("amount", new BigDecimal("123.45"), Types.DECIMAL, 2);
-     * // Set a fixed-length character string
-     * query.setObject("country_code", "US", Types.CHAR, 2);
+     * // Set an InputStream as BLOB with known length
+     * query.setObject("data", inputStream, Types.BLOB, contentLength);
      * }</pre>
      *
      * @param parameterName the name of the parameter (without the ':' prefix)
      * @param x the object containing the parameter value
      * @param sqlType the SQL type (from java.sql.Types) to be used
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
-     *        for character/binary types, the length
+     *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the query
      * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
@@ -3695,25 +3702,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets an Object parameter with a specified SQLType and scale/length for the parameter name.
      * 
-     * <p>This method provides the most control when using JDBC 4.2 SQLType, allowing specification 
-     * of both SQL type and additional type-specific information. The meaning of scaleOrLength depends 
-     * on the SQL type being used.
-     * 
+     * <p>This method provides the most control when using JDBC 4.2 SQLType, allowing specification
+     * of both SQL type and additional type-specific information. The meaning of scaleOrLength depends
+     * on the SQL type being used: for numeric types it is the scale, for {@link java.io.InputStream}/{@link java.io.Reader}
+     * it is the stream length, and for other types it is ignored (per the JDBC specification).
+     *
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Set a decimal with specific scale
      * query.setObject("price", new BigDecimal("99.999"), JDBCType.DECIMAL, 2);
-     * // Set a varchar with maximum length
-     * query.setObject("description", "Product description", JDBCType.VARCHAR, 255);
+     * // Set an InputStream as BLOB with known length
+     * query.setObject("data", inputStream, JDBCType.BLOB, contentLength);
      * }</pre>
      *
      * @param parameterName the name of the parameter (without the ':' prefix)
      * @param x the object containing the parameter value
      * @param sqlType the SQLType to be used
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
-     *        for character/binary types, the length
+     *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the query
      * @throws SQLException if a database access error occurs, this method is called on a closed PreparedStatement,
@@ -4111,7 +4119,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param <T> the type of the parameters object
      * @param parameters the parameters object to pass to the setter
-     * @param parametersSetter a tri-function that receives the parsed SQL, this NamedQuery instance, and the parameters object
+     * @param parametersSetter a tri-consumer that receives the parsed SQL, this NamedQuery instance, and the parameters object
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if parametersSetter is null
      * @throws SQLException if a database access error occurs
@@ -4219,12 +4227,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *                  .iterator()
      * ).batchUpdate();
      *
-     * // Processing data in chunks to avoid memory issues
-     * try (ResultSet rs = JdbcUtil.executeQuery(largeDataQuery)) {
-     *     DataIterator dataIterator = new DataIterator(rs);
-     *     insertQuery.addBatchParameters(dataIterator)
-     *               .batchUpdate();
-     * }
+     * // Processing data in chunks to avoid loading everything into memory
+     * insertQuery.addBatchParameters(streamOfRecords.iterator())
+     *            .batchUpdate();
      * }</pre>
      *
      * @param batchParameters an iterator providing parameter objects for batch processing

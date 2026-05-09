@@ -44,18 +44,19 @@ import com.landawn.abacus.query.SqlBuilder;
  * List<User> users = userDao.batchGet(Arrays.asList(1L, 2L, 3L), Order.class);
  *
  * // Load join entities for existing entities
- * User user = userDao.gett(1L);
- * userDao.loadJoinEntities(user, "orders");
+ * User existingUser = userDao.gett(1L);
+ * userDao.loadJoinEntities(existingUser, "orders");
  *
  * // All delete operations throw UnsupportedOperationException
- * userDao.deleteJoinEntities(user, Order.class);   // Throws exception
+ * userDao.deleteJoinEntities(existingUser, Order.class);   // Throws exception
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
  * @param <ID> the type of the entity's primary key
  * @param <SB> the {@link SqlBuilder} type used to generate SQL statements; must be one of
  *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, or {@code SqlBuilder.PLC}
- * @param <TD> the concrete DAO type itself (self-referencing generic for fluent method chaining)
+ * @param <TD> the companion {@link CrudDao} type that owns this helper (used for fluent
+ *             method chaining and access to CRUD operations)
  * @see ReadOnlyJoinEntityHelper
  * @see CrudJoinEntityHelper
  * @see CrudDao

@@ -35,11 +35,12 @@ public @interface OutParameterList {
 
     /**
      * The array of {@link OutParameter} annotations contained in this list.
-     * Each OutParameter defines a single output parameter for a stored procedure call.
-     * 
+     * Each {@code OutParameter} defines a single output parameter for a stored procedure call.
+     *
      * <p>This array is automatically populated when using multiple {@link OutParameter}
-     * annotations on a method due to the {@link java.lang.annotation.Repeatable} mechanism.</p>
-     * 
+     * annotations on a method via the {@link java.lang.annotation.Repeatable} mechanism;
+     * direct use of {@code @OutParameterList} is rarely needed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @OutParameterList({
@@ -49,7 +50,7 @@ public @interface OutParameterList {
      * })
      * }</pre>
      *
-     * @return array of OutParameter annotations defining the output parameters
+     * @return the contained {@link OutParameter} annotations
      */
     OutParameter[] value();
 }

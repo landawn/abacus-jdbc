@@ -69,31 +69,35 @@ import com.landawn.abacus.annotation.Beta;
  *
  * @see Bind
  * @see SqlFragmentList
+ * @see Query
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface BindList {
 
     /**
-     * Specifies the parameter name to be used in the SQL query.
-     * If not specified (empty string), the parameter name will be used.
-     * The string passed to {@code value} must exactly match the template variable used in the {@code @Query} SQL
+     * Specifies the template-variable name that this collection/array parameter should expand into.
+     * The value must exactly match the template variable referenced in the {@link Query} SQL
      * (for example, {@code @BindList("ids")} must correspond to {@code ... WHERE id IN ({ids})}).
-     * 
-     * <p>The parameter should be referenced in the SQL using curly braces: {@code {paramName}}</p>
-     * 
+     *
+     * <p>If left empty, the actual method parameter name is used as the template-variable name;
+     * this requires compiling with the {@code -parameters} javac flag, otherwise initialization
+     * fails with {@code UnsupportedOperationException}.</p>
+     *
+     * <p>The parameter is referenced in the SQL using curly braces: {@code {paramName}}</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT * FROM users WHERE id IN ({userIds})")
      * List<User> find(@BindList("userIds") List<Long> ids);
-     * 
-     * // Using parameter name (when value is not specified)
+     *
+     * // Falls back to method parameter name (requires '-parameters')
      * @Query("SELECT * FROM users WHERE id IN ({ids})")
      * List<User> find(@BindList List<Long> ids);
      * }</pre>
      *
-     * @return the parameter name, or empty string if using the actual parameter name
+     * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
      */
     String value() default "";
 

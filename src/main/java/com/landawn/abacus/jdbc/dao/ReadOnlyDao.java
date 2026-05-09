@@ -53,9 +53,10 @@ import com.landawn.abacus.query.SqlBuilder;
  *   <li>{@code prepareNamedQuery(String)} - Prepare named {@code SELECT} queries for execution</li>
  * </ul>
  *
- * <p>All save, batch save, and insert operations throw {@link UnsupportedOperationException}.
+ * <p>All {@code save} and {@code batchSave} operations throw {@link UnsupportedOperationException}.
  * Additionally, any prepared queries that are not {@code SELECT} statements also throw
- * {@link UnsupportedOperationException}.</p>
+ * {@link UnsupportedOperationException}. Update, delete, and callable-statement operations remain
+ * disabled via the inherited {@link NoUpdateDao}.</p>
  *
  * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
@@ -149,7 +150,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * Prepares a SQL query optimized for large result sets, restricted to {@code SELECT} statements only.
+     * Prepares a SQL query optimized for large result sets (e.g., with forward-only,
+     * read-only cursor settings), restricted to {@code SELECT} statements only.
+     *
+     * <p>Any attempt to prepare a non-{@code SELECT} query results in an
+     * {@link UnsupportedOperationException}.</p>
      *
      * @param query the SQL query string to prepare (must be a {@code SELECT} statement)
      * @return a {@link PreparedQuery} configured for large result sets
@@ -343,7 +348,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * Prepares a named parameter SQL query optimized for large result sets, restricted to {@code SELECT} statements only.
+     * Prepares a named parameter SQL query optimized for large result sets, restricted to
+     * {@code SELECT} statements only.
+     *
+     * <p>Any attempt to prepare a non-{@code SELECT} query results in an
+     * {@link UnsupportedOperationException}.</p>
      *
      * @param namedQuery the SQL query string with named parameters (must be a {@code SELECT} statement)
      * @return a {@link NamedQuery} configured for large result sets
@@ -361,7 +370,11 @@ public interface ReadOnlyDao<T, SB extends SqlBuilder, TD extends ReadOnlyDao<T,
     }
 
     /**
-     * Prepares a parsed named query optimized for large result sets, restricted to {@code SELECT} statements only.
+     * Prepares a parsed named query optimized for large result sets, restricted to {@code SELECT}
+     * statements only.
+     *
+     * <p>Any attempt to prepare a non-{@code SELECT} query results in an
+     * {@link UnsupportedOperationException}.</p>
      *
      * @param namedQuery the pre-parsed SQL query object (must represent a {@code SELECT} statement)
      * @return a {@link NamedQuery} configured for large result sets

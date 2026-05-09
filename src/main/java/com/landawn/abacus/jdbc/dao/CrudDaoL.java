@@ -35,31 +35,34 @@ import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
 
 /**
- * A specialized CrudDao interface that uses {@code Long} as the ID type.
- * This interface provides convenience methods that accept primitive {@code long} values
- * in addition to the {@code Long} object methods inherited from CrudDao.
- * 
+ * A specialized {@link CrudDao} interface that fixes the ID type to {@code Long}.
+ * This interface adds convenience overloads that accept a primitive {@code long} ID,
+ * in addition to all of the {@code Long}-typed methods inherited from {@code CrudDao}.
+ *
  * <p>This interface is particularly useful for entities that use numeric long IDs,
- * which is a common pattern in many database schemas. All methods delegate to their
- * corresponding CrudDao methods after boxing the primitive long to Long.</p>
- * 
+ * which is a common pattern in many database schemas. Each {@code long}-taking overload
+ * simply boxes the value to {@link Long} and delegates to the corresponding {@code CrudDao}
+ * method.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDaoL<User, SqlBuilder.PSC, UserDao> {
- *     // Inherits all CrudDao methods with Long ID type
- *     // Plus convenience methods that accept primitive long
+ *     // Inherits all CrudDao methods with Long ID type,
+ *     // plus convenience overloads that accept primitive long
  * }
- * 
+ *
  * // Usage with primitive long
  * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
  * Optional<User> user = userDao.get(123L);   // Can use primitive long
- * userDao.deleteById(456L);   // More convenient than Long.valueOf(456)
+ * userDao.deleteById(456L);                  // More convenient than Long.valueOf(456)
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC})
  * @param <TD> the self-type of the DAO for fluent interface support
- * 
+ *
+ * @see CrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @Beta
@@ -376,20 +379,21 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a single non-null value using a custom row mapper.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
      * This allows for complex transformations of the result.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<String> fullName = userDao.queryForSingleNonNull("firstName", 123L,
-     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     * Optional<String> upperFirstName = userDao.queryForSingleNonNull("firstName", 123L,
+     *     rs -> rs.getString(1).toUpperCase());
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
-     * @return an Optional containing the mapped non-null value if found, otherwise empty
+     * @return an {@link Optional} containing the mapped non-null value if found, otherwise empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -451,21 +455,22 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
-     * This is a convenience method that accepts a primitive long ID.
-     * Throws DuplicateResultException if more than one record is found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao} method.
+     * Throws {@link DuplicateResultException} if more than one record is found.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Optional<String> fullName = userDao.queryForUniqueNonNull("firstName", 123L,
-     *     (rs, columnNames) -> rs.getString(1).toUpperCase());
+     * Optional<String> upperFirstName = userDao.queryForUniqueNonNull("firstName", 123L,
+     *     rs -> rs.getString(1).toUpperCase());
      * }</pre>
      *
      * @param <V> the specific property value type to be retrieved and converted
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
-     * @return an Optional containing the mapped unique non-null value if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @return an {@link Optional} containing the mapped unique non-null value if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -476,8 +481,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Retrieves an entity by its ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * Returns an Optional containing the entity if found, otherwise empty.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link CrudDao#get(Object)}.
+     * Returns an {@link Optional} containing the entity if found, otherwise empty.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -486,8 +492,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * }</pre>
      *
      * @param id the primitive long ID of the entity to retrieve
-     * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @return an {@link Optional} containing the entity if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id) throws SQLException {
@@ -495,8 +501,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties populated.
-     * This is a convenience method that accepts a primitive long ID.
+     * Retrieves an entity by its ID with only the selected properties populated.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link CrudDao#get(Object, Collection)}.
      * Properties not in the select list will have their default values.
      *
      * <p><b>Usage Examples:</b></p>
@@ -507,9 +514,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param id the primitive long ID of the entity to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
-     *                        All properties will be selected if null
-     * @return an Optional containing the entity if found, otherwise empty
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     *                        All properties will be selected if {@code null}
+     * @return an {@link Optional} containing the entity if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final long id, final Collection<String> selectPropNames) throws SQLException {
@@ -518,7 +525,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Retrieves an entity by its ID, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID and returns the entity directly instead of wrapped in Optional.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link CrudDao#gett(Object)}. Unlike {@link #get(long)}, the
+     * entity is returned directly rather than wrapped in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -529,8 +538,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * }</pre>
      *
      * @param id the primitive long ID of the entity to retrieve
-     * @return the entity if found, otherwise null
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default T gett(final long id) throws SQLException {
@@ -538,8 +547,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Retrieves an entity by its ID with only selected properties populated, returning {@code null} if not found.
-     * This is a convenience method that accepts a primitive long ID.
+     * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link CrudDao#gett(Object, Collection)}.
      * This is useful for performance optimization when you only need specific fields.
      *
      * <p><b>Usage Examples:</b></p>
@@ -553,9 +563,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *
      * @param id the primitive long ID of the entity to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
-     *                        All properties will be selected if null
-     * @return the entity if found, otherwise null
-     * @throws DuplicateResultException if more than one record found by the specified {@code id}
+     *                        All properties will be selected if {@code null}
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
     default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {
@@ -564,8 +574,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Checks if an entity with the specified ID exists in the database.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link CrudDao#exists(Object)}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.exists(123L)) {
@@ -583,8 +594,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Checks if an entity with the specified ID does not exist in the database.
-     * This is a convenience method that accepts a primitive long ID.
-     * 
+     * This is a convenience overload that accepts a primitive {@code long} ID;
+     * it simply negates the result of {@link #exists(long)}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * if (userDao.notExists(123L)) {
@@ -603,8 +615,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Updates a single property of an entity identified by ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * This convenience method updates one field.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao.update(String, Object, ID)} method.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -623,9 +635,9 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     }
 
     /**
-     * Updates multiple properties of an entity identified by ID.
-     * This is a convenience method that accepts a primitive long ID.
-     * This allows updating multiple fields without loading the entire entity.
+     * Updates multiple properties of an entity identified by ID without loading the entire entity.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to the corresponding {@code CrudDao.update(Map, ID)} method.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -646,7 +658,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
 
     /**
      * Deletes an entity by its ID.
-     * This is a convenience method that accepts a primitive long ID.
+     * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
+     * to {@link Long} and delegated to {@link CrudDao#deleteById(Object)}.
      * This is more efficient than loading the entity first and then deleting it.
      *
      * <p><b>Usage Examples:</b></p>

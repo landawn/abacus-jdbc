@@ -93,6 +93,9 @@ public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateC
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * This {@code long}-keyed single-property update overload is disallowed by
+     * {@code NoUpdateCrudDaoL} because it would mutate an existing record, violating the
+     * read/insert-only contract.
      *
      * @param propName the property name to update
      * @param propValue the new value for the property
@@ -109,6 +112,9 @@ public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateC
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * This {@code long}-keyed multi-property update overload is disallowed by
+     * {@code NoUpdateCrudDaoL} because it would mutate an existing record, violating the
+     * read/insert-only contract.
      *
      * @param updateProps a map of property names to their new values
      * @param id the primitive {@code long} ID of the entity to update
@@ -124,6 +130,8 @@ public interface NoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends NoUpdateC
 
     /**
      * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * This {@code long}-keyed delete-by-id overload is disallowed by {@code NoUpdateCrudDaoL}
+     * because it would remove an existing record, violating the read/insert-only contract.
      *
      * @param id the primitive {@code long} ID of the entity to delete
      * @return never returns normally

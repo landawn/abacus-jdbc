@@ -95,8 +95,10 @@ final class SqlLogConfig {
      * }</pre>
      *
      * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds for logging.
-     *                                      Only SQL statements taking longer than this threshold will be logged.
-     *                                      Set to {@code 0} to log all queries based on execution time.
+     *                                      SQL statements whose execution time is greater than or equal to this
+     *                                      threshold will be logged. Set to {@code 0} to log every executed query
+     *                                      based on this mechanism; pass a negative value to disable performance
+     *                                      logging entirely.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */
@@ -154,8 +156,10 @@ final class SqlLogConfig {
      * }</pre>
      *
      * @param minExecutionTimeForSqlPerfLog the minimum execution time in milliseconds for logging.
-     *                                      Only SQL statements taking longer than this threshold will be logged.
-     *                                      Set to {@code 0} to log all queries based on execution time.
+     *                                      SQL statements whose execution time is greater than or equal to this
+     *                                      threshold will be logged. Set to {@code 0} to log every executed query
+     *                                      based on this mechanism; pass a negative value to disable performance
+     *                                      logging entirely.
      * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
      *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used.
      */

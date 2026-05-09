@@ -34,19 +34,18 @@ import java.sql.PreparedStatement;
 public final class PreparedQuery extends AbstractQuery<PreparedStatement, PreparedQuery> {
 
     /**
-     * Constructs a new {@code PreparedQuery} instance with the specified {@link PreparedStatement}.
-     * The PreparedStatement should be properly initialized with a valid SQL query before being passed to this constructor.
-     * 
-     * <p>The ownership of the {@code PreparedStatement} is transferred to this {@code PreparedQuery} instance,
-     * which means this class will be responsible for closing it based on the {@code closeAfterExecution} flag.
-     * 
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * Connection conn = dataSource.getConnection();
-     * PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM employees WHERE department = ?");
-     * PreparedQuery query = new PreparedQuery(pstmt);
-     * }</pre>
-     * 
+     * Constructs a new {@code PreparedQuery} instance wrapping the specified {@link PreparedStatement}.
+     * The {@code PreparedStatement} should be properly initialized with a valid SQL query before being
+     * passed to this constructor.
+     *
+     * <p>This constructor is package-private; client code should obtain instances through factory
+     * methods such as {@link JdbcUtil#prepareQuery(java.sql.Connection, String)} rather than calling
+     * this constructor directly.</p>
+     *
+     * <p>The ownership of the {@code PreparedStatement} is transferred to this {@code PreparedQuery}
+     * instance, which means this class will be responsible for closing it based on the
+     * {@code closeAfterExecution} flag.</p>
+     *
      * @param stmt the {@link PreparedStatement} to be wrapped by this query. Must not be {@code null}.
      */
     PreparedQuery(final PreparedStatement stmt) {

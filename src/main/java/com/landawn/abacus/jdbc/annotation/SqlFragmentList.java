@@ -34,23 +34,26 @@ import java.lang.annotation.Target;
 public @interface SqlFragmentList {
 
     /**
-     * Specifies the name of the query template variable to be replaced.
-     * If not specified (empty string), the parameter name will be used.
-     * 
-     * <p>The variable should be referenced in the query template using curly braces: {@code {variableName}}</p>
-     * 
+     * Specifies the name of the query template variable that this collection/array parameter
+     * is joined into.
+     * If empty (the default), the actual method parameter name is used; this requires compiling
+     * with the {@code -parameters} javac flag, otherwise initialization fails with
+     * {@code UnsupportedOperationException}.
+     *
+     * <p>The variable is referenced in the query template using curly braces: {@code {variableName}}</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Explicit name
      * @Query("SELECT {cols} FROM users")
      * List<User> findWithColumns(@SqlFragmentList("cols") List<String> columnList);
-     * 
-     * // Using parameter name (when value is not specified)
+     *
+     * // Using the method parameter name (requires '-parameters')
      * @Query("SELECT {columns} FROM users")
      * List<User> findWithColumns(@SqlFragmentList List<String> columns);
      * }</pre>
      *
-     * @return the name of the query template variable, or empty string if using the parameter name
+     * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
      */
     String value() default "";
 }

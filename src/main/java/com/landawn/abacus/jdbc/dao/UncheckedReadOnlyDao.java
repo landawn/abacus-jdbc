@@ -22,15 +22,16 @@ import com.landawn.abacus.query.SqlBuilder;
 
 /**
  * A read-only DAO interface that provides only query operations without any write capabilities.
- * This interface disables all insert, update, and delete operations by throwing {@code UnsupportedOperationException}.
- * It's ideal for scenarios where data should only be read, never modified.
+ * This interface disables all save, insert, update, and delete operations by throwing {@link UnsupportedOperationException}.
+ * It is ideal for scenarios where data should only be read, never modified.
  *
  * <p><b>Unchecked Exception Handling:</b></p>
- * <p>This is an "unchecked" DAO variant, meaning all methods throw {@link com.landawn.abacus.exception.UncheckedSQLException}
+ * <p>This is an "unchecked" DAO variant, meaning query methods throw {@link com.landawn.abacus.exception.UncheckedSQLException}
  * instead of checked {@link java.sql.SQLException}. This eliminates the need for explicit try-catch blocks or
- * throws declarations, making the API more convenient for use in functional programming contexts and lambda expressions.</p>
+ * throws declarations, making the API more convenient for use in functional programming contexts and lambda expressions.
+ * Write operations (save/batchSave) are disabled and throw {@link UnsupportedOperationException}.</p>
  *
- * <p>This is a beta API that extends {@code UncheckedNoUpdateDao} and further restricts save/insert operations,
+ * <p>This is a beta API that extends {@link UncheckedNoUpdateDao} and further restricts save operations,
  * ensuring complete read-only access to the database.</p>
  *
  * <p>Use cases include:</p>
@@ -78,12 +79,12 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
         extends UncheckedNoUpdateDao<T, SB, TD>, ReadOnlyDao<T, SB, TD> {
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave the entity to save (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -92,13 +93,13 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entityToSave the entity to save (ignored)
      * @param propNamesToSave the properties to save (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -107,13 +108,13 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named insert SQL (ignored)
      * @param entityToSave the entity to save (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -122,12 +123,12 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the entities to save (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -136,13 +137,13 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the entities to save (ignored)
      * @param batchSize the batch size (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -151,13 +152,13 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the entities to save (ignored)
      * @param propNamesToSave the properties to save (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -166,14 +167,14 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param entitiesToSave the entities to save (ignored)
      * @param propNamesToSave the properties to save (ignored)
      * @param batchSize the batch size (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -183,13 +184,13 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named insert SQL (ignored)
      * @param entitiesToSave the entities to save (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override
@@ -198,14 +199,14 @@ public interface UncheckedReadOnlyDao<T, SB extends SqlBuilder, TD extends Unche
     }
 
     /**
-     * This operation is not supported in read-only DAO.
-     * Always throws {@code UnsupportedOperationException}.
+     * This operation is not supported in a read-only DAO.
+     * Always throws {@link UnsupportedOperationException}.
      *
      * @param namedInsertSql the named insert SQL (ignored)
      * @param entitiesToSave the entities to save (ignored)
      * @param batchSize the batch size (ignored)
-     * @throws UnsupportedOperationException always thrown as save operations are not supported
-     * @deprecated This operation is not supported in read-only DAO
+     * @throws UnsupportedOperationException always thrown as save operations are not supported in read-only DAOs
+     * @deprecated unsupported operation in read-only DAO
      */
     @Deprecated
     @Override

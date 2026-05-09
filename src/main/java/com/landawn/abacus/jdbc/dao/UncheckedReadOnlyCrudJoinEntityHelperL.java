@@ -18,9 +18,9 @@ package com.landawn.abacus.jdbc.dao;
 import com.landawn.abacus.query.SqlBuilder;
 
 /**
- * A read-only CRUD DAO interface with join entity helper capabilities that uses primitive {@code long} for ID operations
- * and throws unchecked exceptions. This interface combines read-only access restrictions with join entity loading
- * features and optimized primitive long ID handling.
+ * A read-only CRUD DAO helper interface with join entity capabilities that uses {@code Long} as the ID type
+ * (with primitive {@code long} convenience overloads) and throws unchecked exceptions. This interface combines
+ * read-only access restrictions with join entity loading features and optimized primitive long ID handling.
  *
  * <p>This interface is ideal for read-only scenarios where:</p>
  * <ul>
@@ -30,6 +30,11 @@ import com.landawn.abacus.query.SqlBuilder;
  *   <li>Performance is critical (avoiding ID boxing/unboxing)</li>
  *   <li>Unchecked exception handling is preferred</li>
  * </ul>
+ *
+ * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityHelperL} and
+ * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
+ * instead of the checked {@link java.sql.SQLException}. All write/delete operations throw
+ * {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -49,7 +54,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * List<User> users = dao.batchGet(ids, Order.class);
  *
  * // Get with selected properties and join entities
- * User user = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
+ * User userSelected = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
  *
  * // All write operations are disabled:
  * // dao.insert(user);   // throws UnsupportedOperationException
@@ -60,7 +65,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the self-type of the DAO for method chaining
+ * @param <TD> the DAO type that hosts this helper, bound to {@link UncheckedCrudDaoL}
  * @see UncheckedReadOnlyJoinEntityHelper
  * @see UncheckedCrudJoinEntityHelperL
  */

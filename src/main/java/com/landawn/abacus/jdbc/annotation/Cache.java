@@ -29,28 +29,34 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * Enables caching at the DAO level for database query results.
  * This annotation is typically used for DAOs that interact with static or rarely-changing tables,
  * where caching can significantly improve performance by reducing database queries.
- * 
+ *
  * <p><strong>Note:</strong> This feature is marked as {@code @Beta} and may change in future versions.</p>
  *
  * <p>Implementing cache at the Data Access Layer (DAL) can lead to data consistency issues if not
  * managed properly. Consider whether caching should be implemented at a higher layer instead.</p>
- * 
- * <p>When applied to a DAO interface, all eligible query methods will have their results cached
- * according to the specified configuration. The cache key is automatically generated based on
- * the method name and parameters.</p>
+ *
+ * <p><strong>Restriction:</strong> {@code @Cache} is currently only supported on
+ * {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} interfaces. Applying it to a DAO that supports
+ * updates/deletes will fail with {@code UnsupportedOperationException} at initialization time.</p>
+ *
+ * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} (or eligible
+ * methods when {@code @CacheResult} is applied at the type level) will have their results cached
+ * according to the specified configuration. The cache key is automatically derived from the
+ * fully-qualified method name and the serialized parameters.</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * @Cache(capacity = 1000, evictDelay = 3600000) // 1 hour eviction
- * public interface CountryDao extends CrudDao<Country, String> {
- *     // Results will be cached automatically
+ * @Cache(capacity = 1000, evictDelay = 60000) // Run eviction sweep every 60 seconds
+ * public interface CountryDao extends NoUpdateCrudDao<Country, String, SqlBuilder.PSC, CountryDao> {
+ *     // Results will be cached when annotated with @CacheResult
+ *     @CacheResult
  *     @Query("SELECT * FROM countries WHERE continent = :continent")
  *     List<Country> findByContinent(@Bind("continent") String continent);
  * }
- * 
+ *
  * // Using custom cache implementation
- * @Cache(capacity = 500, evictDelay = 1800000, impl = MyCustomDaoCache.class)
- * public interface ConfigDao extends CrudDao<Config, Long> {
+ * @Cache(capacity = 500, evictDelay = 30000, impl = MyCustomDaoCache.class)
+ * public interface ConfigDao extends ReadOnlyDao<Config, Long, SqlBuilder.PSC, ConfigDao> {
  *     // Query results cached with custom implementation
  * }
  * }</pre>
@@ -66,9 +72,12 @@ public @interface Cache {
 
     /**
      * Specifies the maximum number of entries the cache can hold.
-     * When the cache reaches this capacity, the least recently used entries
-     * will be evicted to make room for new entries.
-     * 
+     * When the cache is at capacity, the underlying pool's eviction policy determines
+     * which entries are removed to make room for new ones (the default
+     * {@link Jdbc.DefaultDaoCache} relies on the {@code KeyedObjectPool}'s default policy
+     * combined with TTL/idle-time-based eviction; see {@link CacheResult#liveTime()} and
+     * {@link CacheResult#maxIdleTime()}).
+     *
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY}, which is
      * typically suitable for most use cases. For DAOs handling large amounts
      * of frequently accessed data, consider increasing this value.</p>
@@ -76,7 +85,7 @@ public @interface Cache {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(capacity = 5000) // Large cache for frequently accessed data
-     * public interface ProductDao extends CrudDao<Product, Long> {
+     * public interface ProductDao extends NoUpdateCrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
      *     // Methods here
      * }
      * }</pre>
@@ -86,31 +95,33 @@ public @interface Cache {
     int capacity() default JdbcUtil.DEFAULT_CACHE_CAPACITY;
 
     /**
-     * Specifies the time delay (in milliseconds) after which cached entries will be evicted.
-     * This is the maximum time an entry can remain in the cache before being automatically removed,
-     * regardless of whether it has been accessed.
-     * 
-     * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY}. Set this based on
-     * how frequently the underlying data changes. For static reference data, use longer delays;
-     * for more dynamic data, use shorter delays.</p>
+     * Specifies the interval (in milliseconds) at which the background eviction scheduler
+     * runs to remove expired entries from the cache. This is <em>not</em> the per-entry
+     * time-to-live; entry expiration is controlled by {@link CacheResult#liveTime()} and
+     * {@link CacheResult#maxIdleTime()} when the {@link CacheResult} annotation is used on
+     * individual methods.
      *
-     * <p>Common time duration values:</p>
+     * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY} (3 seconds).
+     * Smaller values cause more frequent sweeps (lower memory footprint, higher CPU cost);
+     * larger values reduce sweep overhead at the cost of holding expired entries longer.</p>
+     *
+     * <p>Common interval values:</p>
      * <ul>
-     *   <li>5 minutes: {@code 300000}</li>
-     *   <li>30 minutes: {@code 1800000}</li>
-     *   <li>1 hour: {@code 3600000}</li>
-     *   <li>24 hours: {@code 86400000}</li>
+     *   <li>1 second: {@code 1000}</li>
+     *   <li>3 seconds (default): {@code 3000}</li>
+     *   <li>30 seconds: {@code 30000}</li>
+     *   <li>1 minute: {@code 60000}</li>
      * </ul>
-     * 
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Cache(evictDelay = 86400000) // 24-hour cache for static data
-     * public interface CurrencyDao extends CrudDao<Currency, String> {
+     * @Cache(evictDelay = 60000) // Sweep expired entries every 60 seconds
+     * public interface CurrencyDao extends ReadOnlyDao<Currency, String, SqlBuilder.PSC, CurrencyDao> {
      *     // Methods here
      * }
      * }</pre>
      *
-     * @return the eviction delay in milliseconds
+     * @return the interval in milliseconds between eviction sweeps
      */
     long evictDelay() default JdbcUtil.DEFAULT_CACHE_EVICT_DELAY;
 
@@ -118,9 +129,9 @@ public @interface Cache {
      * Specifies the implementation class for the DAO cache.
      * The implementation must implement {@link DaoCache} and have a public constructor
      * that accepts two parameters: {@code (int capacity, long evictDelay)}.
-     * 
-     * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which provides a
-     * thread-safe LRU (Least Recently Used) cache implementation. You can provide
+     *
+     * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which is backed by a
+     * keyed object pool with TTL and idle-time-based eviction. You can provide
      * a custom implementation for specialized caching requirements.</p>
      * 
      * <p>Example custom cache implementation:</p>
@@ -140,7 +151,7 @@ public @interface Cache {
      *
      * // Usage
      * @Cache(impl = MyCustomDaoCache.class)
-     * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+     * public interface UserDao extends NoUpdateCrudDao<User, Long, SqlBuilder.PSC, UserDao> {
      *     // Methods here
      * }
      * }</pre>

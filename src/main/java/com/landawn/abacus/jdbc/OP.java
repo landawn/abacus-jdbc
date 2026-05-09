@@ -99,7 +99,8 @@ public enum OP {
      * Dataset queryUsersByAge(int age);
      * }</pre>
      *
-     * @deprecated Generally it is unnecessary to specify {@code "op = OP.query"} in {@code @Query}.
+     * @deprecated Generally it is unnecessary to specify {@code "op = OP.query"} in {@code @Query}; rely on
+     *             {@link #DEFAULT} so the framework can infer the correct operation from the method's return type.
      */
     @Deprecated
     query,
@@ -117,7 +118,9 @@ public enum OP {
      * Stream<User> streamAllUsers();
      * }</pre>
      *
-     * @deprecated Generally it is unnecessary to specify {@code "op = OP.stream"} in {@code @Query}.
+     * @deprecated Generally it is unnecessary to specify {@code "op = OP.stream"} in {@code @Query}; rely on
+     *             {@link #DEFAULT} -- the framework will use streaming automatically when the method's return
+     *             type is a {@code Stream}.
      */
     @Deprecated
     stream,

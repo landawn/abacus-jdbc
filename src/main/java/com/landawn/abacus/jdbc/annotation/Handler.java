@@ -87,19 +87,25 @@ import com.landawn.abacus.jdbc.dao.Dao;
 public @interface Handler {
 
     /**
-     * Specifies a qualifier to distinguish between multiple handlers of the same type.
-     * This is useful when you need different configurations of the same handler class.
-     * 
+     * Specifies a qualifier used to look up a pre-registered handler instance from
+     * {@code HandlerFactory} (or a DAO-class handler map). When non-empty, the qualifier takes
+     * precedence over {@link #type()}; the framework resolves the handler by this name instead
+     * of instantiating one from the {@code type} attribute.
+     *
+     * <p>This is useful when you want to register a handler instance once (with custom
+     * configuration or dependencies) and then reference it from multiple DAO interfaces or
+     * methods by name.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * @Handler(type = CacheHandler.class, qualifier = "shortTerm")
-     * @Handler(type = CacheHandler.class, qualifier = "longTerm")
+     * // Register handler instances at startup (e.g., HandlerFactory.register("auditHandler", new AuditHandler(...)))
+     * @Handler(qualifier = "auditHandler")
      * public interface ConfigDao extends CrudDao<Config, Long> {
-     *     // Different cache configurations can be applied based on qualifier
+     *     // The handler registered under "auditHandler" will be applied
      * }
      * }</pre>
      *
-     * @return the qualifier string, or empty string if not specified
+     * @return the handler qualifier name; empty (default) means resolve a handler by {@link #type()} instead
      */
     String qualifier() default "";
 
