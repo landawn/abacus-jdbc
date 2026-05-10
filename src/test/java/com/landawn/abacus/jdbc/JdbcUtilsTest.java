@@ -1188,4 +1188,42 @@ public class JdbcUtilsTest extends TestBase {
         verify(targetStmt).addBatch();
         verify(targetStmt).executeBatch();
     }
+
+    /**
+     * Regression test for stale-data leakage in
+     * {@code importCsv(Reader, Predicate, PreparedStatement, int, long, BiConsumer)}.
+     *
+     * <p>Before the fix the {@code output} array was nulled only when a row passed the
+     * filter. When the filter rejected a row that had values in every column and the
+     * next row had fewer columns, the trailing positions of the output array still held
+     * the rejected row's values, so they leaked into the accepted row's parameters.
+     * The fix nulls the array on the rejection path too.</p>
+     */
+    @Test
+    public void testImportCsv_FilterRejection_DoesNotLeakStaleColumnValues() throws SQLException, IOException, Exception {
+        // Header has 3 columns; rejected row fills all 3; accepted row has only 2 trailing nulls if parser leaves them
+        final String csv = "c1,c2,c3\nreject,REJ_B,REJ_C\nkeep,K_B,K_C";
+
+        final Reader reader = new StringReader(csv);
+        final Throwables.Predicate<String[], Exception> filter = row -> "keep".equals(row[0]);
+
+        final java.util.concurrent.atomic.AtomicReference<String[]> capturedRow = new java.util.concurrent.atomic.AtomicReference<>();
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (pq, row) -> {
+            capturedRow.set(row.clone());
+            pq.setString(1, row[0]);
+            pq.setString(2, row[1]);
+            pq.setString(3, row[2]);
+        };
+
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        final long result = JdbcUtils.importCsv(reader, filter, mockPreparedStatement, 10, 0L, stmtSetter);
+
+        assertEquals(1, result);
+        // Accepted row's captured values must be exactly the keep row's values - no leakage from the rejected row.
+        final String[] captured = capturedRow.get();
+        assertEquals("keep", captured[0]);
+        assertEquals("K_B", captured[1]);
+        assertEquals("K_C", captured[2]);
+    }
 }

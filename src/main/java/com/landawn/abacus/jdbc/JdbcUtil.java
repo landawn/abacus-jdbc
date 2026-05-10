@@ -825,12 +825,13 @@ public final class JdbcUtil {
             // jdbc:postgresql://localhost:5432/abacustest
         } else if (Strings.indexOfIgnoreCase(url, "postgresql") >= 0) {
             driverClass = ClassUtil.forName("org.postgresql.Driver");
-            // jdbc:h2:hsql://<host>:<port>/<database>
-        } else if (Strings.indexOfIgnoreCase(url, "h2") >= 0) {
-            driverClass = ClassUtil.forName("org.h2.Driver");
-            // jdbc:hsqldb:hsql://localhost/abacustest
+            // jdbc:hsqldb:hsql://localhost/abacustest -- must be checked before "h2" because an HSQLDB
+            // database name (e.g., "h2_compat") would otherwise be mis-detected as H2.
         } else if (Strings.indexOfIgnoreCase(url, "hsqldb") >= 0) {
-            driverClass = ClassUtil.forName("org.hsqldb.JDBCDriver");
+            driverClass = ClassUtil.forName("org.hsqldb.jdbc.JDBCDriver");
+            // jdbc:h2:hsql://<host>:<port>/<database>
+        } else if (Strings.indexOfIgnoreCase(url, ":h2:") >= 0) {
+            driverClass = ClassUtil.forName("org.h2.Driver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
         } else if (Strings.indexOfIgnoreCase(url, "oracle") >= 0) {
             driverClass = ClassUtil.forName("oracle.jdbc.driver.OracleDriver");
@@ -7289,8 +7290,25 @@ public final class JdbcUtil {
             return false;
         }
 
+        // DatabaseMetaData.getTables treats '_' and '%' in the table-name argument as wildcards.
+        // A bare rows.next() can therefore return true for an unrelated table whose name happens to
+        // match the wildcard expansion (e.g., looking up "users_log" matches "usersXlog"). When the
+        // requested pattern contains a wildcard meta-character, verify the returned TABLE_NAME
+        // actually matches (case-insensitive) the requested name; otherwise rely on rows.next().
         try (ResultSet rows = rs) {
-            return rows.next();
+            if (tableNamePattern == null || (tableNamePattern.indexOf('_') < 0 && tableNamePattern.indexOf('%') < 0)) {
+                return rows.next();
+            }
+
+            while (rows.next()) {
+                final String tableNameInMetadata = rows.getString("TABLE_NAME");
+
+                if (tableNameInMetadata != null && tableNameInMetadata.equalsIgnoreCase(tableNamePattern)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 

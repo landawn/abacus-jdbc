@@ -24,14 +24,19 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.annotation.Bind;
+import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.MergedById;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.Query;
+import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.NoUpdateDao;
 import com.landawn.abacus.query.SqlBuilder.PSC;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.u.Optional;
 
 @Tag("2025")
@@ -358,6 +363,112 @@ public class DaoImplTest extends TestBase {
 
         // Should not throw ClassCastException — returns false because paramClassInReturnType is null
         assertDoesNotThrow(() -> classifier.invoke(null, method, List.class, OP.DEFAULT, "GenericListDao.listWildcard"));
+    }
+
+    @CacheResult
+    @RefreshCache
+    interface CacheDisabledOverrideDao
+            extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, PSC, CacheDisabledOverrideDao> {
+        // No @NonDBOperation: must reach the proxy's cache wrapper so the resolution logic actually runs.
+        @CacheResult(disabled = true)
+        default String findCached() {
+            return "fresh-result";
+        }
+
+        default String findCachedDefault() {
+            return "fresh-result";
+        }
+
+        @RefreshCache(disabled = true)
+        default String updateData() {
+            return "refresh-result";
+        }
+    }
+
+    /**
+     * Regression: when the DAO class has @CacheResult and a method has @CacheResult(disabled=true),
+     * the method-level explicit disable must override the class-level annotation. Previously the
+     * disabled annotation was silently filtered out, causing the class-level annotation to take
+     * effect anyway.
+     */
+    @Test
+    void testMethodLevelDisabledCacheResultOverridesClassLevel() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger putCount = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger getCount = new java.util.concurrent.atomic.AtomicInteger();
+        Jdbc.DaoCache recordingCache = new Jdbc.DaoCache() {
+            @Override
+            public Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                getCount.incrementAndGet();
+                return null;
+            }
+
+            @Override
+            public boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                putCount.incrementAndGet();
+                return true;
+            }
+
+            @Override
+            public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                putCount.incrementAndGet();
+                return true;
+            }
+
+            @Override
+            public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            }
+        };
+
+        CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), null, recordingCache, null);
+
+        // Method explicitly disabled — must NOT consult the cache or write to it.
+        assertEquals("fresh-result", dao.findCached());
+        assertEquals(0, getCount.get(), "Disabled method must not query the cache");
+        assertEquals(0, putCount.get(), "Disabled method must not write to the cache");
+
+        // Method without explicit disable — class-level @CacheResult applies (filter matches "find" prefix).
+        dao.findCachedDefault();
+        assertTrue(getCount.get() > 0 || putCount.get() > 0, "Non-disabled method should interact with cache");
+    }
+
+    /**
+     * Regression: same override semantics for @RefreshCache. Method-level disable must take precedence
+     * over a class-level @RefreshCache annotation.
+     */
+    @Test
+    void testMethodLevelDisabledRefreshCacheOverridesClassLevel() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger updateCount = new java.util.concurrent.atomic.AtomicInteger();
+        Jdbc.DaoCache recordingCache = new Jdbc.DaoCache() {
+            @Override
+            public Object get(String defaultCacheKey, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return null;
+            }
+
+            @Override
+            public boolean put(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return true;
+            }
+
+            @Override
+            public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return true;
+            }
+
+            @Override
+            public void update(String defaultCacheKey, Object result, Object daoProxy, Object[] args,
+                    Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                updateCount.incrementAndGet();
+            }
+        };
+
+        CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), null, recordingCache, null);
+        assertEquals("refresh-result", dao.updateData());
+        assertEquals(0, updateCount.get(), "Disabled @RefreshCache method must not invalidate the cache");
     }
 
     private static DataSource mockDataSourceForDaoCreation() throws SQLException {

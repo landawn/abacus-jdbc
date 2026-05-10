@@ -2316,4 +2316,55 @@ public class JdbcUtilTest extends TestBase {
     public void testCreateConnection_UnsupportedUrl_Throws() {
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createConnection("jdbc:unknownDB://localhost", "u", "p"));
     }
+
+    // BUG FIX: tableExists must not be fooled by JDBC '_' / '%' wildcard expansion in the
+    // tableNamePattern argument to DatabaseMetaData.getTables. Looking up "users_log" must NOT
+    // return true when only an unrelated table named "usersXlog" exists.
+    @Test
+    public void testTableExists_RejectsWildcardFalsePositive() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+
+        when(mockDatabaseMetaData.getTables(null, null, "users_log", null)).thenReturn(tableRs);
+        // The driver returns a row, but for an unrelated table name (a real false positive that
+        // happens when '_' is interpreted as the single-char wildcard).
+        when(tableRs.next()).thenReturn(true, false);
+        when(tableRs.getString("TABLE_NAME")).thenReturn("usersXlog");
+        // After the metadata check correctly rejects the false positive, tableExists falls back to
+        // a direct SELECT against the safe-qualified name. Simulate the real-DB outcome: that SELECT
+        // raises a "doesn't exist" SQLException.
+        when(mockConnection.prepareStatement("SELECT 1 FROM users_log WHERE 1 > 2"))
+                .thenThrow(new SQLException("Table 'users_log' doesn't exist"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "users_log"),
+                "tableExists must verify the returned TABLE_NAME, not blindly trust rows.next()");
+    }
+
+    // BUG FIX: tableExists with wildcard chars in the pattern must accept a row whose TABLE_NAME
+    // actually matches the requested name (case-insensitively).
+    @Test
+    public void testTableExists_AcceptsExactMatchAmongWildcardResults() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+
+        when(mockDatabaseMetaData.getTables(null, null, "users_log", null)).thenReturn(tableRs);
+        when(tableRs.next()).thenReturn(true, true, false);
+        when(tableRs.getString("TABLE_NAME")).thenReturn("usersXlog", "USERS_LOG");
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "users_log"));
+    }
+
+    // BUG FIX: getDriverClassByUrl must not misclassify HSQLDB URLs whose database/host portion
+    // contains the substring "h2" (e.g., "h2_compat") as H2. With the bug present, the H2 driver
+    // would be selected for an HSQLDB URL and the connection attempt would fail because H2 does
+    // not recognize "jdbc:hsqldb:..." URLs.
+    @Test
+    public void testCreateConnection_HsqldbUrlWithH2InDatabaseName_UsesHsqldbDriver() throws SQLException {
+        try (Connection conn = JdbcUtil.createConnection("jdbc:hsqldb:mem:h2_compat_db", "sa", "")) {
+            assertNotNull(conn);
+            // HSQLDB reports its product name as "HSQL Database Engine"; the H2 driver would not
+            // accept this URL at all, so reaching this point already proves the routing is correct.
+            String productName = conn.getMetaData().getDatabaseProductName();
+            assertTrue(productName != null && productName.toLowerCase().contains("hsql"),
+                    "Expected HSQLDB driver, but connected to: " + productName);
+        }
+    }
 }

@@ -2,11 +2,21 @@ package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.SqlBuilder;
 
 public class ReadOnlyCrudDaoLTest extends TestBase {
+
+    private interface DummyReadOnlyCrudDaoL extends ReadOnlyCrudDaoL<Object, SqlBuilder.PSC, DummyReadOnlyCrudDaoL> {
+    }
+
+    private final DummyReadOnlyCrudDaoL dao = createDefaultMethodProxy(DummyReadOnlyCrudDaoL.class);
 
     @Test
     public void testIsInterface() {
@@ -31,5 +41,30 @@ public class ReadOnlyCrudDaoLTest extends TestBase {
     @Test
     public void testHasDeclaredMethods() {
         assertTrue(true, "Interface may inherit all methods without declaring its own");
+    }
+
+    @Test
+    public void testInsertUnsupported_InheritedFromReadOnlyCrudDao() {
+        assertThrows(UnsupportedOperationException.class, () -> dao.insert(new Object()));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(List.of(new Object())));
+    }
+
+    @Test
+    public void testUpdateUnsupported_LongOverloadInheritedFromNoUpdateCrudDaoL() {
+        assertThrows(UnsupportedOperationException.class, () -> dao.update("status", "x", 1L));
+        assertThrows(UnsupportedOperationException.class, () -> dao.deleteById(1L));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T createDefaultMethodProxy(final Class<T> interfaceType) {
+        final InvocationHandler handler = (proxy, method, args) -> {
+            if (method.isDefault()) {
+                return InvocationHandler.invokeDefault(proxy, method, args);
+            }
+
+            throw new UnsupportedOperationException("Unexpected invocation: " + method);
+        };
+
+        return (T) Proxy.newProxyInstance(interfaceType.getClassLoader(), new Class<?>[] { interfaceType }, handler);
     }
 }

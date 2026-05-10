@@ -6077,22 +6077,18 @@ final class DaoImpl {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method,
                         ImmutableList.wrap(N.toList(method.getParameterTypes())), method.getReturnType());
 
-                final CacheResult cacheResultAnno = StreamEx.of(method.getAnnotations())
-                        .select(CacheResult.class)
-                        .filter(it -> !it.disabled())
-                        .last()
-                        .orElse((daoClassCacheResultAnno != null //
+                final CacheResult methodCacheResultAnno = StreamEx.of(method.getAnnotations()).select(CacheResult.class).last().orElseNull();
+                final CacheResult cacheResultAnno = methodCacheResultAnno != null ? (methodCacheResultAnno.disabled() ? null : methodCacheResultAnno)
+                        : ((daoClassCacheResultAnno != null //
                                 && !daoClassCacheResultAnno.disabled() //
                                 && !Strings.containsAnyIgnoreCase(method.getName(), "page", "paginate") //
                                 && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodNameStartsWith)) //
                                         ? daoClassCacheResultAnno
                                         : null);
 
-                final RefreshCache refreshResultAnno = StreamEx.of(method.getAnnotations())
-                        .select(RefreshCache.class)
-                        .filter(it -> !it.disabled())
-                        .last()
-                        .orElse((daoClassRefreshCacheAnno != null // 
+                final RefreshCache methodRefreshCacheAnno = StreamEx.of(method.getAnnotations()).select(RefreshCache.class).last().orElseNull();
+                final RefreshCache refreshResultAnno = methodRefreshCacheAnno != null ? (methodRefreshCacheAnno.disabled() ? null : methodRefreshCacheAnno)
+                        : ((daoClassRefreshCacheAnno != null //
                                 && !daoClassRefreshCacheAnno.disabled() //
                                 && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodNameStartsWith)) //
                                         ? daoClassRefreshCacheAnno

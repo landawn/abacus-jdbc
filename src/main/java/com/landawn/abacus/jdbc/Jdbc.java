@@ -31,6 +31,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -4111,20 +4112,15 @@ public final class Jdbc {
                 final int rsColumnCount = columnLabelList.size();
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount];
 
-                int cnt = 0;
                 ColumnGetter<?> columnGetter = null;
 
                 for (int i = 0; i < rsColumnCount; i++) {
                     columnGetter = columnGetterMap.get(columnLabelList.get(i));
 
-                    if (columnGetter != null) {
-                        cnt++;
-                    }
-
                     rsColumnGetters[i] = columnGetter == null ? defaultColumnGetter : columnGetter;
                 }
 
-                if (cnt < columnGetterMap.size()) {
+                if (!new HashSet<>(columnLabelList).containsAll(columnGetterMap.keySet())) {
                     final List<String> tmp = new ArrayList<>(columnGetterMap.keySet());
                     tmp.removeAll(columnLabelList);
                     throw new IllegalArgumentException("ColumnGetters for " + tmp + " are not found in ResultSet columns: " + columnLabelList);
@@ -4310,18 +4306,17 @@ public final class Jdbc {
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                            if (rsColumnCount != 1 && (rsColumnCount = columnLabelList.size()) != 1) {
+                                throw new IllegalArgumentException(
+                                        "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
+                            }
+
                             if (rsColumnGetters == null) {
-                                rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList);
 
                                 if (rsColumnGetters[0] == ColumnGetter.GET_OBJECT) {
                                     rsColumnGetters[0] = ColumnGetter.get(N.typeOf(targetClass));
                                 }
-                            }
-
-                            if (rsColumnCount != 1 && (rsColumnCount = columnLabelList.size()) != 1) {
-                                throw new IllegalArgumentException(
-                                        "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
                             }
 
                             return (T) rsColumnGetters[0].apply(rs, 1);

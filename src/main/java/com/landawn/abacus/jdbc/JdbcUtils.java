@@ -1857,6 +1857,7 @@ public final class JdbcUtils {
                 lineParser.accept(line, output);
 
                 if (filter != null && !filter.test(output)) {
+                    N.fill(output, null);
                     continue;
                 }
 

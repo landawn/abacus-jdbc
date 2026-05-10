@@ -3343,4 +3343,29 @@ public class JdbcTest extends TestBase {
         Jdbc.Columns.ColumnOne.SET_CHARACTER_STREAM.accept(mockAbstractQuery, reader);
         verify(mockAbstractQuery).setCharacterStream(1, reader);
     }
+
+    // Bug: BiRowMapperBuilder.to(scalarClass) crashed with AIOBE on a 0-column ResultSet
+    // (rsColumnGetters[0] was indexed before the multi-column guard fired).
+    @Test
+    public void testBiRowMapperBuilder_ToScalarType_EmptyColumnsThrowsIAE() {
+        Jdbc.BiRowMapper<String> mapper = Jdbc.BiRowMapper.builder().to(String.class);
+
+        Throwable thrown = assertThrows(Throwable.class, () -> mapper.apply(mockResultSet, new ArrayList<>()));
+        // Must be the "multiple columns" IAE, not an ArrayIndexOutOfBoundsException.
+        assertTrue(thrown instanceof IllegalArgumentException, "Expected IllegalArgumentException but got: " + thrown);
+    }
+
+    // Bug: BiRowMapperBuilder.initColumnGetter undercounted missing configured columns when
+    // a duplicate ResultSet column matched the same configured key twice — so the misuse went
+    // undetected and downstream code silently dropped the unmatched configuration.
+    @Test
+    public void testBiRowMapperBuilder_DuplicateRsColumnHidesMissingConfig() {
+        Jdbc.BiRowMapper<List> mapper = Jdbc.BiRowMapper.builder().getInt("col1").getString("col2").to(List.class);
+
+        // RS has [col1, col1] — col2 is configured but missing from the result set.
+        // Must throw IAE pointing at col2, not silently succeed.
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col1")));
+        assertTrue(ex.getMessage().contains("col2"), "Expected message to mention col2: " + ex.getMessage());
+    }
 }
