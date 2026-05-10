@@ -15,20 +15,23 @@
 package com.landawn.abacus.jdbc;
 
 /**
- * Archive class containing historical SQL execution implementation.
+ * Archived placeholder for the historical {@code SqlExecutor} implementation.
  *
- * <p>This class has been deprecated and replaced by {@link AbstractQuery}, {@link PreparedQuery}, {@link NamedQuery},
- * and DAO interfaces. It is retained for historical reference only and should not be used in new code.</p>
+ * <p>This class is no longer functional: its public API and supporting state have been removed,
+ * and the original implementation is preserved only as commented-out source below for historical
+ * reference. The body cannot be invoked, and the class itself cannot be instantiated.</p>
  *
- * <p>The commented code in this class represents a comprehensive SQL executor that was previously
- * used for JDBC operations with support for:</p>
+ * <p>The original {@code SqlExecutor} was a general-purpose JDBC helper that has since been
+ * superseded by {@link AbstractQuery}, {@link PreparedQuery}, {@link NamedQuery}, and the
+ * annotation-driven DAO interfaces under {@code com.landawn.abacus.jdbc.dao}. The archived
+ * source documented support for:</p>
  * <ul>
- *   <li>Multiple SQL parameter formats: indexed (?), named (#{name}), and colon-prefixed (:name)</li>
- *   <li>CRUD operations with entity mapping</li>
- *   <li>Transaction management integration</li>
- *   <li>Batch processing capabilities</li>
- *   <li>Spring Framework transaction integration</li>
- *   <li>Thread-safe database access</li>
+ *   <li>Multiple SQL parameter formats: indexed ({@code ?}), named ({@code #{name}}), and
+ *       colon-prefixed ({@code :name})</li>
+ *   <li>CRUD operations with entity-to-row mapping</li>
+ *   <li>Transaction management, including Spring Framework integration</li>
+ *   <li>Batch processing</li>
+ *   <li>Thread-safe access to the underlying {@link javax.sql.DataSource}</li>
  * </ul>
  *
  * <p><b>Historical SQL Format Examples:</b></p>
@@ -43,7 +46,7 @@ package com.landawn.abacus.jdbc;
  * INSERT INTO account (first_name, last_name) VALUES (:firstName, :lastName)
  * }</pre>
  *
- * <p><b>Historical CRUD Pattern:</b></p>
+ * <p><b>Historical CRUD Pattern (no longer compilable):</b></p>
  * <pre>{@code
  * static final DataSource dataSource = JdbcUtil.createHikariDataSource(url, user, password);
  * static final SqlExecutor sqlExecutor = new SqlExecutor(dataSource);
@@ -67,7 +70,7 @@ package com.landawn.abacus.jdbc;
  * sqlExecutor.delete(sql_delete, account);
  * }</pre>
  *
- * <p><b>Historical Transaction Pattern:</b></p>
+ * <p><b>Historical Transaction Pattern (no longer compilable):</b></p>
  * <pre>{@code
  * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
@@ -79,16 +82,23 @@ package com.landawn.abacus.jdbc;
  * }
  * }</pre>
  *
- * <p>For current JDBC operations, use:</p>
+ * <p>For current JDBC operations, prefer:</p>
  * <ul>
- *   <li>{@link JdbcUtil#prepareQuery} - for preparing SELECT/INSERT/UPDATE/DELETE statements</li>
- *   <li>{@link JdbcUtil#createDao} - for DAO-based data access</li>
- *   <li>{@link JdbcUtil#beginTransaction} - for transaction management</li>
+ *   <li>{@link JdbcUtil#prepareQuery(javax.sql.DataSource, String)} and its overloads — for fluent
+ *       SELECT/INSERT/UPDATE/DELETE execution against a {@link javax.sql.DataSource} or
+ *       {@link java.sql.Connection}</li>
+ *   <li>{@link JdbcUtil#createDao(Class, javax.sql.DataSource)} — for annotation-driven DAO-based
+ *       data access</li>
+ *   <li>{@link JdbcUtil#beginTransaction(javax.sql.DataSource)} and its overloads — for explicit
+ *       transaction management</li>
  * </ul>
  *
- * @deprecated This class is archived and no longer functional. Use {@link JdbcUtil} and DAO interfaces instead.
+ * @deprecated This class is archived and no longer functional. Use {@link JdbcUtil} together with
+ *     {@link PreparedQuery}, {@link NamedQuery}, or the DAO interfaces instead.
  *
  * @see JdbcUtil
+ * @see PreparedQuery
+ * @see NamedQuery
  * @see com.landawn.abacus.jdbc.dao.Dao
  * @see com.landawn.abacus.jdbc.dao.CrudDao
  */
@@ -96,9 +106,13 @@ package com.landawn.abacus.jdbc;
 // Archive for history. Replaced by PreparedQuery and Dao.
 final class SqlExecutor {
     /**
-     * Private constructor to prevent instantiation of this archived class.
+     * Private no-arg constructor that prevents instantiation of this archived class.
      *
-     * @throws IllegalArgumentException declared for historical signature compatibility; never actually thrown
+     * <p>The {@code throws} clause is preserved from the original {@code SqlExecutor} signature
+     * for historical compatibility; the constructor body is empty and never actually throws.</p>
+     *
+     * @throws IllegalArgumentException declared only for historical signature compatibility;
+     *     never actually thrown by this implementation
      */
     private SqlExecutor() throws IllegalArgumentException {
         // archived class - prevent instantiation.

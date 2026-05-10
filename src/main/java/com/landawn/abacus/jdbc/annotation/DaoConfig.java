@@ -70,7 +70,7 @@ public @interface DaoConfig {
 
     /**
      * Controls whether to automatically add a LIMIT clause (or its database equivalent) to
-     * single-result {@link com.landawn.abacus.condition.Condition Condition}-based query
+     * single-result {@link com.landawn.abacus.query.condition.Condition Condition}-based query
      * methods declared by {@code Dao}/{@code CrudDao}.
      *
      * <p>When {@code true}, the framework appends:</p>

@@ -5998,6 +5998,7 @@ public final class Jdbc {
     @NoArgsConstructor
     @AllArgsConstructor
     @Data
+    @SuppressWarnings("missing-explicit-ctor")
     public static final class OutParam {
         /**
          * The 1-based index of the parameter in the stored procedure call.

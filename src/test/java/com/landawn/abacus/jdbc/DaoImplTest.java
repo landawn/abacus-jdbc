@@ -23,12 +23,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
+import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.NoUpdateDao;
 import com.landawn.abacus.query.SqlBuilder.PSC;
@@ -61,6 +63,22 @@ public class DaoImplTest extends TestBase {
         public void setName(String name) {
             this.name = name;
         }
+    }
+
+    static class IdOnlyEntity {
+        @Id
+        private long id;
+
+        public long getId() {
+            return id;
+        }
+
+        public void setId(long id) {
+            this.id = id;
+        }
+    }
+
+    interface IdOnlyCrudDao extends CrudDao<IdOnlyEntity, Long, PSC, IdOnlyCrudDao> {
     }
 
     interface MergedDao {
@@ -225,6 +243,14 @@ public class DaoImplTest extends TestBase {
         assertTrue(dao instanceof Marker, "Should implement Marker");
         // Verify the proxy is not accidentally the raw interface class itself
         assertFalse(dao.getClass().equals(ReorderedGenericDao.class), "Should be a proxy, not the interface itself");
+    }
+
+    @Test
+    void testCreateDaoWithIdOnlyEntityDoesNotBuildEmptyUpdateSql() throws Exception {
+        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, mockDataSourceForDaoCreation(), null, null, null);
+
+        assertNotNull(dao);
+        assertEquals(0, dao.update(new IdOnlyEntity()));
     }
 
     @Test

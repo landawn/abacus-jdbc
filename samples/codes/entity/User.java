@@ -1,5 +1,6 @@
 package codes.entity;
 
+import jakarta.persistence.Column;
 import javax.persistence.Id;
 
 import com.landawn.abacus.annotation.JsonXmlConfig;
@@ -10,7 +11,6 @@ import com.landawn.abacus.annotation.Type;
 import com.landawn.abacus.util.EnumType;
 import com.landawn.abacus.util.NamingPolicy;
 
-import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,8 +22,7 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id",
-        "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
+@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
 @Table(name = "user1")
 public class User {
 

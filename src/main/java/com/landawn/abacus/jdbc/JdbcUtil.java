@@ -1606,8 +1606,9 @@ public final class JdbcUtil {
     /**
      * Skips a specified number of rows in a {@link ResultSet}, supporting a {@code long} count.
      * This method efficiently moves the cursor forward. It attempts to use {@link ResultSet#absolute(int)}
-     * for scrollable result sets and falls back to manual iteration for forward-only result sets or
-     * when {@code absolute()} is not supported by the driver.
+     * for scrollable result sets and falls back to manual {@link ResultSet#next()} iteration when the
+     * skip count exceeds {@link Integer#MAX_VALUE}, when adding it to the current row would overflow,
+     * or when the driver does not support {@code absolute()}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1624,8 +1625,9 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs The {@link ResultSet} to skip rows in.
-     * @param rowsToSkip The number of rows to skip.
-     * @return The number of rows actually skipped.
+     * @param rowsToSkip The number of rows to skip. Values {@code <= 0} are no-ops and return {@code 0}.
+     * @return The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the
+     *         {@code ResultSet} is reached.
      * @throws SQLException If a database access error occurs.
      * @see ResultSet#absolute(int)
      */
@@ -8864,13 +8866,17 @@ public final class JdbcUtil {
 
     /**
      * Checks if the given value is {@code null} or equals the default value for its type.
-     * Default values are: 0 for numeric types, {@code false} for boolean, empty for collections/maps,
-     * and {@code null} for reference types.
+     * A value is considered "null or default" when it is {@code null}, a {@link Number} whose
+     * {@code doubleValue()} is {@code 0}, the {@link Boolean} {@code false}, or otherwise
+     * {@link N#equals(Object, Object) equals} the {@link N#defaultValueOf default value} of its
+     * runtime class. Reference types (such as {@link String} or any collection) are only considered
+     * default when {@code null}; an empty {@code String} or empty collection is <em>not</em> default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.isNullOrDefault(null);    // true
      * JdbcUtil.isNullOrDefault(0);       // true
+     * JdbcUtil.isNullOrDefault(0.0);     // true
      * JdbcUtil.isNullOrDefault(false);   // true
      * JdbcUtil.isNullOrDefault("");      // false (empty string is not default)
      * JdbcUtil.isNullOrDefault(1);       // false

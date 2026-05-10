@@ -1919,6 +1919,7 @@ public final class JdbcCodeGenerationUtil {
     @NoArgsConstructor
     @AllArgsConstructor
     @Accessors(chain = true)
+    @SuppressWarnings("missing-explicit-ctor")
     public static final class EntityCodeConfig {
         /**
          * The source directory where the generated entity class file will be saved.

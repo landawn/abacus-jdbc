@@ -754,23 +754,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to a {@code long} converted from the given {@link BigInteger}.
      *
-     * <p>This method converts the BigInteger to a {@code long} using {@link BigInteger#longValueExact()}.
-     * If the BigInteger value is too large (or too small) to fit in a {@code long}, an
-     * {@link ArithmeticException} will be thrown. Consider using
+     * <p>This method converts the {@code BigInteger} to a {@code long} using
+     * {@link BigInteger#longValueExact()}. If the value lies outside the range of {@code long}
+     * (less than {@link Long#MIN_VALUE} or greater than {@link Long#MAX_VALUE}), an
+     * {@link ArithmeticException} is thrown. Consider using
      * {@link #setBigDecimal(String, BigInteger)} or {@link #setBigIntegerAsString(String, BigInteger)}
-     * for values that might exceed the {@code long} range.
-     * 
+     * for values that may exceed the {@code long} range.
+     *
+     * <p>If {@code x} is {@code null}, the parameter is set to SQL {@code NULL} with type
+     * {@link Types#BIGINT}.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * BigInteger largeNumber = new BigInteger("9223372036854775807");
-     * query.setLong("largeNumber", largeNumber);
+     * BigInteger accountBalance = new BigInteger("1000000");
+     * query.setLong("balance", accountBalance);
      * }</pre>
      *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param x the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws ArithmeticException if the BigInteger value is too large to fit in a long
+     * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setLong(final String parameterName, final BigInteger x) throws IllegalArgumentException, SQLException {
@@ -4004,29 +4008,33 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets specific parameters from an entity object using only the specified parameter names.
-     * 
-     * <p>This method provides fine-grained control over which properties from an entity are used 
-     * to set query parameters. Only properties with names matching those in the parameterNames 
-     * collection will be used.
-     * 
+     * Sets the specified named parameters from an entity (bean/record) by reading the matching properties.
+     *
+     * <p>For each name in {@code parameterNames}, the entity must expose a property of the same name
+     * (otherwise an {@link IllegalArgumentException} is thrown). The value of that property is bound
+     * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
+     * not listed in {@code parameterNames} are left unbound by this call — bind them separately
+     * before executing the query.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
+     * // SQL: UPDATE users SET name = :name, email = :email WHERE id = :id
      * User user = new User();
      * user.setId(1);
      * user.setName("John");
      * user.setEmail("john@example.com");
-     * user.setAge(30);
-     * 
-     * // Only set name and email parameters, ignore id and age
-     * query.setParameters(user, Arrays.asList("name", "email"));
+     *
+     * // Bind only the name and email properties; bind id separately.
+     * query.setParameters(user, Arrays.asList("name", "email"))
+     *      .setLong("id", user.getId());
      * }</pre>
      *
-     * @param entity the entity object containing the parameter values
-     * @param parameterNames a collection of parameter names to be set from the entity
+     * @param entity the bean or record whose properties supply the parameter values
+     * @param parameterNames the names of the parameters (and matching property names) to bind
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if entity or parameterNames is {@code null}, if entity is not a bean class,
-     *         if a property is not found in the entity, or if a parameter name is not found in the query
+     * @throws IllegalArgumentException if {@code entity} or {@code parameterNames} is {@code null}, if
+     *         {@code entity} is not a bean/record class, if a listed property does not exist on the
+     *         entity, or if a listed name is not a parameter in the SQL query
      * @throws SQLException if a database access error occurs
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)

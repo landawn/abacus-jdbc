@@ -159,13 +159,15 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
 /**
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
  *
- * <p>This class is the {@link InvocationHandler} backing DAO proxies created by
- * {@link JdbcUtil#createDao(Class, javax.sql.DataSource)} and its overloads. It implements the method interception
- * and execution logic for SQL operations defined through annotations such as {@code @Query}
- * (which covers SELECT/INSERT/UPDATE/DELETE and stored-procedure calls) together with helpers like {@code @Bind},
- * {@code @BindList}, {@code @SqlScript}, {@code @SqlFragment}, and {@code @SqlSource}. The actual SQL operation type
- * is conveyed by the {@link OP} value supplied in the {@code @Query} annotation, by the SQL keyword (e.g., {@code SELECT},
- * {@code INSERT}) detected from the SQL text itself, or by built-in CRUD methods inherited from {@link Dao} and
+ * <p>This is a non-instantiable utility class. Its primary responsibility is the
+ * {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Jdbc.DaoCache, Executor) createDao} factory
+ * method, which builds an {@link InvocationHandler} for a JDK dynamic proxy that implements a user-defined DAO
+ * interface. The handler intercepts each method call and dispatches it to a pre-built executor derived from the
+ * method's annotation metadata. Supported annotations include {@code @Query} (covering SELECT/INSERT/UPDATE/DELETE
+ * and stored-procedure calls) together with helpers such as {@code @Bind}, {@code @BindList}, {@code @SqlScript},
+ * {@code @SqlFragment}, {@code @SqlFragmentList}, and {@code @SqlSource}. The SQL operation type is determined from
+ * the {@link OP} value supplied in the {@code @Query} annotation, from the leading SQL keyword (e.g., {@code SELECT},
+ * {@code INSERT}) detected in the statement text, or from built-in CRUD methods inherited from {@link Dao} and
  * {@link CrudDao}.</p>
  *
  * <p>The DaoImpl class is responsible for:</p>
@@ -173,11 +175,11 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li>Parsing and caching method-level SQL annotations and their configurations</li>
  *   <li>Building and executing SQL statements based on annotation metadata</li>
  *   <li>Managing parameter binding for named parameters, collections, and entities</li>
- *   <li>Handling result set mapping to entities, primitives, collections, and custom types</li>
+ *   <li>Handling result-set mapping to entities, primitives, collections, and custom types</li>
  *   <li>Supporting transactional behavior through {@code @Transactional} annotations</li>
  *   <li>Implementing cache management for {@code @CacheResult} annotated methods</li>
- *   <li>Managing join entity relationships through {@code @JoinedBy} annotations</li>
- *   <li>Providing SQL logging and performance monitoring capabilities</li>
+ *   <li>Managing join-entity relationships through {@code @JoinedBy} annotations</li>
+ *   <li>Providing SQL logging and performance-monitoring capabilities</li>
  * </ul>
  *
  * <p><b>Key Features:</b></p>
@@ -185,7 +187,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query} for inline or referenced SQL (covering SELECT/INSERT/UPDATE/DELETE
  *       and stored-procedure calls) with flexible parameter binding via {@code @Bind} and {@code @BindList},
  *       and reusable SQL snippets through {@code @SqlFragment}/{@code @SqlScript}</li>
- *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., :paramName)</li>
+ *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., {@code :paramName})</li>
  *   <li><b>Collection Parameter Expansion:</b> Handles IN clauses by expanding collection parameters</li>
  *   <li><b>Entity Mapping:</b> Automatic mapping between database result sets and entity classes</li>
  *   <li><b>Join Support:</b> Loads related entities through {@code @JoinedBy} relationships</li>
@@ -197,20 +199,20 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * </ul>
  *
  * <p><b>Design Pattern:</b></p>
- * <p>The DAO proxies produced by this class apply the Proxy pattern: each method invocation is intercepted by an
- * {@link InvocationHandler} and dispatched to a pre-built handler that was determined from the method's annotation
- * metadata at proxy creation time. Method-handle caching, prepared SQL parsing, and type-safe result mapping are
+ * <p>The DAO proxies produced by this class apply the Proxy pattern: each method invocation is intercepted by the
+ * generated {@link InvocationHandler} and dispatched to a pre-built handler determined from the method's annotation
+ * metadata at proxy-creation time. Method-handle caching, prepared SQL parsing, and type-safe result mapping are
  * used to keep per-call overhead low.</p>
  *
  * <p><b>Thread Safety:</b></p>
- * <p>This class is thread-safe. Method metadata and SQL parsing results are cached in concurrent maps.
- * However, the underlying database connections and transactions are managed per-thread through
- * {@link SqlTransaction} and connection pooling.</p>
+ * <p>This class itself holds no mutable instance state and is safe for concurrent use. Method metadata and SQL
+ * parsing results are cached in {@link ConcurrentHashMap concurrent maps}. The underlying database connections and
+ * transactions are managed per-thread through {@link SqlTransaction} and connection pooling.</p>
  *
  * <p><b>Important Notes:</b></p>
  * <ul>
  *   <li>This is an internal framework class marked with {@code @Internal}</li>
- *   <li>Application code should never directly instantiate or use this class</li>
+ *   <li>Application code should never directly invoke methods on this class</li>
  *   <li>Always use public DAO interfaces ({@link Dao}, {@link CrudDao}, etc.) instead</li>
  *   <li>DAOs are created via {@link JdbcUtil#createDao(Class, javax.sql.DataSource)}</li>
  * </ul>
@@ -347,13 +349,24 @@ final class DaoImpl {
     private static final Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = NamedQuery::setParameters; // NOSONAR
 
     /**
-     * Creates a MethodHandle for invoking a default interface method.
-     * This method attempts multiple strategies to obtain a MethodHandle, handling different JDK versions
-     * and access control scenarios. It's used for invoking default methods from DAO interfaces.
+     * Creates a {@link MethodHandle} for invoking a default interface method via {@code unreflectSpecial}.
      *
-     * @param method the Method object representing the default interface method
-     * @return a MethodHandle that can be used to invoke the default method
-     * @throws UnsupportedOperationException if a MethodHandle cannot be created using any available strategy
+     * <p>This method tries three strategies in order to remain compatible across JDK versions and module
+     * access constraints:</p>
+     * <ol>
+     *   <li>{@link MethodHandles#lookup()} narrowed to the declaring class with {@code unreflectSpecial} (works on
+     *       most modern JDKs).</li>
+     *   <li>The legacy {@code MethodHandles.Lookup(Class)} private constructor accessed reflectively, used for
+     *       older JDKs where the public lookup cannot reach the default method.</li>
+     *   <li>{@link MethodHandles.Lookup#findSpecial(Class, String, MethodType, Class)} as a final fallback.</li>
+     * </ol>
+     *
+     * <p>It is used by the proxy invocation handler to delegate to {@code default} methods declared on the DAO
+     * interface (e.g., user-defined helper methods that the proxy must inherit verbatim).</p>
+     *
+     * @param method the {@link Method} object representing the default interface method
+     * @return a {@link MethodHandle} that can be used to invoke the default method on a proxy instance
+     * @throws UnsupportedOperationException if all three strategies fail to produce a usable handle
      */
     private static MethodHandle createMethodHandle(final Method method) {
         final Class<?> declaringClass = method.getDeclaringClass();
@@ -382,22 +395,33 @@ final class DaoImpl {
             "exist", "notExist", "has", "is");
 
     /**
-     * Checks whether the specified method should be dispatched as a list-style query based on its return type,
-     * its declared {@link OP}, the presence of {@code @MappedByKey}/{@code @MergedById} annotations, and the method's
-     * name prefix.
+     * Determines whether the specified method should be dispatched as a list-style (multi-row) query, based on its
+     * return type, its declared {@link OP}, the presence of {@code @MappedByKey}/{@code @MergedById} annotations,
+     * and (for {@link OP#DEFAULT}) the method's name prefix.
      *
-     * <p>If {@code op} is {@link OP#list} or {@link OP#listAll}, the return type must be a {@link Collection}
-     * subtype; otherwise an {@link UnsupportedOperationException} is raised. For {@link OP#DEFAULT}, a method is
-     * considered a list query when its return type is a {@code Collection} and its name does not start with one
-     * of the single-result prefixes (e.g., {@code get}, {@code findFirst}, {@code findOnlyOne}, {@code exists}).</p>
+     * <p>The decision rules are:</p>
+     * <ul>
+     *   <li>{@link OP#list} or {@link OP#listAll}: return type must be a proper {@link Collection} subtype (not
+     *       raw {@code Collection.class} itself); otherwise an {@link UnsupportedOperationException} is raised, and
+     *       the method is treated as a list query.</li>
+     *   <li>Methods annotated with {@link MappedByKey @MappedByKey}: always treated as list queries.</li>
+     *   <li>Any explicit {@code op} other than {@link OP#DEFAULT}: not a list query.</li>
+     *   <li>{@link OP#DEFAULT}: a list query when the return type is a {@code Collection} subtype and either the
+     *       method is annotated with {@link MergedById @MergedById}, or the generic element type is compatible with
+     *       a trailing {@code RowMapper}/{@code BiRowMapper} parameter, or the method name does not start with one
+     *       of the single-result prefixes (e.g., {@code get}, {@code findFirst}, {@code findOne}, {@code findOnlyOne},
+     *       {@code selectFirst}, {@code selectOne}, {@code selectOnlyOne}, {@code exist}, {@code notExist},
+     *       {@code has}, {@code is}). A trailing {@code ResultExtractor}/{@code BiResultExtractor} parameter forces
+     *       a non-list dispatch.</li>
+     * </ul>
      *
-     * @param method the DAO method to check
+     * @param method the DAO method to inspect
      * @param returnType the return type of the method
-     * @param op the operation type specified for the method
-     * @param fullClassMethodName the fully qualified class and method name used for error reporting
+     * @param op the operation type declared for the method (use {@link OP#DEFAULT} when unspecified)
+     * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return {@code true} if the method should be dispatched as a list query, {@code false} otherwise
-     * @throws UnsupportedOperationException if {@code op} is {@link OP#list}/{@link OP#listAll} but the return type is
-     *         not a {@link Collection} subtype
+     * @throws UnsupportedOperationException if {@code op} is {@link OP#list} or {@link OP#listAll} but the return
+     *         type is not a proper {@link Collection} subtype
      */
     private static boolean isListQuery(final Method method, final Class<?> returnType, final OP op, final String fullClassMethodName) {
         final String methodName = method.getName();
@@ -2063,6 +2087,8 @@ final class DaoImpl {
 
         final boolean noOtherInsertPropNameExceptIdPropNames = idPropNameSet.containsAll(Beans.getPropNameList(entityClass))
                 || N.isEmpty(QueryUtil.getInsertPropNames(entityClass, idPropNameSet));
+        final Collection<String> propNamesToUpdateById = entityClass == null ? N.emptyList() : QueryUtil.getUpdatePropNames(entityClass, idPropNameSet);
+        final boolean noPropNameToUpdateById = N.isEmpty(propNamesToUpdateById);
 
         if (sbc.equals(PSC.class)) {
             sql_getById = isNoId ? null : NSC.select(entityClass).from(tableName).where(idCond).build().query();
@@ -2070,12 +2096,12 @@ final class DaoImpl {
             sql_insertWithId = entityClass == null ? null : NSC.insert(entityClass).into(tableName).build().query();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NSC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_updateById = isNoId ? null : NSC.update(tableName).set(entityClass, idPropNameSet).where(idCond).build().query();
+            sql_updateById = isNoId || noPropNameToUpdateById ? null : NSC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
             sql_deleteById = isNoId ? null : NSC.deleteFrom(tableName, entityClass).where(idCond).build().query();
         } else if (sbc.equals(PAC.class)) {
             sql_getById = isNoId ? null : NAC.select(entityClass).from(tableName).where(idCond).build().query();
             sql_existsById = isNoId ? null : NAC.select(_1).from(tableName, entityClass).where(idCond).build().query();
-            sql_updateById = isNoId ? null : NAC.update(tableName).set(entityClass, idPropNameSet).where(idCond).build().query();
+            sql_updateById = isNoId || noPropNameToUpdateById ? null : NAC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
             sql_insertWithId = entityClass == null ? null : NAC.insert(entityClass).into(tableName).build().query();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NAC.insert(entityClass, idPropNameSet).into(tableName).build().query());
@@ -2086,7 +2112,7 @@ final class DaoImpl {
             sql_insertWithId = entityClass == null ? null : NLC.insert(entityClass).into(tableName).build().query();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NLC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_updateById = isNoId ? null : NLC.update(tableName).set(entityClass, idPropNameSet).where(idCond).build().query();
+            sql_updateById = isNoId || noPropNameToUpdateById ? null : NLC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
             sql_deleteById = isNoId ? null : NLC.deleteFrom(tableName, entityClass).where(idCond).build().query();
         }
 
@@ -4651,6 +4677,10 @@ final class DaoImpl {
                             final Object entity = args[0];
                             N.checkArgNotNull(entity, cs.entity);
 
+                            if (namedUpdateByIdSQL == null) {
+                                return 0;
+                            }
+
                             return proxy.prepareNamedQuery(namedUpdateByIdSQL).settParameters(entity, objParamsSetter).update();
                         };
                     } else if (methodName.equals("update") && paramLen == 2 && !Map.class.equals(paramTypes[0]) && Collection.class.equals(paramTypes[1])) {
@@ -4685,6 +4715,10 @@ final class DaoImpl {
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
+                                return 0;
+                            }
+
+                            if (namedUpdateByIdSQL == null) {
                                 return 0;
                             }
 
@@ -6499,12 +6533,13 @@ final class DaoImpl {
     }
 
     /**
-     * Immutable value object holding parsed metadata about a SQL query derived from a DAO method's {@code @Query}
-     * (or equivalent) annotation.
+     * Immutable value object holding parsed metadata about a SQL query derived from a DAO method's
+     * {@link Query @Query} annotation (or an equivalent SQL-script reference).
      *
-     * <p>Each field corresponds to an attribute of the annotation or a derived property of the SQL statement itself.
-     * Instances are created once during DAO proxy initialization and reused for every invocation of the associated
-     * DAO method.</p>
+     * <p>Each field corresponds either to an attribute of the source annotation (e.g., {@code queryTimeout},
+     * {@code fetchSize}, {@code op}) or to a property derived from the SQL text itself (e.g., {@code isSelect},
+     * {@code isInsert}, {@code isNamedQuery}, the parsed {@link ParsedSql}). Instances are created once during DAO
+     * proxy initialization and reused for every invocation of the associated DAO method.</p>
      */
     static final class QueryInfo {
         final String sql;

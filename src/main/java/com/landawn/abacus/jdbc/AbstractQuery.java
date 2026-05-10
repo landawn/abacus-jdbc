@@ -765,20 +765,27 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //    }
 
     /**
-     * Sets a BigInteger parameter value as a long.
-     * The BigInteger must be within the range of a long value.
-     * 
+     * Sets a {@link BigInteger} parameter value, converting it to a {@code long} via
+     * {@link BigInteger#longValueExact()}.
+     *
+     * <p>The supplied {@code BigInteger} must fit within the range
+     * {@code [Long.MIN_VALUE, Long.MAX_VALUE]}. If it does not, an
+     * {@link ArithmeticException} is thrown and this query is closed before the
+     * exception is propagated.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BigInteger bigValue = new BigInteger("123456789");
-     * query.setLong(1, bigValue);   // converts to long
+     * query.setLong(1, bigValue);   // stored as a SQL BIGINT
      * }</pre>
      *
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if a database access error occurs
-     * @throws ArithmeticException if the BigInteger value does not fit in a {@code long} (i.e., exceeds {@code Long.MIN_VALUE}/{@code Long.MAX_VALUE}). When this is thrown the underlying statement is also closed.
+     * @throws ArithmeticException if the BigInteger value does not fit in a {@code long}
+     *         (i.e., exceeds {@code Long.MIN_VALUE}/{@code Long.MAX_VALUE}).
+     *         When this is thrown the underlying statement is also closed.
      */
     public This setLong(final int parameterIndex, final BigInteger value) throws SQLException {
         if (value == null) {
