@@ -58,7 +58,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
 /**
- * The CrudDao interface provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity management.
+ * Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity management.
  * This interface is designed to work with entity classes that have an ID field annotated with {@code @Id}.
  *
  * <p>It supports batch operations, single-property queries by ID, unique-result queries, upsert,

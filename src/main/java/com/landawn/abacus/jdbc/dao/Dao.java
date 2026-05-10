@@ -128,7 +128,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code PAC}, {@code PLC} or {@code PSB})
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the self-type parameter for fluent API support; must be the concrete sub-DAO interface
  *
  * @see JdbcUtil#createDao(Class, DataSource)

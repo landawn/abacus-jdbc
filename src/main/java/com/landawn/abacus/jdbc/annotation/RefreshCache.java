@@ -60,7 +60,7 @@ public @interface RefreshCache {
      * }
      * }</pre>
      * 
-     * @return {@code true} to disable cache refresh, {@code false} to enable it (default)
+     * @return {@code true} to disable cache refresh, {@code false} to enable it (default).
      */
     boolean disabled() default false;
 

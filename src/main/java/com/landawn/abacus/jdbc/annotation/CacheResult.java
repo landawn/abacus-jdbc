@@ -241,5 +241,5 @@ public @interface CacheResult {
      *
      * @return array of method name patterns to cache
      */
-    String[] filter() default { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exist", "notExist", "count" };
+    String[] filter() default { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exists", "notExist", "count" };
 }

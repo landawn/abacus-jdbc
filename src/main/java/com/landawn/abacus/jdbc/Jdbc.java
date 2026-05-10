@@ -4064,7 +4064,7 @@ public final class Jdbc {
              * @param columnName the name of the column
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}.
-             * @deprecated The default behavior already uses {@code ColumnGetter.GET_OBJECT} if no specific getter is set.
+             * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
             public BiRowMapperBuilder getObject(final String columnName) {
@@ -4097,7 +4097,7 @@ public final class Jdbc {
              * @param columnName the name of the column
              * @param columnGetter the custom {@code ColumnGetter} to use for this column
              * @return this builder instance for method chaining
-             * @throws IllegalArgumentException if {@code columnName} is {@code null}/empty or {@code columnGetter} is {@code null}
+             * @throws IllegalArgumentException if {@code columnName} is {@code null} or {@code columnGetter} is {@code null}
              */
             public BiRowMapperBuilder get(final String columnName, final ColumnGetter<?> columnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, cs.columnName);
@@ -5381,6 +5381,7 @@ public final class Jdbc {
              * execution context and must not be cached or shared across incompatible queries.</p>
              *
              * @return a new stateful {@code RowExtractor}.
+             * @throws IllegalArgumentException if the output array provided to the extractor is shorter than the column count
              */
             @SequentialOnly
             @Stateful

@@ -112,7 +112,7 @@ public @interface Query {
      *
      * @return inline SQL statement lines; empty by default when using {@link #id()}
      */
-    String[] value() default {}; // default ""; // inline SQL statements;
+    String[] value() default {}; // inline SQL statements;
 
     /**
      * Specifies SQL statement identifier lines defined in an external SQL mapper.
@@ -162,7 +162,7 @@ public @interface Query {
      * @return SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
      * @see RegExUtil#JAVA_IDENTIFIER_MATCHER
      */
-    String[] id() default {}; // default ""; // id defined SqlMapper
+    String[] id() default {}; // id defined SqlMapper
 
     /**
      * Specifies the operation type for this query.

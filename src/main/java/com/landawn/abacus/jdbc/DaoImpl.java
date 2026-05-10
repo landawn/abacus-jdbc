@@ -2096,12 +2096,14 @@ final class DaoImpl {
             sql_insertWithId = entityClass == null ? null : NSC.insert(entityClass).into(tableName).build().query();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NSC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_updateById = isNoId || noPropNameToUpdateById ? null : NSC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
+            sql_updateById = isNoId || noPropNameToUpdateById ? null
+                    : NSC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
             sql_deleteById = isNoId ? null : NSC.deleteFrom(tableName, entityClass).where(idCond).build().query();
         } else if (sbc.equals(PAC.class)) {
             sql_getById = isNoId ? null : NAC.select(entityClass).from(tableName).where(idCond).build().query();
             sql_existsById = isNoId ? null : NAC.select(_1).from(tableName, entityClass).where(idCond).build().query();
-            sql_updateById = isNoId || noPropNameToUpdateById ? null : NAC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
+            sql_updateById = isNoId || noPropNameToUpdateById ? null
+                    : NAC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
             sql_insertWithId = entityClass == null ? null : NAC.insert(entityClass).into(tableName).build().query();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NAC.insert(entityClass, idPropNameSet).into(tableName).build().query());
@@ -2112,7 +2114,8 @@ final class DaoImpl {
             sql_insertWithId = entityClass == null ? null : NLC.insert(entityClass).into(tableName).build().query();
             sql_insertWithoutId = entityClass == null ? null
                     : (noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId : NLC.insert(entityClass, idPropNameSet).into(tableName).build().query());
-            sql_updateById = isNoId || noPropNameToUpdateById ? null : NLC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
+            sql_updateById = isNoId || noPropNameToUpdateById ? null
+                    : NLC.update(tableName, entityClass).set(propNamesToUpdateById).where(idCond).build().query();
             sql_deleteById = isNoId ? null : NLC.deleteFrom(tableName, entityClass).where(idCond).build().query();
         }
 

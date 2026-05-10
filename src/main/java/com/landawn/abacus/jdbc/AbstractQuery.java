@@ -2187,7 +2187,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param value the object to set
      * @param type the Type handler for custom serialization
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if type is invalid
+     * @throws IllegalArgumentException if the type handler cannot set the value
      * @throws SQLException if a database access error occurs
      */
     public <T> This setObject(final int parameterIndex, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
@@ -3656,7 +3656,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters Collection of parameters
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If batchParameters or type is null
+     * @throws IllegalArgumentException if batchParameters or type is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3754,7 +3754,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters Iterator over parameters
      * @param type the class type of the parameters
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If batchParameters or type is null
+     * @throws IllegalArgumentException if batchParameters or type is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3851,7 +3851,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters Collection of parameter objects
      * @param parametersSetter Function to set parameters for each object
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If batchParameters or parametersSetter is null
+     * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3880,7 +3880,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters Iterator over parameter objects
      * @param parametersSetter Function to set parameters for each object
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If batchParameters or parametersSetter is null
+     * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -3979,7 +3979,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters Collection of parameter objects
      * @param parametersSetter Function to set parameters with access to query and statement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If batchParameters or parametersSetter is null
+     * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4010,7 +4010,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param batchParameters Iterator over parameter objects
      * @param parametersSetter Function to set parameters with access to query and statement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If batchParameters or parametersSetter is null
+     * @throws IllegalArgumentException if batchParameters or parametersSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4306,7 +4306,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param stmtSetter the function to configure the statement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If stmtSetter is null
+     * @throws IllegalArgumentException if stmtSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4345,7 +4345,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param stmtSetter the function to configure the statement
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException If stmtSetter is null
+     * @throws IllegalArgumentException if stmtSetter is null
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4828,7 +4828,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
      * @return A {@code Nullable} containing the value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4853,7 +4853,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
      * @return A {@code Nullable} containing the value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4885,7 +4885,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
      * @return An {@code Optional} containing the non-null value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @throws NullPointerException if a null value is encountered in the result set
@@ -4914,7 +4914,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
      * @return An {@code Optional} containing the non-null value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @throws NullPointerException if a null value is encountered in the result set
@@ -4946,9 +4946,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
      * @return A {@code Nullable} containing the unique value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicateResultException If more than one row is found
+     * @throws DuplicateResultException if more than one row is found
      * @throws SQLException if a database access error occurs
      */
     public <V> Nullable<V> queryForUniqueValue(final Class<? extends V> targetValueType)
@@ -4974,9 +4974,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
      * @return A {@code Nullable} containing the unique value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicateResultException If more than one row is found
+     * @throws DuplicateResultException if more than one row is found
      * @throws SQLException if a database access error occurs
      */
     public <V> Nullable<V> queryForUniqueValue(final Type<? extends V> targetValueType)
@@ -5018,9 +5018,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
      * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicateResultException If more than one row is found
+     * @throws DuplicateResultException if more than one row is found
      * @throws SQLException if a database access error occurs
      * @throws NullPointerException if a null value is encountered in the result set
      */
@@ -5049,9 +5049,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
      * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
-     * @throws IllegalArgumentException If targetValueType is null
+     * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicateResultException If more than one row is found
+     * @throws DuplicateResultException if more than one row is found
      * @throws SQLException if a database access error occurs
      * @throws NullPointerException if a null value is encountered in the result set
      */
@@ -5247,7 +5247,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param resultExtractor1 the extractor for the first {@code ResultSet}. ResultSet will be closed after extraction.
      * @param resultExtractor2 the extractor for the second {@code ResultSet}. ResultSet will be closed after extraction.
      * @return A {@code Tuple2} containing the results from both ResultSets (may contain {@code null} if ResultSet not available)
-     * @throws IllegalArgumentException If any of the provided extractors is {@code null}
+     * @throws IllegalArgumentException if any of the provided extractors is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -5313,7 +5313,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param resultExtractor2 the extractor for the second {@code ResultSet}. ResultSet will be closed after extraction.
      * @param resultExtractor3 the extractor for the third {@code ResultSet}. ResultSet will be closed after extraction.
      * @return A {@code Tuple3} containing the results from all three ResultSets (may contain {@code null} if ResultSet not available)
-     * @throws IllegalArgumentException If any of the provided extractors is {@code null}
+     * @throws IllegalArgumentException if any of the provided extractors is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -5515,7 +5515,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
      * @throws SQLException if a database access error occurs
-     * @throws E If the function throws an exception
+     * @throws E if the function throws an exception
      */
     @Beta
     public <R, E extends Exception> R queryThenApply(final Throwables.Function<? super Dataset, ? extends R, E> func) throws SQLException, E {
@@ -5542,7 +5542,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
      * @throws SQLException if a database access error occurs
-     * @throws E If the function throws an exception
+     * @throws E if the function throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
@@ -5568,7 +5568,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <E> the type of exception that may be thrown by the consumer
      * @param action the consumer action to apply to the {@code Dataset} resulting from the query
      * @throws SQLException if a database access error occurs
-     * @throws E If the consumer action throws an exception
+     * @throws E if the consumer action throws an exception
      */
     @Beta
     public <E extends Exception> void queryThenAccept(final Throwables.Consumer<? super Dataset, E> action) throws SQLException, E {
@@ -5595,7 +5595,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param entityClassForExtractor the class used to provide metadata for column mapping
      * @param action the consumer action to apply to the {@code Dataset} resulting from the query
      * @throws SQLException if a database access error occurs
-     * @throws E If the consumer action throws an exception
+     * @throws E if the consumer action throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
     @Beta
@@ -5623,7 +5623,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return An {@code Optional} containing a map of column names to values if exactly one record is found, otherwise empty
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueValue(Class)
      * @see #queryForUniqueNonNull(Class)
@@ -5651,10 +5651,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType the class to map the result row to
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If {@code targetType} is {@code null}
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      * @see #queryForUniqueValue(Class)
      * @see #queryForUniqueNonNull(Class)
@@ -5682,10 +5682,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findOnlyOne(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
@@ -5714,10 +5714,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to the result object
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
     public <T> Optional<T> findOnlyOne(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
@@ -5742,7 +5742,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return A {@code Map<String, Object>} containing the result if exactly one record is found, otherwise {@code null}
      * @throws IllegalStateException if this query is closed
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
     public Map<String, Object> findOnlyOneOrNull() throws DuplicateResultException, SQLException {
@@ -5768,10 +5768,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType the class to map the result row to
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If {@code targetType} is {@code null} or if the target type is invalid
+     * @throws IllegalArgumentException if {@code targetType} is {@code null} or if the target type is invalid
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
     public <T> T findOnlyOneOrNull(final Class<? extends T> targetType) throws NullPointerException, DuplicateResultException, SQLException {
@@ -5813,10 +5813,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
     public <T> T findOnlyOneOrNull(final Jdbc.RowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
@@ -5859,10 +5859,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to the result object
      * @return The mapped object if exactly one record is found, otherwise {@code null}
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
-     * @throws DuplicateResultException If the query finds more than one record
+     * @throws DuplicateResultException if the query finds more than one record
      * @throws SQLException if a database access error occurs
      */
     public <T> T findOnlyOneOrNull(final Jdbc.BiRowMapper<? extends T> rowMapper) throws NullPointerException, DuplicateResultException, SQLException {
@@ -5957,7 +5957,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first result, or empty if no result is found
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -5985,7 +5985,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code RowFilter} used to filter the rows in the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first matching result, or empty if no match is found
-     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6017,7 +6017,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first result, or empty if no result is found
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6045,7 +6045,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code BiRowFilter} used to filter the rows in the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return An {@code Optional} containing the first matching result, or empty if no match is found
-     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6097,7 +6097,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param targetType the class to map the result row to
      * @return The first result mapped to the specified type, or {@code null} if no result is found
-     * @throws IllegalArgumentException If targetType is null
+     * @throws IllegalArgumentException if targetType is null
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6132,7 +6132,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return The first result mapped by the rowMapper, or {@code null} if no result is found
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6170,7 +6170,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code RowFilter} used to filter rows
      * @param rowMapper the {@code RowMapper} used to map the result set to an object
      * @return The first matching result, or {@code null} if no match is found
-     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6213,7 +6213,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entity to be retrieved from the result set
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return The first result mapped by the rowMapper, or {@code null} if no result is found
-     * @throws IllegalArgumentException If {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the found row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6251,7 +6251,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the {@code BiRowFilter} used to filter rows
      * @param rowMapper the {@code BiRowMapper} used to map the result set to an object
      * @return The first matching result, or {@code null} if no match is found
-     * @throws IllegalArgumentException If {@code rowFilter} or {@code rowMapper} is {@code null}
+     * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws IllegalStateException if this query is closed
      * @throws NullPointerException if the mapped object for the first matching row is {@code null}
      * @throws SQLException if a database access error occurs
@@ -6343,7 +6343,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class of the type to map the rows to. Must not be {@code null}.
      * @return A list of objects of the specified type, where each object represents a row in the result set.
      *         Returns an empty list if no rows are found.
-     * @throws IllegalArgumentException If targetType is null
+     * @throws IllegalArgumentException if targetType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs or mapping fails
      * @see #list(Jdbc.RowMapper)
@@ -6369,7 +6369,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult the maximum number of results to return
      * @return A list of objects of the specified type, limited by maxResult
      * @throws SQLException if a database access error occurs
-     * @deprecated The result size should be limited in database server side by SQL scripts (e.g., LIMIT clause).
+     * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
      */
     @Deprecated
@@ -6406,7 +6406,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities in the returned list
      * @param rowMapper the row mapper to map each row of the ResultSet to an object. Must not be {@code null}.
      * @return A list of objects of the specified type, where each object represents a row in the result set
-     * @throws IllegalArgumentException If rowMapper is null
+     * @throws IllegalArgumentException if rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs or the row mapper throws an exception
      * @see Jdbc.RowMapper
@@ -6432,7 +6432,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult the maximum number of results to return
      * @return A list of mapped objects, limited by maxResult
      * @throws SQLException if a database access error occurs
-     * @deprecated The result size should be limited in database server side by SQL scripts (e.g., LIMIT clause).
+     * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
      */
     @Deprecated
@@ -6468,7 +6468,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the filter to apply to each row of the ResultSet. Must not be {@code null}.
      * @param rowMapper the row mapper to map each row of the ResultSet to an object. Must not be {@code null}.
      * @return A list of objects that passed the filter, mapped by the row mapper
-     * @throws IllegalArgumentException If rowFilter or rowMapper is null
+     * @throws IllegalArgumentException if rowFilter or rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.RowFilter
@@ -6501,7 +6501,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the row mapper to map filtered rows to objects. Must not be {@code null}.
      * @param maxResult the maximum number of results to return. Must be non-negative.
      * @return A list of objects that passed the filter, limited by maxResult
-     * @throws IllegalArgumentException If rowFilter or rowMapper is {@code null}, or maxResult is negative
+     * @throws IllegalArgumentException if rowFilter or rowMapper is {@code null}, or maxResult is negative
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -6561,7 +6561,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities in the returned list
      * @param rowMapper the BiRowMapper to map each row. Receives ResultSet and column labels. Must not be {@code null}.
      * @return A list of objects mapped by the BiRowMapper
-     * @throws IllegalArgumentException If rowMapper is null
+     * @throws IllegalArgumentException if rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.BiRowMapper
@@ -6587,7 +6587,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult the maximum number of results to return
      * @return A list of mapped objects, limited by maxResult
      * @throws SQLException if a database access error occurs
-     * @deprecated The result size should be limited in database server side by SQL scripts (e.g., LIMIT clause).
+     * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
      */
     @Deprecated
@@ -6613,7 +6613,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the BiRowFilter to test each row. Must not be {@code null}.
      * @param rowMapper the BiRowMapper to map filtered rows. Must not be {@code null}.
      * @return A list of objects that passed the filter
-     * @throws IllegalArgumentException If rowFilter or rowMapper is null
+     * @throws IllegalArgumentException if rowFilter or rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.BiRowFilter
@@ -6659,7 +6659,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the BiRowMapper to map filtered rows. Must not be {@code null}.
      * @param maxResult the maximum number of results to return. Must be non-negative.
      * @return A list of objects that passed the filter, limited by maxResult
-     * @throws IllegalArgumentException If rowFilter or rowMapper is {@code null}, or maxResult is negative
+     * @throws IllegalArgumentException if rowFilter or rowMapper is {@code null}, or maxResult is negative
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -6712,7 +6712,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities extracted from each result set
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @return A list of lists, where each inner list represents one ResultSet
-     * @throws IllegalArgumentException If targetType is null
+     * @throws IllegalArgumentException if targetType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #listAllResultSets(Jdbc.RowMapper)
@@ -6766,7 +6766,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities extracted from each result set
      * @param rowMapper the row mapper to apply to each row in all ResultSets. Must not be {@code null}.
      * @return A list of lists, where each inner list represents one ResultSet
-     * @throws IllegalArgumentException If rowMapper is null
+     * @throws IllegalArgumentException if rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.RowMapper
@@ -6820,7 +6820,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the filter to apply to each row. Must not be {@code null}.
      * @param rowMapper the row mapper for filtered rows. Must not be {@code null}.
      * @return A list of lists, where each inner list contains filtered and mapped rows from one ResultSet
-     * @throws IllegalArgumentException If rowFilter or rowMapper is null
+     * @throws IllegalArgumentException if rowFilter or rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -6877,7 +6877,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities extracted from each result set
      * @param rowMapper the BiRowMapper to apply to each row. Must not be {@code null}.
      * @return A list of lists, where each inner list represents one ResultSet
-     * @throws IllegalArgumentException If rowMapper is null
+     * @throws IllegalArgumentException if rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see Jdbc.BiRowMapper
@@ -6938,7 +6938,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the BiRowFilter to test each row. Must not be {@code null}.
      * @param rowMapper the BiRowMapper for filtered rows. Must not be {@code null}.
      * @return A list of lists with filtered and mapped rows from each ResultSet
-     * @throws IllegalArgumentException If rowFilter or rowMapper is null
+     * @throws IllegalArgumentException if rowFilter or rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -7006,7 +7006,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
      * @throws SQLException if a database access error occurs
-     * @throws E If the function throws an exception
+     * @throws E if the function throws an exception
      * @see #list(Class)
      * @see #listThenAccept(Class, Throwables.Consumer)
      */
@@ -7047,7 +7047,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
      * @throws SQLException if a database access error occurs
-     * @throws E If the function throws an exception
+     * @throws E if the function throws an exception
      */
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.RowMapper<? extends T> rowMapper,
@@ -7087,7 +7087,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
      * @throws SQLException if a database access error occurs
-     * @throws E If the function throws an exception
+     * @throws E if the function throws an exception
      */
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Jdbc.BiRowMapper<? extends T> rowMapper,
@@ -7130,7 +7130,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
      * @throws SQLException if a database access error occurs
-     * @throws E If the consumer throws an exception
+     * @throws E if the consumer throws an exception
      * @see #list(Class)
      * @see #listThenApply(Class, Throwables.Function)
      */
@@ -7163,7 +7163,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the RowMapper to use. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
      * @throws SQLException if a database access error occurs
-     * @throws E If the consumer throws an exception
+     * @throws E if the consumer throws an exception
      */
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.RowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
@@ -7198,7 +7198,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowMapper the BiRowMapper to use. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
      * @throws SQLException if a database access error occurs
-     * @throws E If the consumer throws an exception
+     * @throws E if the consumer throws an exception
      */
     @Beta
     public <T, E extends Exception> void listThenAccept(final Jdbc.BiRowMapper<? extends T> rowMapper, final Throwables.Consumer<? super List<T>, E> consumer)
@@ -7270,7 +7270,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities in the stream result
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @return A lazy-evaluated Stream of the specified type
-     * @throws IllegalArgumentException If targetType is null
+     * @throws IllegalArgumentException if targetType is null
      * @throws IllegalStateException if this query is closed
      * @see #stream(Jdbc.RowMapper)
      * @see #list(Class)
@@ -7312,7 +7312,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities in the stream result
      * @param rowMapper the RowMapper to transform each row. Must not be {@code null}.
      * @return A lazy-evaluated Stream of mapped objects
-     * @throws IllegalArgumentException If rowMapper is null
+     * @throws IllegalArgumentException if rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @see Jdbc.RowMapper
      * @see #stream(Jdbc.BiRowMapper)
@@ -7356,7 +7356,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of entities in the stream result
      * @param rowMapper the BiRowMapper receiving ResultSet and column labels. Must not be {@code null}.
      * @return A lazy-evaluated Stream of mapped objects
-     * @throws IllegalArgumentException If rowMapper is null
+     * @throws IllegalArgumentException if rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @see Jdbc.BiRowMapper
      */
@@ -7397,7 +7397,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the filter to test each row. Must not be {@code null}.
      * @param rowMapper the mapper for rows that pass the filter. Must not be {@code null}.
      * @return A lazy-evaluated Stream of filtered and mapped objects
-     * @throws IllegalArgumentException If rowFilter or rowMapper is null
+     * @throws IllegalArgumentException if rowFilter or rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @see Jdbc.RowFilter
      * @see Jdbc.RowMapper
@@ -7447,7 +7447,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowFilter the BiRowFilter to test each row. Must not be {@code null}.
      * @param rowMapper the BiRowMapper for filtered rows. Must not be {@code null}.
      * @return A lazy-evaluated Stream of filtered and mapped objects
-     * @throws IllegalArgumentException If rowFilter or rowMapper is null
+     * @throws IllegalArgumentException if rowFilter or rowMapper is null
      * @throws IllegalStateException if this query is closed
      * @see Jdbc.BiRowFilter
      * @see Jdbc.BiRowMapper
@@ -7483,8 +7483,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @param <T> The type of the elements in the stream.
     //     * @param targetType the class of the type to be extracted from the {@code ResultSets}.
     //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException If the provided {@code targetType} is invalid.
-    //     * @throws IllegalStateException If this is closed.
+    //     * @throws IllegalArgumentException if the provided {@code targetType} is invalid.
+    //     * @throws IllegalStateException if this is closed.
     //     */
     //    @SuppressWarnings("resource")
     //    public <T> Stream<Stream<T>> streamAllResultSets(final Class<? extends T> targetType) throws IllegalArgumentException, IllegalStateException {
@@ -7510,8 +7510,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @param <T> The type of the elements in the stream.
     //     * @param rowMapper the {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
     //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException If the provided {@code RowMapper} is invalid.
-    //     * @throws IllegalStateException If this is closed.
+    //     * @throws IllegalArgumentException if the provided {@code RowMapper} is invalid.
+    //     * @throws IllegalStateException if this is closed.
     //     */
     //    @SuppressWarnings("resource")
     //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.RowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
@@ -7537,8 +7537,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @param rowFilter the {@code RowFilter} to filter rows of the {@code ResultSet}.
     //     * @param rowMapper the {@code RowMapper} to map rows of the {@code ResultSet} to the target type.
     //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException If the provided {@code RowFilter} or {@code RowMapper} is invalid.
-    //     * @throws IllegalStateException If this is closed.
+    //     * @throws IllegalArgumentException if the provided {@code RowFilter} or {@code RowMapper} is invalid.
+    //     * @throws IllegalStateException if this is closed.
     //     */
     //    @SuppressWarnings("resource")
     //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
@@ -7565,8 +7565,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @param <T> The type of the elements in the stream.
     //     * @param rowMapper the {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
     //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException If the provided {@code rowMapper} is invalid.
-    //     * @throws IllegalStateException If this is closed.
+    //     * @throws IllegalArgumentException if the provided {@code rowMapper} is invalid.
+    //     * @throws IllegalStateException if this is closed.
     //     */
     //    @SuppressWarnings("resource")
     //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.BiRowMapper<? extends T> rowMapper) throws IllegalArgumentException, IllegalStateException {
@@ -7592,8 +7592,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     //     * @param rowFilter the {@code BiRowFilter} to filter rows of the {@code ResultSet}.
     //     * @param rowMapper the {@code BiRowMapper} to map rows of the {@code ResultSet} to the target type.
     //     * @return A {@code Stream} of {@code Stream<T, SQLException>} representing the rows in all {@code ResultSets}.
-    //     * @throws IllegalArgumentException If the provided {@code rowFilter} or {@code rowMapper} is invalid.
-    //     * @throws IllegalStateException If this is closed.
+    //     * @throws IllegalArgumentException if the provided {@code rowFilter} or {@code rowMapper} is invalid.
+    //     * @throws IllegalStateException if this is closed.
     //     */
     //    @SuppressWarnings("resource")
     //    public <T> Stream<Stream<T>> streamAllResultSets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
@@ -7662,9 +7662,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param resultExtractor the extractor used to process each ResultSet and produce a result.
      *                        Must not be {@code null}. The ResultSet will be closed after extraction.
      * @return A stream of R extracted from all ResultSets returned by the executed procedure
-     * @throws IllegalArgumentException If the provided resultExtractor is null
+     * @throws IllegalArgumentException if the provided resultExtractor is null
      * @throws IllegalStateException if this query is closed
-     * @throws UncheckedSQLException If a database access error occurs
+     * @throws UncheckedSQLException if a database access error occurs
      * @see #queryAllResultSets(ResultExtractor)
      * @see ResultExtractor
      */
@@ -7715,9 +7715,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param resultExtractor the extractor used to process each ResultSet with column labels.
      *                        Must not be {@code null}. The ResultSet will be closed after extraction.
      * @return A stream of R extracted from all ResultSets returned by the executed procedure
-     * @throws IllegalArgumentException If the provided resultExtractor is null
+     * @throws IllegalArgumentException if the provided resultExtractor is null
      * @throws IllegalStateException if this query is closed
-     * @throws UncheckedSQLException If a database access error occurs
+     * @throws UncheckedSQLException if a database access error occurs
      * @see #queryAllResultSets(BiResultExtractor)
      * @see BiResultExtractor
      */
@@ -7848,7 +7848,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param rowConsumer the consumer to process the first row if it exists. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer is null
+     * @throws IllegalArgumentException if rowConsumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #ifExistsOrElse(RowConsumer, Throwables.Runnable)
@@ -7890,7 +7890,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param rowConsumer the consumer to process the first row with column labels if it exists. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer is null
+     * @throws IllegalArgumentException if rowConsumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #ifExistsOrElse(BiRowConsumer, Throwables.Runnable)
@@ -7938,7 +7938,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowConsumer the consumer to process the first row if it exists. Must not be {@code null}.
      * @param orElseAction the action to execute if no record exists. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer or orElseAction is null
+     * @throws IllegalArgumentException if rowConsumer or orElseAction is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -7991,7 +7991,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowConsumer the consumer to process the first row with column labels if it exists. Must not be {@code null}.
      * @param orElseAction the action to execute if no record exists. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer or orElseAction is null
+     * @throws IllegalArgumentException if rowConsumer or orElseAction is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -8076,7 +8076,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to apply to each row. Only rows where this returns {@code true} are counted. Must not be {@code null}.
      * @return The count of rows that match the filter
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #count(BiRowFilter)
@@ -8127,7 +8127,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to apply to each row with column labels. Must not be {@code null}.
      * @return The count of rows that match the filter
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #count(RowFilter)
@@ -8174,7 +8174,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to test each row. Must not be {@code null}.
      * @return {@code true} if any row matches the filter, {@code false} if no rows match or result set is empty
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #allMatch(RowFilter)
@@ -8222,7 +8222,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to test each row with column labels. Must not be {@code null}.
      * @return {@code true} if any row matches the filter, {@code false} if no rows match or result set is empty
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #anyMatch(RowFilter)
@@ -8270,7 +8270,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to test each row. Must not be {@code null}.
      * @return {@code true} if all rows match the filter or result set is empty, {@code false} otherwise
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #anyMatch(RowFilter)
@@ -8321,7 +8321,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to test each row with column labels. Must not be {@code null}.
      * @return {@code true} if all rows match the filter or result set is empty, {@code false} otherwise
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #allMatch(RowFilter)
@@ -8366,7 +8366,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to test each row. Must not be {@code null}.
      * @return {@code true} if no rows match the filter or result set is empty, {@code false} if any row matches
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #anyMatch(RowFilter)
@@ -8399,7 +8399,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to test each row with column labels. Must not be {@code null}.
      * @return {@code true} if no rows match the filter or result set is empty, {@code false} if any row matches
-     * @throws IllegalArgumentException If rowFilter is null
+     * @throws IllegalArgumentException if rowFilter is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #anyMatch(BiRowFilter)
@@ -8438,7 +8438,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param rowConsumer the consumer to apply to each row. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer is null
+     * @throws IllegalArgumentException if rowConsumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #forEach(RowFilter, RowConsumer)
@@ -8481,7 +8481,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to apply to each row. Only matching rows are processed. Must not be {@code null}.
      * @param rowConsumer the consumer to apply to each filtered row. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowFilter or rowConsumer is null
+     * @throws IllegalArgumentException if rowFilter or rowConsumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #forEach(RowConsumer)
@@ -8533,7 +8533,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param rowConsumer the consumer to apply to each row with column labels. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer is null
+     * @throws IllegalArgumentException if rowConsumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #forEach(BiRowFilter, BiRowConsumer)
@@ -8592,7 +8592,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param rowFilter the filter to apply to each row with column labels. Must not be {@code null}.
      * @param rowConsumer the consumer to apply to each filtered row with column labels. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowFilter or rowConsumer is null
+     * @throws IllegalArgumentException if rowFilter or rowConsumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -8663,7 +8663,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param rowConsumer the consumer to apply to each row's DisposableObjArray. Must not be {@code null}.
-     * @throws IllegalArgumentException If rowConsumer is null
+     * @throws IllegalArgumentException if rowConsumer is null
      * @throws SQLException if a database access error occurs
      * @see RowConsumer#oneOff(Consumer)
      * @see #foreach(Class, Consumer)
@@ -8713,7 +8713,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param entityClass the class used to determine proper types for column value retrieval. Must not be {@code null}.
      * @param rowConsumer the consumer to apply to each row's DisposableObjArray. Must not be {@code null}.
-     * @throws IllegalArgumentException If entityClass or rowConsumer is null
+     * @throws IllegalArgumentException if entityClass or rowConsumer is null
      * @throws SQLException if a database access error occurs
      * @see RowConsumer#oneOff(Class, Consumer)
      */
@@ -8784,7 +8784,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                                  Must not be {@code null}.
      * @return An Optional containing the generated key if available, otherwise empty.
      *         Empty is returned if no key was generated or if the extractor returns {@code null}.
-     * @throws IllegalArgumentException If autoGeneratedKeyExtractor is null
+     * @throws IllegalArgumentException if autoGeneratedKeyExtractor is null
      * @throws SQLException if a database access error occurs or the statement fails to execute
      * @see #insert(BiRowMapper)
      * @see #insert()
@@ -8814,7 +8814,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
      * @return An Optional containing the generated key if it exists, otherwise an empty Optional
-     * @throws IllegalArgumentException If autoGeneratedKeyExtractor is null
+     * @throws IllegalArgumentException if autoGeneratedKeyExtractor is null
      * @throws SQLException if a database access error occurs
      * @see #insert(RowMapper)
      */
@@ -8928,7 +8928,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys from each row.
      *                                  Must not be {@code null}.
      * @return A list of generated keys. Empty list if no keys were generated.
-     * @throws IllegalArgumentException If autoGeneratedKeyExtractor is null
+     * @throws IllegalArgumentException if autoGeneratedKeyExtractor is null
      * @throws SQLException if a database access error occurs
      * @see #batchInsert()
      * @see #batchInsert(BiRowMapper)
@@ -8958,7 +8958,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
      * @return A list of generated keys. Empty list if no keys were generated.
-     * @throws IllegalArgumentException If autoGeneratedKeyExtractor is null
+     * @throws IllegalArgumentException if autoGeneratedKeyExtractor is null
      * @throws SQLException if a database access error occurs
      * @see #batchInsert(RowMapper)
      */
@@ -9102,7 +9102,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                                  Must not be {@code null}.
      * @return A tuple containing the number of rows affected and a list of generated keys.
      *         The list may be empty if no keys were generated.
-     * @throws IllegalArgumentException If the provided key extractor is null
+     * @throws IllegalArgumentException if the provided key extractor is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #updateAndReturnGeneratedKeys(BiRowMapper)
@@ -9152,7 +9152,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
      * @return A tuple containing the number of rows affected and a list of generated keys
-     * @throws IllegalArgumentException If the provided key extractor is null
+     * @throws IllegalArgumentException if the provided key extractor is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #updateAndReturnGeneratedKeys(RowMapper)
@@ -9253,7 +9253,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys.
      *                                  Must not be {@code null}.
      * @return A tuple containing an array of update counts and a list of generated keys
-     * @throws IllegalArgumentException If the provided key extractor is null
+     * @throws IllegalArgumentException if the provided key extractor is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #batchUpdate()
@@ -9299,7 +9299,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
      * @return A tuple containing an array of update counts and a list of generated keys
-     * @throws IllegalArgumentException If the provided key extractor is null
+     * @throws IllegalArgumentException if the provided key extractor is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #batchUpdateAndReturnGeneratedKeys(RowMapper)
@@ -9467,7 +9467,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param getter the function to apply to the PreparedStatement after execution.
      *               Must not be {@code null}.
      * @return The result of applying the function to the PreparedStatement
-     * @throws IllegalArgumentException If the provided function is null
+     * @throws IllegalArgumentException if the provided function is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #execute()
@@ -9510,7 +9510,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *               the second parameter indicates if the first result is a ResultSet object.
      *               Must not be {@code null}.
      * @return The result of applying the function to the PreparedStatement
-     * @throws IllegalArgumentException If the provided function is null
+     * @throws IllegalArgumentException if the provided function is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #executeThenApply(Throwables.Function) 
@@ -9565,7 +9565,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param consumer the consumer to apply to the PreparedStatement after execution.
      *                 Must not be {@code null}.
-     * @throws IllegalArgumentException If the provided consumer is null
+     * @throws IllegalArgumentException if the provided consumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #execute()
@@ -9609,7 +9609,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param consumer the consumer to apply to the PreparedStatement. The first parameter is the executed PreparedStatement,
      *                 the second parameter indicates if the first result is a ResultSet object.
      *                 Must not be {@code null}.
-     * @throws IllegalArgumentException If the provided consumer is null
+     * @throws IllegalArgumentException if the provided consumer is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      * @see #executeThenAccept(Throwables.Consumer) 
@@ -9652,7 +9652,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> the type of result produced by the SQL operation
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
      * @return A ContinuableFuture representing the result of the asynchronous execution
-     * @throws IllegalArgumentException If the provided SQL action is null
+     * @throws IllegalArgumentException if the provided SQL action is null
      * @throws IllegalStateException if this query is closed
      * @see #asyncCall(Throwables.Function, Executor) 
      * @see #asyncRun(Throwables.Consumer) 
@@ -9702,7 +9702,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
      * @param executor the executor to use for asynchronous execution. Must not be {@code null}.
      * @return A ContinuableFuture representing the result of the asynchronous execution
-     * @throws IllegalArgumentException If sqlAction or executor is null
+     * @throws IllegalArgumentException if sqlAction or executor is null
      * @throws IllegalStateException if this query is closed
      * @see #asyncCall(Throwables.Function) 
      */
@@ -9750,7 +9750,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
      * @return A ContinuableFuture representing the completion of the asynchronous execution
-     * @throws IllegalArgumentException If the provided SQL action is null
+     * @throws IllegalArgumentException if the provided SQL action is null
      * @throws IllegalStateException if this query is closed
      * @see #asyncRun(Throwables.Consumer, Executor) 
      * @see #asyncCall(Throwables.Function) 
@@ -9797,7 +9797,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
      * @param executor the executor to use for asynchronous execution. Must not be {@code null}.
      * @return A ContinuableFuture representing the completion of the asynchronous execution
-     * @throws IllegalArgumentException If sqlAction or executor is null
+     * @throws IllegalArgumentException if sqlAction or executor is null
      * @throws IllegalStateException if this query is closed
      * @see #asyncRun(Throwables.Consumer) 
      */
@@ -9827,7 +9827,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param arg the argument to check
      * @param argName the name of the argument for error messaging
-     * @throws IllegalArgumentException If arg is null
+     * @throws IllegalArgumentException if arg is null
      */
     protected void checkArgNotNull(final Object arg, final String argName) {
         if (arg == null) {
@@ -9852,7 +9852,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param b the condition to check
      * @param errorMsg the error message to use if the condition is false
-     * @throws IllegalArgumentException If b is false
+     * @throws IllegalArgumentException if b is false
      */
     protected void checkArg(final boolean b, final String errorMsg) {
         if (!b) {
@@ -10005,7 +10005,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is called internally before any operation to ensure the query
      * is still open and usable.</p>
      * 
-     * @throws IllegalStateException If this instance has been closed
+     * @throws IllegalStateException if this instance has been closed
      */
     void assertNotClosed() {
         if (isClosed) {
