@@ -55,7 +55,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * // Supported operations - all work fine:
  *
  * // Load join entities for a single user
- * User user = userDao.getOrNull(1L);
+ * User user = userDao.gett(1L);
  * userDao.loadJoinEntities(user, Order.class);   // Loads associated orders
  * userDao.loadJoinEntities(user, "addresses");   // Loads addresses by property name
  * userDao.loadAllJoinEntities(user);   // Loads all defined join entities

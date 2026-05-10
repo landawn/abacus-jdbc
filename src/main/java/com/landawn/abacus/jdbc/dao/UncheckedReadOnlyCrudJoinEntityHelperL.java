@@ -47,14 +47,14 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * // Read operations with join loading using primitive long - no checked exceptions
  * Optional<User> user = dao.get(123L, Order.class);   // loads user with orders
- * User userWithAll = dao.getOrNull(123L, true);   // loads all relationships
+ * User userWithAll = dao.gett(123L, true);   // loads all relationships
  *
  * // Batch operations with primitive long IDs
  * List<Long> ids = Arrays.asList(123L, 456L, 789L);
  * List<User> users = dao.batchGet(ids, Order.class);
  *
  * // Get with selected properties and join entities
- * User userSelected = dao.getOrNull(123L, Arrays.asList("id", "name", "email"), Order.class);
+ * User userSelected = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
  *
  * // All write operations are disabled:
  * // dao.insert(user);   // throws UnsupportedOperationException

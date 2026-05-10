@@ -48,7 +48,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * UserReadOnlyDao userDao = JdbcUtil.createDao(UserReadOnlyDao.class, dataSource);
  *
  * // Read operations work fine - no checked exceptions
- * User user = userDao.getOrNull(1L);
+ * User user = userDao.gett(1L);
  * userDao.loadJoinEntities(user, "orders");   // Loads successfully
  *
  * List<User> users = userDao.list(Filters.eq("status", "active"));

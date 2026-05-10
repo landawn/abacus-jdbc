@@ -526,12 +526,12 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
     /**
      * Retrieves an entity by its ID, returning {@code null} if not found.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#getOrNull(Object)}. Unlike {@link #get(long)}, the
+     * to {@link Long} and delegated to {@link CrudDao#gett(Object)}. Unlike {@link #get(long)}, the
      * entity is returned directly rather than wrapped in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(123L);
+     * User user = userDao.gett(123L);
      * if (user != null) {
      *     System.out.println("Found user: " + user.getName());
      * }
@@ -542,20 +542,20 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default T getOrNull(final long id) throws SQLException {
-        return getOrNull(Long.valueOf(id));
+    default T gett(final long id) throws SQLException {
+        return gett(Long.valueOf(id));
     }
 
     /**
      * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
      * This is a convenience overload that accepts a primitive {@code long} ID; the value is boxed
-     * to {@link Long} and delegated to {@link CrudDao#getOrNull(Object, Collection)}.
+     * to {@link Long} and delegated to {@link CrudDao#gett(Object, Collection)}.
      * This is useful for performance optimization when you only need specific fields.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only load id, name, email fields
-     * User user = userDao.getOrNull(123L, Arrays.asList("id", "name", "email"));
+     * User user = userDao.gett(123L, Arrays.asList("id", "name", "email"));
      * if (user != null) {
      *     System.out.println("User name: " + user.getName());
      * }
@@ -568,38 +568,8 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    default T getOrNull(final long id, final Collection<String> selectPropNames) throws SQLException {
-        return getOrNull(Long.valueOf(id), selectPropNames);
-    }
-
-    /**
-     * Retrieves an entity by its ID, returning {@code null} if not found.
-     *
-     * @param id the primitive long ID of the entity to retrieve
-     * @return the entity if found, otherwise {@code null}
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #getOrNull(long)} instead.
-     */
-    @Deprecated
-    default T gett(final long id) throws SQLException {
-        return getOrNull(id);
-    }
-
-    /**
-     * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
-     *
-     * @param id the primitive long ID of the entity to retrieve
-     * @param selectPropNames the properties to select, excluding properties of joining entities.
-     *                        All properties will be selected if {@code null}
-     * @return the entity if found, otherwise {@code null}
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
-     * @throws SQLException if a database access error occurs
-     * @deprecated use {@link #getOrNull(long, Collection)} instead.
-     */
-    @Deprecated
     default T gett(final long id, final Collection<String> selectPropNames) throws SQLException {
-        return getOrNull(id, selectPropNames);
+        return gett(Long.valueOf(id), selectPropNames);
     }
 
     /**

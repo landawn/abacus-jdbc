@@ -119,7 +119,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <pre>{@code
  * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
- *     User user = userDao.getOrNull(id);
+ *     User user = userDao.gett(id);
  *     userDao.update(user);
  *     tran.commit();
  * } finally {

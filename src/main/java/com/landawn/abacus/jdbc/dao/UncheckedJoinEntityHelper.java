@@ -80,7 +80,7 @@ import com.landawn.abacus.util.stream.Stream;
  * );
  *
  * // Load join entities manually
- * User user = userDao.getOrNull(1);
+ * User user = userDao.gett(1);
  * userDao.loadJoinEntities(user, "orders");
  * userDao.loadJoinEntities(user, UserProfile.class);
  * }</pre>
@@ -422,7 +422,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load all orders for this user
      * userDao.loadJoinEntities(user, Order.class);
      * // Now user.getOrders() will contain the loaded orders
@@ -442,7 +442,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load orders but only fetch id, orderDate, and total
      * userDao.loadJoinEntities(
      *     user, 
@@ -534,7 +534,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Specifically load the "orders" property
      * userDao.loadJoinEntities(user, "orders");
      * // Load the "profile" property
@@ -566,7 +566,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load orders property with only specific fields
      * userDao.loadJoinEntities(
      *     user,
@@ -671,7 +671,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load specific join properties
      * userDao.loadJoinEntities(
      *     user,
@@ -700,7 +700,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load multiple properties in parallel
      * userDao.loadJoinEntities(
      *     user,
@@ -732,7 +732,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(4);
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * 
      * userDao.loadJoinEntities(
      *     user,
@@ -862,7 +862,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load all related entities (orders, profile, addresses, etc.)
      * userDao.loadAllJoinEntities(user);
      * }</pre>
@@ -882,7 +882,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Load all join entities in parallel for better performance
      * userDao.loadAllJoinEntities(user, true);
      * }</pre>
@@ -909,7 +909,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ForkJoinPool customPool = new ForkJoinPool(8);
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * 
      * // Load all join entities with custom thread pool
      * userDao.loadAllJoinEntities(user, customPool);
@@ -1563,7 +1563,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete all orders for this user
      * int deletedCount = userDao.deleteJoinEntities(user, Order.class);
      * }</pre>
@@ -1672,7 +1672,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete all addresses for this user
      * int deleted = userDao.deleteJoinEntities(user, "addresses");
      *
@@ -1756,7 +1756,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete all orders and reviews for this user
      * int deleted = userDao.deleteJoinEntities(
      *     user,
@@ -1802,7 +1802,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService executor = Executors.newFixedThreadPool(4);
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete multiple related entities in parallel
      * int deleted = userDao.deleteJoinEntities(
      *     user,
@@ -1840,7 +1840,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete multiple relationships in parallel
      * int deleted = userDao.deleteJoinEntities(
      *     user,
@@ -1993,7 +1993,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete all related entities (orders, addresses, profile, etc.)
      * int totalDeleted = userDao.deleteAllJoinEntities(user);
      * }</pre>
@@ -2014,7 +2014,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * // Delete all relationships in parallel
      * int deleted = userDao.deleteAllJoinEntities(user, true);
      * }</pre>
@@ -2044,7 +2044,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService cleanupService = Executors.newCachedThreadPool();
-     * User user = userDao.getOrNull(userId);
+     * User user = userDao.gett(userId);
      * 
      * int deleted = userDao.deleteAllJoinEntities(user, cleanupService);
      * }</pre>

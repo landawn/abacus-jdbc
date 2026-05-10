@@ -37,7 +37,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p><b>Supported Read Operations:</b></p>
  * <ul>
- *   <li>{@code get(ID)} / {@code getOrNull(ID)} - Retrieve entity by ID (returns {@code Optional} or {@code null})</li>
+ *   <li>{@code get(ID)} / {@code gett(ID)} - Retrieve entity by ID (returns {@code Optional} or {@code null})</li>
  *   <li>{@code list(Condition)} - Query multiple records matching a condition</li>
  *   <li>{@code findFirst(Condition)} - Find the first record matching a condition</li>
  *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws if multiple found)</li>
@@ -66,7 +66,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * Optional<Report> report = reportDao.get(123L);
  *
  * // Get by ID (returns null if not found)
- * Report report2 = reportDao.getOrNull(456L);
+ * Report report2 = reportDao.gett(456L);
  *
  * // List reports by condition
  * List<Report> activeReports = reportDao.list(Filters.eq("status", "ACTIVE"));

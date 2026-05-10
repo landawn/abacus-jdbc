@@ -38,14 +38,14 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * // Get user by primitive long ID with join entities
  * Optional<User> user = userDao.get(123L, Order.class);
- * User userWithAll = userDao.getOrNull(123L, true);   // Load all join entities
+ * User userWithAll = userDao.gett(123L, true);   // Load all join entities
  *
  * // Batch operations with primitive long IDs
  * List<Long> ids = Arrays.asList(123L, 456L, 789L);
  * List<User> users = userDao.batchGet(ids, Order.class);
  *
  * // Load join entities for existing entity
- * User existingUser = userDao.getOrNull(123L);
+ * User existingUser = userDao.gett(123L);
  * userDao.loadJoinEntities(existingUser, Role.class);   // Works fine
  *
  * // Delete operations throw UnsupportedOperationException

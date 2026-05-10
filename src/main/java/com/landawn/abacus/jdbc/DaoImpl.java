@@ -4408,7 +4408,7 @@ final class DaoImpl {
                                         return Optional.empty();
                                     });
                         };
-                    } else if (methodName.equals("getOrNull") || methodName.equals("gett")) {
+                    } else if (methodName.equals("gett")) {
                         if (paramLen == 1) {
                             call = (proxy, args) -> {
                                 final Object id = args[0];

@@ -532,7 +532,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(123L);
+     * User user = userDao.gett(123L);
      * if (user != null) {
      *     processUser(user);
      * }
@@ -543,8 +543,8 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default T getOrNull(final long id) throws UncheckedSQLException {
-        return getOrNull(Long.valueOf(id));
+    default T gett(final long id) throws UncheckedSQLException {
+        return gett(Long.valueOf(id));
     }
 
     /**
@@ -553,7 +553,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.getOrNull(123L, Arrays.asList("id", "email", "status"));
+     * User user = userDao.gett(123L, Arrays.asList("id", "email", "status"));
      * }</pre>
      *
      * @param id the entity ID as primitive long
@@ -562,37 +562,8 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    default T getOrNull(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
-        return getOrNull(Long.valueOf(id), selectPropNames);
-    }
-
-    /**
-     * Retrieves the entity with the specified ID, returning {@code null} if not found.
-     *
-     * @param id the entity ID as primitive long
-     * @return the entity if found, otherwise null
-     * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated use {@link #getOrNull(long)} instead.
-     */
-    @Override
-    @Deprecated
-    default T gett(final long id) throws UncheckedSQLException {
-        return getOrNull(id);
-    }
-
-    /**
-     * Retrieves the entity with the specified ID and selected properties; returns {@code null} if not found.
-     *
-     * @param id the entity ID as primitive long
-     * @param selectPropNames the properties to select, or {@code null} to select all
-     * @return the entity with selected properties if found, otherwise null
-     * @throws UncheckedSQLException if a database access error occurs
-     * @deprecated use {@link #getOrNull(long, Collection)} instead.
-     */
-    @Override
-    @Deprecated
     default T gett(final long id, final Collection<String> selectPropNames) throws UncheckedSQLException {
-        return getOrNull(id, selectPropNames);
+        return gett(Long.valueOf(id), selectPropNames);
     }
 
     /**

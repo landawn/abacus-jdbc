@@ -43,7 +43,7 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * // Fetch a user with their orders - no checked exceptions
  * Optional<User> userWithOrders = userDao.get(123L, Order.class);
- * User userWithAll = userDao.getOrNull(123L, true);   // Load all join entities
+ * User userWithAll = userDao.gett(123L, true);   // Load all join entities
  *
  * // Batch get with join entities
  * List<User> users = userDao.batchGet(Arrays.asList(1L, 2L, 3L), Order.class);
