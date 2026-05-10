@@ -1827,7 +1827,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append(checkColumnName(columnNames[i], dbProductInfo));
 
                 if (values.get(i) instanceof String) {
-                    sb.append(" = '").append(N.stringOf(values.get(i))).append('\'');
+                    sb.append(" = '").append(N.stringOf(values.get(i)).replace("'", "''")).append('\'');
                 } else {
                     sb.append(" = ").append(N.stringOf(values.get(i)));
                 }
@@ -1839,7 +1839,9 @@ public final class JdbcCodeGenerationUtil {
             }
 
             return sb.toString();
-        } catch (Exception e) {
+        } catch (final IllegalArgumentException e) {
+            throw e;
+        } catch (final Exception e) {
             throw new IllegalArgumentException("Failed to convert insert SQL to update SQL: " + insertSql, e);
         } finally {
             Objectory.recycle(sb);

@@ -171,7 +171,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     volatile boolean isClosed = false;
 
-    Runnable closeHandler;
+    volatile Runnable closeHandler;
 
     AbstractQuery(final Stmt stmt) {
         this.stmt = stmt;
@@ -6351,6 +6351,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @see Jdbc.BiRowMapper#to(Class)
      */
     public <T> List<T> list(final Class<? extends T> targetType) throws SQLException {
+        checkArgNotNull(targetType, cs.targetType);
+
         return list(Jdbc.BiRowMapper.to(targetType));
     }
 
@@ -6374,6 +6376,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @Deprecated
     public <T> List<T> list(final Class<? extends T> targetType, final int maxResult) throws SQLException {
+        checkArgNotNull(targetType, cs.targetType);
+
         return list(Jdbc.BiRowMapper.to(targetType), maxResult);
     }
 
@@ -7013,6 +7017,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, R, E extends Exception> R listThenApply(final Class<? extends T> targetType, final Throwables.Function<? super List<T>, ? extends R, E> func)
             throws SQLException, E {
+        checkArgNotNull(targetType, cs.targetType);
         checkArgNotNull(func, cs.func);
 
         return func.apply(list(targetType));
@@ -7137,6 +7142,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     @Beta
     public <T, E extends Exception> void listThenAccept(final Class<? extends T> targetType, final Throwables.Consumer<? super List<T>, E> consumer)
             throws SQLException, E {
+        checkArgNotNull(targetType, cs.targetType);
         checkArgNotNull(consumer, cs.consumer);
 
         consumer.accept(list(targetType));
@@ -7277,6 +7283,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     @LazyEvaluation
     public <T> Stream<T> stream(final Class<? extends T> targetType) {
+        checkArgNotNull(targetType, cs.targetType);
+
         return stream(Jdbc.BiRowMapper.to(targetType));
     }
 
@@ -10009,7 +10017,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     void assertNotClosed() {
         if (isClosed) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " has already been closed");
         }
     }
 }

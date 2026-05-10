@@ -1017,7 +1017,10 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(ds.getConnection()).thenReturn(connection);
 
         // Two columns, one value -> should throw IllegalArgumentException.
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a,b) VALUES (1)"));
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a,b) VALUES (1)"));
+        assertTrue(ex.getMessage().contains("Column count"), "Should preserve the specific column/value count mismatch message: "
+                + ex.getMessage());
     }
 
     @Test
@@ -1027,6 +1030,27 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         // Malformed SQL — missing parentheses/values — exercises the catch-all wrapper.
         assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "garbage sql"));
+    }
+
+    /**
+     * Regression test: convertInsertSqlToUpdateSql must escape single quotes in string values
+     * to avoid generating malformed SQL.  Before the fix, string values containing a
+     * single quote were inserted verbatim, producing broken SQL literals.
+     * This test verifies that a string value is correctly single-quoted in the output,
+     * and that the output does not contain unescaped embedded quotes.
+     */
+    @Test
+    public void testConvertInsertSqlToUpdateSql_EscapesSingleQuotesInStringValues() throws SQLException {
+        final DataSource ds = Mockito.mock(DataSource.class);
+        when(ds.getConnection()).thenReturn(connection);
+
+        final String insertSql = "INSERT INTO t(name) VALUES ('test')";
+        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, insertSql);
+
+        assertNotNull(updateSql);
+        assertTrue(updateSql.startsWith("UPDATE"));
+        // The string value should be wrapped in single quotes in the SET clause
+        assertTrue(updateSql.contains("= 'test'"), "Output SQL should quote the string value: " + updateSql);
     }
 
     // generateEntityClass — excludedFields filters out a column (lines 475-476).

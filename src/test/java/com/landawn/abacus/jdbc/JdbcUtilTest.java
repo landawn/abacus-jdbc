@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.DisplayName;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -40,12 +42,16 @@ import java.util.function.Supplier;
 
 import javax.sql.DataSource;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.ReadOnly;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.annotation.Transient;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.OutParam;
@@ -2366,5 +2372,71 @@ public class JdbcUtilTest extends TestBase {
             assertTrue(productName != null && productName.toLowerCase().contains("hsql"),
                     "Expected HSQLDB driver, but connected to: " + productName);
         }
+    }
+
+    // BUG FIX: When close(ResultSet, Statement) encounters failures for both resources,
+    // the first exception must be thrown with the second one attached via addSuppressed.
+    // The previous implementation silently lost the ResultSet close error when the
+    // Statement close also failed.
+    @Test
+    @Tag("2025")
+    @DisplayName("close(ResultSet, Statement): preserves first exception with second suppressed when both throw")
+    public void testClose_ResultSetStatement_BothThrow_FirstExceptionWithSecondSuppressed() throws SQLException {
+        final SQLException rsEx = new SQLException("rs boom");
+        final SQLException stmtEx = new SQLException("stmt boom");
+
+        final ResultSet rs = mock(ResultSet.class);
+        final Statement stmt = mock(Statement.class);
+        doThrow(rsEx).when(rs).close();
+        doThrow(stmtEx).when(stmt).close();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(rs, stmt));
+        assertEquals(rsEx, thrown.getCause(), "primary exception should be from ResultSet.close()");
+        assertEquals(1, thrown.getCause().getSuppressed().length, "should have one suppressed exception");
+        assertEquals(stmtEx, thrown.getCause().getSuppressed()[0], "suppressed exception should be from Statement.close()");
+    }
+
+    // BUG FIX: When close(Statement, Connection) encounters failures for both resources,
+    // the first exception must be thrown with the second one attached via addSuppressed.
+    @Test
+    @Tag("2025")
+    @DisplayName("close(Statement, Connection): preserves first exception with second suppressed when both throw")
+    public void testClose_StatementConnection_BothThrow_FirstExceptionWithSecondSuppressed() throws SQLException {
+        final SQLException stmtEx = new SQLException("stmt boom");
+        final SQLException connEx = new SQLException("conn boom");
+
+        final Statement stmt = mock(Statement.class);
+        final Connection conn = mock(Connection.class);
+        doThrow(stmtEx).when(stmt).close();
+        doThrow(connEx).when(conn).close();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(stmt, conn));
+        assertEquals(stmtEx, thrown.getCause(), "primary exception should be from Statement.close()");
+        assertEquals(1, thrown.getCause().getSuppressed().length, "should have one suppressed exception");
+        assertEquals(connEx, thrown.getCause().getSuppressed()[0], "suppressed exception should be from Connection.close()");
+    }
+
+    // BUG FIX: When close(ResultSet, Statement, Connection) encounters failures for all three resources,
+    // the first exception (from ResultSet) must be thrown with the remaining two attached via addSuppressed.
+    @Test
+    @Tag("2025")
+    @DisplayName("close(ResultSet, Statement, Connection): preserves first exception with all others suppressed when all throw")
+    public void testClose_ResultSetStatementConnection_AllThrow_PreservesFirstWithRestSuppressed() throws SQLException {
+        final SQLException rsEx = new SQLException("rs boom");
+        final SQLException stmtEx = new SQLException("stmt boom");
+        final SQLException connEx = new SQLException("conn boom");
+
+        final ResultSet rs = mock(ResultSet.class);
+        final Statement stmt = mock(Statement.class);
+        final Connection conn = mock(Connection.class);
+        doThrow(rsEx).when(rs).close();
+        doThrow(stmtEx).when(stmt).close();
+        doThrow(connEx).when(conn).close();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(rs, stmt, conn));
+        assertEquals(rsEx, thrown.getCause(), "primary exception should be from ResultSet.close()");
+        assertEquals(2, thrown.getCause().getSuppressed().length, "should have two suppressed exceptions");
+        assertEquals(stmtEx, thrown.getCause().getSuppressed()[0], "first suppressed should be from Statement.close()");
+        assertEquals(connEx, thrown.getCause().getSuppressed()[1], "second suppressed should be from Connection.close()");
     }
 }

@@ -5,7 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +24,8 @@ import java.util.concurrent.Executor;
 
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -656,6 +662,36 @@ public class DaoTest extends TestBase {
 
         assertSame(dbEntity, result);
         assertEquals("updated", dbEntity.getName());
+    }
+
+    @Tag("2025")
+    @DisplayName("upsert update path with id uses id-based condition not original condition")
+    @Test
+    public void testUpsert_UpdatePath_WithId_UsesIdConditionForUpdate() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition condition = Mockito.mock(Condition.class);
+        final TestEntity entity = new TestEntity();
+        entity.setId(1L);
+        entity.setName("updated");
+        final TestEntity dbEntity = new TestEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("original");
+
+        when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.update(
+                eq(dbEntity),
+                anyCollection(),
+                any(Condition.class))).thenReturn(1);
+
+        final TestEntity result = dao.upsert(entity, condition);
+
+        assertSame(dbEntity, result);
+        assertEquals("updated", dbEntity.getName());
+        verify(dao).update(
+                eq(dbEntity),
+                anyCollection(),
+                argThat(c -> c != condition));
     }
 
     @Test

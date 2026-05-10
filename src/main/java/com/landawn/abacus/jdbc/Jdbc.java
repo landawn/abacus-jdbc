@@ -5572,6 +5572,8 @@ public final class Jdbc {
          * @return a {@code ColumnGetter} for the specified type.
          */
         static <T> ColumnGetter<T> get(final Type<? extends T> type) {
+            N.checkArgNotNull(type, cs.type);
+
             final ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.computeIfAbsent(type, k -> type::get);
 
             return (ColumnGetter<T>) columnGetter;
@@ -6680,6 +6682,8 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
             if (result == null) {
                 return false;
             }
@@ -6692,6 +6696,8 @@ public final class Jdbc {
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
             if (result == null) {
                 return false;
             }

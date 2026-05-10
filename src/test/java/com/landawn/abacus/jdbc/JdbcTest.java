@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -3367,5 +3368,38 @@ public class JdbcTest extends TestBase {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col1")));
         assertTrue(ex.getMessage().contains("col2"), "Expected message to mention col2: " + ex.getMessage());
+    }
+
+    // Bug fix: ColumnGetter.get(Type) should throw IllegalArgumentException for null type,
+    // not a cryptic NullPointerException from the pool's computeIfAbsent.
+    @Tag("2025")
+    @Test
+    public void testColumnGetterGet_NullType_ThrowsIAE() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.ColumnGetter.get((com.landawn.abacus.type.Type<?>) null));
+    }
+
+    // Bug fix: DaoCacheByMap.put() should reject null cache keys consistently with DefaultDaoCache.
+    @Tag("2025")
+    @Test
+    public void testDaoCacheByMapPut_NullKey_ThrowsIAE() throws Exception {
+        Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        assertThrows(IllegalArgumentException.class, () -> cache.put(null, "value", null, null, methodSignature));
+    }
+
+    @Tag("2025")
+    @Test
+    public void testDaoCacheByMapPutWithTTL_NullKey_ThrowsIAE() throws Exception {
+        Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        assertThrows(IllegalArgumentException.class, () -> cache.put(null, "value", 5000L, 3000L, null, null, methodSignature));
     }
 }

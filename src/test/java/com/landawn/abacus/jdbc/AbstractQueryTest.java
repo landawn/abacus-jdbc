@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -1067,5 +1069,73 @@ public class AbstractQueryTest extends TestBase {
         Predicate<Object> isDefault = id -> id == null;
         List<?> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> null, isDefault);
         assertEquals(0, result.size());
+    }
+
+    @Tag("2025")
+    @DisplayName("list(null) should throw IllegalArgumentException mentioning targetType")
+    @Test
+    public void testList_NullTargetType_ThrowsIllegalArgumentException() {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.list((Class<?>) null));
+        assertTrue(iae.getMessage().contains("targetType"));
+    }
+
+    @Tag("2025")
+    @DisplayName("stream(null) should throw IllegalArgumentException mentioning targetType")
+    @Test
+    public void testStream_NullTargetType_ThrowsIllegalArgumentException() {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.stream((Class<?>) null));
+        assertTrue(iae.getMessage().contains("targetType"));
+    }
+
+    @Tag("2025")
+    @DisplayName("listThenApply(null, func) should throw IllegalArgumentException mentioning targetType")
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testListThenApply_NullTargetType_ThrowsIllegalArgumentException() {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.listThenApply((Class<String>) null, (Throwables.Function<List<String>, String, RuntimeException>) list -> "ok"));
+        assertTrue(iae.getMessage().contains("targetType"));
+    }
+
+    @Tag("2025")
+    @DisplayName("listThenAccept(null, consumer) should throw IllegalArgumentException mentioning targetType")
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testListThenAccept_NullTargetType_ThrowsIllegalArgumentException() {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.listThenAccept((Class<String>) null, (Throwables.Consumer<List<String>, RuntimeException>) list -> {
+                }));
+        assertTrue(iae.getMessage().contains("targetType"));
+    }
+
+    @Tag("2025")
+    @DisplayName("assertNotClosed should include class name in error message")
+    @Test
+    public void testAssertNotClosed_ErrorMessageContainsClassName() {
+        query.close();
+
+        final IllegalStateException ise = assertThrows(IllegalStateException.class, () -> query.closeAfterExecution(false));
+        assertTrue(ise.getMessage().contains("TestQuery"));
+        assertTrue(ise.getMessage().contains("closed"));
+    }
+
+    @Tag("2025")
+    @DisplayName("onClose handler registered after close should throw IllegalStateException")
+    @Test
+    public void testOnClose_AfterClose_ThrowsIllegalStateException() {
+        query.close();
+
+        assertThrows(IllegalStateException.class, () -> query.onClose(() -> {
+        }));
+    }
+
+    @Tag("2025")
+    @DisplayName("list(Class, int) with null targetType should throw IllegalArgumentException")
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testList_WithLimit_NullTargetType_ThrowsIllegalArgumentException() {
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
+                () -> query.list((Class<?>) null, 10));
+        assertTrue(iae.getMessage().contains("targetType"));
     }
 }

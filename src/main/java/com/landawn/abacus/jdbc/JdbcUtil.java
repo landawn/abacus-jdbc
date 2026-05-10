@@ -1179,20 +1179,30 @@ public final class JdbcUtil {
      * @see #closeQuietly(ResultSet, Statement)
      */
     public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException {
-        try {
-            if (rs != null) {
-                rs.close();
-            }
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        } finally {
+        SQLException exception = null;
+
+        if (rs != null) {
             try {
-                if (stmt != null) {
-                    stmt.close();
-                }
+                rs.close();
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e); //NOSONAR
+                exception = e;
             }
+        }
+
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (final SQLException e) {
+                if (exception == null) {
+                    exception = e;
+                } else {
+                    exception.addSuppressed(e);
+                }
+            }
+        }
+
+        if (exception != null) {
+            throw new UncheckedSQLException(exception);
         }
     }
 
@@ -1223,20 +1233,30 @@ public final class JdbcUtil {
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static void close(final Statement stmt, final Connection conn) throws UncheckedSQLException {
-        try {
-            if (stmt != null) {
-                stmt.close();
-            }
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        } finally {
+        SQLException exception = null;
+
+        if (stmt != null) {
             try {
-                if (conn != null) {
-                    conn.close();
-                }
+                stmt.close();
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e); //NOSONAR
+                exception = e;
             }
+        }
+
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (final SQLException e) {
+                if (exception == null) {
+                    exception = e;
+                } else {
+                    exception.addSuppressed(e);
+                }
+            }
+        }
+
+        if (exception != null) {
+            throw new UncheckedSQLException(exception);
         }
     }
 
@@ -1269,28 +1289,42 @@ public final class JdbcUtil {
      * @see #closeQuietly(ResultSet, Statement, Connection)
      */
     public static void close(final ResultSet rs, final Statement stmt, final Connection conn) throws UncheckedSQLException {
-        try {
-            if (rs != null) {
-                rs.close();
-            }
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        } finally {
+        SQLException exception = null;
+
+        if (rs != null) {
             try {
-                if (stmt != null) {
-                    stmt.close();
-                }
+                rs.close();
             } catch (final SQLException e) {
-                throw new UncheckedSQLException(e); //NOSONAR
-            } finally {
-                try {
-                    if (conn != null) {
-                        conn.close();
-                    }
-                } catch (final SQLException e) {
-                    throw new UncheckedSQLException(e); //NOSONAR
+                exception = e;
+            }
+        }
+
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (final SQLException e) {
+                if (exception == null) {
+                    exception = e;
+                } else {
+                    exception.addSuppressed(e);
                 }
             }
+        }
+
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (final SQLException e) {
+                if (exception == null) {
+                    exception = e;
+                } else {
+                    exception.addSuppressed(e);
+                }
+            }
+        }
+
+        if (exception != null) {
+            throw new UncheckedSQLException(exception);
         }
     }
 
