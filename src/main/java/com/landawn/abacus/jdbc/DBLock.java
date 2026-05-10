@@ -203,7 +203,7 @@ public final class DBLock {
 
             JdbcUtil.createTableIfNotExists(conn, tableName, schema);
 
-            if (!JdbcUtil.doesTableExist(conn, tableName)) {
+            if (!JdbcUtil.tableExists(conn, tableName)) {
                 throw new IllegalStateException("Lock table does not exist after creation attempt: " + tableName);
             }
 

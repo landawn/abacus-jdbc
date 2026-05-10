@@ -2024,13 +2024,13 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
-     * @param out the File to write the CSV data to (will be created if doesn't exist)
+     * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
-    public static long exportCsv(final PreparedStatement stmt, final File out) throws SQLException, IOException {
-        return exportCsv(stmt, null, out);
+    public static long exportCsv(final PreparedStatement stmt, final File output) throws SQLException, IOException {
+        return exportCsv(stmt, null, output);
     }
 
     /**

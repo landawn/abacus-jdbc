@@ -924,7 +924,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ", " FROM " + checkTableName(tableName, dbProductInfo));
         } catch (final SQLException e) {
@@ -992,7 +992,7 @@ public final class JdbcCodeGenerationUtil {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
@@ -1053,7 +1053,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
@@ -1121,7 +1121,7 @@ public final class JdbcCodeGenerationUtil {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
@@ -1183,7 +1183,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "INSERT INTO " + checkTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
@@ -1252,7 +1252,7 @@ public final class JdbcCodeGenerationUtil {
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
@@ -1316,7 +1316,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList).map(columnLabel -> checkColumnName(columnLabel, dbProductInfo) + " = ?").join(", ");
@@ -1376,7 +1376,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
                     .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
@@ -1471,7 +1471,7 @@ public final class JdbcCodeGenerationUtil {
                     .map(Strings::toCamelCase)
                     .collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
@@ -1555,7 +1555,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(columnLabelList)
@@ -1617,7 +1617,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final List<String> columnLabelList = JdbcUtil.getColumnLabelList(rs);
+            final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             return "UPDATE " + checkTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
                     .filter(columnLabel -> !(columnLabel.equals(keyColumnName) || Strings.toCamelCase(columnLabel).equals(Strings.toCamelCase(keyColumnName))))
@@ -1707,7 +1707,7 @@ public final class JdbcCodeGenerationUtil {
                     .map(Strings::toCamelCase)
                     .collect(Collectors.toSet());
 
-            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabelList(rs))
+            final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 

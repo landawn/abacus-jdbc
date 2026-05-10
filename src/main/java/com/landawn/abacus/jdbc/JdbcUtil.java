@@ -1730,7 +1730,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection connection = dataSource.getConnection()) {
-     *     List<String> userColumns = JdbcUtil.getColumnNameList(connection, "users");
+     *     List<String> userColumns = JdbcUtil.getColumnNames(connection, "users");
      *     System.out.println("Columns in 'users' table: " + userColumns);
      *     // Example Output: [id, first_name, last_name, email, registration_date]
      * } catch (SQLException e) {
@@ -1743,9 +1743,9 @@ public final class JdbcUtil {
      * @return A {@link List} of column names in the order they are defined in the table.
      * @throws SQLException If a database access error occurs or the table does not exist.
      * @throws IllegalArgumentException If {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
-     * @see #getColumnLabelList(ResultSet)
+     * @see #getColumnLabels(ResultSet)
      */
-    public static List<String> getColumnNameList(final Connection conn, final String tableName) throws SQLException {
+    public static List<String> getColumnNames(final Connection conn, final String tableName) throws SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, "tableName");
 
@@ -1780,30 +1780,30 @@ public final class JdbcUtil {
 
         final DatabaseMetaData metadata = conn.getMetaData();
         final String schemaToUse = schema == null ? conn.getSchema() : schema;
-        List<String> columnNameList = getColumnNameList(metadata, catalog, schemaToUse, table);
+        List<String> columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table);
 
         if (N.isEmpty(columnNameList) && schema == null) {
-            columnNameList = getColumnNameList(metadata, catalog, null, table);
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table);
         }
 
         if (N.isEmpty(columnNameList)) {
-            columnNameList = getColumnNameList(metadata, catalog, schemaToUse, table.toUpperCase());
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table.toUpperCase());
         }
 
         if (N.isEmpty(columnNameList)) {
-            columnNameList = getColumnNameList(metadata, catalog, schemaToUse, table.toLowerCase());
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, schemaToUse, table.toLowerCase());
         }
 
         if (N.isEmpty(columnNameList) && schema == null) {
-            columnNameList = getColumnNameList(metadata, catalog, null, table.toUpperCase());
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table.toUpperCase());
         }
 
         if (N.isEmpty(columnNameList) && schema == null) {
-            columnNameList = getColumnNameList(metadata, catalog, null, table.toLowerCase());
+            columnNameList = getColumnNamesFromMetadata(metadata, catalog, null, table.toLowerCase());
         }
 
         if (N.isEmpty(columnNameList) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
-            columnNameList = getColumnNameListBySelect(conn, fallbackQualifiedTableName);
+            columnNameList = getColumnNamesBySelect(conn, fallbackQualifiedTableName);
         }
 
         if (N.isEmpty(columnNameList)) {
@@ -1813,7 +1813,22 @@ public final class JdbcUtil {
         return columnNameList;
     }
 
-    private static List<String> getColumnNameList(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
+    /**
+     * Returns an ordered list of column names for a specified table.
+     *
+     * @param conn The database {@link Connection} to use.
+     * @param tableName The name of the table for which to retrieve column names.
+     * @return A {@link List} of column names in the order they are defined in the table.
+     * @throws SQLException If a database access error occurs or the table does not exist.
+     * @throws IllegalArgumentException If {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
+     * @deprecated use {@link #getColumnNames(Connection, String)} instead.
+     */
+    @Deprecated
+    public static List<String> getColumnNameList(final Connection conn, final String tableName) throws SQLException {
+        return getColumnNames(conn, tableName);
+    }
+
+    private static List<String> getColumnNamesFromMetadata(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
             final String tableNamePattern) throws SQLException {
         final ResultSet rs = metadata.getColumns(catalog, schemaPattern, tableNamePattern, null);
 
@@ -1851,7 +1866,7 @@ public final class JdbcUtil {
         }
     }
 
-    private static List<String> getColumnNameListBySelect(final Connection conn, final String qualifiedTableName) throws SQLException {
+    private static List<String> getColumnNamesBySelect(final Connection conn, final String qualifiedTableName) throws SQLException {
         final String query = "SELECT * FROM " + qualifiedTableName + " WHERE 1 > 2";
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -1884,7 +1899,7 @@ public final class JdbcUtil {
      * try (Statement stmt = connection.createStatement();
      *      ResultSet rs = stmt.executeQuery("SELECT user_id AS 'User ID', user_name AS 'User Name' FROM users")) {
      *
-     *     List<String> labels = JdbcUtil.getColumnLabelList(rs);
+     *     List<String> labels = JdbcUtil.getColumnLabels(rs);
      *     System.out.println(labels);   // Output: [User ID, User Name]
      * }
      * }</pre>
@@ -1892,10 +1907,10 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} from which to retrieve column labels.
      * @return A {@link List} of column labels in the order they appear in the {@code ResultSet}.
      * @throws SQLException If a database access error occurs.
-     * @see #getColumnNameList(Connection, String)
+     * @see #getColumnNames(Connection, String)
      * @see ResultSetMetaData#getColumnLabel(int)
      */
-    public static List<String> getColumnLabelList(final ResultSet rs) throws SQLException {
+    public static List<String> getColumnLabels(final ResultSet rs) throws SQLException {
         final ResultSetMetaData metaData = rs.getMetaData();
         final int columnCount = metaData.getColumnCount();
         final List<String> labelList = new ArrayList<>(columnCount);
@@ -1905,6 +1920,19 @@ public final class JdbcUtil {
         }
 
         return labelList;
+    }
+
+    /**
+     * Returns an ordered list of column labels from a {@link ResultSet}.
+     *
+     * @param rs The {@link ResultSet} from which to retrieve column labels.
+     * @return A {@link List} of column labels in the order they appear in the {@code ResultSet}.
+     * @throws SQLException If a database access error occurs.
+     * @deprecated use {@link #getColumnLabels(ResultSet)} instead.
+     */
+    @Deprecated
+    public static List<String> getColumnLabelList(final ResultSet rs) throws SQLException {
+        return getColumnLabels(rs);
     }
 
     /**
@@ -1950,14 +1978,14 @@ public final class JdbcUtil {
      * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email");             // Returns -1
      * }</pre>
      *
-     * @param resultSet The {@link ResultSet} to search within.
+     * @param rs The {@link ResultSet} to search within.
      * @param columnName The name or label of the column to find.
      * @return The 1-based index of the column, or -1 if not found.
      * @throws SQLException If a database access error occurs.
      * @see #getColumnIndex(ResultSetMetaData, String)
      */
-    public static int getColumnIndex(final ResultSet resultSet, final String columnName) throws SQLException {
-        return getColumnIndex(resultSet.getMetaData(), columnName);
+    public static int getColumnIndex(final ResultSet rs, final String columnName) throws SQLException {
+        return getColumnIndex(rs.getMetaData(), columnName);
     }
 
     /**
@@ -2424,7 +2452,7 @@ public final class JdbcUtil {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
 
         if (columnIndex < 1) {
-            throw new IllegalArgumentException("No column found with name: " + columnLabel + " in result set: " + JdbcUtil.getColumnLabelList(rs));
+            throw new IllegalArgumentException("No column found with name: " + columnLabel + " in result set: " + JdbcUtil.getColumnLabels(rs));
         }
 
         return getAllColumnValues(rs, columnIndex);
@@ -5771,7 +5799,7 @@ public final class JdbcUtil {
 
     static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
         try {
-            return checkNotResultSet(resultExtractor.apply(rs, getColumnLabelList(rs)));
+            return checkNotResultSet(resultExtractor.apply(rs, getColumnLabels(rs)));
         } finally {
             closeQuietly(rs);
         }
@@ -6090,7 +6118,7 @@ public final class JdbcUtil {
 
                 if (columnLabels == null) {
                     try {
-                        columnLabels = getColumnLabelList(resultSet);
+                        columnLabels = getColumnLabels(resultSet);
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     }
@@ -6203,7 +6231,7 @@ public final class JdbcUtil {
             public boolean hasNext() {
                 if (columnLabels == null) {
                     try {
-                        columnLabels = JdbcUtil.getColumnLabelList(resultSet);
+                        columnLabels = JdbcUtil.getColumnLabels(resultSet);
                     } catch (final SQLException e) {
                         throw new UncheckedSQLException(e);
                     }
@@ -7103,7 +7131,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * if (JdbcUtil.doesTableExist(ds, "users")) {
+     * if (JdbcUtil.tableExists(ds, "users")) {
      *     System.out.println("Users table exists");
      * } else {
      *     System.out.println("Users table does not exist");
@@ -7116,15 +7144,30 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
      */
-    public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName) {
+    public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) {
         Connection conn = null;
 
         try {
             conn = getConnection(ds);
-            return doesTableExist(conn, tableName);
+            return tableExists(conn, tableName);
         } finally {
             releaseConnection(conn, ds);
         }
+    }
+
+    /**
+     * Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource}.
+     *
+     * @param ds the data source to get the connection from
+     * @param tableName the table name (optionally qualified); must not be blank
+     * @return {@code true} if the table exists, {@code false} otherwise
+     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
+     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @deprecated use {@link #tableExists(javax.sql.DataSource, String)} instead.
+     */
+    @Deprecated
+    public static boolean doesTableExist(final javax.sql.DataSource ds, final String tableName) {
+        return tableExists(ds, tableName);
     }
 
     /**
@@ -7140,7 +7183,7 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * if (JdbcUtil.doesTableExist(connection, "users")) {
+     * if (JdbcUtil.tableExists(connection, "users")) {
      *     System.out.println("Users table exists");
      * } else {
      *     System.out.println("Users table does not exist");
@@ -7153,7 +7196,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
      */
-    public static boolean doesTableExist(final Connection conn, final String tableName) {
+    public static boolean tableExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, "tableName");
 
@@ -7186,20 +7229,19 @@ public final class JdbcUtil {
             final DatabaseMetaData metadata = conn.getMetaData();
             final String schemaToUse = schema == null ? conn.getSchema() : schema;
 
-            if (doesTableExist(metadata, catalog, schemaToUse, table)) {
+            if (tableExists(metadata, catalog, schemaToUse, table)) {
                 return true;
             }
 
-            if (schema == null && doesTableExist(metadata, catalog, null, table)) {
+            if (schema == null && tableExists(metadata, catalog, null, table)) {
                 return true;
             }
 
-            if (doesTableExist(metadata, catalog, schemaToUse, table.toUpperCase()) || doesTableExist(metadata, catalog, schemaToUse, table.toLowerCase())) {
+            if (tableExists(metadata, catalog, schemaToUse, table.toUpperCase()) || tableExists(metadata, catalog, schemaToUse, table.toLowerCase())) {
                 return true;
             }
 
-            if (schema == null
-                    && (doesTableExist(metadata, catalog, null, table.toUpperCase()) || doesTableExist(metadata, catalog, null, table.toLowerCase()))) {
+            if (schema == null && (tableExists(metadata, catalog, null, table.toUpperCase()) || tableExists(metadata, catalog, null, table.toLowerCase()))) {
                 return true;
             }
 
@@ -7224,7 +7266,22 @@ public final class JdbcUtil {
         }
     }
 
-    private static boolean doesTableExist(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern)
+    /**
+     * Checks whether a table exists on the given {@link Connection}.
+     *
+     * @param conn the database connection to use for checking table existence
+     * @param tableName the table name (optionally qualified); must not be blank
+     * @return {@code true} if the table exists, {@code false} otherwise
+     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
+     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @deprecated use {@link #tableExists(Connection, String)} instead.
+     */
+    @Deprecated
+    public static boolean doesTableExist(final Connection conn, final String tableName) {
+        return tableExists(conn, tableName);
+    }
+
+    private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern)
             throws SQLException {
         final ResultSet rs = metadata.getTables(catalog, schemaPattern, tableNamePattern, null);
 
@@ -7417,7 +7474,7 @@ public final class JdbcUtil {
     /**
      * Creates a table if it does not already exist.
      *
-     * <p>The method first checks for existence via {@link #doesTableExist(Connection, String)} and only
+     * <p>The method first checks for existence via {@link #tableExists(Connection, String)} and only
      * executes the supplied {@code schema} statement when the table is missing. If the {@code CREATE} fails
      * because the table was created concurrently by another process, this method returns {@code false}
      * rather than rethrowing; any other SQL error is wrapped as {@link UncheckedSQLException}.</p>
@@ -7440,7 +7497,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
-        if (doesTableExist(conn, tableName)) {
+        if (tableExists(conn, tableName)) {
             return false;
         }
 
@@ -7450,7 +7507,7 @@ public final class JdbcUtil {
             return true;
         } catch (final SQLException e) {
             // The table may have been created concurrently by another thread/process
-            if (doesTableExist(conn, tableName)) {
+            if (tableExists(conn, tableName)) {
                 return false;
             }
 
@@ -7461,7 +7518,7 @@ public final class JdbcUtil {
     /**
      * Drops the specified table if it exists.
      *
-     * <p>The method first checks for existence via {@link #doesTableExist(Connection, String)} and only
+     * <p>The method first checks for existence via {@link #tableExists(Connection, String)} and only
      * issues a {@code DROP TABLE} if the table is found. If the drop itself fails because the table no
      * longer exists (for example, a concurrent drop), the method returns {@code false}; any other SQL
      * error is wrapped and rethrown as {@link UncheckedSQLException}.</p>
@@ -7491,7 +7548,7 @@ public final class JdbcUtil {
             throw new UncheckedSQLException(e);
         }
 
-        if (!doesTableExist(conn, tableName)) {
+        if (!tableExists(conn, tableName)) {
             return false;
         }
 
@@ -8158,7 +8215,7 @@ public final class JdbcUtil {
 
     @SuppressWarnings("deprecation")
     static final RowMapper<Object> MULTI_GENERATED_KEY_EXTRACTOR = rs -> {
-        final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+        final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
         if (columnLabels.size() == 1) {
             return getColumnValue(rs, 1);

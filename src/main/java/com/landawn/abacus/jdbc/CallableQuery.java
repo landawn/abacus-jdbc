@@ -3102,7 +3102,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             try (ResultSet rs = executeQuery()) {
                 if (rs != null) {
-                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+                    final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
                     while (rs.next()) {
                         result.add(rowMapper.apply(rs, columnLabels));
@@ -3181,7 +3181,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             try (ResultSet rs = executeQuery()) {
                 if (rs != null) {
-                    final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+                    final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
                     while (rs.next()) {
                         if (rowFilter.test(rs, columnLabels)) {

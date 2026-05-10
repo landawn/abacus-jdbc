@@ -90,7 +90,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      */
     @Beta
     default Optional<T> get(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, joinEntitiesToLoad));
+        return Optional.ofNullable(getOrNull(id, joinEntitiesToLoad));
     }
 
     /**
@@ -118,7 +118,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      */
     @Beta
     default Optional<T> get(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
     /**
@@ -143,7 +143,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        return Optional.ofNullable(getOrNull(id, selectPropNames, joinEntitiesToLoad));
     }
 
     /**
@@ -167,7 +167,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        return Optional.ofNullable(getOrNull(id, selectPropNames, joinEntitiesToLoad));
     }
 
     /**
@@ -192,7 +192,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, selectPropNames, includeAllJoinEntities));
     }
 
     /**
@@ -201,7 +201,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(123L, Order.class);
+     * User user = userDao.getOrNull(123L, Order.class);
      * if (user != null) {
      *     System.out.println("User: " + user.getName());
      *     System.out.println("Orders: " + user.getOrders().size());
@@ -216,8 +216,8 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+    default T getOrNull(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -227,12 +227,29 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
+     * Retrieves an entity by its ID and loads the specified type of join entities, returning {@code null} if not found.
+     *
+     * @param id the primitive {@code long} ID of the entity to retrieve
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the retrieved entity with join entities loaded, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @deprecated use {@link #getOrNull(long, Class)} instead.
+     */
+    @Beta
+    @Deprecated
+    default T gett(final long id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
+        return getOrNull(id, joinEntitiesToLoad);
+    }
+
+    /**
      * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(123L, true);
+     * User user = userDao.getOrNull(123L, true);
      * if (user != null) {
      *     // All @JoinedBy annotated fields are loaded
      *     processUserWithAllRelations(user);
@@ -247,8 +264,8 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+    default T getOrNull(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -258,13 +275,30 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
+     * Retrieves an entity by its ID and optionally loads all join entities, returning {@code null} if not found.
+     *
+     * @param id the primitive {@code long} ID of the entity to retrieve
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
+     * @return the retrieved entity with join entities loaded as specified, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(long, boolean)} instead.
+     */
+    @Beta
+    @Deprecated
+    default T gett(final long id, final boolean includeAllJoinEntities) throws DuplicateResultException, SQLException {
+        return getOrNull(id, includeAllJoinEntities);
+    }
+
+    /**
      * Retrieves an entity by its ID with selected properties and loads the specified type of join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal fields plus orders
-     * User user = userDao.gett(123L, Arrays.asList("id", "name"), Order.class);
+     * User user = userDao.getOrNull(123L, Arrays.asList("id", "name"), Order.class);
      * if (user != null) {
      *     displayUserSummary(user);
      * }
@@ -280,8 +314,9 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
-    default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+    default T getOrNull(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+            throws DuplicateResultException, SQLException {
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id, selectPropNames);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -291,13 +326,31 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
+     * Retrieves an entity by its ID with selected properties and loads the specified type of join entities, returning {@code null} if not found.
+     *
+     * @param id the primitive {@code long} ID of the entity to retrieve
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the retrieved entity with join entities loaded, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @deprecated use {@link #getOrNull(long, Collection, Class)} instead.
+     */
+    @Beta
+    @Deprecated
+    default T gett(final long id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, SQLException {
+        return getOrNull(id, selectPropNames, joinEntitiesToLoad);
+    }
+
+    /**
      * Retrieves an entity by its ID with selected properties and loads multiple types of join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders and addresses
-     * User user = userDao.gett(123L, null, Arrays.asList(Order.class, Address.class));
+     * User user = userDao.getOrNull(123L, null, Arrays.asList(Order.class, Address.class));
      * if (user != null) {
      *     processUserWithRelations(user);
      * }
@@ -312,9 +365,9 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+    default T getOrNull(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -326,13 +379,31 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
     }
 
     /**
+     * Retrieves an entity by its ID with selected properties and loads multiple types of join entities, returning {@code null} if not found.
+     *
+     * @param id the primitive {@code long} ID of the entity to retrieve
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties
+     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @return the retrieved entity with join entities loaded, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(long, Collection, Collection)} instead.
+     */
+    @Beta
+    @Deprecated
+    default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+            throws DuplicateResultException, SQLException {
+        return getOrNull(id, selectPropNames, joinEntitiesToLoad);
+    }
+
+    /**
      * Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
      * This is a convenience method that accepts a primitive {@code long} ID.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with essential fields and all relations
-     * User user = userDao.gett(123L, Arrays.asList("id", "name", "status"), true);
+     * User user = userDao.getOrNull(123L, Arrays.asList("id", "name", "status"), true);
      * if (user != null) {
      *     performCompleteUserAnalysis(user);
      * }
@@ -348,14 +419,33 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @throws SQLException if a database access error occurs
      */
     @Beta
-    default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+    default T getOrNull(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, SQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
         }
 
         return result;
+    }
+
+    /**
+     * Retrieves an entity by its ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
+     *
+     * @param id the primitive {@code long} ID of the entity to retrieve
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
+     *                                  if {@code false}, no join entities are loaded
+     * @return the retrieved entity with join entities loaded as specified, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(long, Collection, boolean)} instead.
+     */
+    @Beta
+    @Deprecated
+    default T gett(final long id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+            throws DuplicateResultException, SQLException {
+        return getOrNull(id, selectPropNames, includeAllJoinEntities);
     }
 }

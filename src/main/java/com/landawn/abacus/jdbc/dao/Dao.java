@@ -119,7 +119,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <pre>{@code
  * final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
  * try {
- *     User user = userDao.gett(id);
+ *     User user = userDao.getOrNull(id);
  *     userDao.update(user);
  *     tran.commit();
  * } finally {
@@ -225,14 +225,14 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * List<User> users = query.setInt(1, 18).list(User.class);
      * }</pre>
      *
-     * @param query the SQL query string
+     * @param sql the SQL query string
      * @return a PreparedQuery instance for the specified query
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String query) throws SQLException {
-        return JdbcUtil.prepareQuery(dataSource(), query);
+    default PreparedQuery prepareQuery(final String sql) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql);
     }
 
     /**
@@ -245,30 +245,30 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Optional<Long> generatedId = query.setString(1, "John").insert();
      * }</pre>
      *
-     * @param query the SQL query string
+     * @param sql the SQL query string
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String query, final boolean generateKeys) throws SQLException {
-        return JdbcUtil.prepareQuery(dataSource(), query, generateKeys);
+    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, generateKeys);
     }
 
     /**
      * Creates a PreparedQuery that will return specific columns as generated keys.
      * This is useful when you need to retrieve specific auto-generated column values.
      *
-     * @param query the SQL query string
+     * @param sql the SQL query string
      * @param returnColumnIndexes array of column indexes to return as generated keys
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String query, final int[] returnColumnIndexes) throws SQLException {
-        return JdbcUtil.prepareQuery(dataSource(), query, returnColumnIndexes);
+    default PreparedQuery prepareQuery(final String sql, final int[] returnColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, returnColumnIndexes);
     }
 
     /**
@@ -283,15 +283,15 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * );
      * }</pre>
      *
-     * @param query the SQL query string
+     * @param sql the SQL query string
      * @param returnColumnNames array of column names to return as generated keys
      * @return a PreparedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String query, final String[] returnColumnNames) throws SQLException {
-        return JdbcUtil.prepareQuery(dataSource(), query, returnColumnNames);
+    default PreparedQuery prepareQuery(final String sql, final String[] returnColumnNames) throws SQLException {
+        return JdbcUtil.prepareQuery(dataSource(), sql, returnColumnNames);
     }
 
     /**
@@ -360,15 +360,15 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a PreparedQuery optimized for queries that return large result sets.
      * This configures the statement to use cursor-based fetching for better memory efficiency.
      *
-     * @param query the SQL query string
+     * @param sql the SQL query string
      * @return a PreparedQuery configured for large results
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final String query) throws SQLException {
-        return JdbcUtil.prepareQueryForLargeResult(dataSource(), query);
+    default PreparedQuery prepareQueryForLargeResult(final String sql) throws SQLException {
+        return JdbcUtil.prepareQueryForLargeResult(dataSource(), sql);
     }
 
     /**
@@ -417,75 +417,75 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *                         .list(User.class);
      * }</pre>
      *
-     * @param namedQuery the named SQL query string with :paramName placeholders
+     * @param namedSql the named SQL query string with :paramName placeholders
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedQuery) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery);
+    default NamedQuery prepareNamedQuery(final String namedSql) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
     }
 
     /**
      * Creates a NamedQuery with the option to generate keys for INSERT statements.
      * Combines named parameters with auto-generated key retrieval.
      *
-     * @param namedQuery the named SQL query string
+     * @param namedSql the named SQL query string
      * @param generateKeys {@code true} to return generated keys
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedQuery, final boolean generateKeys) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, generateKeys);
+    default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
     }
 
     /**
      * Creates a NamedQuery that will return specific columns as generated keys.
      * Useful for INSERT statements with named parameters that need to retrieve auto-generated values.
      *
-     * @param namedQuery the named SQL query string
+     * @param namedSql the named SQL query string
      * @param returnColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedQuery, final int[] returnColumnIndexes) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+    default NamedQuery prepareNamedQuery(final String namedSql, final int[] returnColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnIndexes);
     }
 
     /**
      * Creates a NamedQuery that will return specific named columns as generated keys.
      * Provides the most readable way to retrieve auto-generated values with named queries.
      *
-     * @param namedQuery the named SQL query string
+     * @param namedSql the named SQL query string
      * @param returnColumnNames array of column names to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedQuery, final String[] returnColumnNames) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+    default NamedQuery prepareNamedQuery(final String namedSql, final String[] returnColumnNames) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnNames);
     }
 
     /**
      * Creates a NamedQuery using a custom statement creator function.
      * Provides maximum control over statement creation with named parameters.
      *
-     * @param namedQuery the named SQL query string
+     * @param namedSql the named SQL query string
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedQuery, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+    default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, stmtCreator);
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, stmtCreator);
     }
 
     /**
@@ -519,29 +519,29 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
      *
-     * @param namedQuery the pre-parsed named query
+     * @param namedSql the pre-parsed named query
      * @param returnColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final int[] returnColumnIndexes) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnIndexes);
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] returnColumnIndexes) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnIndexes);
     }
 
     /**
      * Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
      *
-     * @param namedQuery the pre-parsed named query
+     * @param namedSql the pre-parsed named query
      * @param returnColumnNames array of column names to return
      * @return a NamedQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedQuery, final String[] returnColumnNames) throws SQLException {
-        return JdbcUtil.prepareNamedQuery(dataSource(), namedQuery, returnColumnNames);
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] returnColumnNames) throws SQLException {
+        return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, returnColumnNames);
     }
 
     /**
@@ -594,14 +594,14 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Creates a NamedQuery optimized for large result sets.
      * Configures the query to use cursor-based fetching for memory efficiency.
      *
-     * @param namedQuery the named SQL query string
+     * @param namedSql the named SQL query string
      * @return a NamedQuery configured for large results
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final String namedQuery) throws SQLException {
-        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedQuery);
+    default NamedQuery prepareNamedQueryForLargeResult(final String namedSql) throws SQLException {
+        return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedSql);
     }
 
     /**
@@ -660,14 +660,14 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * int count = query.getInt(1);
      * }</pre>
      *
-     * @param query the stored procedure call string
+     * @param sql the stored procedure call string
      * @return a CallableQuery instance
      * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String query) throws SQLException {
-        return JdbcUtil.prepareCallableQuery(dataSource(), query);
+    default CallableQuery prepareCallableQuery(final String sql) throws SQLException {
+        return JdbcUtil.prepareCallableQuery(dataSource(), sql);
     }
 
     /**

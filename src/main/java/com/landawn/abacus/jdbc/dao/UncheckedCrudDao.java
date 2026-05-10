@@ -712,7 +712,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      */
     @Override
     default Optional<T> get(final ID id) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id));
+        return Optional.ofNullable(getOrNull(id));
     }
 
     /**
@@ -732,7 +732,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      */
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, selectPropNames));
+        return Optional.ofNullable(getOrNull(id, selectPropNames));
     }
 
     /**
@@ -741,7 +741,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * if (user != null) {
      *     processUser(user);
      * }
@@ -753,7 +753,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    T gett(final ID id) throws DuplicateResultException, UncheckedSQLException;
+    T getOrNull(final ID id) throws DuplicateResultException, UncheckedSQLException;
 
     /**
      * Retrieves the entity with the specified ID, selecting only the specified properties.
@@ -761,7 +761,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId, Arrays.asList("id", "email", "status"));
+     * User user = userDao.getOrNull(userId, Arrays.asList("id", "email", "status"));
      * if (user != null && "ACTIVE".equals(user.getStatus())) {
      *     sendEmail(user.getEmail());
      * }
@@ -774,7 +774,38 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException;
+    T getOrNull(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException;
+
+    /**
+     * Retrieves the entity with the specified ID, returning {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @return the entity if found, otherwise null
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object)} instead.
+     */
+    @Override
+    @Deprecated
+    default T gett(final ID id) throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id);
+    }
+
+    /**
+     * Retrieves the entity with the specified ID, selecting only the specified properties; returns {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @param selectPropNames the properties to select, or {@code null} to select all
+     * @return the entity with selected properties if found, otherwise null
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, Collection)} instead.
+     */
+    @Override
+    @Deprecated
+    default T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id, selectPropNames);
+    }
 
     /**
      * Gets multiple entities by their IDs in batch using the default batch size.
@@ -934,7 +965,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * user.setEmail("newemail@example.com");
      * user.setLastModified(new Date());
      * int updatedRows = userDao.update(user);
@@ -1475,7 +1506,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
-        final T dbEntity = gett(id, selectPropNames);
+        final T dbEntity = getOrNull(id, selectPropNames);
 
         if (dbEntity == null) {
             return false;
@@ -1624,7 +1655,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * int deletedRows = userDao.delete(user);
      * if (deletedRows > 0) {
      *     System.out.println("User deleted successfully");

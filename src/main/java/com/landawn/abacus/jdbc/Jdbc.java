@@ -939,7 +939,7 @@ public final class Jdbc {
 
             return rs -> {
                 final BiRowMapper<? extends T> rowMapper = BiRowMapper.to(targetClass);
-                final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+                final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
                 final List<T> result = new ArrayList<>();
 
                 while (rs.next()) {
@@ -1990,7 +1990,7 @@ public final class Jdbc {
                 @Override
                 public DisposableObjArray apply(final ResultSet rs) throws SQLException {
                     if (disposable == null) {
-                        final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+                        final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
@@ -2485,7 +2485,7 @@ public final class Jdbc {
                     @Override
                     public Map<String, Object> apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
-                            columnLabels = JdbcUtil.getColumnLabelList(rs);
+                            columnLabels = JdbcUtil.getColumnLabels(rs);
                             rsColumnCount = columnLabels.size();
                             rsColumnGetters = initColumnGetter(rsColumnCount);
                         }
@@ -2588,7 +2588,7 @@ public final class Jdbc {
                     @Override
                     public R apply(final ResultSet rs) throws SQLException {
                         if (rsColumnGetters == null) {
-                            columnLabels = JdbcUtil.getColumnLabelList(rs);
+                            columnLabels = JdbcUtil.getColumnLabels(rs);
                             rsColumnCount = columnLabels.size();
                             rsColumnGetters = initColumnGetter(rsColumnCount);
                             outputRow = new Object[rsColumnCount];
@@ -2765,7 +2765,7 @@ public final class Jdbc {
                 @Override
                 public T apply(final ResultSet rs) throws IllegalArgumentException, SQLException {
                     if (cls == null) {
-                        cls = JdbcUtil.getColumnLabelList(rs);
+                        cls = JdbcUtil.getColumnLabels(rs);
                     }
 
                     return biRowMapper.apply(rs, cls);
@@ -4508,7 +4508,7 @@ public final class Jdbc {
                 @Override
                 public void accept(final ResultSet rs) throws SQLException {
                     if (disposable == null) {
-                        final List<String> columnLabels = JdbcUtil.getColumnLabelList(rs);
+                        final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
@@ -5085,7 +5085,7 @@ public final class Jdbc {
                 public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
                     if (columnTypes == null) {
                         final Map<String, String> column2FieldNameMap = JdbcUtil.getColumn2FieldNameMap(entityClassForFetch);
-                        final List<String> columnLabelList = N.isEmpty(columnLabels) ? JdbcUtil.getColumnLabelList(rs) : columnLabels;
+                        final List<String> columnLabelList = N.isEmpty(columnLabels) ? JdbcUtil.getColumnLabels(rs) : columnLabels;
                         columnCount = columnLabelList.size();
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 

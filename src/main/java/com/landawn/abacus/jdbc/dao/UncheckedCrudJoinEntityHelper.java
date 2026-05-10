@@ -46,8 +46,8 @@ import com.landawn.abacus.util.u.Optional;
  * Optional<User> user = userDao.get(userId, true);
  * 
  * // Get user with specific related entities
- * User user = userDao.gett(userId, Order.class);
- * 
+ * User user = userDao.getOrNull(userId, Order.class);
+ *
  * // Batch get users with their profiles
  * List<User> users = userDao.batchGet(
  *     Arrays.asList(1L, 2L, 3L),
@@ -88,7 +88,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     @Beta
     @Override
     default Optional<T> get(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, joinEntitiesToLoad));
+        return Optional.ofNullable(getOrNull(id, joinEntitiesToLoad));
     }
 
     /**
@@ -112,7 +112,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     @Beta
     @Override
     default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
     /**
@@ -141,7 +141,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        return Optional.ofNullable(getOrNull(id, selectPropNames, joinEntitiesToLoad));
     }
 
     /**
@@ -170,7 +170,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, joinEntitiesToLoad));
+        return Optional.ofNullable(getOrNull(id, selectPropNames, joinEntitiesToLoad));
     }
 
     /**
@@ -200,7 +200,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, UncheckedSQLException {
-        return Optional.ofNullable(gett(id, selectPropNames, includeAllJoinEntities));
+        return Optional.ofNullable(getOrNull(id, selectPropNames, includeAllJoinEntities));
     }
 
     /**
@@ -210,7 +210,7 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with orders, returns null if not found
-     * User user = userDao.gett(userId, Order.class);
+     * User user = userDao.getOrNull(userId, Order.class);
      * if (user != null) {
      *     // Process user with loaded orders
      * }
@@ -224,8 +224,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      */
     @Beta
     @Override
-    default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+    default T getOrNull(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -235,13 +235,30 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     }
 
     /**
+     * Retrieves an entity by ID and loads the specified join entity class, returning {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the entity with loaded join entities, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, Class)} instead.
+     */
+    @Beta
+    @Override
+    @Deprecated
+    default T gett(final ID id, final Class<?> joinEntitiesToLoad) throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id, joinEntitiesToLoad);
+    }
+
+    /**
      * Retrieves an entity by ID and optionally loads all join entities, returning the entity directly.
      * This is a beta API that returns {@code null} if the entity is not found.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with all relationships
-     * User user = userDao.gett(userId, true);
+     * User user = userDao.getOrNull(userId, true);
      * if (user != null) {
      *     // All relationships are loaded
      * }
@@ -256,8 +273,8 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      */
     @Beta
     @Override
-    default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id);
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
@@ -267,13 +284,30 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     }
 
     /**
+     * Retrieves an entity by ID and optionally loads all join entities, returning {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
+     * @return the entity with loaded join entities, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, boolean)} instead.
+     */
+    @Beta
+    @Override
+    @Deprecated
+    default T gett(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id, includeAllJoinEntities);
+    }
+
+    /**
      * Retrieves an entity by ID with selected properties and loads the specified join entity class.
      * This is a beta API for efficient partial entity loading with relationships.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with minimal data and profile
-     * User user = userDao.gett(
+     * User user = userDao.getOrNull(
      *     userId,
      *     Arrays.asList("id", "name"),
      *     UserProfile.class
@@ -290,9 +324,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      */
     @Beta
     @Override
-    default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+    default T getOrNull(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id, selectPropNames);
 
         if (result != null) {
             loadJoinEntities(result, joinEntitiesToLoad);
@@ -302,13 +336,32 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     }
 
     /**
+     * Retrieves an entity by ID with selected properties and loads the specified join entity class, returning {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties
+     * @param joinEntitiesToLoad the class of the join entities to load
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, Collection, Class)} instead.
+     */
+    @Beta
+    @Override
+    @Deprecated
+    default T gett(final ID id, final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad)
+            throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id, selectPropNames, joinEntitiesToLoad);
+    }
+
+    /**
      * Retrieves an entity by ID with selected properties and loads multiple join entity classes.
      * This is a beta API for complex entity loading scenarios.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with specific fields and multiple relationships
-     * User user = userDao.gett(
+     * User user = userDao.getOrNull(
      *     userId,
      *     Arrays.asList("id", "name", "email"),
      *     Arrays.asList(Order.class, Payment.class, Review.class)
@@ -325,9 +378,9 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      */
     @Beta
     @Override
-    default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+    default T getOrNull(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id, selectPropNames);
 
         if (result != null && N.notEmpty(joinEntitiesToLoad)) {
             for (final Class<?> joinEntityClass : joinEntitiesToLoad) {
@@ -339,13 +392,32 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
     }
 
     /**
+     * Retrieves an entity by ID with selected properties and loads multiple join entity classes, returning {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties
+     * @param joinEntitiesToLoad the collection of join entity classes to load
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, Collection, Collection)} instead.
+     */
+    @Beta
+    @Override
+    @Deprecated
+    default T gett(final ID id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
+            throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id, selectPropNames, joinEntitiesToLoad);
+    }
+
+    /**
      * Retrieves an entity by ID with selected properties and optionally loads all join entities.
      * This is a beta API that combines partial loading with automatic relationship loading.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get user with core fields and all relationships
-     * User user = userDao.gett(
+     * User user = userDao.getOrNull(
      *     userId,
      *     Arrays.asList("id", "name", "email", "verified"),
      *     true  // load all join entities
@@ -363,15 +435,34 @@ public interface UncheckedCrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD 
      */
     @Beta
     @Override
-    default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+    default T getOrNull(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
             throws DuplicateResultException, UncheckedSQLException {
-        final T result = DaoUtil.getCrudDao(this).gett(id, selectPropNames);
+        final T result = DaoUtil.getCrudDao(this).getOrNull(id, selectPropNames);
 
         if (result != null && includeAllJoinEntities) {
             loadAllJoinEntities(result);
         }
 
         return result;
+    }
+
+    /**
+     * Retrieves an entity by ID with selected properties and optionally loads all join entities, returning {@code null} if not found.
+     *
+     * @param id the entity ID
+     * @param selectPropNames the properties to select from the main entity, excluding join entity properties
+     * @param includeAllJoinEntities if {@code true}, all join entities will be loaded
+     * @return the entity with selected properties and loaded join entities, or {@code null} if not found
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, Collection, boolean)} instead.
+     */
+    @Beta
+    @Override
+    @Deprecated
+    default T gett(final ID id, final Collection<String> selectPropNames, final boolean includeAllJoinEntities)
+            throws DuplicateResultException, UncheckedSQLException {
+        return getOrNull(id, selectPropNames, includeAllJoinEntities);
     }
 
     /**

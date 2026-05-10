@@ -703,7 +703,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
 
     /**
      * Retrieves an entity by its ID.
-     * This is a convenience default method that wraps the result of {@link #gett(Object)} in an {@link Optional}.
+     * This is a convenience default method that wraps the result of {@link #getOrNull(Object)} in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -717,13 +717,13 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final ID id) throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id));
+        return Optional.ofNullable(getOrNull(id));
     }
 
     /**
      * Retrieves an entity by its ID with only the selected properties populated.
      * Properties not in the select list will have their default (un-set) values.
-     * This is a convenience default method that wraps the result of {@link #gett(Object, Collection)}
+     * This is a convenience default method that wraps the result of {@link #getOrNull(Object, Collection)}
      * in an {@link Optional}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -740,7 +740,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws SQLException if a database access error occurs
      */
     default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
-        return Optional.ofNullable(gett(id, selectPropNames));
+        return Optional.ofNullable(getOrNull(id, selectPropNames));
     }
 
     /**
@@ -749,7 +749,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * if (user != null) {
      *     System.out.println("Found user: " + user.getName());
      * }
@@ -760,7 +760,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    T gett(final ID id) throws DuplicateResultException, SQLException;
+    T getOrNull(final ID id) throws DuplicateResultException, SQLException;
 
     /**
      * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
@@ -769,7 +769,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Only load id, name, and email fields
-     * User user = userDao.gett(userId, Arrays.asList("id", "name", "email"));
+     * User user = userDao.getOrNull(userId, Arrays.asList("id", "name", "email"));
      * if (user != null) {
      *     System.out.println("User name: " + user.getName());
      * }
@@ -782,7 +782,37 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
      */
-    T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException;
+    T getOrNull(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException;
+
+    /**
+     * Retrieves an entity by its ID, returning {@code null} if not found.
+     *
+     * @param id the ID of the entity to retrieve
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object)} instead.
+     */
+    @Deprecated
+    default T gett(final ID id) throws DuplicateResultException, SQLException {
+        return getOrNull(id);
+    }
+
+    /**
+     * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
+     *
+     * @param id the ID of the entity to retrieve
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws SQLException if a database access error occurs
+     * @deprecated use {@link #getOrNull(Object, Collection)} instead.
+     */
+    @Deprecated
+    default T gett(final ID id, final Collection<String> selectPropNames) throws DuplicateResultException, SQLException {
+        return getOrNull(id, selectPropNames);
+    }
 
     /**
      * Retrieves multiple entities by their IDs using the default batch size
@@ -937,7 +967,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * user.setEmail("newemail@example.com");
      * user.setLastModified(new Date());
      * int updatedRows = userDao.update(user);
@@ -1443,7 +1473,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
-        final T dbEntity = gett(id, selectPropNames);
+        final T dbEntity = getOrNull(id, selectPropNames);
 
         if (dbEntity == null) {
             return false;
@@ -1595,7 +1625,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User user = userDao.gett(userId);
+     * User user = userDao.getOrNull(userId);
      * int deletedRows = userDao.delete(user);
      * if (deletedRows > 0) {
      *     System.out.println("User deleted successfully");
