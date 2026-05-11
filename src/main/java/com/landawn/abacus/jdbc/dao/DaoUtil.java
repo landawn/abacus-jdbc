@@ -233,6 +233,10 @@ final class DaoUtil {
      *         {@link HashSet} containing both the requested properties and all ID properties
      */
     static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
+        if (propNamesToRefresh == null) {
+            return new HashSet<>(idPropNameList);
+        }
+
         if (propNamesToRefresh.containsAll(idPropNameList)) {
             return propNamesToRefresh;
         } else {
@@ -850,7 +854,7 @@ final class DaoUtil {
      * @param sql the SQL statement to check; may be empty or {@code null}
      * @return {@code true} if the SQL is a SELECT query, {@code false} otherwise
      */
-    static boolean isSelectQuery(final String sql) throws UnsupportedOperationException {
+    static boolean isSelectQuery(final String sql) {
         return "SELECT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
@@ -885,7 +889,7 @@ final class DaoUtil {
      * @param sql the SQL statement to check; may be empty or {@code null}
      * @return {@code true} if the SQL is an INSERT query, {@code false} otherwise
      */
-    static boolean isInsertQuery(final String sql) throws UnsupportedOperationException {
+    static boolean isInsertQuery(final String sql) {
         return "INSERT".equalsIgnoreCase(getLeadingQueryKeyword(sql));
     }
 
@@ -1030,6 +1034,9 @@ final class DaoUtil {
             if (ch == '\\') {
                 // Skip backslash-escaped character (e.g., \' in MySQL)
                 fromIndex += 2;
+                if (fromIndex >= sql.length()) {
+                    break;
+                }
             } else if (ch == quoteChar) {
                 if ((fromIndex + 1 < sql.length()) && sql.charAt(fromIndex + 1) == quoteChar) {
                     // Doubled quote escape (SQL standard)

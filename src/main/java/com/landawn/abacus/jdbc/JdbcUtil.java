@@ -371,7 +371,7 @@ public final class JdbcUtil {
     static {
         try {
             isInSpring = ClassUtil.forName("org.springframework.jdbc.datasource.DataSourceUtils") != null;
-        } catch (final Throwable e) {
+        } catch (final Exception | LinkageError e) {
             isInSpring = false;
         }
     }
@@ -461,45 +461,45 @@ public final class JdbcUtil {
             } else if (Strings.containsIgnoreCase(productNameForMatch, "MariaDB") || Strings.containsIgnoreCase(productVersionForMatch, "MariaDB")) {
                 dbVersion = DBVersion.MariaDB;
             } else if (Strings.containsIgnoreCase(productNameForMatch, "MySQL")) {
-                if (productVersionForMatch.startsWith("5.5")) {
+                if (productVersionForMatch.startsWith("5.5") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.MySQL_5_5;
-                } else if (productVersionForMatch.startsWith("5.6")) {
+                } else if (productVersionForMatch.startsWith("5.6") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.MySQL_5_6;
-                } else if (productVersionForMatch.startsWith("5.7")) {
+                } else if (productVersionForMatch.startsWith("5.7") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.MySQL_5_7;
-                } else if (productVersionForMatch.startsWith("5.8")) {
+                } else if (productVersionForMatch.startsWith("5.8") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.MySQL_5_8;
-                } else if (productVersionForMatch.startsWith("5.9")) {
+                } else if (productVersionForMatch.startsWith("5.9") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.MySQL_5_9;
-                } else if (productVersionForMatch.startsWith("6")) {
+                } else if (productVersionForMatch.startsWith("6") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
                     dbVersion = DBVersion.MySQL_6;
-                } else if (productVersionForMatch.startsWith("7")) {
+                } else if (productVersionForMatch.startsWith("7") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
                     dbVersion = DBVersion.MySQL_7;
-                } else if (productVersionForMatch.startsWith("8")) {
+                } else if (productVersionForMatch.startsWith("8") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
                     dbVersion = DBVersion.MySQL_8;
-                } else if (productVersionForMatch.startsWith("9")) {
+                } else if (productVersionForMatch.startsWith("9") && (productVersionForMatch.length() == 1 || productVersionForMatch.charAt(1) == '.')) {
                     dbVersion = DBVersion.MySQL_9;
-                } else if (productVersionForMatch.startsWith("10")) {
+                } else if (productVersionForMatch.startsWith("10") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
                     dbVersion = DBVersion.MySQL_10;
                 } else {
                     dbVersion = DBVersion.MySQL_OTHERS;
                 }
             } else if (Strings.containsIgnoreCase(productNameForMatch, "PostgreSQL")) {
-                if (productVersionForMatch.startsWith("9.2")) {
+                if (productVersionForMatch.startsWith("9.2") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_9_2;
-                } else if (productVersionForMatch.startsWith("9.3")) {
+                } else if (productVersionForMatch.startsWith("9.3") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_9_3;
-                } else if (productVersionForMatch.startsWith("9.4")) {
+                } else if (productVersionForMatch.startsWith("9.4") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_9_4;
-                } else if (productVersionForMatch.startsWith("9.5")) {
+                } else if (productVersionForMatch.startsWith("9.5") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_9_5;
-                } else if (productVersionForMatch.startsWith("9.6")) {
+                } else if (productVersionForMatch.startsWith("9.6") && (productVersionForMatch.length() == 3 || productVersionForMatch.charAt(3) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_9_6;
-                } else if (productVersionForMatch.startsWith("10")) {
+                } else if (productVersionForMatch.startsWith("10") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_10;
-                } else if (productVersionForMatch.startsWith("11")) {
+                } else if (productVersionForMatch.startsWith("11") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_11;
-                } else if (productVersionForMatch.startsWith("12")) {
+                } else if (productVersionForMatch.startsWith("12") && (productVersionForMatch.length() == 2 || productVersionForMatch.charAt(2) == '.')) {
                     dbVersion = DBVersion.PostgreSQL_12;
                 } else {
                     dbVersion = DBVersion.PostgreSQL_OTHERS;
@@ -882,7 +882,7 @@ public final class JdbcUtil {
         if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
-            } catch (final NoClassDefFoundError e) {
+            } catch (final LinkageError e) {
                 isInSpring = false;
 
                 try {
@@ -932,7 +932,7 @@ public final class JdbcUtil {
         if (isInSpring && ds != null && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
             try {
                 org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
-            } catch (final NoClassDefFoundError e) {
+            } catch (final LinkageError e) {
                 isInSpring = false;
                 JdbcUtil.closeQuietly(conn);
             }
@@ -4967,7 +4967,7 @@ public final class JdbcUtil {
         boolean noException = false;
 
         try {
-            if (originalAutoCommit && listOfParameters.size() > batchSize) {
+            if (originalAutoCommit && listOfParameters.size() > 1) {
                 conn.setAutoCommit(false);
             }
 
@@ -4996,7 +4996,7 @@ public final class JdbcUtil {
 
             return res;
         } finally {
-            if (originalAutoCommit && listOfParameters.size() > batchSize) {
+            if (originalAutoCommit && listOfParameters.size() > 1) {
                 try {
                     if (noException) {
                         conn.commit();
@@ -5134,7 +5134,7 @@ public final class JdbcUtil {
         boolean noException = false;
 
         try {
-            if (originalAutoCommit && listOfParameters.size() > batchSize) {
+            if (originalAutoCommit && listOfParameters.size() > 1) {
                 conn.setAutoCommit(false);
             }
 
@@ -5163,7 +5163,7 @@ public final class JdbcUtil {
 
             return res;
         } finally {
-            if (originalAutoCommit && listOfParameters.size() > batchSize) {
+            if (originalAutoCommit && listOfParameters.size() > 1) {
                 try {
                     if (noException) {
                         conn.commit();
@@ -6535,21 +6535,11 @@ public final class JdbcUtil {
 
                 final ResultSet rs = resultSetHolder.getAndSet(null);
 
-                //    should keep or drop the current ResultSet? probably drop, why do we need to keep the current result?
-                //    #: 3
-                //    File: JdbcUtil.java
-                //    Line: 6442
-                //    Bug: iterateAllResultSets never called getMoreResults() after
-                //    consuming
-                //      a ResultSet, silently dropping all but the first result set from
-                //      stored procedures
-                //    Severity: High
-
-                //    try {
-                //        isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
-                //    } catch (final SQLException e) {
-                //        throw new UncheckedSQLException(e);
-                //    }
+                try {
+                    isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
+                } catch (final SQLException e) {
+                    throw new UncheckedSQLException(e);
+                }
 
                 return rs;
             }

@@ -487,6 +487,10 @@ public final class DBLock {
                 N.sleep(1); // Minimum 1ms delay to prevent tight spin loop
             }
 
+            if (Thread.interrupted()) {
+                return null;
+            }
+
             now = DateUtil.currentTimestamp();
             attempts++;
         } while (endTime > now.getTime() && attempts < maxAttempts);
@@ -601,6 +605,11 @@ public final class DBLock {
         // Cancel the scheduled refresh task first to prevent interference during lock release
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
+            try {
+                scheduledFuture.get();
+            } catch (final Exception e) {
+                // ignore
+            }
         }
 
         // Release all held locks from the database

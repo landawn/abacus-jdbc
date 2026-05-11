@@ -455,4 +455,28 @@ public class DaoUtilTest extends TestBase {
         final com.landawn.abacus.jdbc.NamedQuery nq = pair._2.apply(null, cond);
         assertNotNull(nq);
     }
+
+    @Test
+    public void testGetRefreshSelectPropNamesNullInput() {
+        final Collection<String> result = DaoUtil.getRefreshSelectPropNames(null, Arrays.asList("id", "version"));
+        assertNotNull(result);
+        assertTrue(result.contains("id"));
+        assertTrue(result.contains("version"));
+    }
+
+    @Test
+    public void testIsSelectQueryDoesNotThrow() {
+        assertFalse(DaoUtil.isSelectQuery(null));
+        assertFalse(DaoUtil.isSelectQuery(""));
+        assertTrue(DaoUtil.isSelectQuery("SELECT * FROM t"));
+        assertFalse(DaoUtil.isSelectQuery("INSERT INTO t VALUES(1)"));
+    }
+
+    @Test
+    public void testIsInsertQueryDoesNotThrow() {
+        assertFalse(DaoUtil.isInsertQuery(null));
+        assertFalse(DaoUtil.isInsertQuery(""));
+        assertTrue(DaoUtil.isInsertQuery("INSERT INTO t VALUES(1)"));
+        assertFalse(DaoUtil.isInsertQuery("SELECT * FROM t"));
+    }
 }

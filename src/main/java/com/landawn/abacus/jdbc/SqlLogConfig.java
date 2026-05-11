@@ -43,9 +43,9 @@ package com.landawn.abacus.jdbc;
  * @see JdbcUtil#setMinExecutionTimeForSqlPerfLog(long)
  */
 final class SqlLogConfig {
-    boolean isEnabled;
-    int maxSqlLogLength;
-    long minExecutionTimeForSqlPerfLog;
+    volatile boolean isEnabled;
+    volatile int maxSqlLogLength;
+    volatile long minExecutionTimeForSqlPerfLog;
 
     /**
      * Constructs a SqlLogConfig for general SQL logging.

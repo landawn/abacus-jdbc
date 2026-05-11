@@ -428,7 +428,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         if (x == null) {
             cstmt.setNull(parameterName, Types.BIGINT);
         } else {
-            cstmt.setLong(parameterName, x.longValueExact());
+            boolean noException = false;
+            try {
+                cstmt.setLong(parameterName, x.longValueExact());
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
         }
 
         return this;

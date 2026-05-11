@@ -6213,7 +6213,7 @@ public final class Jdbc {
 
             try {
                 tmp = new SpringApplicationContext();
-            } catch (final Throwable e) {
+            } catch (final Exception | LinkageError e) {
                 // ignore.
             }
 

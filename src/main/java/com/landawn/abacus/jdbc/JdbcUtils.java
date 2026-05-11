@@ -169,7 +169,7 @@ public final class JdbcUtils {
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
-        final Connection conn = targetDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try {
             return importData(dataset, conn, insertSql);
@@ -993,7 +993,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
-        final Connection conn = targetDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try {
             return importData(file, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
@@ -1099,7 +1099,7 @@ public final class JdbcUtils {
      */
     public static <E extends Exception> long importData(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.Function<? super String, Object[], E> func) throws SQLException, IOException, E {
-        final Connection conn = targetDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try {
             return importData(reader, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, func);
@@ -1264,7 +1264,7 @@ public final class JdbcUtils {
      */
     public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> stmtSetter) throws SQLException {
-        final Connection conn = targetDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importData(iter, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, stmtSetter);
@@ -1453,7 +1453,7 @@ public final class JdbcUtils {
      */
     public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        final Connection conn = targetDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importCsv(file, stmt, stmtSetter);
@@ -1680,7 +1680,7 @@ public final class JdbcUtils {
      */
     public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> stmtSetter) throws SQLException, IOException {
-        final Connection conn = targetDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importCsv(reader, stmt, stmtSetter);
@@ -1913,7 +1913,7 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs while writing to the file
      */
     public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final File output) throws SQLException, IOException {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
         try {
             return exportCsv(conn, querySql, output);
@@ -2183,7 +2183,7 @@ public final class JdbcUtils {
      * @throws IOException if an I/O error occurs while writing
      */
     public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String querySql, final Writer output) throws SQLException, IOException {
-        final Connection conn = sourceDataSource.getConnection();
+        final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
         try {
             return exportCsv(conn, querySql, output);
@@ -2495,8 +2495,8 @@ public final class JdbcUtils {
         Connection targetConn = null;
 
         try {
-            sourceConn = sourceDataSource.getConnection();
-            targetConn = targetDataSource.getConnection();
+            sourceConn = JdbcUtil.getConnection(sourceDataSource);
+            targetConn = JdbcUtil.getConnection(targetDataSource);
 
             selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
             insertSql = JdbcCodeGenerationUtil.generateInsertSql(targetConn, targetTableName);
@@ -2570,8 +2570,8 @@ public final class JdbcUtils {
         Connection targetConn = null;
 
         try {
-            sourceConn = sourceDataSource.getConnection();
-            targetConn = targetDataSource.getConnection();
+            sourceConn = JdbcUtil.getConnection(sourceDataSource);
+            targetConn = JdbcUtil.getConnection(targetDataSource);
 
             selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
             insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);

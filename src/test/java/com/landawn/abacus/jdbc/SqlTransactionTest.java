@@ -635,4 +635,39 @@ public class SqlTransactionTest extends TestBase {
         mapField.setAccessible(true);
         ((java.util.Map<String, SqlTransaction>) mapField.get(null)).clear();
     }
+
+    @Test
+    public void testResetConnectionContinuesAfterSetAutoCommitFails() throws SQLException {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+
+        final SQLException autoCommitEx = new SQLException("autoCommit reset failed");
+        doThrow(autoCommitEx).when(connection).setAutoCommit(true);
+
+        final SqlTransaction tx = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true);
+        tx.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+
+        tx.rollback();
+        verify(connection).setAutoCommit(true);
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        verify(connection).close();
+    }
+
+    @Test
+    public void testResetConnectionContinuesAfterSetIsolationFails() throws SQLException {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+
+        final SQLException isoEx = new SQLException("isolation reset failed");
+        doThrow(isoEx).when(connection).setTransactionIsolation(Mockito.anyInt());
+
+        final SqlTransaction tx = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true);
+        tx.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+
+        tx.rollback();
+        verify(connection).setAutoCommit(true);
+        verify(connection).close();
+    }
 }

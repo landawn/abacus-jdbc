@@ -522,13 +522,18 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     private void resetAndCloseConnection() {
         try {
             _conn.setAutoCommit(_originalAutoCommit);
+        } catch (final SQLException e) {
+            logger.warn("Failed to reset autoCommit", e);
+        }
+
+        try {
             _conn.setTransactionIsolation(_originalIsolationLevel);
         } catch (final SQLException e) {
-            logger.warn("Failed to reset connection", e);
-        } finally {
-            if (_closeConnection) {
-                JdbcUtil.releaseConnection(_conn, _ds);
-            }
+            logger.warn("Failed to reset transaction isolation", e);
+        }
+
+        if (_closeConnection) {
+            JdbcUtil.releaseConnection(_conn, _ds);
         }
     }
 
@@ -613,6 +618,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                         _conn.setTransactionIsolation(_isolationLevel.intValue());
                     }
                 } catch (final SQLException e) {
+                    _isolationLevelStack.push(_isolationLevel);
                     throw new UncheckedSQLException(e);
                 }
             }
