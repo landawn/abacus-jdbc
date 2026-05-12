@@ -209,8 +209,12 @@ public final class DBLock {
 
             final String removeDeadLockSQL = "DELETE FROM " + sqlTableName + " WHERE host_name = ? and create_time < ?";
 
-            JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(), Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+            final int removedDeadLocks = JdbcUtil.executeUpdate(conn, removeDeadLockSQL, IOUtil.getHostName(),
+                    Dates.createTimestamp(ManagementFactory.getRuntimeMXBean().getStartTime()));
+
+            logger.info("Initialized DBLock(tableName={}, removedDeadLocks={})", tableName, removedDeadLocks);
         } catch (final SQLException e) {
+            logger.warn(e, "Failed to initialize DBLock(tableName={})", tableName);
             throw new UncheckedSQLException(e);
         } finally {
             JdbcUtil.releaseConnection(conn, ds);
@@ -225,6 +229,9 @@ public final class DBLock {
 
                     final Connection refreshConn = JdbcUtil.getConnection(ds);
                     try {
+                        int refreshed = 0;
+                        int staleRemoved = 0;
+
                         for (final Map.Entry<String, LockInfo> entry : m.entrySet()) {
                             final LockInfo info = entry.getValue();
                             if (info == null) {
@@ -239,22 +246,30 @@ public final class DBLock {
                             if (updated == 0) {
                                 // Remove from pool only if the cached lock instance is still present
                                 if (targetCodePool.remove(entry.getKey(), info)) {
+                                    staleRemoved++;
+
                                     if (logger.isWarnEnabled()) {
-                                        logger.warn("Removed stale lock from pool: " + entry.getKey());
+                                        logger.warn("Removed stale lock from pool(target={})", entry.getKey());
                                     }
                                 }
+                            } else {
+                                refreshed++;
                             }
+                        }
+
+                        if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0)) {
+                            logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, active={})", refreshed, staleRemoved, targetCodePool.size());
                         }
                     } catch (final SQLException e) {
                         if (logger.isWarnEnabled()) {
-                            logger.warn("Failed to refresh locks", e);
+                            logger.warn(e, "Failed to refresh DB locks(active={})", targetCodePool.size());
                         }
                     } finally {
                         JdbcUtil.releaseConnection(refreshConn, ds);
                     }
                 } catch (final Exception e) {
                     if (logger.isWarnEnabled()) {
-                        logger.warn("Error occurred in lock refresh task", e);
+                        logger.warn(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
                     }
                 } finally {
                     Objectory.recycle(m);
@@ -446,12 +461,12 @@ public final class DBLock {
 
         try {
             if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, DateUtil.currentTimestamp(),
-                    DateUtil.addMilliseconds(DateUtil.currentTimestamp(), -MAX_IDLE_TIME)) > 0) && logger.isWarnEnabled()) {
-                logger.warn("Removed expired lock for target: " + target);
+                    DateUtil.addMilliseconds(DateUtil.currentTimestamp(), -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
+                logger.info("Removed expired DB lock(target={})", target);
             }
         } catch (final Exception e) {
             if (logger.isWarnEnabled()) {
-                logger.warn("Failed to remove expired lock for target: " + target, e);
+                logger.warn(e, "Failed to remove expired DB lock(target={})", target);
             }
         }
 
@@ -466,17 +481,21 @@ public final class DBLock {
         final int maxAttempts = (int) maxAttemptsWithBuffer;
         Exception lastException = null;
 
+        logger.debug("Trying to acquire DB lock(target={}, liveTime={}, timeout={}, retryInterval={})", target, liveTime, timeout, retryInterval);
+
         do {
             try {
                 if (JdbcUtil.executeUpdate(ds, lockSQL, IOUtil.getHostName(), target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now,
                         now) > 0) {
                     targetCodePool.put(target, new LockInfo(code, liveTime));
 
+                    logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
+
                     return code;
                 }
             } catch (final Exception e) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Failed to acquire lock for target: " + target, e);
+                    logger.debug(e, "Failed to acquire DB lock(target={}, attempt={})", target, attempts + 1);
                 }
                 lastException = e;
             }
@@ -488,6 +507,7 @@ public final class DBLock {
             }
 
             if (Thread.interrupted()) {
+                logger.warn("Interrupted while acquiring DB lock(target={}, attempts={})", target, attempts + 1);
                 return null;
             }
 
@@ -495,8 +515,12 @@ public final class DBLock {
             attempts++;
         } while (endTime > now.getTime() && attempts < maxAttempts);
 
-        if (lastException != null && logger.isWarnEnabled()) {
-            logger.warn("Failed to acquire lock for target: " + target + " after timeout", lastException);
+        if (lastException == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("DB lock was not acquired(target={}) within timeout={} after attempts={}", target, timeout, attempts);
+            }
+        } else if (logger.isWarnEnabled()) {
+            logger.warn(lastException, "Failed to acquire DB lock(target={}) within timeout={} after attempts={}", target, timeout, attempts);
         }
 
         return null;
@@ -555,11 +579,18 @@ public final class DBLock {
         try {
             unLocked = JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
         } catch (final SQLException e) {
+            logger.warn(e, "Failed to release DB lock(target={})", target);
             throw new UncheckedSQLException(e);
         }
 
         if (shouldRemoveFromLocal && unLocked) {
             targetCodePool.remove(target, lockInfo);
+        }
+
+        if (unLocked) {
+            logger.info("Released DB lock(target={})", target);
+        } else {
+            logger.warn("DB lock was not released(target={}); it may have expired or been released by another owner", target);
         }
 
         return unLocked;
@@ -597,10 +628,13 @@ public final class DBLock {
      */
     public synchronized void close() {
         if (isClosed) {
+            logger.debug("DBLock is already closed");
             return;
         }
 
         isClosed = true;
+
+        logger.info("Closing DBLock(activeLocks={})", targetCodePool.size());
 
         // Cancel the scheduled refresh task first to prevent interference during lock release
         if (scheduledFuture != null) {
@@ -608,7 +642,7 @@ public final class DBLock {
             try {
                 scheduledFuture.get();
             } catch (final Exception e) {
-                // ignore
+                logger.debug(e, "DB lock refresh task stopped during close");
             }
         }
 
@@ -616,14 +650,17 @@ public final class DBLock {
         for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
             try {
                 JdbcUtil.executeUpdate(ds, unlockSQL, entry.getKey(), entry.getValue().code());
+                logger.debug("Released DB lock(target={}) during close", entry.getKey());
             } catch (final Exception e) {
                 if (logger.isWarnEnabled()) {
-                    logger.warn("Failed to release lock for target: " + entry.getKey() + " during close", e);
+                    logger.warn(e, "Failed to release DB lock(target={}) during close", entry.getKey());
                 }
             }
         }
 
         targetCodePool.clear();
+
+        logger.info("Closed DBLock");
     }
 
     private void assertNotClosed() {

@@ -514,6 +514,7 @@ public final class JdbcUtil {
 
             return new DBProductInfo(dbProductName, dbProductVersion, dbVersion);
         } catch (final SQLException e) {
+            logger.warn(e, "Failed to read database product metadata");
             throw new UncheckedSQLException(e);
         }
     }
@@ -555,8 +556,12 @@ public final class JdbcUtil {
             config.setUsername(user);
             config.setPassword(password);
 
-            return new com.zaxxer.hikari.HikariDataSource(config);
+            final com.zaxxer.hikari.HikariDataSource dataSource = new com.zaxxer.hikari.HikariDataSource(config);
+            logger.info("Created HikariDataSource(url={}, user={})", url, user);
+
+            return dataSource;
         } catch (final Exception e) {
+            logger.warn(e, "Failed to create HikariDataSource(url={}, user={})", url, user);
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -604,8 +609,12 @@ public final class JdbcUtil {
             config.setMinimumIdle(minIdle);
             config.setMaximumPoolSize(maxPoolSize);
 
-            return new com.zaxxer.hikari.HikariDataSource(config);
+            final com.zaxxer.hikari.HikariDataSource dataSource = new com.zaxxer.hikari.HikariDataSource(config);
+            logger.info("Created HikariDataSource(url={}, user={}, minIdle={}, maxPoolSize={})", url, user, minIdle, maxPoolSize);
+
+            return dataSource;
         } catch (final Exception e) {
+            logger.warn(e, "Failed to create HikariDataSource(url={}, user={}, poolSize={})", url, user, minIdle + ".." + maxPoolSize);
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -644,8 +653,11 @@ public final class JdbcUtil {
             cpds.setUser(user);
             cpds.setPassword(password);
 
+            logger.info("Created C3P0 DataSource(url={}, user={})", url, user);
+
             return cpds;
         } catch (final Exception e) {
+            logger.warn(e, "Failed to create C3P0 DataSource(url={}, user={})", url, user);
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -691,8 +703,11 @@ public final class JdbcUtil {
             cpds.setPassword(password);
             cpds.setMinPoolSize(minPoolSize);
             cpds.setMaxPoolSize(maxPoolSize);
+            logger.info("Created C3P0 DataSource(url={}, user={}, minPoolSize={}, maxPoolSize={})", url, user, minPoolSize, maxPoolSize);
+
             return cpds;
         } catch (final Exception e) {
+            logger.warn(e, "Failed to create C3P0 DataSource(url={}, user={}, poolSize={})", url, user, minPoolSize + ".." + maxPoolSize);
             throw ExceptionUtil.toRuntimeException(e, true);
         }
     }
@@ -800,10 +815,12 @@ public final class JdbcUtil {
         try {
             if (registeredDriverClasses.add(driverClass)) {
                 DriverManager.registerDriver(N.newInstance(driverClass));
+                logger.debug("Registered JDBC driver(class={})", ClassUtil.getCanonicalClassName(driverClass));
             }
 
             return DriverManager.getConnection(url, user, password);
         } catch (final SQLException e) {
+            logger.warn(e, "Failed to create JDBC connection(url={}, user={}, driver={})", url, user, ClassUtil.getCanonicalClassName(driverClass));
             throw new UncheckedSQLException("Failed to create connection", e);
         }
     }
@@ -1433,7 +1450,7 @@ public final class JdbcUtil {
                 conn = stmt.getConnection();
             }
         } catch (final SQLException e) {
-            logger.error("Failed to get Statement or Connection from ResultSet", e);
+            logger.warn(e, "Failed to get Statement or Connection from ResultSet(closeStatement={}, closeConnection={})", closeStatement, closeConnection);
         } finally {
             closeQuietly(rs, stmt, conn);
         }
@@ -1585,7 +1602,7 @@ public final class JdbcUtil {
             try {
                 rs.close();
             } catch (final Exception e) {
-                logger.error("Failed to close ResultSet", e);
+                logger.warn(e, "Failed to close ResultSet");
             }
         }
 
@@ -1593,7 +1610,7 @@ public final class JdbcUtil {
             try {
                 stmt.close();
             } catch (final Exception e) {
-                logger.error("Failed to close Statement", e);
+                logger.warn(e, "Failed to close Statement");
             }
         }
 
@@ -1601,7 +1618,7 @@ public final class JdbcUtil {
             try {
                 conn.close();
             } catch (final Exception e) {
-                logger.error("Failed to close Connection", e);
+                logger.warn(e, "Failed to close Connection");
             }
         }
     }
@@ -1699,7 +1716,7 @@ public final class JdbcUtil {
                         }
                     }
                 } catch (final SQLException e) {
-                    logger.warn("Failed to call ResultSet.absolute(), falling back to manual iteration", e);
+                    logger.warn(e, "Failed to call ResultSet.absolute(rowsToSkip={}); falling back to manual iteration", rowsToSkip);
 
                     // After a failed absolute(), cursor state may be undefined.
                     // Attempt to determine how many rows were skipped, but fall back to
@@ -5325,7 +5342,7 @@ public final class JdbcUtil {
                 try {
                     stmt.clearBatch();
                 } catch (final SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeBatch", e);
+                    logger.warn(e, "Failed to clear batch parameters after executeBatch");
                 }
             }
         } else {
@@ -5335,7 +5352,7 @@ public final class JdbcUtil {
                 try {
                     stmt.clearBatch();
                 } catch (final SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeBatch", e);
+                    logger.warn(e, "Failed to clear batch parameters after executeBatch");
                 }
             }
         }
@@ -5355,7 +5372,7 @@ public final class JdbcUtil {
                 try {
                     stmt.clearBatch();
                 } catch (final SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeLargeBatch", e);
+                    logger.warn(e, "Failed to clear batch parameters after executeLargeBatch");
                 }
             }
         } else {
@@ -5365,7 +5382,7 @@ public final class JdbcUtil {
                 try {
                     stmt.clearBatch();
                 } catch (final SQLException e) {
-                    logger.error("Failed to clear batch parameters after executeLargeBatch", e);
+                    logger.warn(e, "Failed to clear batch parameters after executeLargeBatch");
                 }
             }
         }
@@ -5401,7 +5418,7 @@ public final class JdbcUtil {
             try {
                 stmt.clearParameters();
             } catch (final SQLException e) {
-                logger.error("Failed to clear parameters after execution", e);
+                logger.warn(e, "Failed to clear parameters after execution");
             }
         }
     }
@@ -7546,19 +7563,24 @@ public final class JdbcUtil {
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (tableExists(conn, tableName)) {
+            logger.debug("Table already exists(tableName={})", tableName);
             return false;
         }
 
         try {
             execute(conn, schema);
 
+            logger.info("Created table(tableName={})", tableName);
+
             return true;
         } catch (final SQLException e) {
             // The table may have been created concurrently by another thread/process
             if (tableExists(conn, tableName)) {
+                logger.debug("Table was created concurrently(tableName={})", tableName);
                 return false;
             }
 
+            logger.warn(e, "Failed to create table(tableName={})", tableName);
             throw new UncheckedSQLException("Failed to create table: " + tableName, e);
         }
     }
@@ -7597,19 +7619,24 @@ public final class JdbcUtil {
         }
 
         if (!tableExists(conn, tableName)) {
+            logger.debug("Table does not exist(tableName={})", tableName);
             return false;
         }
 
         try {
             execute(conn, "DROP TABLE " + sqlTableName);
 
+            logger.info("Dropped table(tableName={})", tableName);
+
             return true;
         } catch (final SQLException e) {
             // The table may have been dropped concurrently by another thread/process
             if (isTableNotExistsException(e)) {
+                logger.debug("Table was dropped concurrently(tableName={})", tableName);
                 return false;
             }
 
+            logger.warn(e, "Failed to drop table(tableName={})", tableName);
             throw new UncheckedSQLException("Failed to drop table: " + tableName, e);
         }
     }
@@ -9049,7 +9076,7 @@ public final class JdbcUtil {
         // synchronized (isSQLLogEnabled_TL) {
         if (logger.isDebugEnabled() && config.isEnabled != b) {
             if (b) {
-                logger.debug("Enabled SQL logging");
+                logger.debug("Enabled SQL logging(maxSqlLogLength={})", maxSqlLogLength);
             } else {
                 logger.debug("Disabled SQL logging");
             }
@@ -9295,7 +9322,7 @@ public final class JdbcUtil {
         // synchronized (minExecutionTimeForSqlPerfLog_TL) {
         if (logger.isDebugEnabled() && config.minExecutionTimeForSqlPerfLog != minExecutionTimeForSqlPerfLog) {
             if (minExecutionTimeForSqlPerfLog >= 0) {
-                logger.debug("Set minExecutionTimeForSqlPerfLog to: " + minExecutionTimeForSqlPerfLog);
+                logger.debug("Set SQL performance logging threshold(minExecutionTime={}, maxSqlLogLength={})", minExecutionTimeForSqlPerfLog, maxSqlLogLength);
             } else {
                 logger.debug("Disabled SQL performance logging");
             }
@@ -10452,7 +10479,7 @@ public final class JdbcUtil {
 
             isSpringTransactionalDisabled_TL.set(b);
         } else {
-            logger.warn("Spring framework not detected or unable to retrieve Spring transaction context");
+            logger.debug("Spring framework not detected or unable to retrieve Spring transaction context");
         }
         // }
     }
@@ -11153,8 +11180,7 @@ public final class JdbcUtil {
             try {
                 paramKey = kryoParser.serialize(cacheKeyArgs);
             } catch (final Exception e) {
-                // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
             }
         } else {
             final List<Object> newArgs = Stream.of(cacheKeyArgs).map(it -> {
@@ -11174,8 +11200,7 @@ public final class JdbcUtil {
             try {
                 paramKey = N.toJson(newArgs);
             } catch (final Exception e) {
-                // ignore;
-                daoLogger.warn("Failed to generated cache key and not able cache the result for method: " + fullClassMethodName);
+                daoLogger.warn(e, "Failed to generate cache key; result will not be cached(method={})", fullClassMethodName);
             }
         }
 

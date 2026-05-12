@@ -505,7 +505,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     private void executeRollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         final Status previousStatus = _status;
 
-        logger.warn("Rolling back transaction(id={}, status={})", _timedId, previousStatus);
+        logger.info("Rolling back transaction(id={}, status={})", _timedId, previousStatus);
 
         _status = Status.FAILED_ROLLBACK;
         SQLException rollbackException = null;
@@ -519,7 +519,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             throw new UncheckedSQLException("Failed to roll back transaction(id=" + _timedId + ")", e);
         } finally {
             if (_status == Status.ROLLED_BACK) {
-                logger.warn("Transaction(id={}) has been rolled back successfully", _timedId);
+                logger.info("Transaction(id={}) has been rolled back successfully", _timedId);
             } else if (rollbackException == null) {
                 logger.warn("Failed to roll back transaction(id={})", _timedId);
             } else {

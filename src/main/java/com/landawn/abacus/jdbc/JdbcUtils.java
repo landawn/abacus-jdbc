@@ -40,6 +40,8 @@ import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
@@ -133,6 +135,8 @@ import com.landawn.abacus.util.stream.CharStream;
  * @see ResultSet
  */
 public final class JdbcUtils {
+
+    private static final Logger logger = LoggerFactory.getLogger(JdbcUtils.class);
 
     static final char[] ELEMENT_SEPARATOR_CHAR_ARRAY = Strings.ELEMENT_SEPARATOR.toCharArray();
 
@@ -935,6 +939,9 @@ public final class JdbcUtils {
         final Object[] row = new Object[columnCount];
         int result = 0;
 
+        logger.debug("Importing Dataset(rows={}, columns={}, batchSize={}, batchIntervalInMillis={})", dataset.size(), columnCount, batchSize,
+                batchIntervalInMillis);
+
         for (int i = 0, size = dataset.size(); i < size; i++) {
             dataset.moveToRow(i);
 
@@ -962,6 +969,8 @@ public final class JdbcUtils {
         if ((result % batchSize) > 0) {
             JdbcUtil.executeBatch(stmt);
         }
+
+        logger.info("Imported Dataset rows(imported={}, sourceRows={}, columns={})", result, dataset.size(), columnCount);
 
         return result;
     }
@@ -1192,6 +1201,8 @@ public final class JdbcUtils {
         final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
         final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
 
+        logger.debug("Importing reader data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
+
         try {
             String line = null;
             Object[] row = null;
@@ -1221,6 +1232,8 @@ public final class JdbcUtils {
             if ((result % batchSize) > 0) {
                 JdbcUtil.executeBatch(stmt);
             }
+
+            logger.info("Imported reader data rows(imported={})", result);
         } finally {
             if (!isBufferedReader) {
                 Objectory.recycle(br);
@@ -1395,6 +1408,8 @@ public final class JdbcUtils {
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
         long result = 0;
 
+        logger.debug("Importing iterator data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
+
         T next = null;
         while (iter.hasNext()) {
             next = iter.next();
@@ -1414,6 +1429,8 @@ public final class JdbcUtils {
         if ((result % batchSize) > 0) {
             JdbcUtil.executeBatch(stmt);
         }
+
+        logger.info("Imported iterator data rows(imported={})", result);
 
         return result;
     }
@@ -1841,10 +1858,13 @@ public final class JdbcUtils {
         final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
         long result = 0;
 
+        logger.debug("Importing CSV data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
+
         try {
             String line = br.readLine();
 
             if (line == null) {
+                logger.info("Imported CSV data rows(imported=0, columns=0)");
                 return 0;
             }
 
@@ -1878,6 +1898,8 @@ public final class JdbcUtils {
             if ((result % batchSize) > 0) {
                 JdbcUtil.executeBatch(stmt);
             }
+
+            logger.info("Imported CSV data rows(imported={}, columns={})", result, columnCount);
         } finally {
             if (!isBufferedReader) {
                 Objectory.recycle(br);
@@ -2314,6 +2336,8 @@ public final class JdbcUtils {
         final BufferedCsvWriter bw = isBufferedWriter ? (BufferedCsvWriter) output : Objectory.createBufferedCsvWriter(output);
         long result = 0;
 
+        logger.debug("Exporting ResultSet to CSV(selectColumns={})", selectColumnNames == null ? null : selectColumnNames.size());
+
         try {
             final boolean checkDateType = JdbcUtil.checkDateType(rs);
 
@@ -2389,6 +2413,8 @@ public final class JdbcUtils {
             }
 
             bw.flush();
+
+            logger.info("Exported CSV rows(exported={}, columns={})", result, columnNameSet == null ? columnCount : selectColumnNames.size());
         } finally {
             if (!isBufferedWriter) {
                 Objectory.recycle(bw);
@@ -3208,6 +3234,8 @@ public final class JdbcUtils {
 
         ResultSet rs = null;
 
+        logger.debug("Copying data(batchSize={}, batchIntervalInMillis={}, customStmtSetter={})", batchSize, batchIntervalInMillis, stmtSetter != null);
+
         try {
             rs = JdbcUtil.executeQuery(selectStmt);
 
@@ -3233,6 +3261,8 @@ public final class JdbcUtils {
             }
 
             // insertStmt.clearBatch();   // clearBatch() is called in JdbcUtil.executeBatch(insertStmt)
+
+            logger.info("Copied rows(copied={})", cnt);
 
             return cnt;
         } finally {

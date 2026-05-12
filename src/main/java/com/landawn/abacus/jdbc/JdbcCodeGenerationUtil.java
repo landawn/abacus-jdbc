@@ -42,6 +42,8 @@ import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.BiMap;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.CodeGenerationUtil;
@@ -92,6 +94,8 @@ import lombok.experimental.Accessors;
  */
 @SuppressWarnings("resource")
 public final class JdbcCodeGenerationUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(JdbcCodeGenerationUtil.class);
 
     /**
      * Default name of the inner class for static field/property name constants.
@@ -383,6 +387,7 @@ public final class JdbcCodeGenerationUtil {
 
             return generateEntityClass(entityName, rs, config);
         } catch (final SQLException e) {
+            logger.warn(e, "Failed to generate entity class(entityName={}, query={})", entityName, query);
             throw new UncheckedSQLException(e);
         }
     }
@@ -803,12 +808,18 @@ public final class JdbcCodeGenerationUtil {
                 IOUtil.createFileIfNotExists(file);
 
                 IOUtil.write(result, file);
+
+                logger.info("Generated entity class(className={}, file={})", finalClassName, file.getAbsolutePath());
             }
+
+            logger.debug("Generated entity class(className={}, columns={})", finalClassName, fieldNameList.size());
 
             return result;
         } catch (final SQLException e) {
+            logger.warn(e, "Failed to generate entity class(entityName={}, className={})", entityName, finalClassName);
             throw new UncheckedSQLException(e);
         } catch (final IOException e) {
+            logger.warn(e, "Failed to write generated entity class(entityName={}, className={}, srcDir={})", entityName, finalClassName, srcDir);
             throw new UncheckedIOException(e);
         }
     }
@@ -831,7 +842,7 @@ public final class JdbcCodeGenerationUtil {
         try {
             columnClassName = ClassUtil.getCanonicalClassName(ClassUtil.forName(columnClassName));
         } catch (final Throwable e) {
-            // ignore.
+            logger.debug(e, "Failed to resolve JDBC column class({}); using reported name", columnClassName);
         }
 
         if ("oracle.sql.TIMESTAMP".equals(columnClassName) || "oracle.sql.TIMESTAMPTZ".equals(columnClassName)
