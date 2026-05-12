@@ -113,6 +113,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         if (isolationLevel != IsolationLevel.DEFAULT) {
             conn.setTransactionIsolation(isolationLevel.intValue());
         }
+
+        logger.info("Started transaction(id={}, isolationLevel={}, closeConnection={})", _timedId, _isolationLevel, _closeConnection);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Original connection state for transaction(id={}): autoCommit={}, isolationLevel={}", _timedId, _originalAutoCommit,
+                    _originalIsolationLevel);
+        }
     }
 
     /**
@@ -311,6 +318,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         final int refCount = decrementAndGetRef();
 
         if (refCount > 0) {
+            logger.debug("Deferred commit for nested transaction(id={}); remaining scopes={}", _timedId, refCount);
             return;
         } else if (refCount < 0) {
             logger.warn("Transaction(id={}) is already: {}. Commit operation ignored", _timedId, _status);
@@ -330,12 +338,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         logger.info("Committing transaction(id={})", _timedId);
 
         _status = Status.FAILED_COMMIT;
+        SQLException commitException = null;
 
         try {
             _conn.commit();
 
             _status = Status.COMMITTED;
         } catch (final SQLException e) {
+            commitException = e;
             throw new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
         } finally {
             if (_status == Status.COMMITTED) {
@@ -345,13 +355,18 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
                 actionAfterCommit.run();
             } else {
-                logger.warn("Failed to commit transaction(id={}). Automatically rolling back", _timedId);
+                if (commitException == null) {
+                    logger.warn("Commit did not complete transaction(id={}). Automatically rolling back", _timedId);
+                } else {
+                    logger.warn(commitException, "Failed to commit transaction(id={}). Automatically rolling back", _timedId);
+                }
 
                 try {
                     executeRollback();
                 } catch (final Exception rollbackEx) {
-                    logger.warn("Failed to rollback transaction(id={}) after failed commit. Rollback error suppressed to preserve original commit exception.",
-                            _timedId, rollbackEx);
+                    logger.warn(rollbackEx,
+                            "Failed to roll back transaction(id={}) after failed commit. Rollback error suppressed to preserve original commit exception.",
+                            _timedId);
                 }
             }
         }
@@ -404,6 +419,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
+            logger.warn("Marked nested transaction(id={}) for rollback; remaining scopes={}", _timedId, refCount);
             return;
         } else if (refCount < 0) {
             logger.warn("Transaction(id={}) is already: {}. Rollback operation ignored", _timedId, _status);
@@ -459,6 +475,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
+            logger.warn("Marked nested transaction(id={}) for rollback; remaining scopes={}", _timedId, refCount);
             return;
         }
 
@@ -486,21 +503,27 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      */
     private void executeRollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
-        logger.warn("Rolling back transaction(id={})", _timedId);
+        final Status previousStatus = _status;
+
+        logger.warn("Rolling back transaction(id={}, status={})", _timedId, previousStatus);
 
         _status = Status.FAILED_ROLLBACK;
+        SQLException rollbackException = null;
 
         try {
             _conn.rollback();
 
             _status = Status.ROLLED_BACK;
         } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
+            rollbackException = e;
+            throw new UncheckedSQLException("Failed to roll back transaction(id=" + _timedId + ")", e);
         } finally {
             if (_status == Status.ROLLED_BACK) {
                 logger.warn("Transaction(id={}) has been rolled back successfully", _timedId);
-            } else {
+            } else if (rollbackException == null) {
                 logger.warn("Failed to roll back transaction(id={})", _timedId);
+            } else {
+                logger.warn(rollbackException, "Failed to roll back transaction(id={})", _timedId);
             }
 
             resetAndCloseConnection();
@@ -523,16 +546,17 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         try {
             _conn.setAutoCommit(_originalAutoCommit);
         } catch (final SQLException e) {
-            logger.warn("Failed to reset autoCommit", e);
+            logger.warn(e, "Failed to reset autoCommit for transaction(id={}) to {}", _timedId, _originalAutoCommit);
         }
 
         try {
             _conn.setTransactionIsolation(_originalIsolationLevel);
         } catch (final SQLException e) {
-            logger.warn("Failed to reset transaction isolation", e);
+            logger.warn(e, "Failed to reset transaction isolation for transaction(id={}) to {}", _timedId, _originalIsolationLevel);
         }
 
         if (_closeConnection) {
+            logger.debug("Releasing connection for transaction(id={})", _timedId);
             JdbcUtil.releaseConnection(_conn, _ds);
         }
     }
@@ -578,7 +602,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         _isolationLevel = isolationLevel;
         _isForUpdateOnly = forUpdateOnly;
 
-        return _refCount.incrementAndGet();
+        final int refCount = _refCount.incrementAndGet();
+
+        logger.debug("Entered transaction scope(id={}, isolationLevel={}, forUpdateOnly={}, refCount={})", _timedId, _isolationLevel, _isForUpdateOnly,
+                refCount);
+
+        return refCount;
     }
 
     /**
@@ -598,9 +627,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         if (res == 0) {
             threadTransactionMap.computeIfPresent(_id, (k, v) -> v == this ? null : v);
 
-            logger.info("Finishing transaction(id={})", _timedId);
+            logger.info("Finishing transaction scope(id={}, status={})", _timedId, _status);
 
-            logger.debug("Remaining active transactions: {}", threadTransactionMap.values());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Remaining active transactions: {}", threadTransactionMap.values());
+            }
         } else if (res > 0) {
             // Add safety checks to prevent NoSuchElementException
             if (!_isolationLevelStack.isEmpty()) {
@@ -619,9 +650,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     }
                 } catch (final SQLException e) {
                     _isolationLevelStack.push(_isolationLevel);
+                    logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, _isolationLevel);
                     throw new UncheckedSQLException(e);
                 }
             }
+
+            logger.debug("Left nested transaction scope(id={}, isolationLevel={}, forUpdateOnly={}, refCount={})", _timedId, _isolationLevel, _isForUpdateOnly,
+                    res);
         }
 
         return res;
