@@ -781,7 +781,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         if (x == null) {
             setNull(parameterName, java.sql.Types.BIGINT);
         } else {
-            setLong(parameterName, x.longValueExact());
+            boolean noException = false;
+            try {
+                setLong(parameterName, x.longValueExact());
+                noException = true;
+            } finally {
+                if (!noException) {
+                    close();
+                }
+            }
         }
 
         return this;

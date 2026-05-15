@@ -2527,8 +2527,12 @@ public final class JdbcUtils {
             selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
             insertSql = JdbcCodeGenerationUtil.generateInsertSql(targetConn, targetTableName);
         } finally {
-            JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
-            JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            // Release both connections even if one release throws (avoid leaking the second).
+            try {
+                JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+            } finally {
+                JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            }
         }
 
         return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
@@ -2602,8 +2606,12 @@ public final class JdbcUtils {
             selectSql = generateSelectSql(sourceConn, sourceTableName, selectColumnNames);
             insertSql = generateInsertSql(targetConn, targetTableName, selectColumnNames);
         } finally {
-            JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
-            JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            // Release both connections even if one release throws (avoid leaking the second).
+            try {
+                JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+            } finally {
+                JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            }
         }
 
         return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetDataSource, insertSql, batchSize);
@@ -2757,12 +2765,15 @@ public final class JdbcUtils {
 
             return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis, stmtSetter);
         } finally {
-            if (sourceConn != null) {
-                JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
-            }
-
-            if (targetConn != null) {
-                JdbcUtil.releaseConnection(targetConn, targetDataSource);
+            // Release both connections even if one release throws (avoid leaking the second).
+            try {
+                if (sourceConn != null) {
+                    JdbcUtil.releaseConnection(sourceConn, sourceDataSource);
+                }
+            } finally {
+                if (targetConn != null) {
+                    JdbcUtil.releaseConnection(targetConn, targetDataSource);
+                }
             }
         }
     }

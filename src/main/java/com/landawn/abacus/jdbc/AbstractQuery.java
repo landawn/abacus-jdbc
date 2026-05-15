@@ -4090,9 +4090,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This addBatch() throws SQLException {
         assertNotClosed();
 
-        addBatchAction.accept((This) this, stmt);
+        boolean noException = false;
 
-        isBatch = true;
+        try {
+            addBatchAction.accept((This) this, stmt);
+            isBatch = true;
+            noException = true;
+        } finally {
+            if (!noException) {
+                close();
+            }
+        }
 
         return (This) this;
     }

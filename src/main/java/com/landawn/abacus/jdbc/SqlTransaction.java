@@ -635,10 +635,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             }
         } else if (res > 0) {
             // Add safety checks to prevent NoSuchElementException
-            if (!_isolationLevelStack.isEmpty()) {
+            final boolean isolationPoppedFromStack = !_isolationLevelStack.isEmpty();
+            final boolean forUpdateOnlyPoppedFromStack = !_isForUpdateOnlyStack.isEmpty();
+
+            if (isolationPoppedFromStack) {
                 _isolationLevel = _isolationLevelStack.pop();
             }
-            if (!_isForUpdateOnlyStack.isEmpty()) {
+            if (forUpdateOnlyPoppedFromStack) {
                 _isForUpdateOnly = _isForUpdateOnlyStack.pop();
             }
 
@@ -650,7 +653,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                         _conn.setTransactionIsolation(_isolationLevel.intValue());
                     }
                 } catch (final SQLException e) {
-                    _isolationLevelStack.push(_isolationLevel);
+                    // Restore both stacks symmetrically so that the next decrement sees a consistent state.
+                    if (isolationPoppedFromStack) {
+                        _isolationLevelStack.push(_isolationLevel);
+                    }
+                    if (forUpdateOnlyPoppedFromStack) {
+                        _isForUpdateOnlyStack.push(_isForUpdateOnly);
+                    }
                     logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, _isolationLevel);
                     throw new UncheckedSQLException(e);
                 }

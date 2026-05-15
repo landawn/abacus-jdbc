@@ -556,7 +556,10 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import jakarta.persistence.Column;\n", "");
             }
 
-            if (N.isEmpty(idFields) || N.intersection(idFields, fieldNameList).isEmpty()) {
+            // Id fields may be specified using either Java field names (camelCase) or raw DB column names (often snake_case),
+            // particularly when auto-detected from JDBC metadata via getPrimaryKeys(). Match against both lists so the
+            // import is preserved whenever the field-emission pass below will actually emit @Id.
+            if (N.isEmpty(idFields) || (N.intersection(idFields, fieldNameList).isEmpty() && N.intersection(idFields, columnNameList).isEmpty())) {
                 headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
             } else if (isJavaPersistenceId) {
@@ -566,7 +569,8 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
             }
 
-            if (N.isEmpty(nonUpdatableFields) || N.intersection(nonUpdatableFields, fieldNameList).isEmpty()) {
+            if (N.isEmpty(nonUpdatableFields)
+                    || (N.intersection(nonUpdatableFields, fieldNameList).isEmpty() && N.intersection(nonUpdatableFields, columnNameList).isEmpty())) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
             }
 

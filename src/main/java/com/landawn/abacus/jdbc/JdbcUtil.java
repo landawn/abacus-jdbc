@@ -9450,7 +9450,10 @@ public final class JdbcUtil {
                 conn = JdbcUtil.getConnection(ds);
 
                 return org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(conn, ds);
-            } catch (final NoClassDefFoundError e) {
+            } catch (final LinkageError e) {
+                // Catch any LinkageError (NoClassDefFoundError, NoSuchMethodError, etc.) so that
+                // mismatched Spring versions or partial classpaths fall back gracefully instead of
+                // propagating a fatal error.
                 isInSpring = false;
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
