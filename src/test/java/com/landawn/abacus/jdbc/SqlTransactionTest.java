@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
@@ -629,6 +630,90 @@ public class SqlTransactionTest extends TestBase {
         }
     }
 
+    // commit() when status is not ACTIVE: covers line 335 (IllegalStateException)
+    @Test
+    public void testCommit_WhenStatusNotActive_ThrowsISE() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        final Field refCountField = SqlTransaction.class.getDeclaredField("_refCount");
+        refCountField.setAccessible(true);
+        ((AtomicInteger) refCountField.get(transaction)).set(1);
+
+        final Field statusField = SqlTransaction.class.getDeclaredField("_status");
+        statusField.setAccessible(true);
+        statusField.set(transaction, Transaction.Status.COMMITTED);
+
+        assertThrows(IllegalStateException.class, transaction::commit);
+    }
+
+    // rollback() when status is not ACTIVE/MARKED_ROLLBACK/FAILED_COMMIT: covers line 430 (IllegalStateException)
+    @Test
+    public void testRollback_WhenStatusInvalid_ThrowsISE() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        final Field refCountField = SqlTransaction.class.getDeclaredField("_refCount");
+        refCountField.setAccessible(true);
+        ((AtomicInteger) refCountField.get(transaction)).set(1);
+
+        final Field statusField = SqlTransaction.class.getDeclaredField("_status");
+        statusField.setAccessible(true);
+        statusField.set(transaction, Transaction.Status.COMMITTED);
+
+        assertThrows(IllegalStateException.class, transaction::rollback);
+    }
+
+    // rollbackIfNotCommitted() when status is not valid: covers line 483 (IllegalStateException)
+    @Test
+    public void testRollbackIfNotCommitted_WhenStatusInvalid_ThrowsISE() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        final Field statusField = SqlTransaction.class.getDeclaredField("_status");
+        statusField.setAccessible(true);
+        statusField.set(transaction, null);
+
+        assertThrows(IllegalStateException.class, transaction::rollbackIfNotCommitted);
+    }
+
+    // runOutsideTransaction(): cmd throws AND another transaction is opened inside → addSuppressed (line 763)
+    @Test
+    public void testRunOutsideTransaction_WhenCmdThrowsAndAnotherTransactionOpened_AddSuppressesISE() throws Exception {
+        clearThreadTransactionMap();
+        final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        try {
+            final RuntimeException ex = assertThrows(RuntimeException.class, () -> outerTx.runOutsideTransaction(() -> {
+                JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+                throw new RuntimeException("cmd error");
+            }));
+            assertTrue(ex.getSuppressed().length > 0);
+            assertTrue(ex.getSuppressed()[0] instanceof IllegalStateException);
+        } finally {
+            final SqlTransaction inner = SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL);
+            if (inner != null) {
+                inner.rollbackIfNotCommitted();
+            }
+        }
+    }
+
+    // callOutsideTransaction(): cmd throws AND another transaction is opened inside → addSuppressed (line 826)
+    @Test
+    public void testCallOutsideTransaction_WhenCmdThrowsAndAnotherTransactionOpened_AddSuppressesISE() throws Exception {
+        clearThreadTransactionMap();
+        final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        try {
+            final RuntimeException ex = assertThrows(RuntimeException.class, () -> outerTx.callOutsideTransaction(() -> {
+                JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+                throw new RuntimeException("cmd error");
+            }));
+            assertTrue(ex.getSuppressed().length > 0);
+            assertTrue(ex.getSuppressed()[0] instanceof IllegalStateException);
+        } finally {
+            final SqlTransaction inner = SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL);
+            if (inner != null) {
+                inner.rollbackIfNotCommitted();
+            }
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static void clearThreadTransactionMap() throws Exception {
         final Field mapField = SqlTransaction.class.getDeclaredField("threadTransactionMap");
@@ -669,5 +754,41 @@ public class SqlTransactionTest extends TestBase {
         tx.rollback();
         verify(connection).setAutoCommit(true);
         verify(connection).close();
+    }
+
+    @Test
+    public void testDecrementAndGetRefKeepsStacksSymmetricOnIsolationFailure() throws Exception {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+
+        final SqlTransaction tx = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, true);
+
+        // First increment: refCount becomes 1, no stack push (initial scope).
+        tx.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
+        // Second increment: refCount becomes 2; pushes the previous (isolation, forUpdateOnly)=(READ_COMMITTED,false) onto both stacks.
+        tx.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true);
+
+        final Field isolationStackField = SqlTransaction.class.getDeclaredField("_isolationLevelStack");
+        isolationStackField.setAccessible(true);
+        final Field forUpdateStackField = SqlTransaction.class.getDeclaredField("_isForUpdateOnlyStack");
+        forUpdateStackField.setAccessible(true);
+
+        final java.util.Deque<?> isolationStack = (java.util.Deque<?>) isolationStackField.get(tx);
+        final java.util.Deque<?> forUpdateStack = (java.util.Deque<?>) forUpdateStackField.get(tx);
+        assertEquals(1, isolationStack.size());
+        assertEquals(1, forUpdateStack.size());
+
+        // Make the inner-scope isolation restore fail to trigger the catch path.
+        Mockito.reset(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        doThrow(new SQLException("isolation restore failed")).when(connection).setTransactionIsolation(Mockito.anyInt());
+
+        assertThrows(UncheckedSQLException.class, tx::decrementAndGetRef);
+
+        // Stacks must remain symmetric (same size) so subsequent decrements stay consistent.
+        assertEquals(isolationStack.size(), forUpdateStack.size(),
+                "_isolationLevelStack and _isForUpdateOnlyStack must remain the same size after restore failure");
     }
 }

@@ -13,8 +13,8 @@ import com.landawn.abacus.query.SqlBuilder;
 
 public class UncheckedReadOnlyCrudJoinEntityHelperLTest extends TestBase {
 
-    private interface DummyDao extends UncheckedCrudDaoL<Object, SqlBuilder.PSC, DummyDao>,
-            UncheckedReadOnlyCrudJoinEntityHelperL<Object, SqlBuilder.PSC, DummyDao> {
+    private interface DummyDao
+            extends UncheckedCrudDaoL<Object, SqlBuilder.PSC, DummyDao>, UncheckedReadOnlyCrudJoinEntityHelperL<Object, SqlBuilder.PSC, DummyDao> {
     }
 
     private final DummyDao dao = createDefaultMethodProxy(DummyDao.class);

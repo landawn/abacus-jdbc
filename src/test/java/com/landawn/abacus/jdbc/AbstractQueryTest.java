@@ -48,6 +48,11 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.u.OptionalByte;
+import com.landawn.abacus.util.u.OptionalDouble;
+import com.landawn.abacus.util.u.OptionalFloat;
+import com.landawn.abacus.util.u.OptionalLong;
+import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream;
 
 public class AbstractQueryTest extends TestBase {
@@ -281,6 +286,18 @@ public class AbstractQueryTest extends TestBase {
         assertSame(query, result);
         verify(preparedStatement).setInt(9, 99);
         verify(preparedStatement, never()).addBatch();
+    }
+
+    // addBatch() must close the statement when the addBatchAction throws, otherwise a
+    // fluent chain that fails mid-way (e.g. query.setX(...).addBatch()) leaks the statement
+    // because batchUpdate()/closeAfterExecutionIfAllowed() will never run.
+    @Test
+    public void testAddBatch_ExceptionClosesQuery() throws SQLException {
+        doThrow(new SQLException("addBatch failed")).when(preparedStatement).addBatch();
+
+        assertThrows(SQLException.class, () -> query.addBatch());
+
+        verify(preparedStatement).close();
     }
 
     @Test
@@ -1134,8 +1151,181 @@ public class AbstractQueryTest extends TestBase {
     @Test
     @SuppressWarnings("deprecation")
     public void testList_WithLimit_NullTargetType_ThrowsIllegalArgumentException() {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.list((Class<?>) null, 10));
+        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.list((Class<?>) null, 10));
         assertTrue(iae.getMessage().contains("targetType"));
     }
+
+    // queryForUniqueValue(Type) - no rows returns Nullable.empty() (L4998)
+    @Test
+    public void testQueryForUniqueValue_Type_NoResult_ReturnsEmpty() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        final com.landawn.abacus.util.u.Nullable<String> result = query.queryForUniqueValue(Type.of(String.class));
+
+        assertFalse(result.isPresent());
+    }
+
+    // queryForUniqueNonNull(Type) - no rows returns Optional.empty() (L5074)
+    @Test
+    public void testQueryForUniqueNonNull_Type_NoResult_ReturnsEmpty() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        final com.landawn.abacus.util.u.Optional<String> result = query.queryForUniqueNonNull(Type.of(String.class));
+
+        assertFalse(result.isPresent());
+    }
+
+    // setDate(int, java.util.Date) with java.sql.Date instance when instanceof check is true (L1251)
+    @Test
+    public void testSetDate_UtilDate_WithSqlDateInstance() throws SQLException {
+        final java.sql.Date sqlDate = new java.sql.Date(5000L);
+        query.setDate(1, (java.util.Date) sqlDate);
+        verify(preparedStatement).setDate(1, sqlDate);
+    }
+
+    // setTime(int, java.util.Date) with java.sql.Time instance when instanceof check is true (L1333)
+    @Test
+    public void testSetTime_UtilDate_WithSqlTimeInstance() throws SQLException {
+        final java.sql.Time sqlTime = new java.sql.Time(6000L);
+        query.setTime(1, (java.util.Date) sqlTime);
+        verify(preparedStatement).setTime(1, sqlTime);
+    }
+
+    // setTimestamp(int, java.util.Date) with java.sql.Timestamp instance when instanceof check is true (L1415)
+    @Test
+    public void testSetTimestamp_UtilDate_WithSqlTimestampInstance() throws SQLException {
+        final java.sql.Timestamp sqlTs = new java.sql.Timestamp(7000L);
+        query.setTimestamp(1, (java.util.Date) sqlTs);
+        verify(preparedStatement).setTimestamp(1, sqlTs);
+    }
+
+    // Consume streamAllResultSets to trigger createExecuteSupplier -> JdbcUtil.execute(stmt) (L7759)
+    @Test
+    public void testStreamAllResultSets_ConsumeStream_HitsExecuteSupplier() throws SQLException {
+        when(preparedStatement.execute()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+
+        try (com.landawn.abacus.util.stream.Stream<com.landawn.abacus.util.Dataset> s = query.streamAllResultSets()) {
+            assertNotNull(s);
+            final java.util.List<com.landawn.abacus.util.Dataset> results = s.toList();
+            assertEquals(0, results.size());
+        }
+    }
+
+    // listAllResultSets(Class) with at least one ResultSet → covers NC L6739 (while loop body)
+    @Test
+    public void testListAllResultSets_Class_WithResultSet() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+
+        final List<List<String>> result = query.listAllResultSets(String.class);
+
+        assertEquals(1, result.size());
+        assertTrue(result.get(0).isEmpty());
+    }
+
+    // setFetchDirection second call → default already saved, covers PC L4130 else branch
+    @Test
+    public void testSetFetchDirection_SecondCall_DoesNotResaveDefault() throws SQLException {
+        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_FORWARD);
+        query.setFetchDirection(FetchDirection.FORWARD);
+        query.setFetchDirection(FetchDirection.REVERSE);
+        verify(preparedStatement, times(1)).getFetchDirection();
+    }
+
+    // setFetchSize second call → default already saved, covers PC L4180 else branch
+    @Test
+    public void testSetFetchSize_SecondCall_DoesNotResaveDefault() throws SQLException {
+        when(preparedStatement.getFetchSize()).thenReturn(100);
+        query.setFetchSize(50);
+        query.setFetchSize(200);
+        verify(preparedStatement, times(1)).getFetchSize();
+    }
+
+    // setMaxFieldSize second call → default already saved, covers PC L4208 else branch
+    @Test
+    public void testSetMaxFieldSize_SecondCall_DoesNotResaveDefault() throws SQLException {
+        when(preparedStatement.getMaxFieldSize()).thenReturn(1024);
+        query.setMaxFieldSize(512);
+        query.setMaxFieldSize(2048);
+        verify(preparedStatement, times(1)).getMaxFieldSize();
+    }
+
+    // setQueryTimeout second call → default already saved, covers PC L4281 else branch
+    @Test
+    public void testSetQueryTimeout_SecondCall_DoesNotResaveDefault() throws SQLException {
+        when(preparedStatement.getQueryTimeout()).thenReturn(30);
+        query.setQueryTimeout(10);
+        query.setQueryTimeout(60);
+        verify(preparedStatement, times(1)).getQueryTimeout();
+    }
+
+    // queryForByte with result row → covers PC L4464 true branch
+    @Test
+    public void testQueryForByte_WithResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getByte(1)).thenReturn((byte) 42);
+
+        assertEquals(OptionalByte.of((byte) 42), query.queryForByte());
+    }
+
+    // queryForShort with result row → covers PC L4492 true branch
+    @Test
+    public void testQueryForShort_WithResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getShort(1)).thenReturn((short) 999);
+
+        assertEquals(OptionalShort.of((short) 999), query.queryForShort());
+    }
+
+    // queryForLong with result row → covers PC L4551 true branch
+    @Test
+    public void testQueryForLong_WithResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getLong(1)).thenReturn(888L);
+
+        assertEquals(OptionalLong.of(888L), query.queryForLong());
+    }
+
+    // queryForFloat with result row → covers PC L4579 true branch
+    @Test
+    public void testQueryForFloat_WithResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getFloat(1)).thenReturn(3.14f);
+
+        assertEquals(OptionalFloat.of(3.14f), query.queryForFloat());
+    }
+
+    // queryForDouble with result row → covers PC L4607 true branch
+    @Test
+    public void testQueryForDouble_WithResult() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getDouble(1)).thenReturn(2.718);
+
+        assertEquals(OptionalDouble.of(2.718), query.queryForDouble());
+    }
+
+    // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable
+    // TODO: L7427, L7477 (stream(RowFilter/BiRowFilter) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
+    // TODO: L7688-L7689, L7741-L7742 (streamAllResultSets(Extractor/BiExtractor) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
 }

@@ -19,6 +19,7 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1493,5 +1494,182 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getObject(2)).thenReturn(utilDate);
         Object result = proxy.getObject("col2");
         assertEquals(utilDate, result);
+    }
+
+    // getObject(int) - columnIndex <= 0 branch (L459-L460)
+    @Test
+    public void testGetObjectByIndex_ZeroColumnIndex() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(3);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(0)).thenReturn("delegated");
+        assertEquals("delegated", proxy.getObject(0));
+        verify(delegate).getObject(0);
+    }
+
+    // getObject(int) - Timestamp value in simple type guard (L471)
+    @Test
+    public void testGetObjectByIndex_TimestampValue() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(3);
+        when(delegate.getMetaData()).thenReturn(meta);
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(ts);
+        assertEquals(ts, proxy.getObject(1));
+    }
+
+    // getObject(int) - Boolean value in simple type guard (L471)
+    @Test
+    public void testGetObjectByIndex_BooleanValue() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(3);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.getObject(1)).thenReturn(Boolean.TRUE);
+        assertTrue((Boolean) proxy.getObject(1));
+    }
+
+    // getObject(int) - first call with non-simple type, metadata already set (L474 false branch)
+    @Test
+    public void testGetObjectByIndex_FirstCall_NonSimpleType() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        java.util.Date utilDate = new java.util.Date();
+        when(delegate.getObject(1)).thenReturn(utilDate);
+        assertEquals(utilDate, proxy.getObject(1));
+    }
+
+    // getObject(String) - Number value in simple type guard (L552)
+    @Test
+    public void testGetObjectByLabel_NumberValue() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(3);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("num")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(42);
+        assertEquals(42, proxy.getObject("num"));
+    }
+
+    // getObject(String) - Timestamp value in simple type guard (L552)
+    @Test
+    public void testGetObjectByLabel_TimestampValue() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(3);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("ts")).thenReturn(1);
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(ts);
+        assertEquals(ts, proxy.getObject("ts"));
+    }
+
+    // getObject(String) - Boolean value in simple type guard (L552)
+    @Test
+    public void testGetObjectByLabel_BooleanValue() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(3);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("flag")).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(true);
+        assertTrue((Boolean) proxy.getObject("flag"));
+    }
+
+    // getObject(int) with oracle.sql.TIMESTAMP — lines 480-482
+    @Test
+    public void testGetObjectByIndex_OracleTimestamp() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(new oracle.sql.TIMESTAMP(now));
+        assertEquals(now, proxy.getObject(1));
+    }
+
+    // getObject(int) with oracle.sql.TIMESTAMPLTZ — lines 483-485 (exception at 485, unreachable without real Oracle connection)
+    @Test
+    public void testGetObjectByIndex_OracleTimestampLTZ() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        oracle.sql.TIMESTAMPLTZ oracleTstz = new oracle.sql.TIMESTAMPLTZ();
+        when(delegate.getObject(1)).thenReturn(oracleTstz);
+        assertThrows(SQLException.class, () -> proxy.getObject(1));
+    }
+
+    // getObject(int) with oracle.sql.DATE and Timestamp metadata — lines 486-491
+    @Test
+    public void testGetObjectByIndex_OracleDate_TimestampMetadata() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(1)).thenReturn("java.sql.Timestamp");
+        when(delegate.getMetaData()).thenReturn(meta);
+        java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(new oracle.sql.DATE(ts));
+        when(delegate.getTimestamp(1)).thenReturn(ts);
+        assertEquals(ts, proxy.getObject(1));
+    }
+
+    // getObject(int) with oracle.sql.DATE and Date metadata — lines 486, 493-494
+    @Test
+    public void testGetObjectByIndex_OracleDate_DateMetadata() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(1)).thenReturn("java.sql.Date");
+        when(delegate.getMetaData()).thenReturn(meta);
+        java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(new oracle.sql.DATE(date));
+        when(delegate.getDate(1)).thenReturn(date);
+        assertEquals(date, proxy.getObject(1));
+    }
+
+    // getObject(String) with oracle.sql.TIMESTAMP — lines 561-563
+    @Test
+    public void testGetObjectByLabel_OracleTimestamp() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("col")).thenReturn(1);
+        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(new oracle.sql.TIMESTAMP(now));
+        assertEquals(now, proxy.getObject("col"));
+    }
+
+    // getObject(String) with oracle.sql.TIMESTAMPLTZ — lines 564-566 (exception at 566, unreachable without real Oracle connection)
+    @Test
+    public void testGetObjectByLabel_OracleTimestampLTZ() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("col")).thenReturn(1);
+        oracle.sql.TIMESTAMPLTZ oracleTstz = new oracle.sql.TIMESTAMPLTZ();
+        when(delegate.getObject(1)).thenReturn(oracleTstz);
+        assertThrows(SQLException.class, () -> proxy.getObject("col"));
+    }
+
+    // getObject(String) with oracle.sql.DATE and Timestamp metadata — lines 567-572
+    @Test
+    public void testGetObjectByLabel_OracleDate_TimestampMetadata() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(1)).thenReturn("java.sql.Timestamp");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("col")).thenReturn(1);
+        java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(new oracle.sql.DATE(ts));
+        when(delegate.getTimestamp(1)).thenReturn(ts);
+        assertEquals(ts, proxy.getObject("col"));
+    }
+
+    // getObject(String) with oracle.sql.DATE and Date metadata — lines 567, 573-575
+    @Test
+    public void testGetObjectByLabel_OracleDate_DateMetadata() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(2);
+        when(meta.getColumnClassName(1)).thenReturn("java.sql.Date");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("col")).thenReturn(1);
+        java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(new oracle.sql.DATE(date));
+        when(delegate.getDate(1)).thenReturn(date);
+        assertEquals(date, proxy.getObject("col"));
     }
 }

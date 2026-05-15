@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -483,4 +484,94 @@ public class CrudDaoTest extends TestBase {
 
         assertEquals(0, dao.batchRefresh(List.of(), List.of("name"), 5));
     }
+
+    // refresh(entity, propNames) — dbEntity found, copies into entity and returns true (lines 1448-1453).
+    @Test
+    public void testRefresh_WithProps_EntityFound() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(5L);
+        entity.setName("stale");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(5L);
+        dbEntity.setName("fresh");
+
+        when(dao.gett(Mockito.anyLong(), Mockito.anyCollection())).thenReturn(dbEntity);
+
+        assertTrue(dao.refresh(entity, List.of("name")));
+        assertEquals("fresh", entity.getName());
+    }
+
+    // refresh(entity) single-arg — delegates to refresh(entity, propNames) (lines 1406-1411).
+    @Test
+    public void testRefresh_SingleArg() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("test");
+
+        Mockito.doReturn(true).when(dao).refresh(Mockito.same(entity), Mockito.any(Collection.class));
+
+        assertTrue(dao.refresh(entity));
+        Mockito.verify(dao).refresh(Mockito.same(entity), Mockito.any(Collection.class));
+    }
+
+    // batchRefresh(entities, batchSize) — non-empty path delegates to full signature (lines 1498-1506).
+    @Test
+    public void testBatchRefresh_WithBatchSize_NonEmpty() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(2L);
+        entity.setName("X");
+        List<IdAnnotatedEntity> entities = List.of(entity);
+
+        Mockito.doReturn(2).when(dao).batchRefresh(Mockito.same(entities), Mockito.any(Collection.class), Mockito.eq(3));
+
+        assertEquals(2, dao.batchRefresh(entities, 3));
+        Mockito.verify(dao).batchRefresh(Mockito.same(entities), Mockito.any(Collection.class), Mockito.eq(3));
+    }
+
+    // batchRefresh(entities, propNamesToRefresh, batchSize) — non-empty entities, DB returns entities, copies and returns refreshed count (lines 1563-1588).
+    @Test
+    public void testBatchRefresh_WithPropsAndBatchSize_EntityFound() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(7L);
+        entity.setName("stale");
+        List<IdAnnotatedEntity> entities = List.of(entity);
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(7L);
+        dbEntity.setName("fresh");
+
+        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(2))).thenReturn(List.of(dbEntity));
+
+        int count = dao.batchRefresh(entities, List.of("name"), 2);
+
+        assertEquals(1, count);
+        assertEquals("fresh", entity.getName());
+    }
+
+    // batchUpsert with multiple unique props — checks second prop in the validation loop (lines 1305-1309).
+    @Test
+    public void testBatchUpsert_FullSig_SecondPropUnknown_Throws() {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(entities, List.of("id", "nonExistent"), 5));
+    }
+
+    // batchRefresh(entities, propNamesToRefresh, batchSize) — dbEntities empty (lines 1574-1575).
+    @Test
+    public void testBatchRefresh_DbEntitiesEmpty_ReturnsZero() throws SQLException {
+        IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+
+        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(5))).thenReturn(List.of());
+
+        assertEquals(0, dao.batchRefresh(List.of(entity), List.of("name"), 5));
+    }
+
+    // TODO: batchUpsert(entities, uniquePropNamesForQuery, batchSize) full signature (lines 1303-1380)
+    // involves Seq.of, batchInsert, batchUpdate, SqlTransaction, and EntityId/Seid — requires DB integration.
 }

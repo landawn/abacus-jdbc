@@ -16,6 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -324,6 +325,95 @@ public class DBLockTest extends TestBase {
         assertNotNull(code);
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
+
+    // Lock: removeExpiredLockSQL returns > 0, covering L465 info log
+    @Test
+    public void testLock_ExpiredLockRemoved() throws Exception {
+        final LockFixture fixture = newLockFixture(1, 1);
+
+        final String code = fixture.lock.lock("resource-expired", 200L, 50L, 0L);
+
+        assertNotNull(code);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+    }
+
+    // Lock: exception during acquire, timeout expires, covering L522-L523
+    @Test
+    public void testLock_ExceptionThenTimeoutReturnsNull() throws Exception {
+        final LockFixture fixture = newLockFixture(0);
+        when(fixture.preparedStatement.executeUpdate()).thenReturn(0).thenThrow(new RuntimeException("lock failed")).thenReturn(0);
+
+        final String code = fixture.lock.lock("resource-exc-timeout", 200L, 1L, 0L);
+
+        assertNull(code);
+    }
+
+    // Unlock: wrong code — lockInfo exists but code mismatch, covering L576 branch, L580 false, L593
+    @Test
+    public void testUnlock_WrongCode() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0);
+        final String code = fixture.lock.lock("resource-wrong-code", 200L, 50L, 0L);
+
+        assertNotNull(code);
+        final boolean unlocked = fixture.lock.unlock("resource-wrong-code", "wrong-code");
+
+        assertFalse(unlocked);
+    }
+
+    // Close: scheduledFuture.get() throws exception, covering L644-L645
+    @Test
+    public void testClose_ScheduledFutureGetThrowsException() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        when(fixture.scheduledFuture.get()).thenThrow(new java.util.concurrent.ExecutionException(new RuntimeException("test")));
+
+        fixture.lock.close();
+
+        assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    // Close: unlockSQL throws during close loop, covering L654-L656
+    @Test
+    public void testClose_UnlockThrowsExceptionDuringClose() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        fixture.lock.lock("resource-close-exc", 200L, 50L, 0L);
+        when(fixture.preparedStatement.executeUpdate()).thenThrow(new RuntimeException("unlock failed during close"));
+
+        fixture.lock.close();
+
+        assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    // Close with null scheduledFuture, covering the null branch at L640
+    @Test
+    public void testClose_ScheduledFutureNull() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        setField(fixture.lock, "scheduledFuture", null);
+
+        assertDoesNotThrow(() -> fixture.lock.close());
+        assertEquals(0, targetCodePool(fixture.lock).size());
+    }
+
+    // Unlock where code matches but DB delete returns 0 rows (shouldRemoveFromLocal=true, unLocked=false)
+    // Covers the L586 branch where both operands are evaluated and unLocked is false
+    @Test
+    public void testUnlock_CodeMatchesButDBAffectReturnsZero() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0);
+        final String code = fixture.lock.lock("resource-no-db", 200L, 50L, 0L);
+
+        assertNotNull(code);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+
+        final boolean unlocked = fixture.lock.unlock("resource-no-db", code);
+
+        assertFalse(unlocked);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+    }
+
+    // TODO: L207 — tableExists returns false after creation (requires full constructor with real DB)
+    // TODO: L217-L218 — SQLException in constructor catch (requires full constructor with real DB)
+    // TODO: L224-L278 — refreshTask body (lambda created in constructor, untestable via Unsafe-based approach)
+    // TODO: L509-L511 — Thread.interrupted() during lock acquire (requires precise thread interruption timing)
+    // TODO: L516 — attempts >= maxAttempts loop exit (requires impractical number of iterations)
 
     private static Unsafe unsafe() throws Exception {
         final Field field = Unsafe.class.getDeclaredField("theUnsafe");

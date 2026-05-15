@@ -479,4 +479,245 @@ public class DaoUtilTest extends TestBase {
         assertTrue(DaoUtil.isInsertQuery("INSERT INTO t VALUES(1)"));
         assertFalse(DaoUtil.isInsertQuery("SELECT * FROM t"));
     }
+
+    // SQL keyword parsing edge cases: non-letter leading characters (line 910)
+    @Test
+    public void testIsSelectQuery_NonLetterSql() {
+        assertFalse(DaoUtil.isSelectQuery("123 SELECT * FROM t"));
+        assertFalse(DaoUtil.isSelectQuery("_abc SELECT * FROM t"));
+        assertFalse(DaoUtil.isSelectQuery("-- comment\n123"));
+    }
+
+    @Test
+    public void testIsInsertQuery_NonLetterSql() {
+        assertFalse(DaoUtil.isInsertQuery("123 INSERT INTO t VALUES(1)"));
+    }
+
+    // WITH clause with no final DML keyword (lines 936, 975)
+    @Test
+    public void testIsSelectQuery_CteNoFinalKeyword() {
+        assertFalse(DaoUtil.isSelectQuery("WITH cte AS (SELECT 1)"));
+        assertFalse(DaoUtil.isInsertQuery("WITH cte AS (SELECT 1)"));
+    }
+
+    @Test
+    public void testIsSelectQuery_CteNoFinalKeyword_WithRecursive() {
+        assertFalse(DaoUtil.isSelectQuery("WITH RECURSIVE cte AS (SELECT 1)"));
+        assertFalse(DaoUtil.isInsertQuery("WITH RECURSIVE cte AS (SELECT 1)"));
+    }
+
+    // WITH clause containing DML keywords in CTE body — exercises isQueryKeyword branches (line 979) and depth tracking (line 953)
+    @Test
+    public void testIsSelectQuery_CteWithNestedUpdate() {
+        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (UPDATE t SET x=1 RETURNING *) SELECT * FROM cte"));
+    }
+
+    @Test
+    public void testIsSelectQuery_CteWithNestedDelete() {
+        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (DELETE FROM t WHERE id=1 RETURNING *) SELECT * FROM cte"));
+    }
+
+    @Test
+    public void testIsInsertQuery_CteWithNestedMerge() {
+        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (MERGE INTO t USING s ON t.id=s.id WHEN MATCHED THEN UPDATE SET x=1) INSERT INTO t2 SELECT * FROM cte"));
+    }
+
+    // Backtick-quoted identifiers in WITH clause exercises quote-type branch (line 941)
+    @Test
+    public void testIsSelectQuery_CteWithBacktickQuotes() {
+        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT `col` FROM `tbl`) SELECT * FROM cte"));
+    }
+
+    @Test
+    public void testIsInsertQuery_CteWithBacktickQuotes() {
+        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (SELECT `col` FROM `tbl`) INSERT INTO t2 SELECT * FROM cte"));
+    }
+
+    // CTE with parenthesized sub-expressions at different depths
+    @Test
+    public void testIsSelectQuery_CteWithNestedParens() {
+        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT x FROM (SELECT 1 AS x) sub WHERE x > 0) SELECT * FROM cte"));
+    }
+
+    // getEntityJoinInfo delegation (line 1097)
+    @Test
+    public void testGetEntityJoinInfo() {
+        final var result = DaoUtil.getEntityJoinInfo(SimpleEntity.class, SimpleEntity.class, "simple_entity");
+        assertNotNull(result);
+        assertEquals(0, result.size());
+    }
+
+    // getJoinEntityPropNamesByType delegation (line 1138)
+    @Test
+    public void testGetJoinEntityPropNamesByType() {
+        final var result = DaoUtil.getJoinEntityPropNamesByType(SimpleEntity.class, SimpleEntity.class, "simple_entity", String.class);
+        assertNotNull(result);
+        assertEquals(0, result.size());
+    }
+
+    // getDaoPreparedQueryFunc PSC with non-null selectPropNames — exercises the non-null branch (lines 681, 686)
+    @Test
+    public void testGetDaoPreparedQueryFunc_PscApplyWithSelectProps() throws SQLException {
+        final PscDao dao = Mockito.mock(PscDao.class);
+        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
+        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
+        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
+        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
+
+        Mockito.when(dao.dataSource()).thenReturn(ds);
+        Mockito.when(ds.getConnection()).thenReturn(conn);
+        Mockito.when(conn.getMetaData()).thenReturn(md);
+        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
+        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+
+        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
+        final Collection<String> selectProps = Arrays.asList("id", "name");
+
+        final var pq = pair._1.apply(selectProps, cond);
+        assertNotNull(pq);
+
+        final var nq = pair._2.apply(selectProps, cond);
+        assertNotNull(nq);
+    }
+
+    // getDaoPreparedQueryFunc PAC apply (lines 693-701)
+    @Test
+    public void testGetDaoPreparedQueryFunc_PacApply() throws SQLException {
+        final PacDao dao = Mockito.mock(PacDao.class);
+        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
+        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
+        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
+        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
+
+        Mockito.when(dao.dataSource()).thenReturn(ds);
+        Mockito.when(ds.getConnection()).thenReturn(conn);
+        Mockito.when(conn.getMetaData()).thenReturn(md);
+        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
+        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+
+        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
+
+        final var pq = pair._1.apply(null, cond);
+        assertNotNull(pq);
+
+        final var nq = pair._2.apply(null, cond);
+        assertNotNull(nq);
+    }
+
+    // getDaoPreparedQueryFunc PLC apply (lines 705-713)
+    @Test
+    public void testGetDaoPreparedQueryFunc_PlcApply() throws SQLException {
+        final PlcDao dao = Mockito.mock(PlcDao.class);
+        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
+        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
+        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
+        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
+
+        Mockito.when(dao.dataSource()).thenReturn(ds);
+        Mockito.when(ds.getConnection()).thenReturn(conn);
+        Mockito.when(conn.getMetaData()).thenReturn(md);
+        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
+        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+
+        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
+
+        final var pq = pair._1.apply(null, cond);
+        assertNotNull(pq);
+
+        final var nq = pair._2.apply(null, cond);
+        assertNotNull(nq);
+    }
+
+    // getDaoPreparedQueryFunc PSB apply (lines 717-725)
+    @Test
+    public void testGetDaoPreparedQueryFunc_PsbApply() throws SQLException {
+        final PsbDao dao = Mockito.mock(PsbDao.class);
+        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+        final javax.sql.DataSource ds = Mockito.mock(javax.sql.DataSource.class);
+        final java.sql.Connection conn = Mockito.mock(java.sql.Connection.class);
+        final java.sql.PreparedStatement stmt = Mockito.mock(java.sql.PreparedStatement.class);
+        final java.sql.DatabaseMetaData md = Mockito.mock(java.sql.DatabaseMetaData.class);
+
+        Mockito.when(dao.dataSource()).thenReturn(ds);
+        Mockito.when(ds.getConnection()).thenReturn(conn);
+        Mockito.when(conn.getMetaData()).thenReturn(md);
+        Mockito.when(md.getDatabaseProductName()).thenReturn("MySQL");
+        Mockito.when(md.getDatabaseProductVersion()).thenReturn("8.0");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+
+        final var pair = DaoUtil.getDaoPreparedQueryFunc(dao);
+        final com.landawn.abacus.query.condition.Condition cond = com.landawn.abacus.query.Filters.eq("id", 1L);
+
+        final var pq = pair._1.apply(null, cond);
+        assertNotNull(pq);
+
+        final var nq = pair._2.apply(null, cond);
+        assertNotNull(nq);
+    }
+
+    // getDaoPreparedQueryFunc with a non-standard SqlBuilder type parameter exercises the else / throw branch (line 728).
+    static abstract class CustomSqlBuilder extends com.landawn.abacus.query.SqlBuilder {
+        CustomSqlBuilder() {
+            super(com.landawn.abacus.util.NamingPolicy.NO_CHANGE, SQLPolicy.PARAMETERIZED_SQL);
+        }
+    }
+
+    interface CustomDao extends Dao<DemoBean, CustomSqlBuilder, CustomDao> {
+    }
+
+    @Test
+    public void testGetDaoPreparedQueryFunc_NonStandardSqlBuilder_Throws() {
+        final CustomDao dao = Mockito.mock(CustomDao.class);
+        Mockito.when(dao.targetEntityClass()).thenReturn((Class) DemoBean.class);
+
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.getDaoPreparedQueryFunc(dao));
+    }
+
+    // Shell-comment (#) in skipLeadingWhitespaceAndComments exercises the continue at line 1019.
+    @Test
+    public void testIsSelectQuery_ShellComment() {
+        assertTrue(DaoUtil.isSelectQuery("# comment\nSELECT * FROM t"));
+    }
+
+    @Test
+    public void testIsInsertQuery_ShellComment() {
+        assertTrue(DaoUtil.isInsertQuery("# comment\nINSERT INTO t VALUES(1)"));
+    }
+
+    // Backslash-escaped quote inside a CTE quoted literal exercises skipQuotedLiteral lines 1036-1038.
+    @Test
+    public void testIsSelectQuery_CteWithBackslashEscapedQuote() {
+        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT 'it\\'s' AS name) SELECT * FROM cte"));
+    }
+
+    @Test
+    public void testIsInsertQuery_CteWithBackslashEscapedQuote() {
+        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (SELECT 'it\\'s' AS name) INSERT INTO t SELECT * FROM cte"));
+    }
+
+    // Backslash at end of quoted literal exercises the break at line 1038.
+    @Test
+    public void testIsSelectQuery_CteWithBackslashAtEndOfQuote() {
+        assertFalse(DaoUtil.isSelectQuery("WITH cte AS (SELECT 'test\\' AS name) SELECT * FROM cte"));
+    }
+
+    // Doubled-quote escape (SQL standard) inside a CTE exercises skipQuotedLiteral line 1043.
+    @Test
+    public void testIsSelectQuery_CteWithDoubledQuoteEscape() {
+        assertTrue(DaoUtil.isSelectQuery("WITH cte AS (SELECT 'it''s' AS name) SELECT * FROM cte"));
+    }
+
+    @Test
+    public void testIsInsertQuery_CteWithDoubledQuoteEscape() {
+        assertTrue(DaoUtil.isInsertQuery("WITH cte AS (SELECT 'it''s' AS name) INSERT INTO t SELECT * FROM cte"));
+    }
 }

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -26,6 +27,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
+import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.Query;
@@ -39,6 +41,7 @@ import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.RowDataset;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u;
 import com.landawn.abacus.util.u.Optional;
 
 @Tag("2025")
@@ -133,6 +136,75 @@ public class DaoImplTest extends TestBase {
     // Before the fix, createQueryFunctionByMethod threw ClassCastException trying to cast TypeVariable to ParameterizedType.
     interface GenericExtractorDao<T> {
         List<T> listWithExtractor(Jdbc.ResultExtractor<T> extractor);
+    }
+
+    // isFindFirst/isFindOnlyOne/isQueryForUnique test interfaces
+    interface FindFirstOpDao {
+        List<TestEntity> anyName();
+    }
+
+    interface FindFirstPrefixDao {
+        List<TestEntity> findFirstByStatus(String status);
+    }
+
+    interface FindOnlyOneMethodDao {
+        List<TestEntity> findOnlyOneById(long id);
+    }
+
+    interface QueryForUniqueMethodDao {
+        List<TestEntity> queryForUniqueByName(String name);
+    }
+
+    interface AnyOpDaoForUnique {
+        List<TestEntity> anyName();
+    }
+
+    // isListQuery branch test interfaces
+    interface ListAllOpDao {
+        java.util.Set<TestEntity> getEntities();
+    }
+
+    interface MappedByKeyDao {
+        @MappedByKey("id")
+        java.util.Map<Long, TestEntity> findMapped();
+    }
+
+    interface UpdateOpDao {
+        int updateCount();
+    }
+
+    // isExistsQuery branch test interfaces
+    interface ExistsOpDao {
+        boolean checkExists();
+    }
+
+    // getFirstReturnEleType / getSecondReturnEleType / getFirstReturnEleEleType test interfaces
+    interface FirstReturnEleDao {
+        java.util.List<TestEntity> getEntities();
+    }
+
+    interface SecondReturnEleDao {
+        java.util.Map<String, TestEntity> getMapped();
+    }
+
+    interface FirstReturnEleEleDao {
+        java.util.List<java.util.List<TestEntity>> getNested();
+    }
+
+    interface SecondReturnEleEleDao {
+        java.util.List<java.util.Set<TestEntity>> getNestedSets();
+    }
+
+    // Non-parameterized return type for getFirstReturnEleType null path
+    interface PlainReturnDao {
+        TestEntity getEntity();
+    }
+
+    // Default method for createMethodHandle test
+    interface DefaultMethodDao {
+        default String greeting() {
+            return "hello";
+        }
     }
 
     static final class StubQuery extends AbstractQuery<PreparedStatement, StubQuery> {
@@ -393,8 +465,7 @@ public class DaoImplTest extends TestBase {
 
     @CacheResult
     @RefreshCache
-    interface CacheDisabledOverrideDao
-            extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, PSC, CacheDisabledOverrideDao> {
+    interface CacheDisabledOverrideDao extends com.landawn.abacus.jdbc.dao.UncheckedNoUpdateDao<TestEntity, PSC, CacheDisabledOverrideDao> {
         // No @NonDBOperation: must reach the proxy's cache wrapper so the resolution logic actually runs.
         @CacheResult(disabled = true)
         default String findCached() {
@@ -495,6 +566,234 @@ public class DaoImplTest extends TestBase {
         CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), null, recordingCache, null);
         assertEquals("refresh-result", dao.updateData());
         assertEquals(0, updateCount.get(), "Disabled @RefreshCache method must not invalidate the cache");
+    }
+
+    // isFindFirst: OP.findFirst returns true regardless of method name (line 521)
+    @Test
+    public void testIsFindFirst_OpFindFirst() throws Exception {
+        Method method = FindFirstOpDao.class.getMethod("anyName");
+        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.findFirst));
+    }
+
+    // isFindFirst: OP.DEFAULT with method starting "findFirst" returns true (line 524)
+    @Test
+    public void testIsFindFirst_DefaultWithFindFirstPrefix() throws Exception {
+        Method method = FindFirstPrefixDao.class.getMethod("findFirstByStatus", String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.DEFAULT));
+    }
+
+    // isFindFirst: OP.DEFAULT with "findOnlyOne" prefix returns false (line 524)
+    @Test
+    public void testIsFindFirst_DefaultFindOnlyOneReturnsFalse() throws Exception {
+        Method method = FindOnlyOneMethodDao.class.getMethod("findOnlyOneById", long.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindFirst", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertFalse((boolean) m.invoke(null, method, OP.DEFAULT));
+    }
+
+    // isFindOnlyOne: OP.findOnlyOne returns true (line 530)
+    @Test
+    public void testIsFindOnlyOne_OpFindOnlyOne() throws Exception {
+        Method method = FindFirstOpDao.class.getMethod("anyName");
+        Method m = DaoImpl.class.getDeclaredMethod("isFindOnlyOne", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.findOnlyOne));
+    }
+
+    // isFindOnlyOne: OP.DEFAULT with method starting "findOnlyOne" returns true (line 533)
+    @Test
+    public void testIsFindOnlyOne_DefaultWithFindOnlyOnePrefix() throws Exception {
+        Method method = FindOnlyOneMethodDao.class.getMethod("findOnlyOneById", long.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isFindOnlyOne", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.DEFAULT));
+    }
+
+    // isQueryForUnique: OP.queryForUnique returns true (line 538)
+    @Test
+    public void testIsQueryForUnique_OpQueryForUnique() throws Exception {
+        Method method = AnyOpDaoForUnique.class.getMethod("anyName");
+        Method m = DaoImpl.class.getDeclaredMethod("isQueryForUnique", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.queryForUnique));
+    }
+
+    // isQueryForUnique: OP.DEFAULT with method starting "queryForUnique" returns true (line 541)
+    @Test
+    public void testIsQueryForUnique_DefaultWithQueryForUniquePrefix() throws Exception {
+        Method method = QueryForUniqueMethodDao.class.getMethod("queryForUniqueByName", String.class);
+        Method m = DaoImpl.class.getDeclaredMethod("isQueryForUnique", Method.class, OP.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.DEFAULT));
+    }
+
+    // isListQuery: OP.listAll with valid Collection subtype returns true (line 437)
+    @Test
+    public void testIsListQuery_ListAllOpWithValidCollection() throws Exception {
+        Method method = ListAllOpDao.class.getMethod("getEntities");
+        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, java.util.Set.class, OP.listAll, "ListAllOpDao.getEntities"));
+    }
+
+    // isListQuery: @MappedByKey annotation returns true (line 439)
+    @Test
+    public void testIsListQuery_MappedByKeyAnnotation() throws Exception {
+        Method method = MappedByKeyDao.class.getMethod("findMapped");
+        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, java.util.Map.class, OP.DEFAULT, "MappedByKeyDao.findMapped"));
+    }
+
+    // isListQuery: non-DEFAULT non-list op returns false (line 441)
+    @Test
+    public void testIsListQuery_UpdateOpReturnsFalse() throws Exception {
+        Method method = UpdateOpDao.class.getMethod("updateCount");
+        Method m = DaoImpl.class.getDeclaredMethod("isListQuery", Method.class, Class.class, OP.class, String.class);
+        m.setAccessible(true);
+
+        assertFalse((boolean) m.invoke(null, method, int.class, OP.update, "UpdateOpDao.updateCount"));
+    }
+
+    // isExistsQuery: OP.exists with boolean return returns true (line 500)
+    @Test
+    public void testIsExistsQuery_OpExistsReturnsTrue() throws Exception {
+        Method method = ExistsOpDao.class.getMethod("checkExists");
+        Method m = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, method, OP.exists, "ExistsOpDao.checkExists"));
+    }
+
+    // isExistsQuery: non-DEFAULT non-exists op returns false (line 502)
+    @Test
+    public void testIsExistsQuery_ListOpReturnsFalse() throws Exception {
+        Method method = ExistsOpDao.class.getMethod("checkExists");
+        Method m = DaoImpl.class.getDeclaredMethod("isExistsQuery", Method.class, OP.class, String.class);
+        m.setAccessible(true);
+
+        assertFalse((boolean) m.invoke(null, method, OP.list, "ExistsOpDao.checkExists"));
+    }
+
+    // isSingleReturnType: checks Optional, Nullable, primitive types
+    @Test
+    public void testIsSingleReturnType() throws Exception {
+        Method m = DaoImpl.class.getDeclaredMethod("isSingleReturnType", Class.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, u.Optional.class));
+        assertTrue((boolean) m.invoke(null, u.Nullable.class));
+        assertTrue((boolean) m.invoke(null, u.OptionalInt.class));
+        assertTrue((boolean) m.invoke(null, int.class));
+        assertTrue((boolean) m.invoke(null, java.util.Optional.class));
+        assertFalse((boolean) m.invoke(null, String.class));
+        assertFalse((boolean) m.invoke(null, TestEntity.class));
+    }
+
+    // isFindOrListTargetClass: checks bean, map, list, array, record classes
+    @Test
+    public void testIsFindOrListTargetClass() throws Exception {
+        Method m = DaoImpl.class.getDeclaredMethod("isFindOrListTargetClass", Class.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(null, TestEntity.class));
+        assertTrue((boolean) m.invoke(null, java.util.Map.class));
+        assertTrue((boolean) m.invoke(null, java.util.List.class));
+        assertTrue((boolean) m.invoke(null, Object[].class));
+        assertFalse((boolean) m.invoke(null, String.class));
+    }
+
+    // getFirstReturnEleType: returns element type from parameterized return type
+    @Test
+    public void testGetFirstReturnEleType_List() throws Exception {
+        Method method = FirstReturnEleDao.class.getMethod("getEntities");
+        Method m = DaoImpl.class.getDeclaredMethod("getFirstReturnEleType", Method.class);
+        m.setAccessible(true);
+
+        assertEquals(TestEntity.class, m.invoke(null, method));
+    }
+
+    // getFirstReturnEleType: null for non-parameterized return type
+    @Test
+    public void testGetFirstReturnEleType_PlainReturn() throws Exception {
+        Method method = PlainReturnDao.class.getMethod("getEntity");
+        Method m = DaoImpl.class.getDeclaredMethod("getFirstReturnEleType", Method.class);
+        m.setAccessible(true);
+
+        assertEquals(null, m.invoke(null, method));
+    }
+
+    // getSecondReturnEleType: returns second element type from Map return
+    @Test
+    public void testGetSecondReturnEleType_Map() throws Exception {
+        Method method = SecondReturnEleDao.class.getMethod("getMapped");
+        Method m = DaoImpl.class.getDeclaredMethod("getSecondReturnEleType", Method.class);
+        m.setAccessible(true);
+
+        assertEquals(TestEntity.class, m.invoke(null, method));
+    }
+
+    // getFirstReturnEleEleType: returns nested element type from List<List<>> return
+    @Test
+    public void testGetFirstReturnEleEleType_NestedList() throws Exception {
+        Method method = FirstReturnEleEleDao.class.getMethod("getNested");
+        Method m = DaoImpl.class.getDeclaredMethod("getFirstReturnEleEleType", Method.class);
+        m.setAccessible(true);
+
+        assertEquals(TestEntity.class, m.invoke(null, method));
+    }
+
+    // getFirstReturnEleEleType: returns nested element type from List<Set<>> return
+    @Test
+    public void testGetFirstReturnEleEleType_NestedSet() throws Exception {
+        Method method = SecondReturnEleEleDao.class.getMethod("getNestedSets");
+        Method m = DaoImpl.class.getDeclaredMethod("getFirstReturnEleEleType", Method.class);
+        m.setAccessible(true);
+
+        assertEquals(TestEntity.class, m.invoke(null, method));
+    }
+
+    // createMethodHandle: creates a method handle for a default interface method (line 375)
+    @Test
+    public void testCreateMethodHandle_DefaultMethod() throws Exception {
+        Method method = DefaultMethodDao.class.getMethod("greeting");
+        Method m = DaoImpl.class.getDeclaredMethod("createMethodHandle", Method.class);
+        m.setAccessible(true);
+
+        Object handle = m.invoke(null, method);
+        assertNotNull(handle);
+        assertTrue(handle instanceof java.lang.invoke.MethodHandle);
+    }
+
+    // QueryInfo: sql without trailing semicolon is not modified (line 6649)
+    @Test
+    public void testQueryInfo_SqlWithoutTrailingSemicolon() {
+        DaoImpl.QueryInfo qi = new DaoImpl.QueryInfo("SELECT 1", null, 10, 20, true, 50, OP.update, true, true, false, false, false, false);
+        assertEquals("SELECT 1", qi.sql);
+        assertEquals(10, qi.queryTimeout);
+        assertEquals(20, qi.fetchSize);
+        assertTrue(qi.isBatch);
+        assertEquals(50, qi.batchSize);
+        assertEquals(OP.update, qi.op);
+        assertTrue(qi.isSingleParameter);
+        assertTrue(qi.autoSetSysTimeParam);
+        assertFalse(qi.isSelect);
+        assertFalse(qi.isInsert);
+        assertFalse(qi.isProcedure);
+        assertFalse(qi.isNamedQuery);
     }
 
     private static DataSource mockDataSourceForDaoCreation() throws SQLException {

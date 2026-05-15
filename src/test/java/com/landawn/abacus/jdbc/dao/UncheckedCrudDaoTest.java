@@ -443,6 +443,14 @@ public class UncheckedCrudDaoTest extends TestBase {
     }
 
     @Test
+    public void testBatchUpsert_FullSig_SecondPropUnknown_Throws() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(entities, List.of("id", "nonExistent"), 5));
+    }
+
+    @Test
     public void testBatchUpsert_FullSig_NonPositiveBatchSize_Throws() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
 
@@ -487,5 +495,151 @@ public class UncheckedCrudDaoTest extends TestBase {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
 
         assertEquals(0, dao.batchRefresh(List.of(), List.of("name"), 5));
+    }
+
+    // refresh(entity) — single-arg delegates to refresh(entity, propNamesToRefresh)
+    @Test
+    public void testRefresh_SingleArg_DelegatesToRefreshWithProps() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+
+        Mockito.doReturn(true).when(dao).refresh(Mockito.same(entity), Mockito.anyCollection());
+
+        assertTrue(dao.refresh(entity));
+        verify(dao).refresh(Mockito.same(entity), Mockito.anyCollection());
+    }
+
+    // refresh(entity, propNamesToRefresh) — found branch (dbEntity != null)
+    @Test
+    public void testRefresh_WithPropNames_Found() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(3L);
+        entity.setName("stale");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(3L);
+        dbEntity.setName("fresh");
+
+        when(dao.gett(Mockito.eq(3L), Mockito.anyCollection())).thenReturn(dbEntity);
+
+        assertTrue(dao.refresh(entity, List.of("name")));
+        assertEquals("fresh", entity.getName());
+    }
+
+    // batchRefresh(entities, batchSize) — non-empty delegates to batchRefresh with props
+    @Test
+    public void testBatchRefresh_WithBatchSize_NonEmpty_Delegates() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        List<IdAnnotatedEntity> entities = List.of(new IdAnnotatedEntity());
+
+        Mockito.doReturn(1).when(dao).batchRefresh(Mockito.same(entities), Mockito.anyCollection(), Mockito.eq(5));
+
+        assertEquals(1, dao.batchRefresh(entities, 5));
+        verify(dao).batchRefresh(Mockito.same(entities), Mockito.anyCollection(), Mockito.eq(5));
+    }
+
+    // batchRefresh(entities, propNamesToRefresh, batchSize) — dbEntities empty
+    @Test
+    public void testBatchRefresh_FullSig_DbEntitiesEmpty_ReturnsZero() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+
+        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(5))).thenReturn(List.of());
+
+        assertEquals(0, dao.batchRefresh(List.of(entity), List.of("name"), 5));
+    }
+
+    // batchRefresh(entities, propNamesToRefresh, batchSize) — non-empty refreshes entities
+    @Test
+    public void testBatchRefresh_FullSig_NonEmpty_RefreshesEntities() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("stale");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("fresh");
+
+        when(dao.batchGet(Mockito.anyCollection(), Mockito.anyCollection(), Mockito.eq(5))).thenReturn(List.of(dbEntity));
+
+        assertEquals(1, dao.batchRefresh(List.of(entity), List.of("name"), 5));
+        assertEquals("fresh", entity.getName());
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — single unique prop, insert only
+    @Test
+    public void testBatchUpsert_FullSig_SingleUniqueProp_InsertOnly() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("Alice");
+
+        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of());
+        when(dao.batchInsert(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(List.of(1L));
+
+        List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("name"), 2);
+
+        assertEquals(1, result.size());
+        assertSame(entity, result.get(0));
+        verify(dao).batchInsert(Mockito.anyCollection(), Mockito.eq(2));
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — single unique prop, update only
+    @Test
+    public void testBatchUpsert_FullSig_SingleUniqueProp_UpdateOnly() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("Alice");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(10L);
+        dbEntity.setName("Alice");
+
+        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of(dbEntity));
+        when(dao.batchUpdate(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(1);
+
+        List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("name"), 2);
+
+        assertEquals(1, result.size());
+        verify(dao).batchUpdate(Mockito.anyCollection(), Mockito.eq(2));
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — multi unique prop, insert only
+    @Test
+    public void testBatchUpsert_FullSig_MultiUniqueProp_InsertOnly() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("Alice");
+
+        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of());
+        when(dao.batchInsert(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(List.of(1L));
+
+        List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("id", "name"), 2);
+
+        assertEquals(1, result.size());
+        verify(dao).batchInsert(Mockito.anyCollection(), Mockito.eq(2));
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — multi unique prop, update only
+    @Test
+    public void testBatchUpsert_FullSig_MultiUniqueProp_UpdateOnly() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("Alice");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("Alice");
+
+        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of(dbEntity));
+        when(dao.batchUpdate(Mockito.anyCollection(), Mockito.eq(2))).thenReturn(1);
+
+        List<IdAnnotatedEntity> result = dao.batchUpsert(List.of(entity), List.of("id", "name"), 2);
+
+        assertEquals(1, result.size());
+        verify(dao).batchUpdate(Mockito.anyCollection(), Mockito.eq(2));
     }
 }

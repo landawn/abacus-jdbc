@@ -815,6 +815,36 @@ public class JoinInfoTest extends TestBase {
     interface SetUserDao extends Dao<SetUserEntity, PSC, SetUserDao> {
     }
 
+    @DaoConfig(allowJoiningByNullOrDefaultValue = false)
+    interface AllowFalseDao extends Dao<UserEntity, PSC, AllowFalseDao> {
+    }
+
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface CollectionUserDao extends Dao<CollectionUserEntity, PSC, CollectionUserDao> {
+    }
+
+    public static final class CollectionUserEntity {
+        private long userId;
+        @JoinedBy("userId")
+        private Collection<OrderEntity> orders;
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(long userId) {
+            this.userId = userId;
+        }
+
+        public Collection<OrderEntity> getOrders() {
+            return orders;
+        }
+
+        public void setOrders(Collection<OrderEntity> orders) {
+            this.orders = orders;
+        }
+    }
+
     public static final class SetUserEntity {
         private long userId;
         @JoinedBy("userId")
@@ -1191,6 +1221,237 @@ public class JoinInfoTest extends TestBase {
         org.mockito.Mockito.verify(stmt).setLong(3, 30L);
         org.mockito.Mockito.verify(stmt).setLong(4, 40L);
     }
+
+    // 2-column join key extractors via setJoinPropEntities (L652-653)
+    @Test
+    public void testTwoColumnJoin_SetJoinPropEntities() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(OrderItemDao.class, OrderItemEntity.class, "order_item_2col_set", "details");
+        final OrderItemEntity item = new OrderItemEntity();
+        item.setOrderId(10L);
+        item.setProductId(20L);
+        final OrderDetailEntity detail = new OrderDetailEntity();
+        detail.setOrderId(10L);
+        detail.setProductId(20L);
+        detail.setQty(5);
+
+        joinInfo.setJoinPropEntities(List.of(item), List.of(detail));
+
+        assertNotNull(item.getDetails());
+        assertEquals(1, item.getDetails().size());
+    }
+
+    // m2m single param setter (L333-334)
+    @Test
+    public void testParamSetter_ManyToMany_ExecutesLambda() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_param", "roles");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserRoleUserEntity entity = new UserRoleUserEntity();
+        entity.setUserId(42L);
+
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 42L);
+    }
+
+    // m2m batch param setter (L337-342)
+    @Test
+    public void testBatchParamSetter_ManyToMany_ExecutesLambda() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_batch", "roles");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserRoleUserEntity e1 = new UserRoleUserEntity();
+        e1.setUserId(1L);
+        final UserRoleUserEntity e2 = new UserRoleUserEntity();
+        e2.setUserId(2L);
+
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo
+                .getBatchSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, List.of(e1, e2));
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 1L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 2L);
+    }
+
+    // m2m select plan with null/empty selectPropNames (L361-362)
+    @Test
+    public void testGetSelectSqlPlan_ManyToMany_NullColumns() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_null", "roles");
+        final Tuple2<Function<Collection<String>, String>, ?> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        final String sql = plan._1.apply(null);
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
+
+    // m2m batch select plan with null/empty selectPropNames (L411-412)
+    @Test
+    public void testGetBatchSelectSqlPlan_ManyToMany_NullColumns() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bnull", "roles");
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final String sql = plan._1.apply(null, 2);
+        assertNotNull(sql);
+        assertTrue(sql.contains("JOIN"));
+    }
+
+    // m2m batch select plan with selectPropNames not containing ref prop (L416-419)
+    @Test
+    public void testGetBatchSelectSqlPlan_ManyToMany_ColumnsNotIncludingRefProp() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bref", "roles");
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final String sql = plan._1.apply(List.of("name"), 2);
+        assertNotNull(sql);
+        assertTrue(sql.contains("JOIN"));
+    }
+
+    // batch select plan with size==1 for direct join (L594-595)
+    @Test
+    public void testGetBatchSelectSqlPlan_DirectJoin_SizeOne() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_s1", "orders");
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final String sql = plan._1.apply(null, 1);
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
+
+    // batch select plan with columns missing referenced prop for direct join (L600-609)
+    @Test
+    public void testGetBatchSelectSqlPlan_DirectJoin_ColumnsMissingRefProp() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_cmr", "orders");
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final String sql = plan._1.apply(List.of("id"), 2);
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
+
+    // batch select plan with columns including referenced prop for direct join (L612)
+    @Test
+    public void testGetBatchSelectSqlPlan_DirectJoin_ColumnsIncludingRefProp() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_cir", "orders");
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(PSC.class);
+        final String sql = plan._1.apply(List.of("userId"), 2);
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT"));
+    }
+
+    // batch delete plan with size==1 for direct join (L627-628)
+    @Test
+    public void testGetBatchDeleteSqlPlan_DirectJoin_SizeOne() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_direct_bd1", "orders");
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final String sql = plan._1.apply(1);
+        assertNotNull(sql);
+        assertTrue(sql.contains("DELETE"));
+    }
+
+    // m2m batch delete plan with size==1 (L456-459)
+    @Test
+    public void testGetBatchDeleteSqlPlan_ManyToMany_SizeOne() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bd1", "roles");
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final String sql = plan._1.apply(1);
+        assertNotNull(sql);
+        assertTrue(sql.contains("DELETE"));
+    }
+
+    // m2m batch delete plan with size>1 (L459)
+    @Test
+    public void testGetBatchDeleteSqlPlan_ManyToMany_SizeMultiple() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_bd3", "roles");
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        final String sql = plan._1.apply(3);
+        assertNotNull(sql);
+        assertTrue(sql.contains("DELETE"));
+    }
+
+    // 1-column batch param setter (L533-536)
+    @Test
+    public void testBatchParamSetter_OneColumn_ExecutesLambda() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_batch1", "orders");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserEntity e1 = new UserEntity();
+        e1.setUserId(10L);
+        final UserEntity e2 = new UserEntity();
+        e2.setUserId(20L);
+
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Collection<?>>> plan = joinInfo
+                .getBatchSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, List.of(e1, e2));
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 10L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 20L);
+    }
+
+    // param setter for strict dao with non-null value (L1018 branch 4: !allow && !isNullOrDefault)
+    @Test
+    public void testParamSetter_Strict_NonNullValue() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserStrictDao.class, UserEntity.class, "user_entity_strict_ok", "orders");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final UserEntity entity = new UserEntity();
+        entity.setUserId(5L);
+
+        final Tuple2<?, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo.getSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 5L);
+    }
+
+    // DaoConfig with allowJoiningByNullOrDefaultValue=false (L1075)
+    @Test
+    public void testDaoConfig_AllowJoiningFalse() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(AllowFalseDao.class, UserEntity.class, "user_entity_allow_false", "orders");
+        assertNotNull(joinInfo);
+        assertFalse(joinInfo.allowJoiningByNullOrDefaultValue);
+    }
+
+    // setJoinPropEntities with no matching joined entity (L965 null branch)
+    @Test
+    public void testSetJoinPropEntities_NoMatchingEntity() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity_no_match", "orders");
+        final UserEntity user = new UserEntity();
+        user.setUserId(99L);
+        final OrderEntity order = new OrderEntity();
+        order.setUserId(1L);
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(order));
+
+        assertTrue(user.getOrders() == null || user.getOrders().isEmpty());
+    }
+
+    // setJoinPropEntities with Collection (non-List) prop type (L967 assignableFrom branch)
+    @Test
+    public void testSetJoinPropEntities_CollectionProp_NotList() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(CollectionUserDao.class, CollectionUserEntity.class, "collection_user", "orders");
+        final CollectionUserEntity user = new CollectionUserEntity();
+        user.setUserId(1L);
+        final OrderEntity o = new OrderEntity();
+        o.setUserId(1L);
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(o));
+
+        assertNotNull(user.getOrders());
+        assertEquals(1, user.getOrders().size());
+    }
+
+    // m2m setJoinPropEntities (L481 srcEntityKeyExtractor lambda for m2m)
+    @Test
+    public void testSetJoinPropEntities_ManyToMany() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_set", "roles");
+        final UserRoleUserEntity user = new UserRoleUserEntity();
+        user.setUserId(1L);
+        final RoleLookupEntity role = new RoleLookupEntity();
+        role.setRoleId(1L);
+        role.setName("Admin");
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(role));
+
+        assertNotNull(user.getRoles());
+        assertEquals(1, user.getRoles().size());
+    }
+
+    // M2M right pair missing '=' separator (L251 branch 2)
+    @Test
+    public void testConstructor_ManyToManyJoin_NoEqInSecondPair() {
+        assertThrows(IllegalArgumentException.class, () -> new JoinInfo(M2MNoEqInSecondPairEntity.class, "m2m_no_eq2", "roles", false));
+    }
 }
 
 final class UserRoleUserEntity {
@@ -1255,6 +1516,30 @@ final class UserRoleLink {
 
     public void setRoleId(final long roleId) {
         this.roleId = roleId;
+    }
+}
+
+// M2M join where only the second pair has no '=' separator → L251 branch 2
+final class M2MNoEqInSecondPairEntity {
+    private long userId;
+
+    @JoinedBy("userId = UserRoleLink.userId, UserRoleLink.roleId")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+
+    public List<RoleLookupEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<RoleLookupEntity> roles) {
+        this.roles = roles;
     }
 }
 

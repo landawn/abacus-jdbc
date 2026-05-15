@@ -1147,8 +1147,7 @@ public class JdbcUtilsTest extends TestBase {
         when(mockDataset.get(0)).thenReturn("keep", "skip", "skip", "keep");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
-        Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter =
-                (pq, row) -> pq.setString(1, (String) row[0]);
+        Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (pq, row) -> pq.setString(1, (String) row[0]);
         Throwables.Predicate<Object[], Exception> filter = row -> "keep".equals(row[0]);
 
         // Execute: batchSize=1 so executeBatch is called after every accepted row
@@ -1225,5 +1224,56 @@ public class JdbcUtilsTest extends TestBase {
         assertEquals("keep", captured[0]);
         assertEquals("K_B", captured[1]);
         assertEquals("K_C", captured[2]);
+    }
+
+    /**
+     * Regression test for connection-leak in
+     * {@code copy(DataSource, DataSource, String, String, int)} and
+     * {@code copy(DataSource, String, int, DataSource, String, int, long, BiConsumer)}.
+     *
+     * <p>Before the fix the finally block called {@code releaseConnection(source...)}
+     * followed by {@code releaseConnection(target...)} as two top-level statements;
+     * if the first release threw a {@link RuntimeException}, the second release was
+     * silently skipped, leaking the target connection. The fix wraps the first release
+     * in a nested try/finally so the second always runs.</p>
+     */
+    @Test
+    public void testCopyDataSources_ReleasesTargetConnectionEvenWhenSourceReleaseThrows() throws SQLException {
+        // Source DataSource where the connection's close() throws (simulating a release failure).
+        final DataSource srcDs = mock(DataSource.class);
+        final Connection srcConn = mock(Connection.class);
+        when(srcDs.getConnection()).thenReturn(srcConn);
+        when(srcConn.getMetaData()).thenReturn(mockDatabaseMetaData);
+        // Force releaseConnection -> closeQuietly -> conn.close() to throw a RuntimeException
+        // (closeQuietly catches Exception not Error; we use a RuntimeException to ensure it
+        // propagates out of the finally on the first release).
+        Mockito.doThrow(new RuntimeException("simulated release failure")).when(srcConn).close();
+
+        // Target DataSource: must still have its connection released even though source release threw.
+        final DataSource targetDs = mock(DataSource.class);
+        final Connection targetConn = mock(Connection.class);
+        final DatabaseMetaData targetMd = mock(DatabaseMetaData.class);
+        when(targetDs.getConnection()).thenReturn(targetConn);
+        when(targetConn.getMetaData()).thenReturn(targetMd);
+        when(targetMd.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetMd.getDatabaseProductVersion()).thenReturn("8");
+
+        // Drive copy() into the finally block by failing the SQL generation step.
+        // generateSelectSql calls getMetaData(); make the source connection's metadata throw to
+        // trigger the finally cleanup deterministically (we don't care which step fails as long
+        // as we reach finally).
+        when(srcConn.getMetaData()).thenThrow(new SQLException("simulated generation failure"));
+
+        try {
+            JdbcUtils.copy(srcDs, targetDs, "src_table", "dst_table", 100);
+            org.junit.jupiter.api.Assertions.fail("Expected SQLException or RuntimeException to propagate from copy()");
+        } catch (final SQLException | RuntimeException expected) {
+            // Either the generation failure or the close() failure may surface; we don't care
+            // which - we only care that the target connection was still closed.
+        }
+
+        // The fix guarantees that the target connection's close() is invoked even though the
+        // source's close() threw a RuntimeException in the finally block.
+        verify(targetConn).close();
     }
 }

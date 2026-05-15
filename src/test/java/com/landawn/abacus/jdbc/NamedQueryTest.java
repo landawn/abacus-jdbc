@@ -367,6 +367,17 @@ public class NamedQueryTest extends TestBase {
     }
 
     @Test
+    public void testSetLongBigIntegerOverflowClosesStatement() throws SQLException {
+        // BigInteger > Long.MAX_VALUE causes ArithmeticException from longValueExact().
+        // The statement must be closed so the connection is not leaked.
+        BigInteger tooLarge = new BigInteger("18446744073709551616"); // 2^64
+
+        assertThrows(ArithmeticException.class, () -> namedQuery.setLong("param1", tooLarge));
+
+        verify(mockPreparedStatement).close();
+    }
+
+    @Test
     public void testSetFloatPrimitive() throws SQLException {
         String paramName = "param1";
         float value = 123.45f;
@@ -3655,5 +3666,47 @@ public class NamedQueryTest extends TestBase {
         // Integer (not bean/Map/Collection/Object[]/EntityId), paramCount==1 → calls stmt.setInt
         doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setInt(anyInt(), anyInt());
         assertThrows(RuntimeException.class, () -> q.setParameters(Integer.valueOf(42)));
+    }
+
+    // --- setParameters(Object) via Object overload: Collection branch (L3981) ---
+
+    @Test
+    public void testSetParameters_ObjectOverload_Collection() throws SQLException {
+        Object params = Arrays.asList("value1", 123);
+        NamedQuery result = namedQuery.setParameters(params);
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement).setString(eq(1), eq("value1"));
+        verify(mockPreparedStatement).setInt(eq(2), eq(123));
+    }
+
+    // --- setParameters(Object) via Object overload: Collection exception (L3982-3984) ---
+
+    @Test
+    public void testSetParameters_ObjectOverload_CollectionExceptionClosesAndRethrows() throws SQLException {
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        Object params = Arrays.asList(null, null);
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
+        verify(mockPreparedStatement).close();
+    }
+
+    // --- setParameters(Object) via Object overload: Object[] branch (L3988) ---
+
+    @Test
+    public void testSetParameters_ObjectOverload_Array() throws SQLException {
+        Object params = new Object[] { "value1", 123 };
+        NamedQuery result = namedQuery.setParameters(params);
+        assertSame(namedQuery, result);
+        verify(mockPreparedStatement).setString(eq(1), eq("value1"));
+        verify(mockPreparedStatement).setInt(eq(2), eq(123));
+    }
+
+    // --- setParameters(Object) via Object overload: Object[] exception (L3989-3991) ---
+
+    @Test
+    public void testSetParameters_ObjectOverload_ArrayExceptionClosesAndRethrows() throws SQLException {
+        doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
+        Object params = new Object[] { null, null };
+        assertThrows(RuntimeException.class, () -> namedQuery.setParameters(params));
+        verify(mockPreparedStatement).close();
     }
 }

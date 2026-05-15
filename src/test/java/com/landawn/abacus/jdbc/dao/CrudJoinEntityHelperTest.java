@@ -163,6 +163,58 @@ public class CrudJoinEntityHelperTest extends TestBase {
         verify(dao).loadAllJoinEntities(Mockito.<Collection<TestEntity>> any());
     }
 
+    // gett(id, joinEntitiesToLoad) with non-null result loads join entities (line 250 branch).
+    @Test
+    public void testGett_WithJoinClass_LoadsJoinEntities() throws SQLException {
+        TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        when(dao.gett(16L)).thenReturn(entity);
+        doNothing().when(dao).loadJoinEntities(entity, String.class);
+
+        assertSame(entity, dao.gett(16L, String.class));
+        verify(dao).loadJoinEntities(entity, String.class);
+    }
+
+    // gett(id, boolean) with true loads all join entities (line 281 branch).
+    @Test
+    public void testGett_WithBooleanTrue_LoadsAllJoinEntities() throws SQLException {
+        TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        when(dao.gett(17L)).thenReturn(entity);
+        doNothing().when(dao).loadAllJoinEntities(entity);
+
+        assertSame(entity, dao.gett(17L, true));
+        verify(dao).loadAllJoinEntities(entity);
+    }
+
+    // gett(id, selectPropNames, joinEntitiesToLoad) with non-null result loads join entities (lines 314-315).
+    @Test
+    public void testGett_WithSelectPropNamesAndJoinClass_LoadsJoinEntities() throws SQLException {
+        TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        when(dao.gett(18L, List.of("name"))).thenReturn(entity);
+        doNothing().when(dao).loadJoinEntities(entity, String.class);
+
+        assertSame(entity, dao.gett(18L, List.of("name"), String.class));
+        verify(dao).loadJoinEntities(entity, String.class);
+    }
+
+    // gett(id, selectPropNames, boolean) with true loads all join entities (line 386 branch).
+    @Test
+    public void testGett_WithSelectPropNamesAndBooleanTrue_LoadsAllJoinEntities() throws SQLException {
+        TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+
+        when(dao.gett(19L, List.of("name"))).thenReturn(entity);
+        doNothing().when(dao).loadAllJoinEntities(entity);
+
+        assertSame(entity, dao.gett(19L, List.of("name"), true));
+        verify(dao).loadAllJoinEntities(entity);
+    }
+
     @Test
     public void testBatchGet_LoadsJoinEntitiesAcrossBatches() throws SQLException {
         TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);

@@ -679,19 +679,13 @@ public class DaoTest extends TestBase {
 
         when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(TestEntity.class);
-        when(dao.update(
-                eq(dbEntity),
-                anyCollection(),
-                any(Condition.class))).thenReturn(1);
+        when(dao.update(eq(dbEntity), anyCollection(), any(Condition.class))).thenReturn(1);
 
         final TestEntity result = dao.upsert(entity, condition);
 
         assertSame(dbEntity, result);
         assertEquals("updated", dbEntity.getName());
-        verify(dao).update(
-                eq(dbEntity),
-                anyCollection(),
-                argThat(c -> c != condition));
+        verify(dao).update(eq(dbEntity), anyCollection(), argThat(c -> c != condition));
     }
 
     @Test
@@ -734,6 +728,49 @@ public class DaoTest extends TestBase {
 
             assertSame(expected, dao.prepareNamedQuery(props, cond));
         }
+    }
+
+    @Test
+    public void testNotExists() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+
+        when(dao.exists(cond)).thenReturn(true);
+        assertEquals(false, dao.notExists(cond));
+
+        when(dao.exists(cond)).thenReturn(false);
+        assertEquals(true, dao.notExists(cond));
+    }
+
+    // propInfo is null when property name does not exist on entity class,
+    // covering the ColumnOne.getObject() branch
+    @Test
+    public void testList_SinglePropNameNonExistentProperty() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+        final List<Object> expected = List.of("value");
+
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        Mockito.doReturn(expected).when(dao).list(Mockito.anyList(), Mockito.same(cond), Mockito.<Jdbc.RowMapper<? extends Object>> any());
+
+        final List<Object> result = dao.list("nonexistent", cond);
+
+        assertSame(expected, result);
+    }
+
+    // propInfo is null when property name does not exist on entity class,
+    // covering the ColumnOne.getObject() branch in stream()
+    @Test
+    public void testStream_SinglePropNameNonExistentProperty() {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+        @SuppressWarnings("unchecked")
+        final Stream<Object> expected = Mockito.mock(Stream.class);
+
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        Mockito.doReturn(expected).when(dao).stream(Mockito.anyList(), Mockito.same(cond), Mockito.<Jdbc.RowMapper<? extends Object>> any());
+
+        assertSame(expected, dao.stream("nonexistent", cond));
     }
 
     @Test

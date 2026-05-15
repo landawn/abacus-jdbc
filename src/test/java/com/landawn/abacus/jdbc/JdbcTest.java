@@ -3365,8 +3365,7 @@ public class JdbcTest extends TestBase {
 
         // RS has [col1, col1] — col2 is configured but missing from the result set.
         // Must throw IAE pointing at col2, not silently succeed.
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col1")));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, Arrays.asList("col1", "col1")));
         assertTrue(ex.getMessage().contains("col2"), "Expected message to mention col2: " + ex.getMessage());
     }
 

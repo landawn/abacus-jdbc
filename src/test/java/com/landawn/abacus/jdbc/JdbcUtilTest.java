@@ -1349,6 +1349,25 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    @DisplayName("isInTransaction should not propagate LinkageError when Spring is on classpath but mismatched")
+    public void testIsInTransactionToleratesLinkageError() throws Exception {
+        // The Spring DataSourceUtils.isConnectionTransactional fallback should catch any LinkageError
+        // subtype (NoClassDefFoundError, NoSuchMethodError, etc.) — not just NoClassDefFoundError —
+        // so that an absent/mismatched Spring on the classpath does not crash callers.
+        // We can only test the public-API contract here: with no active transaction the call must
+        // simply return without throwing, regardless of whether Spring participation is enabled.
+        final Field isInSpringField = JdbcUtil.class.getDeclaredField("isInSpring");
+        isInSpringField.setAccessible(true);
+        final boolean originalIsInSpring = (boolean) isInSpringField.get(null);
+
+        try {
+            assertDoesNotThrow(() -> JdbcUtil.isInTransaction(mockDataSource));
+        } finally {
+            isInSpringField.set(null, originalIsInSpring);
+        }
+    }
+
+    @Test
     public void testBeginTransaction() throws SQLException {
         SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource);
         assertNotNull(tran);
@@ -2142,6 +2161,413 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(2, skipped);
     }
 
+    // getInsertPropNames overloads
+    @Test
+    public void testGetInsertPropNames_WithExclusions() {
+        class TestInsertEntity {
+            private String firstName;
+            private String lastName;
+            @ReadOnly
+            private String readOnlyField;
+
+            public String getFirstName() {
+                return firstName;
+            }
+
+            public void setFirstName(String firstName) {
+                this.firstName = firstName;
+            }
+
+            public String getLastName() {
+                return lastName;
+            }
+
+            public void setLastName(String lastName) {
+                this.lastName = lastName;
+            }
+
+            public String getReadOnlyField() {
+                return readOnlyField;
+            }
+
+            public void setReadOnlyField(String readOnlyField) {
+                this.readOnlyField = readOnlyField;
+            }
+        }
+
+        TestInsertEntity entity = new TestInsertEntity();
+        Set<String> excluded = Set.of("lastName");
+        Collection<String> propNames = JdbcUtil.getInsertPropNames(entity, excluded);
+
+        assertNotNull(propNames);
+        assertFalse(propNames.contains("readOnlyField"));
+        assertFalse(propNames.contains("lastName"));
+        assertTrue(propNames.contains("firstName"));
+    }
+
+    @Test
+    public void testGetInsertPropNames_FromClass() {
+        class TestInsertClass {
+            private String name;
+            @ReadOnly
+            private String readOnlyField;
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public String getReadOnlyField() {
+                return readOnlyField;
+            }
+
+            public void setReadOnlyField(String readOnlyField) {
+                this.readOnlyField = readOnlyField;
+            }
+        }
+
+        Collection<String> propNames = JdbcUtil.getInsertPropNames(TestInsertClass.class);
+
+        assertNotNull(propNames);
+        assertFalse(propNames.contains("readOnlyField"));
+        assertTrue(propNames.contains("name"));
+    }
+
+    @Test
+    public void testGetInsertPropNames_FromClassWithExclusions() {
+        class TestInsertExClass {
+            private String name;
+            private String desc;
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public String getDesc() {
+                return desc;
+            }
+
+            public void setDesc(String desc) {
+                this.desc = desc;
+            }
+        }
+
+        Set<String> excluded = Set.of("desc");
+        Collection<String> propNames = JdbcUtil.getInsertPropNames(TestInsertExClass.class, excluded);
+
+        assertNotNull(propNames);
+        assertFalse(propNames.contains("desc"));
+        assertTrue(propNames.contains("name"));
+    }
+
+    // getSelectPropNames overloads
+    @Test
+    public void testGetSelectPropNames_WithExclusions() {
+        class TestSelectClass {
+            private Long id;
+            private String name;
+            @Transient
+            private String transField;
+
+            public Long getId() {
+                return id;
+            }
+
+            public void setId(Long id) {
+                this.id = id;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public String getTransField() {
+                return transField;
+            }
+
+            public void setTransField(String transField) {
+                this.transField = transField;
+            }
+        }
+
+        Set<String> excluded = Set.of("id");
+        Collection<String> propNames = JdbcUtil.getSelectPropNames(TestSelectClass.class, excluded);
+
+        assertNotNull(propNames);
+        assertFalse(propNames.contains("transField"));
+        assertFalse(propNames.contains("id"));
+        assertTrue(propNames.contains("name"));
+    }
+
+    @Test
+    public void testGetSelectPropNames_WithSubEntities() {
+        class TestSubEntityClass {
+            private Long id;
+            private String name;
+
+            public Long getId() {
+                return id;
+            }
+
+            public void setId(Long id) {
+                this.id = id;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+        }
+
+        Collection<String> propNames = JdbcUtil.getSelectPropNames(TestSubEntityClass.class, true, null);
+
+        assertNotNull(propNames);
+        assertTrue(propNames.contains("id"));
+        assertTrue(propNames.contains("name"));
+    }
+
+    // getUpdatePropNames overloads
+    @Test
+    public void testGetUpdatePropNames_FromClass() {
+        class TestUpdateClass {
+            private String name;
+            @ReadOnly
+            private String readOnlyField;
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public String getReadOnlyField() {
+                return readOnlyField;
+            }
+
+            public void setReadOnlyField(String readOnlyField) {
+                this.readOnlyField = readOnlyField;
+            }
+        }
+
+        Collection<String> propNames = JdbcUtil.getUpdatePropNames(TestUpdateClass.class);
+
+        assertNotNull(propNames);
+        assertTrue(propNames.contains("name"));
+        assertFalse(propNames.contains("readOnlyField"));
+    }
+
+    @Test
+    public void testGetUpdatePropNames_FromClassWithExclusions() {
+        class TestUpdateExClass {
+            private String name;
+            private String desc;
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public String getDesc() {
+                return desc;
+            }
+
+            public void setDesc(String desc) {
+                this.desc = desc;
+            }
+        }
+
+        Set<String> excluded = Set.of("desc");
+        Collection<String> propNames = JdbcUtil.getUpdatePropNames(TestUpdateExClass.class, excluded);
+
+        assertNotNull(propNames);
+        assertFalse(propNames.contains("desc"));
+        assertTrue(propNames.contains("name"));
+    }
+
+    // getColumnNames validation
+    @Test
+    public void testGetColumnNames_NullConnection() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnNames(null, "users"));
+    }
+
+    @Test
+    public void testGetColumnNames_BlankTableName() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnNames(mockConnection, ""));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnNames(mockConnection, "   "));
+    }
+
+    // getColumnLabels
+    @Test
+    public void testGetColumnLabels() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("");
+        when(mockResultSetMetaData.getColumnName(2)).thenReturn("user_name");
+
+        List<String> labels = JdbcUtil.getColumnLabels(mockResultSet);
+
+        assertEquals(2, labels.size());
+        assertEquals("user_id", labels.get(0));
+        assertEquals("user_name", labels.get(1));
+    }
+
+    // getDBProductInfo edge cases
+    @Test
+    public void testGetDBProductInfo_MariaDBProductName() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MariaDB");
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("10.5.9");
+
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+
+        assertNotNull(info);
+        assertEquals(DBVersion.MariaDB, info.version());
+    }
+
+    @Test
+    public void testGetDBProductInfo_NullProductNameAndVersion() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn(null);
+        when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn(null);
+
+        DBProductInfo info = JdbcUtil.getDBProductInfo(mockConnection);
+
+        assertNotNull(info);
+        assertEquals(DBVersion.OTHERS, info.version());
+    }
+
+    // getDBProductInfo DataSource overload with SQLException when Spring bypassed
+    @Test
+    public void testGetDBProductInfo_DataSource_SQLException() throws SQLException {
+        when(mockDataSource.getConnection()).thenThrow(new SQLException("connection failed"));
+
+        JdbcUtil.runWithoutUsingSpringTransaction(() -> {
+            assertThrows(UncheckedSQLException.class, () -> JdbcUtil.getDBProductInfo(mockDataSource));
+        });
+    }
+
+    // blob2String edge cases
+    @Test
+    public void testBlob2String_NullBlob() throws SQLException {
+        assertNull(JdbcUtil.blob2String(null));
+    }
+
+    @Test
+    public void testBlob2String_NullBlobWithCharset() throws SQLException {
+        assertNull(JdbcUtil.blob2String(null, StandardCharsets.UTF_8));
+    }
+
+    // clob2String edge cases
+    @Test
+    public void testClob2String_NullClob() throws SQLException {
+        assertNull(JdbcUtil.clob2String(null));
+    }
+
+    // writeBlobToFile edge cases
+    @Test
+    public void testWriteBlobToFile_NullBlob() throws SQLException, IOException {
+        assertEquals(0L, JdbcUtil.writeBlobToFile(null, new File("output.txt")));
+    }
+
+    // writeClobToFile edge cases
+    @Test
+    public void testWriteClobToFile_NullClob() throws SQLException, IOException {
+        assertEquals(0L, JdbcUtil.writeClobToFile(null, new File("output.txt")));
+    }
+
+    // isNullOrDefault additional edge cases
+    @Test
+    public void testIsNullOrDefault_FloatZero() {
+        assertTrue(JdbcUtil.isNullOrDefault(0.0f));
+    }
+
+    @Test
+    public void testIsNullOrDefault_ShortZero() {
+        assertTrue(JdbcUtil.isNullOrDefault((short) 0));
+    }
+
+    @Test
+    public void testIsNullOrDefault_ByteZero() {
+        assertTrue(JdbcUtil.isNullOrDefault((byte) 0));
+    }
+
+    @Test
+    public void testIsNullOrDefault_NonZeroFloat() {
+        assertFalse(JdbcUtil.isNullOrDefault(0.1f));
+    }
+
+    @Test
+    public void testIsNullOrDefault_NonZeroShort() {
+        assertFalse(JdbcUtil.isNullOrDefault((short) 1));
+    }
+
+    // enableSqlLog with negative maxSqlLogLength
+    @Test
+    public void testEnableSqlLog_NegativeMaxLength() {
+        assertDoesNotThrow(() -> JdbcUtil.enableSqlLog(-1));
+    }
+
+    // setMinExecutionTimeForSqlPerfLog with custom maxLogLength
+    @Test
+    public void testSetMinExecutionTimeForSqlPerfLog_WithMaxLength() {
+        assertDoesNotThrow(() -> JdbcUtil.setMinExecutionTimeForSqlPerfLog(100, 512));
+    }
+
+    // callWithSqlLogDisabled when log already disabled
+    @Test
+    public void testCallWithSqlLogDisabled_WhenAlreadyDisabled() {
+        JdbcUtil.disableSqlLog();
+        assertFalse(JdbcUtil.isSqlLogEnabled());
+
+        String result = JdbcUtil.callWithSqlLogDisabled(() -> "test");
+        assertEquals("test", result);
+        assertFalse(JdbcUtil.isSqlLogEnabled());
+    }
+
+    // runWithSqlLogDisabled when log already disabled
+    @Test
+    public void testRunWithSqlLogDisabled_WhenAlreadyDisabled() {
+        JdbcUtil.disableSqlLog();
+        assertFalse(JdbcUtil.isSqlLogEnabled());
+
+        boolean[] ran = { false };
+        JdbcUtil.runWithSqlLogDisabled(() -> ran[0] = true);
+        assertTrue(ran[0]);
+        assertFalse(JdbcUtil.isSqlLogEnabled());
+    }
+
+    // closeQuietly ResultSet flags - closeResultSet without closeStatement is valid
+    @Test
+    public void testCloseQuietly_CloseRsWithoutStmt_Valid() throws SQLException {
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, false));
+    }
+
+    // prepareNamedQuery with ParsedSql
+    @Test
+    public void testPrepareNamedQuery_WithParsedSql() throws SQLException {
+        ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM t WHERE id = :id");
+        NamedQuery query = JdbcUtil.prepareNamedQuery(mockConnection, parsedSql);
+        assertNotNull(query);
+        query.close();
+    }
+
     // Test entity class for various tests
     public static class TestEntity {
         private Long id;
@@ -2338,11 +2764,9 @@ public class JdbcUtilTest extends TestBase {
         // After the metadata check correctly rejects the false positive, tableExists falls back to
         // a direct SELECT against the safe-qualified name. Simulate the real-DB outcome: that SELECT
         // raises a "doesn't exist" SQLException.
-        when(mockConnection.prepareStatement("SELECT 1 FROM users_log WHERE 1 > 2"))
-                .thenThrow(new SQLException("Table 'users_log' doesn't exist"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM users_log WHERE 1 > 2")).thenThrow(new SQLException("Table 'users_log' doesn't exist"));
 
-        assertFalse(JdbcUtil.tableExists(mockConnection, "users_log"),
-                "tableExists must verify the returned TABLE_NAME, not blindly trust rows.next()");
+        assertFalse(JdbcUtil.tableExists(mockConnection, "users_log"), "tableExists must verify the returned TABLE_NAME, not blindly trust rows.next()");
     }
 
     // BUG FIX: tableExists with wildcard chars in the pattern must accept a row whose TABLE_NAME
@@ -2369,8 +2793,7 @@ public class JdbcUtilTest extends TestBase {
             // HSQLDB reports its product name as "HSQL Database Engine"; the H2 driver would not
             // accept this URL at all, so reaching this point already proves the routing is correct.
             String productName = conn.getMetaData().getDatabaseProductName();
-            assertTrue(productName != null && productName.toLowerCase().contains("hsql"),
-                    "Expected HSQLDB driver, but connected to: " + productName);
+            assertTrue(productName != null && productName.toLowerCase().contains("hsql"), "Expected HSQLDB driver, but connected to: " + productName);
         }
     }
 

@@ -1,6 +1,8 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,10 +27,18 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.io.File;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Tuple;
+import com.landawn.abacus.util.function.QuadFunction;
 
 public class JdbcCodeGenerationUtilTest extends TestBase {
 
@@ -1019,8 +1029,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         // Two columns, one value -> should throw IllegalArgumentException.
         final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(a,b) VALUES (1)"));
-        assertTrue(ex.getMessage().contains("Column count"), "Should preserve the specific column/value count mismatch message: "
-                + ex.getMessage());
+        assertTrue(ex.getMessage().contains("Column count"), "Should preserve the specific column/value count mismatch message: " + ex.getMessage());
     }
 
     @Test
@@ -1090,5 +1099,401 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("enumerated = "));
+    }
+
+    // generateBuilder=false — L593
+    @Test
+    public void testGenerateEntityClass_WithGenerateBuilderFalse() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().generateBuilder(false).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertFalse(result.contains("import lombok.Builder;"));
+        assertFalse(result.contains("\n@Builder\n"));
+    }
+
+    // chainAccessor=false — L597
+    @Test
+    public void testGenerateEntityClass_WithChainAccessorFalse() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().chainAccessor(false).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertFalse(result.contains("import lombok.experimental.Accessors;"));
+        assertFalse(result.contains("@Accessors(chain = true)"));
+    }
+
+    // customizedField._2 (field name override) — L478
+    @Test
+    public void testGenerateEntityClass_WithCustomizedFieldName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .customizedFields(Arrays.asList(Tuple.of("created_at", "createdAtOverride", (Class<?>) null)))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("createdAtOverride"));
+    }
+
+    // customizedField._3 (field type override via customized class) — L484-L487
+    @Test
+    public void testGenerateEntityClass_WithCustomizedFieldType() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .customizedFields(Arrays.asList(Tuple.of("status", (String) null, String.class)))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("String status"));
+    }
+
+    // idFields non-null in config — L416
+    @Test
+    public void testGenerateEntityClass_WithIdFieldsList() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().idFields(Arrays.asList("id")).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("@Id"));
+    }
+
+    // isJavaPersistenceId=true with idFields non-empty — L562-L565
+    @Test
+    public void testGenerateEntityClass_WithJakartaIdAndIdFields() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .idAnnotationClass(jakarta.persistence.Id.class)
+                .idFields(Arrays.asList("id"))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("jakarta.persistence.Id"));
+        assertFalse(result.contains("import com.landawn.abacus.annotation.Id;"));
+    }
+
+    // fieldTypeConverter — L485
+    @Test
+    public void testGenerateEntityClass_WithFieldTypeConverter() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final QuadFunction<String, String, String, String, String> converter = (entity, field, col, cls) -> "java.lang.Object";
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().fieldTypeConverter(converter).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("Object id") || result.contains("Object created_at"));
+    }
+
+    // srcDir — writes generated file to disk — L793-L812
+    @Test
+    public void testGenerateEntityClass_WithSrcDir_WritesFile() throws Exception {
+        setupFullGenerateEntityClassMock();
+        final Path tempDir = Files.createTempDirectory("jdbcCodeGenTest");
+        try {
+            final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                    .srcDir(tempDir.toString())
+                    .className("OrderHistory")
+                    .packageName("com.test.entity")
+                    .build();
+            final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+            assertNotNull(result);
+            final File expectedFile = new File(tempDir.toFile(), "com/test/entity/OrderHistory.java");
+            assertTrue(expectedFile.exists(), "Expected generated file at " + expectedFile.getAbsolutePath());
+        } finally {
+            deleteRecursively(tempDir.toFile());
+        }
+    }
+
+    // javax.persistence annotations (non-jakarta) — L434, L436, L438
+    @Test
+    public void testGenerateEntityClass_WithJavaxPersistenceAnnotations() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(javax.persistence.Table.class)
+                .columnAnnotationClass(javax.persistence.Column.class)
+                .idAnnotationClass(javax.persistence.Id.class)
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("javax.persistence"));
+    }
+
+    // mapBigIntegerToLong — L873-L874
+    @Test
+    public void testGenerateEntityClass_WithMapBigIntegerToLong() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(resultSetMetaData.getColumnName(1)).thenReturn("value");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.BIGINT);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn("java.math.BigInteger");
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().mapBigIntegerToLong(true).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("long value") || result.contains("long "));
+    }
+
+    // mapBigDecimalToDouble — L875-L876
+    @Test
+    public void testGenerateEntityClass_WithMapBigDecimalToDouble() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(resultSetMetaData.getColumnName(1)).thenReturn("amount");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.DECIMAL);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn("java.math.BigDecimal");
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().mapBigDecimalToDouble(true).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("double amount") || result.contains("double "));
+    }
+
+    // empty columnClassName — falls back to Object.class — L839
+    @Test
+    public void testGenerateEntityClass_WithEmptyColumnClassName() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(resultSetMetaData.getColumnName(1)).thenReturn("payload");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.OTHER);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn(""); // empty → Object.class fallback
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", null);
+        assertNotNull(result);
+        assertTrue(result.contains("Object payload"));
+    }
+
+    // oracle.sql.TIMESTAMP — maps to java.sql.Timestamp — L848-L850
+    @Test
+    public void testGenerateEntityClass_WithOracleTimestampColumnName() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(resultSetMetaData.getColumnName(1)).thenReturn("ts");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn("oracle.sql.TIMESTAMP");
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", null);
+        assertNotNull(result);
+        assertTrue(result.contains("Timestamp ts"));
+    }
+
+    // oracle.sql.DATE — maps to java.sql.Date — L851-L852
+    @Test
+    public void testGenerateEntityClass_WithOracleDateColumnName() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(resultSetMetaData.getColumnName(1)).thenReturn("myDate");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.DATE);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn("oracle.sql.DATE");
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", null);
+        assertNotNull(result);
+        assertTrue(result.contains("Date myDate"));
+    }
+
+    // oracle.sql.TIME — maps to java.sql.Time — L853-L854
+    @Test
+    public void testGenerateEntityClass_WithOracleTimeColumnName() throws SQLException {
+        final Statement stmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(stmt);
+        when(stmt.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(resultSetMetaData.getColumnName(1)).thenReturn("myTime");
+        when(resultSetMetaData.getColumnType(1)).thenReturn(Types.TIME);
+        when(resultSetMetaData.getColumnClassName(1)).thenReturn("oracle.sql.TIME");
+        when(resultSetMetaData.getColumnName(2)).thenReturn("created_at");
+        when(resultSetMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
+        when(resultSetMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(resultSetMetaData.getColumnName(3)).thenReturn("status");
+        when(resultSetMetaData.getColumnType(3)).thenReturn(Types.VARCHAR);
+        when(resultSetMetaData.getColumnClassName(3)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", null);
+        assertNotNull(result);
+        assertTrue(result.contains("Time myTime"));
+    }
+
+    // generateNamedUpdateSql with whereClause only (no keyColumnNames) — L1737
+    @Test
+    public void testGenerateNamedUpdateSql_WithWhereClauseOnly_NoKeyColumns() throws SQLException {
+        final String sql = JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, null, "status = 'OPEN'");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+        assertTrue(sql.contains("WHERE status = 'OPEN'"));
+    }
+
+    // generateUpdateSql with whereClause only (no keyColumnNames) — L1501
+    @Test
+    public void testGenerateUpdateSql_WithWhereClauseOnly_NoKeyColumns() throws SQLException {
+        final String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, null, "status = 'OPEN'");
+        assertNotNull(sql);
+        assertTrue(sql.startsWith("UPDATE"));
+        assertTrue(sql.contains("WHERE status = 'OPEN'"));
+    }
+
+    // Exercise continue on line 481 when excludedFields match by column name (snake_case)
+    @Test
+    public void testGenerateEntityClass_ExcludedFieldsByColumnName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().excludedFields(List.of("created_at")).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertFalse(result.contains("createdAt"));
+    }
+
+    // Exercise catch block at line 524 — Class.forName throw on non-java.util type with generics
+    @Test
+    public void testGenerateEntityClass_AdditionalFieldsWithNonJavaUtilParameterizedType() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .additionalFieldsOrLines("private javax.sql.DataSource<String> ds;")
+                .build();
+        assertDoesNotThrow(() -> JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
+    // Exercise catch blocks at lines 818–820 (SQLException → UncheckedSQLException)
+    @Test
+    public void testGenerateEntityClass_ResultSetMetaData_WrapsSQLException() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(rs.getMetaData()).thenThrow(new SQLException("metadata failed"));
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("TestEntity", rs, null));
+    }
+
+    // Exercise catch blocks at lines 821–823 (IOException → UncheckedIOException when srcDir is set)
+    @Test
+    public void testGenerateEntityClass_WithSrcDir_WrapsIOException() throws Exception {
+        final Path tempDir = Files.createTempDirectory("jdbcCodeGenTest");
+        try {
+            final Path targetDir = tempDir.resolve("OrderHistory.java");
+            Files.createDirectories(targetDir);
+
+            setupFullGenerateEntityClassMock();
+            final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                    .srcDir(tempDir.toString())
+                    .className("OrderHistory")
+                    .build();
+
+            assertThrows(UncheckedIOException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+        } finally {
+            deleteRecursively(tempDir.toFile());
+        }
+    }
+
+    // Exercise line 864 — mapColumClassName returns Object.class when columnClassName is empty
+    @Test
+    public void testGenerateEntityClass_FieldTypeConverterReturnsEmptyString() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final QuadFunction<String, String, String, String, String> converter = (entity, field, col, cls) -> "";
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().fieldTypeConverter(converter).build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+        assertNotNull(result);
+        assertTrue(result.contains("Object "));
+    }
+
+    // Regression: when an @Id field is identified by raw snake_case column name (e.g. from
+    // DatabaseMetaData.getPrimaryKeys returning COLUMN_NAME='order_id'), the import for @Id must
+    // be preserved because the field-emission pass matches against both fieldName and columnName.
+    @Test
+    public void testGenerateEntityClass_IdImportPreservedWhenIdFieldUsesColumnName() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
+        when(conn.prepareStatement("SELECT * FROM orders WHERE 1 > 2")).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMetaData);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        when(metaData.getPrimaryKeys(null, null, "orders")).thenReturn(pkRs);
+        // Primary key auto-detect returns the raw snake_case column name.
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("order_id");
+        when(rsMetaData.getColumnCount()).thenReturn(2);
+        when(rsMetaData.getColumnName(1)).thenReturn("order_id");
+        when(rsMetaData.getColumnName(2)).thenReturn("status");
+        when(rsMetaData.getColumnLabel(1)).thenReturn("order_id");
+        when(rsMetaData.getColumnLabel(2)).thenReturn("status");
+        when(rsMetaData.getColumnType(1)).thenReturn(Types.BIGINT);
+        when(rsMetaData.getColumnType(2)).thenReturn(Types.VARCHAR);
+        when(rsMetaData.getColumnClassName(1)).thenReturn("java.lang.Long");
+        when(rsMetaData.getColumnClassName(2)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "orders");
+
+        assertNotNull(result);
+        // @Id annotation must be emitted on the id field.
+        assertTrue(result.contains("@Id"), "Expected @Id annotation in: " + result);
+        // The matching import statement must also be present so the generated source compiles.
+        assertTrue(result.contains("import com.landawn.abacus.annotation.Id;"), "Expected '@Id' import in generated class: " + result);
+    }
+
+    private static void deleteRecursively(final File file) {
+        if (file.isDirectory()) {
+            final File[] children = file.listFiles();
+            if (children != null) {
+                for (final File child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        file.delete();
     }
 }
