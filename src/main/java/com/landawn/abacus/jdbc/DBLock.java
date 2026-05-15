@@ -645,6 +645,10 @@ public final class DBLock {
             scheduledFuture.cancel(true);
             try {
                 scheduledFuture.get();
+            } catch (final InterruptedException e) {
+                // Preserve interrupt flag so callers up the stack can detect cancellation.
+                Thread.currentThread().interrupt();
+                logger.debug(e, "Interrupted while awaiting DB lock refresh task termination during close");
             } catch (final Exception e) {
                 logger.debug(e, "DB lock refresh task stopped during close");
             }

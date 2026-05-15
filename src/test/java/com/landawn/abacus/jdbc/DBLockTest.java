@@ -383,6 +383,26 @@ public class DBLockTest extends TestBase {
         assertEquals(0, targetCodePool(fixture.lock).size());
     }
 
+    // Close: when scheduledFuture.get() throws InterruptedException, the thread's interrupt
+    // flag must be re-set so callers up the stack can detect cancellation. Before the fix the
+    // exception was caught by a generic catch(Exception) that silently swallowed it.
+    @Test
+    public void testClose_ScheduledFutureGetThrowsInterruptedException_PreservesInterruptFlag() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        when(fixture.scheduledFuture.get()).thenThrow(new InterruptedException("interrupted during close"));
+
+        // Make sure the flag is clear before calling close().
+        assertFalse(Thread.interrupted(), "precondition: interrupt flag must be clear");
+
+        try {
+            fixture.lock.close();
+            assertTrue(Thread.currentThread().isInterrupted(), "close() must restore interrupt flag when scheduledFuture.get() throws InterruptedException");
+        } finally {
+            // Always clear the interrupt flag for subsequent tests, regardless of assertion outcome.
+            Thread.interrupted();
+        }
+    }
+
     // Close with null scheduledFuture, covering the null branch at L640
     @Test
     public void testClose_ScheduledFutureNull() throws Exception {

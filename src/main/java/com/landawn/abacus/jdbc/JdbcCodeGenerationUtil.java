@@ -486,6 +486,12 @@ public final class JdbcCodeGenerationUtil {
                                 : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
                         : mapColumClassName(ClassUtil.getCanonicalClassName(customizedField._3), true, configToUse);
 
+                if (!Strings.isValidJavaIdentifier(fieldName)) {
+                    logger.warn(
+                            "Generated field name '{}' for column '{}' is not a valid Java identifier (reserved word or starts with a non-letter) — the generated entity class will not compile. Override via EntityCodeConfig.fieldNameConverter or customizedFields.",
+                            fieldName, columnName);
+                }
+
                 columnNameList.add(columnName);
                 fieldNameList.add(fieldName);
                 columnClassNameList.add(columnClassName);
@@ -1897,6 +1903,29 @@ public final class JdbcCodeGenerationUtil {
 
     private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {
         return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.productName(), "MySQL", "MariaDB") ? "`" : "\"";
+    }
+
+    /**
+     * Checks if the supplied name is a syntactically valid Java identifier and not a reserved word/literal.
+     * Used to warn callers when a derived field name (e.g. from a snake_case column converted to camelCase)
+     * would prevent the generated source from compiling.
+     */
+    static boolean isValidJavaIdentifier(final String name) {
+        if (Strings.isEmpty(name)) {
+            return false;
+        }
+
+        if (!Character.isJavaIdentifierStart(name.charAt(0))) {
+            return false;
+        }
+
+        for (int i = 1, len = name.length(); i < len; i++) {
+            if (!Character.isJavaIdentifierPart(name.charAt(i))) {
+                return false;
+            }
+        }
+
+        return !javax.lang.model.SourceVersion.isKeyword(name);
     }
 
     /**
