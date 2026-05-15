@@ -76,9 +76,9 @@ public @interface Query {
      * @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
      * List<Order> findOrders(@Bind("user") User user, @Bind("status") String status);
      *
-     * // IN clause with collection
-     * @Query("SELECT * FROM users WHERE id IN (:ids)")
-     * List<User> findByIds(@Bind("ids") List<Long> ids);
+     * // IN clause with collection (note: use {@link BindList}, not {@code @Bind}, to expand collections)
+     * @Query("SELECT * FROM users WHERE id IN ({ids})")
+     * List<User> findByIds(@BindList("ids") List<Long> ids);
      * }</pre>
      *
      * <p>Complex SQL examples:</p>
@@ -112,7 +112,7 @@ public @interface Query {
      *
      * @return inline SQL statement lines; empty by default when using {@link #id()}
      */
-    String[] value() default {}; // inline SQL statements;
+    String[] value() default {};
 
     /**
      * Specifies SQL statement identifier lines defined in an external SQL mapper.
@@ -162,7 +162,7 @@ public @interface Query {
      * @return SQL statement id lines from the SQL mapper; empty by default when using {@link #value()}
      * @see RegExUtil#JAVA_IDENTIFIER_MATCHER
      */
-    String[] id() default {}; // id defined SqlMapper
+    String[] id() default {};
 
     /**
      * Specifies the operation type for this query.

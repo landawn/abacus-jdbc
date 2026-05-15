@@ -1645,7 +1645,7 @@ public final class JdbcUtil {
      * @param rowsToSkip The number of rows to skip.
      * @return The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the
      *         {@code ResultSet} is reached.
-     * @throws SQLException if a database access error occurs or the result set type is {@code TYPE_FORWARD_ONLY}.
+     * @throws SQLException if a database access error occurs.
      * @see #skip(ResultSet, long)
      */
     public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException {
@@ -2619,7 +2619,7 @@ public final class JdbcUtil {
      * // op2 is SqlOperation.INSERT
      *
      * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (...)");
-     * // op3 is SqlOperation.CREATE if that constant is defined in {@link SqlOperation}, otherwise SqlOperation.UNKNOWN
+     * // op3 is SqlOperation.CREATE if that constant is defined in SqlOperation, otherwise SqlOperation.UNKNOWN
      * }</pre>
      *
      * @param sql The SQL statement to analyze.

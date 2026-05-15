@@ -186,7 +186,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <ul>
  *   <li><b>SQL Annotation Processing:</b> Supports {@code @Query} for inline or referenced SQL (covering SELECT/INSERT/UPDATE/DELETE
  *       and stored-procedure calls) with flexible parameter binding via {@code @Bind} and {@code @BindList},
- *       and reusable SQL snippets through {@code @SqlFragment}/{@code @SqlScript}</li>
+ *       reusable SQL snippets through {@code @SqlFragment}, and field-level inline SQL definitions through {@code @SqlScript}</li>
  *   <li><b>Named Parameter Support:</b> Automatically maps method parameters to SQL named parameters (e.g., {@code :paramName})</li>
  *   <li><b>Collection Parameter Expansion:</b> Handles IN clauses by expanding collection parameters</li>
  *   <li><b>Entity Mapping:</b> Automatic mapping between database result sets and entity classes</li>

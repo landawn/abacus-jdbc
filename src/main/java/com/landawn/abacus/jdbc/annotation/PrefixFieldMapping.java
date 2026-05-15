@@ -67,7 +67,7 @@ public @interface PrefixFieldMapping {
      * // ship.street -> shipping.address.street
      * }</pre>
      * 
-     * @return the prefix-to-field mapping string, or empty string if using default mapping
+     * @return the comma-separated {@code prefix=fieldPath} mapping string; empty (default) means no prefix mapping is applied
      */
     String value() default "";
 }

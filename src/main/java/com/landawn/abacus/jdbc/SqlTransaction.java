@@ -393,6 +393,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
+     * @throws IllegalStateException if the transaction is not in a valid state for rollback
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
@@ -873,6 +874,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback operation
+     * @throws IllegalStateException if the transaction is in an unexpected status when the rollback is actually performed
      * @see #rollbackIfNotCommitted()
      */
     @Override

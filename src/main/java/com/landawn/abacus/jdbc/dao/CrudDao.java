@@ -81,7 +81,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
  * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC})
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the self-type of the DAO for fluent interface support
  *
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
@@ -180,7 +180,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * Long userId = userDao.insert(user, Arrays.asList("email", "createdDate"));
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be null)
+     * @param entityToInsert the entity to insert (must not be {@code null})
      * @param propNamesToInsert the property names to include in the INSERT statement.
      *                          If {@code null} or empty, all properties will be inserted
      * @return the ID of the inserted entity (either database-generated or entity-provided)
@@ -863,7 +863,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *
      * @param ids the collection of IDs to retrieve
      * @param selectPropNames the properties to select, excluding properties of joining entities.
-     *                        All properties will be selected if null
+     *                        All properties will be selected if {@code null}
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of found entities

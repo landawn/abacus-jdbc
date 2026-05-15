@@ -89,7 +89,7 @@ import com.landawn.abacus.util.stream.Stream;
  * <ul>
  *   <li>Avoid unnecessary/repeated database calls</li>
  *   <li>Only fetch the columns you need or update the columns you want</li>
- *   <li>Index is the key point in a lot of database performance issues</li>
+ *   <li>Proper indexing is a key factor in many database performance issues</li>
  * </ul>
  * 
  * <p><b>Usage Examples:</b></p>
@@ -162,7 +162,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * String query = sqlMapper.get("findUserByEmail");
      * }</pre>
      *
-     * @return the SqlMapper instance, never null
+     * @return the SqlMapper instance, never {@code null}
      */
     @NonDBOperation
     SqlMapper sqlMapper();

@@ -48,5 +48,5 @@ public @interface SqlScript {
      *
      * @return the identifier used by {@link Query#id()}; empty means the annotated field name is used
      */
-    String id() default ""; // default will be field name.
+    String id() default "";
 }

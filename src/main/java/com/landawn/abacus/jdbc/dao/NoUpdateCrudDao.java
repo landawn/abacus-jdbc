@@ -51,20 +51,13 @@ import com.landawn.abacus.query.condition.Condition;
  * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  *
- *
- * @param <T> the entity type managed by this DAO
- * @param <ID> the ID type of the entity (e.g. {@code Long}, {@code String}, {@code EntityId})
- * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
- *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC})
- * @param <TD> the self-type of the DAO for fluent interface support
- *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Define a DAO for immutable transaction records
  * public interface TransactionDao extends NoUpdateCrudDao<Transaction, String, SqlBuilder.PSC, TransactionDao> {
  *     // Custom read methods can be added
  * }
-
+ *
  * TransactionDao transactionDao = JdbcUtil.createDao(TransactionDao.class, dataSource);
  *
  * // Supported operations - all work fine:

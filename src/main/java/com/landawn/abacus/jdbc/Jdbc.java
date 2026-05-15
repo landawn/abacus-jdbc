@@ -2037,7 +2037,7 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a new {@code RowMapperBuilder} with a default column getter of {@code ColumnGetter.GET_OBJECT}.
+         * Creates a new {@code RowMapperBuilder} with a default column getter of {@link ColumnGetter#GET_OBJECT}.
          * This builder provides a fluent API for constructing complex {@code RowMapper} instances.
          *
          * <p><b>Usage Examples:</b></p>
@@ -3858,7 +3858,7 @@ public final class Jdbc {
         }
 
         /**
-         * Creates a new {@code BiRowMapperBuilder} with a default column getter of {@code ColumnGetter.GET_OBJECT}.
+         * Creates a new {@code BiRowMapperBuilder} with a default column getter of {@link ColumnGetter#GET_OBJECT}.
          * This builder provides a fluent API for constructing complex {@code BiRowMapper} instances.
          *
          * <p><b>Usage Examples:</b></p>
@@ -4140,6 +4140,8 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
+             * @throws IllegalArgumentException at first row execution if {@code targetClass} is a bean class and a result column
+             *         cannot be mapped to any property; use {@link #to(Class, boolean)} with {@code true} to ignore unmatched columns
              */
             @SequentialOnly
             @Stateful
@@ -4159,6 +4161,8 @@ public final class Jdbc {
              * @param targetClass the class to map rows to
              * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are ignored
              * @return a new stateful {@code BiRowMapper<T>}
+             * @throws IllegalArgumentException at first row execution if {@code targetClass} is a bean class,
+             *         {@code ignoreUnmatchedColumns} is {@code false}, and a result column cannot be mapped to any property
              */
             @SequentialOnly
             @Stateful
@@ -5143,7 +5147,7 @@ public final class Jdbc {
 
         /**
          * Creates a {@link RowExtractorBuilder} with a default behavior of retrieving all column values
-         * as {@code Object} instances using {@code ColumnGetter.GET_OBJECT}.
+         * as {@code Object} instances using {@link ColumnGetter#GET_OBJECT}.
          *
          * @return a new {@code RowExtractorBuilder}.
          */

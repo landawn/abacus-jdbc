@@ -227,9 +227,10 @@ final class DaoUtil {
      * // result contains: "name", "email", "id" (HashSet, iteration order not guaranteed)
      * }</pre>
      *
-     * @param propNamesToRefresh the collection of property names to refresh
+     * @param propNamesToRefresh the collection of property names to refresh; may be {@code null}
      * @param idPropNameList the list of ID property names that must be included
-     * @return the original collection if it contains all ID properties, otherwise a new
+     * @return a new {@link HashSet} of the ID properties when {@code propNamesToRefresh} is {@code null};
+     *         the original collection if it already contains all ID properties; otherwise a new
      *         {@link HashSet} containing both the requested properties and all ID properties
      */
     static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {

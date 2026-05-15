@@ -70,7 +70,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type managed by this DAO
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
@@ -607,16 +607,16 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> selectPropNames) throws SQLException {
+        if (N.isEmpty(entities)) {
+            return;
+        }
+
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
         @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
-
-        if (N.isEmpty(entities)) {
-            return;
-        }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName, selectPropNames);
@@ -1623,16 +1623,16 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
+        if (N.isEmpty(entities)) {
+            return 0;
+        }
+
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
         @SuppressWarnings("deprecation")
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
         N.checkArgument(N.notEmpty(joinEntityPropNames), "No joined property of type {} found in class {}", joinEntityClass, targetEntityClass);
-
-        if (N.isEmpty(entities)) {
-            return 0;
-        }
 
         if (joinEntityPropNames.size() == 1) {
             return deleteJoinEntities(entities, joinEntityPropNames.get(0));

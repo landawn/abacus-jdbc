@@ -1783,7 +1783,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * <ul>
      *   <li>Column and value counts must match or conversion fails.</li>
-     *   <li>String values are rendered as quoted SQL literals (single-quoted).</li>
+     *   <li>String values are rendered as single-quoted SQL literals; embedded single quotes are escaped by doubling.</li>
      *   <li>All other value types are rendered using {@link com.landawn.abacus.util.N#stringOf(Object)}.</li>
      *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>
      *   <li>All parsing and SQL assembly failures are converted to {@link IllegalArgumentException}.</li>
@@ -2094,7 +2094,8 @@ public final class JdbcCodeGenerationUtil {
         private boolean generateFieldNameTable;
 
         /**
-         * Whether to extend the field name table class name with additional context.
+         * Reserved configuration flag intended to extend the field-name table class name with additional context.
+         * Currently unused by the generator; retained for binary compatibility and future extension.
          * Default is {@code false}.
          */
         private boolean extendFieldNameTableClassName;

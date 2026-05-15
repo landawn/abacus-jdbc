@@ -68,12 +68,11 @@ public @interface HandlerList {
      * The handlers will be processed in the order they appear in this array.
      *
      * <p>When multiple handlers are applied to a DAO or method, they form
-     * a chain of interceptors, with each handler having the opportunity to:</p>
+     * a chain of interceptors. Each handler may:</p>
      * <ul>
-     *   <li>Modify input parameters before invocation</li>
-     *   <li>Prevent the actual method execution</li>
-     *   <li>Transform or filter the results</li>
-     *   <li>Handle exceptions in custom ways</li>
+     *   <li>Inspect arguments and run custom logic in {@code beforeInvoke}</li>
+     *   <li>Mutate mutable elements within the {@code args} array (e.g., entity fields)</li>
+     *   <li>Observe the return value and run custom logic in {@code afterInvoke}</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>

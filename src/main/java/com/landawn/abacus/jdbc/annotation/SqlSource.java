@@ -53,7 +53,7 @@ public @interface SqlSource {
      * @SqlSource("mappers/user-queries.xml")     // Custom naming
      * }</pre>
      *
-     * @return the path to the SQL mapper XML file passed to {@code SqlMapper.load}; empty by default
+     * @return the path to the SQL mapper XML file passed to {@code SqlMapper.load}; empty (default) means no external mapper is associated with this DAO
      */
     String value() default "";
 }

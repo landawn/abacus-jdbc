@@ -314,6 +314,7 @@ public final class DBLock {
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the default timeout.
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
+     * @throws IllegalArgumentException if {@code target} is {@code null} or empty.
      * @see #lock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
      * @see #DEFAULT_TIMEOUT
@@ -356,6 +357,7 @@ public final class DBLock {
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the specified timeout.
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
+     * @throws IllegalArgumentException if {@code target} is {@code null} or empty, or {@code timeout} is negative.
      * @see #lock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
      */
@@ -401,6 +403,8 @@ public final class DBLock {
      * @return a unique {@code String} code representing the acquired lock, or {@code null} if the lock
      *         could not be acquired within the specified timeout.
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
+     * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
+     *         {@code liveTime} is not positive, or {@code timeout} is negative.
      * @see #lock(String, long, long, long)
      */
     public String lock(final String target, final long liveTime, final long timeout) {
