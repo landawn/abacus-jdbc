@@ -1766,8 +1766,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source used to resolve database-specific behavior
      * @param insertSql the INSERT SQL statement to convert
      * @return an UPDATE SQL statement derived from the INSERT statement
-     * @throws IllegalArgumentException if the data source is null or the INSERT SQL
-     *         cannot be parsed or converted
+     * @throws IllegalArgumentException if the INSERT SQL is null/empty, invalid, or cannot be converted
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql) {

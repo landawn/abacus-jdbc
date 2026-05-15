@@ -51,11 +51,11 @@ public enum Propagation {
 
     /**
      * Support a current transaction, throw an exception if none exists.
-     * 
+     *
      * <p>This behavior requires that a transaction already be active when the method
-     * is called. If no transaction exists, an exception will be thrown. The method
-     * will never create a new transaction.</p>
-     * 
+     * is called. If no transaction exists, an {@link IllegalStateException} will be thrown.
+     * The method will never create a new transaction.</p>
+     *
      * <p>Use this for methods that must be part of a larger transactional operation
      * and should never execute outside a transaction context.</p>
      */
@@ -88,11 +88,11 @@ public enum Propagation {
 
     /**
      * Execute non-transactionally, throw an exception if a transaction exists.
-     * 
+     *
      * <p>This is the most restrictive behavior - the method will only execute
-     * if no transaction is currently active. If a transaction exists, an exception
-     * will be thrown.</p>
-     * 
+     * if no transaction is currently active. If a transaction exists, an
+     * {@link IllegalStateException} will be thrown.</p>
+     *
      * <p>Use this for operations that must never execute within a transaction
      * and should fail fast if called from within a transactional context.</p>
      */

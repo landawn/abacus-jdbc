@@ -6422,8 +6422,9 @@ public final class JdbcUtil {
      *
      * @param stmt the Statement to extract ResultSets from
      * @return a Stream of Dataset containing the extracted ResultSets
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}
      */
-    public static Stream<Dataset> streamAllResultSets(final Statement stmt) {
+    public static Stream<Dataset> streamAllResultSets(final Statement stmt) throws IllegalArgumentException {
         return streamAllResultSets(stmt, ResultExtractor.TO_DATASET);
     }
 

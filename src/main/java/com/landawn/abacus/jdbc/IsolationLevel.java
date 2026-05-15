@@ -214,9 +214,13 @@ public enum IsolationLevel {
      * }</pre>
      *
      * @param intValue the JDBC integer constant representing a transaction isolation level
-     *        (e.g., {@link Connection#TRANSACTION_READ_COMMITTED}).
+     *        (e.g., {@link Connection#TRANSACTION_READ_COMMITTED}), or {@code -1} for {@link #DEFAULT}.
      * @return the corresponding {@code IsolationLevel} enum constant.
-     * @throws IllegalArgumentException if {@code intValue} does not match any known JDBC isolation level constant.
+     * @throws IllegalArgumentException if {@code intValue} is not {@code -1} and does not match
+     *         any of the standard JDBC isolation level constants
+     *         ({@link Connection#TRANSACTION_NONE}, {@link Connection#TRANSACTION_READ_UNCOMMITTED},
+     *         {@link Connection#TRANSACTION_READ_COMMITTED}, {@link Connection#TRANSACTION_REPEATABLE_READ},
+     *         {@link Connection#TRANSACTION_SERIALIZABLE}).
      */
     public static IsolationLevel valueOf(final int intValue) {
         switch (intValue) {

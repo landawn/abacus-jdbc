@@ -87,7 +87,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
- * @see Dao
+ * @see UncheckedDao
+ * @see CrudDao
  * @see com.landawn.abacus.query.Filters
  */
 @SuppressWarnings("resource")

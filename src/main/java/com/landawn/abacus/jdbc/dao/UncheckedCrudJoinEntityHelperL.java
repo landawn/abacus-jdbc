@@ -63,7 +63,8 @@ import com.landawn.abacus.util.u.Optional;
  *
  * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the self-referential type parameter for the DAO, extending {@link UncheckedCrudDaoL}
+ * @param <TD> the companion {@link UncheckedCrudDaoL} type (with {@code Long} primary key) that owns
+ *             this helper, used for fluent method chaining and access to CRUD operations
  * @see UncheckedCrudJoinEntityHelper
  * @see CrudJoinEntityHelperL
  * @see UncheckedCrudDaoL

@@ -26,6 +26,12 @@ import java.lang.annotation.Target;
  * <p>Annotated constants can be resolved by {@link Query#id()} and are useful for moving
  * large SQL definitions out of method annotations while keeping them close to the DAO type.</p>
  *
+ * <p>The annotated field must be declared as {@code static final String} on the DAO interface
+ * (or a nested class within it). DAO initialization fails with {@code IllegalArgumentException}
+ * if these requirements are violated, if the resolved id is empty or contains whitespace, if
+ * two annotated fields resolve to the same id, or if the id collides with an entry already
+ * defined by an external SQL mapper loaded via {@link SqlSource}.</p>
+ *
  * @see Query
  * @see SqlSource
  */

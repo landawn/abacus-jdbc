@@ -87,7 +87,8 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * @param <T> the entity type that this helper manages
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
- * @param <TD> the self-type of the DAO for method chaining
+ * @param <TD> the companion {@link UncheckedDao} type that owns this helper (used for fluent
+ *             method chaining and access to DAO operations)
  * @see com.landawn.abacus.jdbc.dao.JoinEntityHelper
  * @see com.landawn.abacus.query.Filters
  */

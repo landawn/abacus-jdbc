@@ -123,6 +123,8 @@ public @interface OutParameter {
      * @OutParameter(name = "isActive", sqlType = Types.BOOLEAN)
      * }</pre>
      *
+     * <p>This element has no default value and must be specified for every {@code @OutParameter}.</p>
+     *
      * @return the SQL type constant from {@link java.sql.Types}
      * @see Types
      */
