@@ -5574,6 +5574,7 @@ public final class Jdbc {
          * @param <T> target type
          * @param type the {@code Type} for which to get a {@code ColumnGetter}.
          * @return a {@code ColumnGetter} for the specified type.
+         * @throws IllegalArgumentException if {@code type} is {@code null}.
          */
         static <T> ColumnGetter<T> get(final Type<? extends T> type) {
             N.checkArgNotNull(type, cs.type);

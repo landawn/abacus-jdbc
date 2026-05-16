@@ -238,6 +238,8 @@ public final class JdbcCodeGenerationUtil {
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
@@ -287,6 +289,8 @@ public final class JdbcCodeGenerationUtil {
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config) {
         try (Connection conn = ds.getConnection()) {
@@ -335,6 +339,8 @@ public final class JdbcCodeGenerationUtil {
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) {
         return generateEntityClass(conn, tableName, createQueryByTableName(conn, tableName), config);
@@ -380,6 +386,8 @@ public final class JdbcCodeGenerationUtil {
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     * @throws RuntimeException if the configuration is invalid (e.g., a field is declared both read-only and non-updatable)
      */
     public static String generateEntityClass(final Connection conn, final String entityName, final String query, final EntityCodeConfig config) {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
@@ -1360,7 +1368,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param keyColumnName the column name to use in the WHERE clause
-     * @return an UPDATE SQL statement string with positional parameters for all columns and a WHERE clause
+     * @return an UPDATE SQL statement string with positional parameters for all columns except the one in the WHERE clause
      * @throws UncheckedSQLException if a database access error occurs
      */
     public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws UncheckedSQLException {

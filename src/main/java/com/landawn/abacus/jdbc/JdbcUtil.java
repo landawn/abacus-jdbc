@@ -6556,6 +6556,9 @@ public final class JdbcUtil {
                 try {
                     isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
                 } catch (final SQLException e) {
+                    // The caller never received `rs`, so they cannot close it. Release it
+                    // here instead of leaking it to be cleaned up when the statement closes.
+                    closeQuietly(rs);
                     throw new UncheckedSQLException(e);
                 }
 
@@ -7561,6 +7564,7 @@ public final class JdbcUtil {
      * @return {@code true} if this call created the table; {@code false} if the table already existed
      *         when checked, or was created concurrently while this call was running
      * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (tableExists(conn, tableName)) {

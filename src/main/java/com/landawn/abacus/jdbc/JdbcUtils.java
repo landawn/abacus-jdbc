@@ -524,10 +524,11 @@ public final class JdbcUtils {
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders
-     * @param batchSize the number of rows to be inserted in each batch
-     * @param batchIntervalInMillis the interval in milliseconds between each batch execution
+     * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
+     * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */

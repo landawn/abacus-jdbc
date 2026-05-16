@@ -880,6 +880,27 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    @Tag("2025")
+    public void testIterateAllResultSets_NextClosesResultSetIfGetMoreResultsThrows() throws SQLException {
+        // hasNext() pulls the first ResultSet into the holder via stmt.getResultSet().
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        // next() removes it from the holder and calls stmt.getMoreResults(KEEP_CURRENT_RESULT)
+        // to advance. If that call fails, the caller never receives the ResultSet, so the iterator
+        // must close it itself rather than leaking it until the statement is closed.
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(new SQLException("driver error during getMoreResults"));
+
+        com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
+        try {
+            assertTrue(iter.hasNext(), "first ResultSet should be available");
+            UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, iter::next);
+            assertNotNull(ex.getCause());
+            verify(mockResultSet).close();
+        } finally {
+            iter.close();
+        }
+    }
+
+    @Test
     public void testQueryByPage() throws SQLException {
         String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 10";
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
