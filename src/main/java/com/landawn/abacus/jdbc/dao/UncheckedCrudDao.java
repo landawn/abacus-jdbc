@@ -116,7 +116,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Inserts the specified entity into the database and returns the generated ID.
-     * All non-null properties of the entity will be included in the INSERT statement.
+     * All insertable properties of the entity will be included in the INSERT statement.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -931,7 +931,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Updates the specified entity in the database. The entity must have its ID set.
-     * All non-null properties will be updated.
+     * All updatable properties of the entity will be updated.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1172,7 +1172,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
     /**
      * Executes an upsert operation based on the specified condition.
      * If no record matches the condition, inserts the entity.
-     * Otherwise, updates the existing record merging non-null values.
+     * Otherwise, copies the non-id properties from the entity into the existing record and updates it.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

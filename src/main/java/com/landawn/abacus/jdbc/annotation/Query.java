@@ -76,7 +76,7 @@ public @interface Query {
      * @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
      * List<Order> findOrders(@Bind("user") User user, @Bind("status") String status);
      *
-     * // IN clause with collection (note: use {@link BindList}, not {@code @Bind}, to expand collections)
+     * // IN clause with collection (note: use @BindList, not @Bind, to expand collections)
      * @Query("SELECT * FROM users WHERE id IN ({ids})")
      * List<User> findByIds(@BindList("ids") List<Long> ids);
      * }</pre>

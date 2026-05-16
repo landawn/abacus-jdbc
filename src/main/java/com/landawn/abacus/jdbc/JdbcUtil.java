@@ -2668,10 +2668,13 @@ public final class JdbcUtil {
     };
 
     /**
-     * Prepares a SQL query for execution, returning a {@link PreparedQuery} object that can be reused
-     * multiple times with different parameters ({@code 'closeAfterExecution'} flag is set to {@code false} by calling {@link PreparedQuery#closeAfterExecution(boolean)}).
-     * This is more efficient than creating new prepared statements
-     * for each execution, especially when the same query is executed repeatedly with different parameters.
+     * Prepares a SQL query for execution, returning a {@link PreparedQuery} object. By default the
+     * returned {@code PreparedQuery} closes itself (and any connection it opened) after the first
+     * execution. To reuse it multiple times with different parameters, call
+     * {@link PreparedQuery#closeAfterExecution(boolean) closeAfterExecution(false)} and close it
+     * explicitly when done. Reusing a single statement is more efficient than creating new prepared
+     * statements for each execution, especially when the same query is executed repeatedly with
+     * different parameters.
      *
      * <p>This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),

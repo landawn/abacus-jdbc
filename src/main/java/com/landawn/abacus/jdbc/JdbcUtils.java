@@ -234,6 +234,7 @@ public final class JdbcUtils {
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the selected columns
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql)
@@ -267,7 +268,8 @@ public final class JdbcUtils {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final Connection conn, final String insertSql,
@@ -305,7 +307,8 @@ public final class JdbcUtils {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -344,6 +347,7 @@ public final class JdbcUtils {
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
@@ -383,7 +387,8 @@ public final class JdbcUtils {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
@@ -427,7 +432,8 @@ public final class JdbcUtils {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      * @throws E if the filter throws an exception
      */
@@ -583,6 +589,7 @@ public final class JdbcUtils {
      * @param selectColumnNames the collection of column names to be selected for import
      * @param stmt the PreparedStatement to be used for the import
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt) throws SQLException {
@@ -614,7 +621,8 @@ public final class JdbcUtils {
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     public static int importData(final Dataset dataset, final Collection<String> selectColumnNames, final PreparedStatement stmt, final int batchSize,
@@ -707,6 +715,7 @@ public final class JdbcUtils {
      * @param stmt the PreparedStatement to be used for the import
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
+     * @throws IllegalArgumentException if any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
@@ -737,7 +746,8 @@ public final class JdbcUtils {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
-     * @throws IllegalArgumentException if {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, {@code batchIntervalInMillis < 0},
+     *         or any key in {@code columnTypeMap} is not a column of the dataset
      * @throws SQLException if a database access error occurs
      */
     @SuppressWarnings("rawtypes")
@@ -2010,6 +2020,7 @@ public final class JdbcUtils {
      * @param selectColumnNames collection of column names to include in export (null for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
+     * @throws IllegalArgumentException if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */
@@ -2083,6 +2094,7 @@ public final class JdbcUtils {
      * @param selectColumnNames collection of column names to include in export (null for all columns)
      * @param output the File to write the CSV data to (will be created if doesn't exist)
      * @return the total number of rows exported to the CSV file
+     * @throws IllegalArgumentException if any specified column name is not found in the query result
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs while writing to the file
      */

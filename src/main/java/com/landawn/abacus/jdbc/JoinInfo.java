@@ -837,7 +837,7 @@ public final class JoinInfo {
      * Retrieves the SQL plan for delete operations.
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL, condition SQL, and parameter setter
+     * @return a tuple containing the delete SQL, the optional middle (join) table delete SQL, and the parameter setter
      * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
      */
     @Deprecated

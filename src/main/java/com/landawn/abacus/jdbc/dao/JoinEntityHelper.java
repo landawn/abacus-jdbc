@@ -168,6 +168,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws SQLException {
@@ -256,6 +257,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws DuplicateResultException if more than one record is found by the specified condition
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
             throws DuplicateResultException, SQLException {
@@ -316,6 +318,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param cond the condition to match
      * @return a list of entities matching the condition with the specified join entities loaded
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     default List<T> list(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond) throws SQLException {
@@ -348,6 +351,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param cond the condition to match
      * @return a list of entities matching the condition with the specified join entities loaded
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
     default List<T> list(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond) throws SQLException {
