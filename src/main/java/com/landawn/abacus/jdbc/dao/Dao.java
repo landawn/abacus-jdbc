@@ -2163,7 +2163,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Iterates over results using a disposable object array consumer.
      * The array is reused for each row to minimize object allocation.
-     * WARNING: Do not store or cache the array parameter as it's reused.
+     *
+     * <p><b>WARNING:</b> Do not store or cache the array parameter as it is reused for every row.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -210,7 +210,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param closeAfterExecution if {@code true}, the statement will be closed after execution. Default is {@code true}.
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalStateException if the query is already closed
+     * @throws IllegalStateException if this query is already closed
      */
     public This closeAfterExecution(final boolean closeAfterExecution) throws IllegalStateException {
         assertNotClosed();
@@ -236,7 +236,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .onClose(() -> releaseResources());
      * }</pre>
      *
-     * @param closeHandler a task to execute after this {@code Query} is closed
+     * @param closeHandler a task to execute after this query is closed
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if closeHandler is null
      * @throws IllegalStateException if this query is already closed

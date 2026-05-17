@@ -95,6 +95,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @return an {@link Optional} containing the entity with loaded join entities, or empty if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     @Beta
@@ -153,6 +154,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @return an {@link Optional} containing the entity with selected properties and loaded join entities
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     @Beta
@@ -183,6 +185,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @return an {@link Optional} containing the entity with selected properties and loaded join entities
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Override
     @Beta
@@ -246,6 +249,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @return the entity with loaded join entities, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     @Beta
@@ -317,6 +321,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     @Beta
@@ -358,6 +363,7 @@ public interface UncheckedCrudJoinEntityHelperL<T, SB extends SqlBuilder, TD ext
      * @return the entity with selected properties and loaded join entities, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Override
     @Beta

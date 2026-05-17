@@ -58,7 +58,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Apply caching to all matching methods at type level
  * @CacheResult(liveTime = 600000, filter = {"find.*", "get.*"})
- * public interface ProductDao extends CrudDao<Product, Long> {
+ * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
  *     // All find* and get* methods will be cached
  * }
  * }</pre>
@@ -144,8 +144,8 @@ public @interface CacheResult {
     /**
      * Specifies the minimum size requirement for caching collection results.
      * Results with fewer elements than this value will not be cached.
-     * Only applies to methods returning {@code Collection} or {@code Dataset}.
-     * 
+     * Only applies to methods returning {@code Collection} or {@code DataSet}.
+     *
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
      * 
@@ -164,8 +164,8 @@ public @interface CacheResult {
     /**
      * Specifies the maximum size limit for caching collection results.
      * Results with more elements than this value will not be cached.
-     * Only applies to methods returning {@code Collection} or {@code Dataset}.
-     * 
+     * Only applies to methods returning {@code Collection} or {@code DataSet}.
+     *
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>
      * 

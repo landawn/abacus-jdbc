@@ -32,7 +32,7 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *   <li>Automatic LIMIT clause addition for single-result queries</li>
  *   <li>ID generation behavior for insert operations</li>
  *   <li>Join condition handling with {@code null} values</li>
- *   <li>Column fetching strategies for Dataset queries</li>
+ *   <li>Column fetching strategies for DataSet queries</li>
  * </ul>
  * 
  * <p><b>Usage Examples:</b></p>
@@ -172,11 +172,11 @@ public @interface DaoConfig {
     boolean allowJoiningByNullOrDefaultValue() default false;
 
     /**
-     * Controls whether Dataset queries should fetch only columns that match entity class properties.
-     * When true (default), Dataset queries will only include columns that correspond
+     * Controls whether DataSet queries should fetch only columns that match entity class properties.
+     * When true (default), DataSet queries will only include columns that correspond
      * to properties in the target entity class, similar to {@link FetchColumnByEntityClass}.
-     * 
-     * <p>This provides consistency between entity queries and Dataset queries,
+     *
+     * <p>This provides consistency between entity queries and DataSet queries,
      * and can improve performance by reducing unnecessary data transfer.</p>
      * 
      * <p><b>Usage Examples:</b></p>
@@ -187,11 +187,11 @@ public @interface DaoConfig {
      *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
      *             "GROUP BY r.id")
-     *     Dataset getReportSummaries();
+     *     DataSet getReportSummaries();
      * }
      * }</pre>
      *
-     * @return {@code true} to fetch only entity columns in Dataset queries
+     * @return {@code true} to fetch only entity columns in DataSet queries
      */
     boolean fetchColumnByEntityClassForDatasetQuery() default true;
 }

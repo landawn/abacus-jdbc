@@ -447,9 +447,9 @@ public @interface Query {
      *
      * <p>Contrast with default behavior:</p>
      * <pre>{@code
-     * // Default: collection is expanded for IN clause
-     * @Query(value = "SELECT * FROM users WHERE id IN (:ids)")
-     * List<User> findByIds(@Bind("ids") List<Long> ids);
+     * // Default: collection is expanded for IN clause (use @BindList with {ids} template syntax)
+     * @Query(value = "SELECT * FROM users WHERE id IN ({ids})")
+     * List<User> findByIds(@BindList("ids") List<Long> ids);
      * // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...)
      *
      * // With isSingleParameter: collection passed as single array value

@@ -1695,6 +1695,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the list of property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1727,6 +1728,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * @param entity the entity to insert or update
      * @param cond the condition to verify if the record exists
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

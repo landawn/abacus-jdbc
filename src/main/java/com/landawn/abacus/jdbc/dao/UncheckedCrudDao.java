@@ -106,7 +106,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return the generated ID
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UnsupportedOperationException if the operation is not supported (default behavior)
-     * @deprecated ID generation should typically be handled by the database or application layer directly
+     * @deprecated This operation is deprecated as ID generation should typically be handled by the database
+     *             (e.g., via auto-increment columns or sequences). Override this method only if a client-side
+     *             ID generation strategy is required.
      */
     @Deprecated
     @NonDBOperation

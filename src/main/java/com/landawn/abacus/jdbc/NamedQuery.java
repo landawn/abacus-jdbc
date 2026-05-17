@@ -1061,10 +1061,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     }
 
     /**
-     * Sets the specified named parameter to a BigInteger value by converting it to String.
-     * 
-     * <p>This method stores very large integer values as strings in the database. This is useful
-     * when the numeric value exceeds the range of standard numeric types.
+     * Sets the specified named parameter to a BigInteger value, stored as its base-10 String representation.
+     *
+     * <p>This method delegates to {@link #setString(String, BigInteger)}, storing very large integer
+     * values as strings in the database. This is useful when the numeric value exceeds the range of
+     * standard numeric types. If {@code x} is {@code null}, the parameter is set to SQL {@code NULL}.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -62,10 +62,10 @@ import com.landawn.abacus.util.stream.Stream;
  *     private Long id;
  *     private String name;
  *
- *     @JoinedBy("userId")
+ *     @JoinedBy("id=Order.userId")
  *     private List<Order> orders;
  *
- *     @JoinedBy("userId")
+ *     @JoinedBy("id=UserProfile.userId")
  *     private UserProfile profile;
  *     // getters/setters
  * }
@@ -1170,6 +1170,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames)
@@ -1575,6 +1576,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     /**
      * Deletes all join entities of the specified class related to the given entity.
      * This performs a cascade delete operation for the specified relationship type.
+     * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1620,6 +1622,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     /**
      * Deletes all join entities of the specified class for multiple entities.
      * This performs a batch cascade delete operation.
+     * If multiple properties in the entity class are joined to the specified type, all of them are deleted within a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1769,7 +1772,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Deletes join entities for multiple property names of a single entity.
-     * The deletions are performed in a single transaction.
+     * This operation is performed within a transaction when multiple properties are specified.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1887,7 +1890,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
 
     /**
      * Deletes join entities for multiple property names for multiple entities.
-     * The deletions are performed in a single transaction.
+     * This operation is performed within a transaction when multiple properties are specified.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

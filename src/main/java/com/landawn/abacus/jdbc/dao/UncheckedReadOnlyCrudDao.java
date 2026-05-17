@@ -69,6 +69,7 @@ import com.landawn.abacus.query.SqlBuilder;
  * @param <TD> the self-type of the DAO for method chaining
  * @see UncheckedReadOnlyDao
  * @see UncheckedNoUpdateCrudDao
+ * @see ReadOnlyCrudDao
  */
 @Beta
 public interface UncheckedReadOnlyCrudDao<T, ID, SB extends SqlBuilder, TD extends UncheckedReadOnlyCrudDao<T, ID, SB, TD>>

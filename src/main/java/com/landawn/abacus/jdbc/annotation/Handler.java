@@ -122,9 +122,9 @@ public @interface Handler {
      * 
      * <p>Example handler implementation:</p>
      * <pre>{@code
-     * public class SecurityHandler implements Jdbc.Handler<BaseDao> {
+     * public class SecurityHandler implements Jdbc.Handler<UserDao> {
      *     @Override
-     *     public void beforeInvoke(BaseDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *     public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Check user permissions
      *         if (!hasPermission(methodSignature._1)) {
      *             throw new SecurityException("Access denied");
@@ -132,7 +132,7 @@ public @interface Handler {
      *     }
      *
      *     @Override
-     *     public void afterInvoke(Object result, BaseDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+     *     public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Can filter or log results
      *         filterSensitiveData(result);
      *     }

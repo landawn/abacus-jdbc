@@ -417,7 +417,7 @@ final class DaoImpl {
      *
      * @param method the DAO method to inspect
      * @param returnType the return type of the method
-     * @param op the operation type declared for the method (use {@link OP#DEFAULT} when unspecified)
+     * @param op the operation type declared for the method ({@link OP#DEFAULT} when not explicitly specified)
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return {@code true} if the method should be dispatched as a list query, {@code false} otherwise
      * @throws UnsupportedOperationException if {@code op} is {@link OP#list} or {@link OP#listAll} but the return

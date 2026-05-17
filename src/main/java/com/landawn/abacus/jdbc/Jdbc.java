@@ -162,6 +162,7 @@ public final class Jdbc {
      * @param <QS> the type of the query statement (e.g., {@code PreparedStatement}, {@code CallableStatement}).
      * @see BiParametersSetter
      * @see TriParametersSetter
+     * @see ParametersSetter#DO_NOTHING
      */
     @FunctionalInterface
     public interface ParametersSetter<QS> extends Throwables.Consumer<QS, SQLException> {
@@ -5567,7 +5568,7 @@ public final class Jdbc {
          * @param <T> target type
          * @param cls the class for which to get a {@code ColumnGetter}.
          * @return a {@code ColumnGetter} for the specified type.
-         * @throws IllegalArgumentException if the resolved {@code Type} is {@code null}.
+         * @throws IllegalArgumentException if the {@code Type} resolved from {@code cls} is {@code null}.
          */
         static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
             return get(N.typeOf(cls));

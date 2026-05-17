@@ -205,6 +205,7 @@ public final class JdbcUtils {
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
+     * @see #importData(Dataset, Collection, Connection, String)
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql) throws SQLException {
         return importData(dataset, dataset.columnNames(), conn, insertSql);

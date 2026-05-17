@@ -2413,6 +2413,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @return a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element)
+     * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs
      * @see #queryAndGetOutParameters(Jdbc.ResultExtractor)
      * @see Dataset
@@ -2552,6 +2553,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @return a {@link Tuple2} containing a list of Datasets (one per result set) and OUT parameters
+     * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs
      * @see #queryAllResultSetsAndGetOutParameters(Jdbc.ResultExtractor)
      */
@@ -2913,6 +2915,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalArgumentException if {@code targetType} is {@code null}
+     * @throws IllegalStateException if this query has already been closed
      * @throws SQLException if a database access error occurs, the stored procedure fails,
      *                      or the mapping fails
      * @see #listAndGetOutParameters(RowMapper)

@@ -59,12 +59,13 @@ import com.landawn.abacus.util.u.Optional;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
  * @param <TD> the companion {@link CrudDaoL} type (with {@code Long} primary key) that owns
  *             this helper, used for fluent method chaining and access to CRUD operations
  *
  * @see com.landawn.abacus.annotation.JoinedBy
  * @see CrudJoinEntityHelper
+ * @see CrudDaoL
  */
 public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, TD>> extends CrudJoinEntityHelper<T, Long, SB, TD> {
 
@@ -164,6 +165,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @return an Optional containing the retrieved entity with join entities loaded, or an empty Optional if no entity is found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
     default Optional<T> get(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)
@@ -311,6 +313,7 @@ public interface CrudJoinEntityHelperL<T, SB extends SqlBuilder, TD extends Crud
      * @return the retrieved entity with join entities loaded, or {@code null} if not found
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
     default T gett(final long id, final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad)

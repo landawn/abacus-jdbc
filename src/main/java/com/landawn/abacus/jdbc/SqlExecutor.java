@@ -108,8 +108,9 @@ final class SqlExecutor {
     /**
      * Private no-arg constructor that prevents instantiation of this archived class.
      *
-     * <p>The {@code throws} clause is preserved from the original {@code SqlExecutor} signature
-     * for historical compatibility; the constructor body is empty and never actually throws.</p>
+     * <p>The {@code throws} clause is retained for historical compatibility with the original
+     * {@code SqlExecutor} argument validation, which could raise {@link IllegalArgumentException}.
+     * The constructor body is empty and never actually throws.</p>
      *
      * @throws IllegalArgumentException declared only for historical signature compatibility;
      *     never actually thrown by this implementation

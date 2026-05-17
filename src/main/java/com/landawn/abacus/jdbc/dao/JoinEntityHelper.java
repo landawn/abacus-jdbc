@@ -65,7 +65,7 @@ import com.landawn.abacus.util.stream.Stream;
  * Optional<User> user = userDao.findFirst(null, Order.class, Filters.eq("id", 1L));
  *
  * // Load orders for multiple users
- * List<User> users = userDao.list(null, Filters.gt("id", 0));
+ * List<User> users = userDao.list(null, Order.class, Filters.gt("id", 0));
  * userDao.loadJoinEntities(users, "orders");
  * }</pre>
  *
@@ -305,6 +305,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Retrieves a list of entities that match the specified condition and loads the specified type of join entities for each.
      * For result sets larger than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join-entity loading is performed in batches.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -338,6 +339,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Retrieves a list of entities that match the specified condition and loads multiple types of join entities for each.
      * For result sets larger than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join-entity loading is performed in batches.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -377,6 +379,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
     /**
      * Retrieves a list of entities that match the specified condition, optionally loading all join entities.
      * For result sets larger than {@link JdbcUtil#DEFAULT_BATCH_SIZE}, the join-entity loading is performed in batches.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -412,6 +415,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * The stream processes entities in batches of {@link JdbcUtil#DEFAULT_BATCH_SIZE} for efficient memory usage.
      * Any {@link SQLException} thrown while loading join entities during stream consumption is wrapped as an
      * {@link UncheckedSQLException}.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -447,6 +451,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * The stream processes entities in batches of {@link JdbcUtil#DEFAULT_BATCH_SIZE} for efficient memory usage.
      * Any {@link SQLException} thrown while loading join entities during stream consumption is wrapped as an
      * {@link UncheckedSQLException}.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -485,6 +490,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * {@link JdbcUtil#DEFAULT_BATCH_SIZE} for efficient memory usage; any {@link SQLException} thrown
      * while loading join entities during stream consumption is wrapped as an {@link UncheckedSQLException}.
      * When {@code includeAllJoinEntities} is {@code false}, the underlying entity stream is returned without modification.
+     * This is a beta API and may change in a future release.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1192,6 +1198,7 @@ public interface JoinEntityHelper<T, SB extends SqlBuilder, TD extends Dao<T, SB
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist in the entity class
      */
     default void loadJoinEntitiesIfNull(final T entity, final String joinEntityPropName, final Collection<String> selectPropNames) throws SQLException {
         final Class<?> cls = entity.getClass();

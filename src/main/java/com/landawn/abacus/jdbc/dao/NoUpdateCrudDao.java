@@ -138,7 +138,7 @@ public interface NoUpdateCrudDao<T, ID, SB extends SqlBuilder, TD extends NoUpda
      * they would mutate an existing record, violating the read/insert-only contract.
      *
      * @param entityToUpdate the entity containing the values to update
-     * @param propNamesToUpdate the property names to update; if {@code null} or empty, all properties will be updated
+     * @param propNamesToUpdate the property names to update
      * @return never returns normally
      * @throws UnsupportedOperationException always, since updates are not permitted
      * @deprecated Unsupported in {@code NoUpdateCrudDao}. Updates are not allowed.
