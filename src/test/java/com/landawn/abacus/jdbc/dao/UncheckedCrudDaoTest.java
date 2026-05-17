@@ -642,4 +642,75 @@ public class UncheckedCrudDaoTest extends TestBase {
         assertEquals(1, result.size());
         verify(dao).batchUpdate(Mockito.anyCollection(), Mockito.eq(2));
     }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — insert-only spanning multiple
+    // sub-batches must run within a transaction (mirrors the fix already in CrudDao.batchUpsert).
+    // Before the fix the dataSource()/beginTransaction branch was skipped for the insert-only
+    // (and update-only) cases regardless of size, so a partial failure could not be rolled back.
+    @Test
+    public void testBatchUpsert_InsertOnly_ExceedsBatchSize_UsesTransaction() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        IdAnnotatedEntity e1 = new IdAnnotatedEntity();
+        e1.setId(1L);
+        e1.setName("Alice");
+        IdAnnotatedEntity e2 = new IdAnnotatedEntity();
+        e2.setId(2L);
+        e2.setName("Bob");
+        IdAnnotatedEntity e3 = new IdAnnotatedEntity();
+        e3.setId(3L);
+        e3.setName("Carol");
+
+        // No existing rows -> all three entities go to the insert-only group; batchSize 2 -> 3 > 2.
+        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of());
+
+        final RuntimeException sentinel = new RuntimeException("dataSource() invoked - transaction branch taken");
+        when(dao.dataSource()).thenThrow(sentinel);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> dao.batchUpsert(List.of(e1, e2, e3), List.of("name"), 2));
+
+        assertSame(sentinel, thrown);
+        verify(dao).dataSource();
+    }
+
+    // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — update-only spanning multiple
+    // sub-batches must likewise run within a transaction.
+    @Test
+    public void testBatchUpsert_UpdateOnly_ExceedsBatchSize_UsesTransaction() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        IdAnnotatedEntity e1 = new IdAnnotatedEntity();
+        e1.setId(1L);
+        e1.setName("Alice");
+        IdAnnotatedEntity e2 = new IdAnnotatedEntity();
+        e2.setId(2L);
+        e2.setName("Bob");
+        IdAnnotatedEntity e3 = new IdAnnotatedEntity();
+        e3.setId(3L);
+        e3.setName("Carol");
+
+        IdAnnotatedEntity db1 = new IdAnnotatedEntity();
+        db1.setId(1L);
+        db1.setName("Alice");
+        IdAnnotatedEntity db2 = new IdAnnotatedEntity();
+        db2.setId(2L);
+        db2.setName("Bob");
+        IdAnnotatedEntity db3 = new IdAnnotatedEntity();
+        db3.setId(3L);
+        db3.setName("Carol");
+
+        // All three match existing rows -> update-only group; batchSize 2 -> 3 > 2.
+        // batchUpsert splits the entities into sub-batches of batchSize and calls list(...) once
+        // per sub-batch ([e1,e2] then [e3]), flat-mapping the results into an id-keyed map with a
+        // throwing merger; return the matching rows per consecutive call so ids stay unique.
+        when(dao.list(Mockito.any(Condition.class))).thenReturn(List.of(db1, db2), List.of(db3));
+
+        final RuntimeException sentinel = new RuntimeException("dataSource() invoked - transaction branch taken");
+        when(dao.dataSource()).thenThrow(sentinel);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> dao.batchUpsert(List.of(e1, e2, e3), List.of("name"), 2));
+
+        assertSame(sentinel, thrown);
+        verify(dao).dataSource();
+    }
 }
