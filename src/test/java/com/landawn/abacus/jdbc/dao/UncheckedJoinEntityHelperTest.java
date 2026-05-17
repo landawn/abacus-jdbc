@@ -865,4 +865,80 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         assertNotNull(result);
         assertEquals(201, result.size());
     }
+
+    // ---- loadJoinEntities(T, Class<?>, Collection<String>) — UncheckedJoinEntityHelper L470-480 ----
+
+    // Resolves prop names by type and delegates to the per-prop overload for each match.
+    @Test
+    public void testLoadJoinEntities_EntityByClass_WithSelectProps_RunsLoop() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        List<String> selectProps = List.of("id");
+        Mockito.doReturn(TestEntity.class).when(dao).targetEntityClass();
+        Mockito.doReturn(TestUncheckedJoinDao.class).when(dao).targetDaoInterface();
+        Mockito.doReturn("test_entity").when(dao).targetTableName();
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entity), Mockito.anyString(), Mockito.same(selectProps));
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.eq(String.class)))
+                    .thenReturn(List.of("orders", "addresses"));
+
+            dao.loadJoinEntities(entity, String.class, selectProps);
+
+            verify(dao).loadJoinEntities(entity, "orders", selectProps);
+            verify(dao).loadJoinEntities(entity, "addresses", selectProps);
+        }
+    }
+
+    // No joined property of the requested type → IllegalArgumentException from N.checkArgument (L475).
+    @Test
+    public void testLoadJoinEntities_EntityByClass_NoJoinPropOfType_Throws() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        Mockito.doReturn(TestEntity.class).when(dao).targetEntityClass();
+        Mockito.doReturn(TestUncheckedJoinDao.class).when(dao).targetDaoInterface();
+        Mockito.doReturn("test_entity").when(dao).targetTableName();
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+                    .thenReturn(new ArrayList<>());
+
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> dao.loadJoinEntities(entity, Integer.class, List.of("id")));
+        }
+    }
+
+    // ---- loadJoinEntities(Collection<T>, Class<?>, Collection<String>) — L526-540 ----
+
+    // Empty input collection short-circuits before any prop-name resolution (L529).
+    @Test
+    public void testLoadJoinEntities_EntitiesByClass_EmptyShortCircuits() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+
+        dao.loadJoinEntities(new ArrayList<TestEntity>(), String.class, List.of("id"));
+
+        // No interaction with the per-prop overload because the collection was empty.
+        verify(dao, Mockito.never()).loadJoinEntities(Mockito.<Collection<TestEntity>> any(), Mockito.anyString(), Mockito.<Collection<String>> any());
+    }
+
+    // Non-empty collection resolves prop names and delegates to the per-prop batch overload (L532-540).
+    @Test
+    public void testLoadJoinEntities_EntitiesByClass_WithSelectProps_RunsLoop() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        List<String> selectProps = List.of("id");
+        Mockito.doReturn(TestEntity.class).when(dao).targetEntityClass();
+        Mockito.doReturn(TestUncheckedJoinDao.class).when(dao).targetDaoInterface();
+        Mockito.doReturn("test_entity").when(dao).targetTableName();
+        doNothing().when(dao).loadJoinEntities(Mockito.same(entities), Mockito.anyString(), Mockito.same(selectProps));
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.eq(String.class)))
+                    .thenReturn(List.of("orders"));
+
+            dao.loadJoinEntities(entities, String.class, selectProps);
+
+            verify(dao).loadJoinEntities(entities, "orders", selectProps);
+        }
+    }
 }

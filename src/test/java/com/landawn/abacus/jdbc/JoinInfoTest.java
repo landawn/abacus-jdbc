@@ -19,6 +19,7 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1452,6 +1453,146 @@ public class JoinInfoTest extends TestBase {
     public void testConstructor_ManyToManyJoin_NoEqInSecondPair() {
         assertThrows(IllegalArgumentException.class, () -> new JoinInfo(M2MNoEqInSecondPairEntity.class, "m2m_no_eq2", "roles", false));
     }
+
+    // ---- Three-column direct join: exercises the srcPropInfos.length > 2 param-setter branch (JoinInfo L526-530) ----
+
+    @DaoConfig(allowJoiningByNullOrDefaultValue = true)
+    interface ThreeColDao extends Dao<ThreeColEntity, PSC, ThreeColDao> {
+    }
+
+    public static final class ThreeColEntity {
+        private long aId;
+        private long bId;
+        private long cId;
+
+        @JoinedBy("aId=aId, bId=bId, cId=cId")
+        private List<ThreeColRefEntity> refs;
+
+        public long getAId() {
+            return aId;
+        }
+
+        public void setAId(final long aId) {
+            this.aId = aId;
+        }
+
+        public long getBId() {
+            return bId;
+        }
+
+        public void setBId(final long bId) {
+            this.bId = bId;
+        }
+
+        public long getCId() {
+            return cId;
+        }
+
+        public void setCId(final long cId) {
+            this.cId = cId;
+        }
+
+        public List<ThreeColRefEntity> getRefs() {
+            return refs;
+        }
+
+        public void setRefs(final List<ThreeColRefEntity> refs) {
+            this.refs = refs;
+        }
+    }
+
+    public static final class ThreeColRefEntity {
+        private long aId;
+        private long bId;
+        private long cId;
+
+        public long getAId() {
+            return aId;
+        }
+
+        public void setAId(final long aId) {
+            this.aId = aId;
+        }
+
+        public long getBId() {
+            return bId;
+        }
+
+        public void setBId(final long bId) {
+            this.bId = bId;
+        }
+
+        public long getCId() {
+            return cId;
+        }
+
+        public void setCId(final long cId) {
+            this.cId = cId;
+        }
+    }
+
+    // The non-batch param setter for a >2 column direct join loops over all source props (JoinInfo L526-530).
+    @Test
+    public void testParamSetter_ThreeColumnDirectJoin_ExecutesLoop() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(ThreeColDao.class, ThreeColEntity.class, "three_col_entity", "refs");
+        assertNotNull(joinInfo);
+
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final ThreeColEntity entity = new ThreeColEntity();
+        entity.setAId(11L);
+        entity.setBId(22L);
+        entity.setCId(33L);
+
+        final Tuple3<String, String, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo
+                .getDeleteSqlPlan(PSC.class);
+        assertNotNull(plan);
+        plan._3.accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 11L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 22L);
+        org.mockito.Mockito.verify(stmt).setLong(3, 33L);
+    }
+
+    // The select-plan param setter for a >2 column direct join also loops over all source props.
+    @Test
+    public void testParamSetter_ThreeColumnDirectJoin_SelectPlan() throws java.sql.SQLException {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(ThreeColDao.class, ThreeColEntity.class, "three_col_entity_sel", "refs");
+        final java.sql.PreparedStatement stmt = org.mockito.Mockito.mock(java.sql.PreparedStatement.class);
+        final ThreeColEntity entity = new ThreeColEntity();
+        entity.setAId(1L);
+        entity.setBId(2L);
+        entity.setCId(3L);
+
+        final Tuple2<Function<Collection<String>, String>, com.landawn.abacus.jdbc.Jdbc.BiParametersSetter<java.sql.PreparedStatement, Object>> plan = joinInfo
+                .getSelectSqlPlan(PSC.class);
+        plan._2.accept(stmt, entity);
+
+        org.mockito.Mockito.verify(stmt).setLong(1, 1L);
+        org.mockito.Mockito.verify(stmt).setLong(2, 2L);
+        org.mockito.Mockito.verify(stmt).setLong(3, 3L);
+    }
+
+    // For an m2m join, getBatchDeleteSqlPlan still returns a usable main builder; the middle
+    // builder slot (._2) is intentionally null because cascade delete is assumed DB-side.
+    @Test
+    public void testGetBatchDeleteSqlPlan_ManyToMany_MiddleBuilderIsNull() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_mid1", "roles");
+        final Tuple3<IntFunction<String>, IntFunction<String>, ?> plan = joinInfo.getBatchDeleteSqlPlan(PSC.class);
+        assertNotNull(plan);
+        assertNotNull(plan._1.apply(2));
+        // cascadeDeleteDefinedInDB is hardcoded true, so the middle-delete builder is null.
+        assertNull(plan._2);
+    }
+
+    // TODO: JoinInfo batchMiddleDeleteSqlBuilder bodies (L471, L473) and the middleDeleteSql slot
+    // (L446) are unreachable: cascadeDeleteDefinedInDB is a hardcoded `true` constant (JoinInfo
+    // L221), so the `? null :` ternary never evaluates the middle-delete branch. Dead code until
+    // DB-side cascade handling is implemented.
+    // TODO: JoinInfo setNullParamSetterForUpdate lambdas (L344-347, L555-571) are stored in
+    // setNullSqlAndParamSetterPool which has no public accessor (getSetNullSqlAndParamSetter is
+    // commented out), so they are unreachable in isolation and intentionally left uncovered.
+    // TODO: JoinInfo L296 ("intermediate entity class is required but not found" when forName
+    // returns null) is defensive dead code — ClassUtil.forName throws before returning null.
 }
 
 final class UserRoleUserEntity {
