@@ -429,6 +429,14 @@ public class DBLockTest extends TestBase {
         assertEquals(1, targetCodePool(fixture.lock).size());
     }
 
+    // NOTE (interrupt-flag preservation in lock()): when Thread.interrupted() is observed inside the
+    // retry loop, lock() now re-asserts the interrupt flag (Thread.currentThread().interrupt())
+    // before returning null, consistent with close(). A deterministic unit test is not feasible:
+    // reaching that branch requires the interrupt to arrive in the narrow window *outside* N.sleep
+    // (N.sleep wraps an interrupt-during-sleep into an UncheckedException that propagates out of
+    // lock() before the check is reached), which depends on thread-scheduling timing and would be
+    // flaky. This matches the pre-existing untestable note below.
+
     // TODO: L207 — tableExists returns false after creation (requires full constructor with real DB)
     // TODO: L217-L218 — SQLException in constructor catch (requires full constructor with real DB)
     // TODO: L224-L278 — refreshTask body (lambda created in constructor, untestable via Unsafe-based approach)

@@ -511,6 +511,8 @@ public final class DBLock {
             }
 
             if (Thread.interrupted()) {
+                // Preserve the interrupt flag so callers up the stack can detect the cancellation.
+                Thread.currentThread().interrupt();
                 logger.warn("Interrupted while acquiring DB lock(target={}, attempts={})", target, attempts + 1);
                 return null;
             }

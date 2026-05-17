@@ -261,12 +261,48 @@ public class UncheckedDaoTest extends TestBase {
 
         when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(IdentifiedEntity.class);
-        when(dao.update(same(dbEntity), Mockito.anyCollection(), same(condition))).thenReturn(1);
+        when(dao.update(same(dbEntity), Mockito.anyCollection(), any(Condition.class))).thenReturn(1);
 
         IdentifiedEntity result = dao.upsert(entityToMerge, condition);
 
         assertSame(dbEntity, result);
         assertEquals(1L, dbEntity.getId());
         assertEquals("new-name", dbEntity.getName());
+    }
+
+    /**
+     * Regression test for {@link UncheckedDao#upsert(Object, Condition)}: when the entity has ID
+     * properties, the existing record must be updated using an ID-based condition derived from the
+     * loaded DB entity (mirroring the checked {@link Dao#upsert(Object, Condition)} contract), not
+     * the original lookup condition.
+     */
+    @Test
+    public void testUpsert_Condition_WithIdProps_UpdatesByIdCondition() {
+        IdentifiedUncheckedDao dao = Mockito.mock(IdentifiedUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Condition lookupCondition = Mockito.mock(Condition.class);
+        IdentifiedEntity entityToMerge = new IdentifiedEntity();
+        entityToMerge.setId(99L);
+        entityToMerge.setName("new-name");
+        IdentifiedEntity dbEntity = new IdentifiedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("old-name");
+
+        when(dao.findOnlyOne(lookupCondition)).thenReturn(Optional.of(dbEntity));
+        when(dao.targetEntityClass()).thenReturn(IdentifiedEntity.class);
+        when(dao.update(same(dbEntity), Mockito.anyCollection(), any(Condition.class))).thenReturn(1);
+
+        IdentifiedEntity result = dao.upsert(entityToMerge, lookupCondition);
+
+        assertSame(dbEntity, result);
+
+        ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
+        verify(dao).update(same(dbEntity), Mockito.<Collection<String>> any(), condCaptor.capture());
+
+        Condition usedCond = condCaptor.getValue();
+        // Must NOT reuse the original lookup condition; must be an id-based condition built from the db entity.
+        assertNotSame(lookupCondition, usedCond);
+        String condStr = usedCond.toString();
+        assertTrue(condStr.contains("id"), "Expected id-based condition but was: " + condStr);
+        assertTrue(condStr.contains("1"), "Expected condition bound to db entity id (1) but was: " + condStr);
     }
 }

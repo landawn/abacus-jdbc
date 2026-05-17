@@ -1745,13 +1745,14 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
 
             if (N.isEmpty(idPropNameList)) {
                 Beans.copyInto(entity, dbEntity);
+                update(dbEntity, cond);
             } else {
                 Beans.copyInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                final Condition idCond = Filters.allEqual(dbEntity, idPropNameList);
+                update(dbEntity, idCond);
             }
 
-            update(dbEntity, cond);
             return dbEntity;
-
         }
     }
 
