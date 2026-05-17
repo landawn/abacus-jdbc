@@ -3630,7 +3630,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         try {
             cstmt.clearParameters();
         } catch (final SQLException e) {
-            logger.warn("Failed to reset statement", e);
+            logger.warn(e, "Failed to reset statement");
         } finally {
             super.closeStatement();
         }

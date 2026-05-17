@@ -9854,7 +9854,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 close();
             } catch (final Exception e) {
-                JdbcUtil.logger.error("Failed to close Query", e);
+                JdbcUtil.logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
 
@@ -9879,7 +9879,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             try {
                 close();
             } catch (final Exception e) {
-                JdbcUtil.logger.error("Failed to close Query", e);
+                JdbcUtil.logger.error(e, "Failed to close Query");
                 iae.addSuppressed(e);
             }
 
@@ -9972,7 +9972,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 try {
                     stmt.setFetchDirection(defaultFetchDirection);
                 } catch (final SQLException e) {
-                    logger.warn("Failed to reset fetch direction", e);
+                    logger.warn(e, "Failed to reset fetch direction");
                 }
             }
 
@@ -9980,7 +9980,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 try {
                     stmt.setFetchSize(defaultFetchSize);
                 } catch (final SQLException e) {
-                    logger.warn("Failed to reset fetch size", e);
+                    logger.warn(e, "Failed to reset fetch size");
                 }
             }
 
@@ -9988,7 +9988,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 try {
                     stmt.setMaxFieldSize(defaultMaxFieldSize);
                 } catch (final SQLException e) {
-                    logger.warn("Failed to reset max field size", e);
+                    logger.warn(e, "Failed to reset max field size");
                 }
             }
 
@@ -9996,7 +9996,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 try {
                     stmt.setQueryTimeout(defaultQueryTimeout);
                 } catch (final SQLException e) {
-                    logger.warn("Failed to reset query timeout", e);
+                    logger.warn(e, "Failed to reset query timeout");
                 }
             }
         } finally {

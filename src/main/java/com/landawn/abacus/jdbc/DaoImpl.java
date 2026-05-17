@@ -6587,8 +6587,8 @@ final class DaoImpl {
             }
         }
 
-        JdbcUtil.logger.warn("No Dao interface/instance found for entity class: " + referencedEntityClass + " with data source: " + ds
-                + " for join operations in Dao: " + defaultDao.getClass());
+        JdbcUtil.logger.warn("No Dao interface/instance found for join operations(entityClass={}, dataSource={}, dao={})", referencedEntityClass, ds,
+                defaultDao.getClass());
 
         // Don't cache defaultDao - the correct DAO may be registered later (e.g., during initialization).
         // Caching the wrong DAO here would permanently prevent the correct one from being found.

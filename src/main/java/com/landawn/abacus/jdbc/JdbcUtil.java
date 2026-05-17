@@ -10669,7 +10669,7 @@ public final class JdbcUtil {
                                         }
                                     }
                                 } else {
-                                    logger.warn("Cannot set generated keys for id type: " + ClassUtil.getCanonicalClassName(id.getClass()));
+                                    logger.warn("Cannot set generated keys for unsupported id type(idType={})", ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             } : (id, entity) -> {
                                 if (id != null && Beans.isBeanClass(id.getClass())) {
@@ -10680,8 +10680,8 @@ public final class JdbcUtil {
                                         propInfo.setPropValue(entity, Beans.getPropValue(entityId, propInfo.name));
                                     }
                                 } else {
-                                    logger.warn(
-                                            "Cannot set generated keys for id type: " + (id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass())));
+                                    logger.warn("Cannot set generated keys for unsupported id type(idType={})",
+                                            id == null ? "null" : ClassUtil.getCanonicalClassName(id.getClass()));
                                 }
                             }));
 
