@@ -3004,8 +3004,28 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setParametersFrom(int startParameterIndex, final Collection<?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
+        // Resolve the Abacus Type once per distinct element class instead of once per element.
+        // Collections passed here (e.g. IN-list values) are almost always homogeneous, so this
+        // turns N (often large) N.typeOf(...) registry lookups into a single one. Behavior is
+        // identical to per-element setObject(int, Object): null -> SQL NULL, otherwise the Type
+        // resolved from the value's runtime class.
+        Class<?> lastClass = null;
+        @SuppressWarnings("rawtypes")
+        Type lastType = null;
+
         for (final Object param : parameters) {
-            setObject(startParameterIndex++, param);
+            if (param == null) {
+                stmt.setObject(startParameterIndex++, null);
+            } else {
+                final Class<?> cls = param.getClass();
+
+                if (cls != lastClass) {
+                    lastClass = cls;
+                    lastType = N.typeOf(cls);
+                }
+
+                lastType.set(stmt, startParameterIndex++, param);
+            }
         }
 
         return (This) this;

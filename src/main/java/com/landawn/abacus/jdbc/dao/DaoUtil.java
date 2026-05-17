@@ -592,6 +592,15 @@ final class DaoUtil {
     @SuppressWarnings("rawtypes")
     static final Map<Class<? extends Dao>, Class<? extends SqlBuilder>> daoSqlBuilderClassPool = new ConcurrentHashMap<>();
 
+    // getDaoPreparedQueryFunc(dao) is called on every prepareQuery(Collection,Condition) /
+    // prepareNamedQuery(Collection,Condition) path. The returned Tuple2 (and the 6 closures it
+    // wraps) are bound to the specific DAO instance (dataSource()/targetEntityClass()), so it is
+    // cached per DAO instance rather than per class. DAO proxies are pooled/long-lived (held in
+    // DaoImpl.daoPool); the proxy's hashCode/equals are identity-based, so this map is bounded by
+    // the number of distinct DAO instances.
+    @SuppressWarnings("rawtypes")
+    private static final Map<Dao, Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>>> daoPreparedQueryFuncPool = new ConcurrentHashMap<>();
+
     /**
      * Creates query preparation functions for a given DAO instance.
      * <p>
@@ -630,6 +639,12 @@ final class DaoUtil {
      */
     @SuppressWarnings("rawtypes")
     static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(
+            final Dao dao) {
+        return daoPreparedQueryFuncPool.computeIfAbsent(dao, DaoUtil::computeDaoPreparedQueryFunc);
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> computeDaoPreparedQueryFunc(
             final Dao dao) {
         final Class<? extends Dao> daoInterface = dao.getClass();
         final Class<? extends SqlBuilder> sbc = daoSqlBuilderClassPool.computeIfAbsent(daoInterface, DaoUtil::getDaoSqlBuilderClass);

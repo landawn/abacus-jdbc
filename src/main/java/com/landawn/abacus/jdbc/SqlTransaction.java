@@ -51,6 +51,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
     private final String _id; //NOSONAR
 
+    // Dedicated per-instance monitor for runOutsideTransaction/callOutsideTransaction. Replaces
+    // synchronized(_id): locking on a String is an anti-pattern (lock identity depends on String
+    // interning). _id is a freshly built String per instance, so the intended semantics are
+    // "lock this transaction instance" - this object preserves exactly that, safely.
+    private final Object _outsideTxLock = new Object(); //NOSONAR
+
     private final String _timedId; //NOSONAR
 
     private final javax.sql.DataSource _ds; //NOSONAR
@@ -754,7 +760,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalStateException if another transaction is opened during execution
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
-        synchronized (_id) { //NOSONAR
+        synchronized (_outsideTxLock) { //NOSONAR
             final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 
             Throwable throwable = null;
@@ -817,7 +823,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws IllegalStateException if another transaction is opened during execution
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<R, E> cmd) throws E {
-        synchronized (_id) { //NOSONAR
+        synchronized (_outsideTxLock) { //NOSONAR
             final boolean wasRegistered = threadTransactionMap.remove(_id, this);
 
             Throwable throwable = null;

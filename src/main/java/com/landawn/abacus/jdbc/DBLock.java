@@ -485,12 +485,15 @@ public final class DBLock {
         final int maxAttempts = (int) maxAttemptsWithBuffer;
         Exception lastException = null;
 
+        // Host name is process-constant; resolve it once instead of on every retry attempt
+        // (IOUtil.getHostName() can perform an InetAddress/DNS lookup).
+        final String hostName = IOUtil.getHostName();
+
         logger.debug("Trying to acquire DB lock(target={}, liveTime={}, timeout={}, retryInterval={})", target, liveTime, timeout, retryInterval);
 
         do {
             try {
-                if (JdbcUtil.executeUpdate(ds, lockSQL, IOUtil.getHostName(), target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now,
-                        now) > 0) {
+                if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, DateUtil.createTimestamp(now.getTime() + liveTime), now, now) > 0) {
                     targetCodePool.put(target, new LockInfo(code, liveTime));
 
                     logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
