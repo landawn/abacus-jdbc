@@ -3,11 +3,15 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +25,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalInt;
@@ -198,5 +203,88 @@ public class JdbcUtilIntegrationTest extends TestBase {
         assertEquals(2, rows.size());
         assertNotNull(rows.get(0));
         assertEquals(2, rows.size());
+    }
+
+    // ---- JdbcUtil.iterateAllResultSets (real embedded DB, no mock) ----
+
+    private static List<String> drainNames(final ResultSet rs) throws SQLException {
+        final List<String> names = new ArrayList<>();
+        while (rs.next()) {
+            names.add(rs.getString(1));
+        }
+        return names;
+    }
+
+    // Multiple query results: H2's plain Statement does NOT expose multiple JDBC
+    // ResultSets from a single execute (it runs only the first command of a
+    // ';'-separated script), so a genuine multi-result-set Statement is produced with
+    // an HSQLDB stored procedure declared with DYNAMIC RESULT SETS. This is still a
+    // real embedded database, not a mock.
+    @Test
+    public void testIterateAllResultSets_MultipleResults() throws SQLException {
+        final DataSource hsqlDs = JdbcUtil.createHikariDataSource("jdbc:hsqldb:mem:iter_multi", "SA", "");
+
+        try (Connection conn = hsqlDs.getConnection()) {
+            try (Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE t (id INT, name VARCHAR(20))");
+                st.execute("INSERT INTO t VALUES (1,'a'),(2,'b'),(3,'c')");
+                st.execute("CREATE PROCEDURE three_rs() READS SQL DATA DYNAMIC RESULT SETS 3 "
+                        + "BEGIN ATOMIC "
+                        + "  DECLARE r1 CURSOR WITH RETURN FOR SELECT name FROM t WHERE id = 1; "
+                        + "  DECLARE r2 CURSOR WITH RETURN FOR SELECT name FROM t WHERE id IN (2,3) ORDER BY id; "
+                        + "  DECLARE r3 CURSOR WITH RETURN FOR SELECT name FROM t ORDER BY id; "
+                        + "  OPEN r1; OPEN r2; OPEN r3; "
+                        + "END");
+            }
+
+            try (CallableStatement cs = conn.prepareCall("{call three_rs()}")) {
+                final boolean isFirstResultSet = cs.execute();
+
+                final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(cs, isFirstResultSet);
+
+                assertTrue(iter.hasNext());
+                assertEquals(List.of("a"), drainNames(iter.next()));
+
+                assertTrue(iter.hasNext());
+                assertEquals(List.of("b", "c"), drainNames(iter.next()));
+
+                // next() without a preceding hasNext() still advances to the 3rd result.
+                assertEquals(List.of("a", "b", "c"), drainNames(iter.next()));
+
+                assertFalse(iter.hasNext());
+                assertThrows(java.util.NoSuchElementException.class, iter::next);
+
+                // close() is idempotent.
+                iter.close();
+                iter.close();
+            }
+        } finally {
+            try (Connection c = hsqlDs.getConnection(); Statement st = c.createStatement()) {
+                st.execute("DROP PROCEDURE three_rs");
+                st.execute("DROP TABLE t");
+            }
+        }
+    }
+
+    // Single result set against real H2: exercises the first-result-set branch and the
+    // end-of-results path (getUpdateCount() == -1 -> noMoreResult).
+    @Test
+    public void testIterateAllResultSets_SingleResult_H2() throws SQLException {
+        insertWidget("only", 42);
+
+        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+            final boolean isFirstResultSet = stmt.execute("SELECT name FROM widget WHERE qty = 42");
+
+            final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(stmt, isFirstResultSet);
+
+            assertTrue(iter.hasNext());
+            // hasNext is idempotent (does not advance).
+            assertTrue(iter.hasNext());
+            assertEquals(List.of("only"), drainNames(iter.next()));
+
+            assertFalse(iter.hasNext());
+            assertThrows(java.util.NoSuchElementException.class, iter::next);
+            iter.close();
+        }
     }
 }
