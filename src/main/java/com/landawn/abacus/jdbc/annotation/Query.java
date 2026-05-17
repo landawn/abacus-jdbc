@@ -882,10 +882,10 @@ public @interface Query {
      * (×2 accounts for driver buffering and object overhead)
      *
      * Example calculations:
-     * - Small rows (100 bytes)    =5000 → ~1MB per batch
-     * - Medium rows (1KB)         =1000 → ~2MB per batch
-     * - Large rows (10KB)         =100 → ~2MB per batch
-     * - Very large rows (100KB)   =10 → ~2MB per batch
+     * - Small rows (100 bytes), batchSize 5000   → ~1MB per batch
+     * - Medium rows (1KB), batchSize 1000        → ~2MB per batch
+     * - Large rows (10KB), batchSize 100         → ~2MB per batch
+     * - Very large rows (100KB), batchSize 10    → ~2MB per batch
      * </pre>
      *
      * <p>Best practices:</p>

@@ -396,7 +396,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * );
      * }</pre>
      *
-     * @param <V> the type of the property value to retrieve
+     * @param <V> the value type produced by the row mapper
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row
@@ -474,7 +474,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * );
      * }</pre>
      *
-     * @param <V> the type of the property value to retrieve
+     * @param <V> the value type produced by the row mapper
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the function to map the result set row

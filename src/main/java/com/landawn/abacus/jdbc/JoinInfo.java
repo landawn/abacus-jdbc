@@ -902,10 +902,11 @@ public final class JoinInfo {
      * This method populates the join properties of the source entities with the provided joined entities
      * based on the join key relationships.
      *
-     * <p>For one-to-one or one-to-many joins, the method groups the joined entities by their keys
-     * and assigns them to the corresponding source entities. If the join property is declared as a
-     * {@code List} and the grouped value is already a {@code List}, the list is assigned directly;
-     * otherwise a new collection of the declared type is created and populated.</p>
+     * <p>The joined entities are grouped by their referenced join key and then assigned to the
+     * corresponding source entities. If the join property is declared as a {@code List} and the
+     * grouped value is already a {@code List}, the list is assigned directly; otherwise a new
+     * collection of the declared type is created and populated. For single-entity and map join
+     * properties, only the first (or single) matching entity is used.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

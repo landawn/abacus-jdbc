@@ -86,7 +86,7 @@ import com.landawn.abacus.util.stream.Stream;
  * }</pre>
  *
  * @param <T> the entity type that this helper manages
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+ * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
  * @param <TD> the companion {@link UncheckedDao} type that owns this helper (used for fluent
  *             method chaining and access to DAO operations)
  * @see com.landawn.abacus.jdbc.dao.JoinEntityHelper
@@ -115,6 +115,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
@@ -147,6 +148,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Override
     default Optional<T> findFirst(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
@@ -216,6 +218,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
      * @throws DuplicateResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Class<?> joinEntitiesToLoad, final Condition cond)
@@ -249,6 +252,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @return an Optional containing the unique entity with loaded join entities, or empty if not found
      * @throws DuplicateResultException if more than one record is found for the specified condition
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Collection<Class<?>> joinEntitiesToLoad, final Condition cond)
@@ -318,6 +322,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param cond the condition to match
      * @return a list of entities with loaded join entities
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Beta
     @Override
@@ -355,6 +360,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param cond the condition to match
      * @return a list of entities with loaded join entities
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
      */
     @Beta
     @Override
@@ -432,6 +438,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param entity the entity to load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -457,6 +464,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -485,6 +493,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param entities the collection of entities to load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -510,6 +519,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1018,6 +1028,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param entity the entity to conditionally load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -1043,6 +1054,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1070,6 +1082,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param entities the collection of entities to conditionally load join entities for
      * @param joinEntityClass the class of the join entities to load
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @Override
     default void loadJoinEntitiesIfNull(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
@@ -1095,6 +1108,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param selectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1573,6 +1587,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param joinEntityClass the class of join entities to delete
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1617,6 +1632,7 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
      * @param joinEntityClass the class of join entities to delete
      * @return the total count of deleted records
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
      */
     @SuppressWarnings("deprecation")
     @Override
@@ -1836,8 +1852,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes join entities for multiple property names of a single entity in parallel (deprecated).
-     * Note: Parallel deletion may not complete in a single transaction.
+     * Deletes join entities for multiple property names of a single entity, optionally in parallel.
+     * Note: parallel deletion may not complete in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1915,8 +1931,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes join entities for multiple property names for multiple entities in parallel (deprecated).
-     * Note: Parallel deletion may not complete in a single transaction.
+     * Deletes join entities for multiple property names for multiple entities, optionally in parallel.
+     * Note: parallel deletion may not complete in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1949,8 +1965,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes join entities for multiple property names for multiple entities using a custom executor (deprecated).
-     * Note: Operations executed in multiple threads won't be completed in a single transaction.
+     * Deletes join entities for multiple property names for multiple entities using a custom executor.
+     * Note: operations executed in multiple threads will not be completed in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2010,8 +2026,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes all join entities for a single entity, optionally in parallel (deprecated).
-     * Note: Parallel deletion may not complete in a single transaction.
+     * Deletes all join entities for a single entity, optionally in parallel.
+     * Note: parallel deletion may not complete in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2039,8 +2055,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes all join entities for a single entity using a custom executor (deprecated).
-     * Note: Operations executed in multiple threads won't be completed in a single transaction.
+     * Deletes all join entities for a single entity using a custom executor.
+     * Note: operations executed in multiple threads will not be completed in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2090,8 +2106,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes all join entities for multiple entities, optionally in parallel (deprecated).
-     * Note: Parallel deletion may not complete in a single transaction.
+     * Deletes all join entities for multiple entities, optionally in parallel.
+     * Note: parallel deletion may not complete in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2119,8 +2135,8 @@ public interface UncheckedJoinEntityHelper<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * Deletes all join entities for multiple entities using a custom executor (deprecated).
-     * Note: Operations executed in multiple threads won't be completed in a single transaction.
+     * Deletes all join entities for multiple entities using a custom executor.
+     * Note: operations executed in multiple threads will not be completed in a single transaction.
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

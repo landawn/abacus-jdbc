@@ -241,7 +241,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws SQLException;
@@ -282,7 +282,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param propNamesToInsert the property names to include in the INSERT statement
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws SQLException;
@@ -325,7 +325,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of generated IDs in the same order as the input entities
+     * @return a list of generated IDs in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -866,7 +866,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
      *                        All properties will be selected if {@code null}
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of found entities
+     * @return a list of found entities (order is not guaranteed to match the input IDs)
      * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
      * @throws SQLException if a database access error occurs
      */

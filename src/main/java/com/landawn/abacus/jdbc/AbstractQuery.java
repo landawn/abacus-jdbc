@@ -2063,8 +2063,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets an Object parameter value.
-     * The JDBC driver will attempt to map the object to an appropriate SQL type.
-     * 
+     * If the value is {@code null}, it is set as SQL {@code NULL}; otherwise the value is set
+     * using the Abacus {@link Type} resolved from its runtime class, which maps it to an
+     * appropriate SQL type.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject(1, user)

@@ -171,7 +171,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * Retrieves the class object representing the entity type managed by this DAO.
      * This is used internally for reflection-based operations.
      *
-     * @return the class of the target entity type T
+     * @return the class of the target entity type {@code T}
      * @deprecated for internal framework use only; not intended to be called by application code.
      */
     @Deprecated
@@ -2311,6 +2311,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param uniquePropNamesForQuery property names that uniquely identify the record
      * @return the saved entity (newly inserted or updated)
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
+     * @see #upsert(Object, Condition)
      */
     default T upsert(final T entity, final List<String> uniquePropNamesForQuery) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
@@ -2343,6 +2345,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param cond condition to check for existence
      * @return the saved entity (newly inserted or updated)
      * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws DuplicateResultException if more than one record matches the specified condition
      */
     default T upsert(final T entity, final Condition cond) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
@@ -2432,6 +2436,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param sqlAction function that performs database operations
      * @param executor the executor to run the operation
      * @return ContinuableFuture with the operation result
+     * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is {@code null}
      */
     @Beta
     @NonDBOperation
@@ -2485,6 +2490,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param sqlAction consumer that performs database operations
      * @param executor the executor to run the operation
      * @return ContinuableFuture that completes when operation finishes
+     * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is {@code null}
      */
     @Beta
     @NonDBOperation

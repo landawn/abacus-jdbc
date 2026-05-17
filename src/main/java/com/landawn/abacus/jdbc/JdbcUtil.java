@@ -737,7 +737,8 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
-     * @throws UncheckedSQLException if a database access error occurs or the driver cannot be determined from the URL.
+     * @throws IllegalArgumentException if {@code url} is empty or the driver class cannot be determined from the URL.
+     * @throws UncheckedSQLException if a database access error occurs while creating the connection.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#getConnection(String, String, String)
      */
@@ -769,7 +770,8 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
-     * @throws UncheckedSQLException if a database access error occurs or the specified driver class is not found.
+     * @throws RuntimeException if the specified driver class cannot be loaded (e.g., it is not on the classpath).
+     * @throws UncheckedSQLException if a database access error occurs while creating the connection.
      * @see #createConnection(Class, String, String, String)
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
@@ -2607,8 +2609,10 @@ public final class JdbcUtil {
 
     /**
      * Determines the {@link SqlOperation} type from a given SQL string by analyzing its leading keyword.
-     * This method trims the SQL string and performs a case-insensitive check for keywords like
-     * {@code SELECT}, {@code UPDATE}, {@code INSERT}, {@code DELETE}, etc.
+     * This method trims the SQL string and performs a case-insensitive check for the keywords
+     * {@code SELECT}, {@code UPDATE}, {@code INSERT}, {@code DELETE}, and {@code MERGE}. If none of
+     * these match, it falls back to matching the leading word against every {@link SqlOperation}
+     * constant name.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4957,7 +4961,7 @@ public final class JdbcUtil {
      * Executes a batch SQL update using the provided Connection with specified batch size.
      * This method does not close the provided Connection after the batch update is executed.
      *
-     * <p>If the connection is in auto-commit mode and the number of parameter sets exceeds {@code batchSize},
+     * <p>If the connection is in auto-commit mode and more than one parameter set is supplied,
      * auto-commit is temporarily disabled so that all batches execute as a single transaction. The original
      * auto-commit setting is restored after execution, with the changes either committed (on success) or
      * rolled back (on failure).</p>
@@ -5124,7 +5128,7 @@ public final class JdbcUtil {
      * Executes a large batch SQL update using the provided Connection with specified batch size.
      * This method does not close the provided Connection after the batch update is executed.
      *
-     * <p>If the connection is in auto-commit mode and the number of parameter sets exceeds {@code batchSize},
+     * <p>If the connection is in auto-commit mode and more than one parameter set is supplied,
      * auto-commit is temporarily disabled so that all batches execute as a single transaction. The original
      * auto-commit setting is restored after execution, with the changes either committed (on success) or
      * rolled back (on failure).</p>

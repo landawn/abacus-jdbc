@@ -25,9 +25,10 @@ import com.landawn.abacus.query.SqlBuilder;
  * in addition to the {@code Long} object methods inherited from {@link UncheckedReadOnlyCrudDao}.
  *
  * <p>This interface is particularly useful for entities that use numeric long IDs,
- * which is a common pattern in many database schemas. The primitive-{@code long} convenience methods
- * inherited from {@link UncheckedNoUpdateCrudDaoL} delegate to their corresponding {@code Long}
- * counterparts after boxing.</p>
+ * which is a common pattern in many database schemas. Read-oriented primitive-{@code long}
+ * convenience methods delegate to their corresponding {@code Long} counterparts after boxing,
+ * while the primitive-{@code long} update and {@code deleteById} overloads inherited from
+ * {@link UncheckedNoUpdateCrudDaoL} throw {@link UnsupportedOperationException}.</p>
  *
  * <p>Query methods throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException},
  * making it easier to work with in functional programming contexts.</p>

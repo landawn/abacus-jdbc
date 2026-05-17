@@ -82,7 +82,8 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *
  * @param <T> the entity type managed by this DAO
  * @param <ID> the ID type of the entity
- * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC)
+ * @param <SB> the {@link SqlBuilder} type used to generate SQL scripts (typically one of
+ *             {@code SqlBuilder.PSC}, {@code SqlBuilder.PAC}, {@code SqlBuilder.PLC} or {@code SqlBuilder.PSB})
  * @param <TD> the self-type of the DAO for method chaining
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
@@ -1124,6 +1125,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param entity the entity to insert or update
      * @return the inserted or updated entity
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1157,6 +1159,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entity the entity to insert or update
      * @param uniquePropNamesForQuery the property names that uniquely identify the record
      * @return the inserted or updated entity
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1193,6 +1196,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entity the entity to insert or update
      * @param cond the condition to check for existing record
      * @return the inserted or updated entity
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1259,6 +1263,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entities the collection of entities to upsert
      * @param batchSize the size of each batch
      * @return a list of upserted entities
+     * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1320,6 +1325,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param uniquePropNamesForQuery the property names that uniquely identify each record
      * @param batchSize the size of each batch
      * @return a list of upserted entities
+     * @throws IllegalArgumentException if {@code batchSize} is not positive or {@code uniquePropNamesForQuery} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1434,6 +1440,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      *
      * @param entity the entity to refresh (must have ID set)
      * @return {@code true} if the entity was found and refreshed, {@code false} if not found
+     * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1461,6 +1468,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param entity the entity to refresh (must have ID set)
      * @param propNamesToRefresh the properties to refresh from the database
      * @return {@code false} if no record found by the ID in the specified entity, {@code true} otherwise
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1578,6 +1586,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @param propNamesToRefresh the properties to refresh for each entity
      * @param batchSize the size of each batch
      * @return the count of successfully refreshed entities
+     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

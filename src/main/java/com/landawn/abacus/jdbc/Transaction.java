@@ -113,8 +113,9 @@ public interface Transaction {
      * After a successful commit, the transaction is no longer active and cannot
      * be used for further operations.
      * 
-     * <p>If the commit fails, the transaction status will be set to
-     * {@link Status#FAILED_COMMIT} and an exception will be thrown.</p>
+     * <p>If the commit fails, the transaction transitions to {@link Status#FAILED_COMMIT}
+     * and an exception is thrown. Implementations may additionally attempt an automatic
+     * rollback after a failed commit.</p>
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

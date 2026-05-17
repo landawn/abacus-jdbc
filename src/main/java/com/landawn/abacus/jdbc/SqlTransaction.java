@@ -686,7 +686,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     /**
      * Generates a unique transaction ID for the given data source and creator.
      * This is an internal method that creates a transaction identifier composed of the data source's
-     * identity hash code, current thread ID, thread name, and creator ordinal value.
+     * identity hash code, the current thread ID, and the creator's ordinal value, joined by underscores.
      *
      * @param ds the data source, must not be {@code null}
      * @param creator the transaction creator type, must not be {@code null}

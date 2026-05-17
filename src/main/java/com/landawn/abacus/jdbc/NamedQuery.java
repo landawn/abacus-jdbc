@@ -3586,7 +3586,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }</pre>
      *
      * @param parameterName the name of the parameter (without the ':' prefix)
-     * @param x the object containing the parameter value
+     * @param x the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @param sqlType the SQL type (from java.sql.Types) to be used
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
@@ -3730,7 +3730,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }</pre>
      *
      * @param parameterName the name of the parameter (without the ':' prefix)
-     * @param x the object containing the parameter value
+     * @param x the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @param sqlType the SQLType to be used
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
@@ -3808,7 +3808,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param <T> parameter value type
      * @param parameterName the name of the parameter (without the ':' prefix)
-     * @param x the object containing the parameter value
+     * @param x the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @param type the Type handler to use for setting the parameter
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the query

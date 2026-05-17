@@ -239,7 +239,8 @@ public @interface CacheResult {
      * }
      * }</pre>
      *
-     * @return array of method name patterns to cache
+     * @return array of method name patterns to cache; the default targets common read methods
+     *         such as {@code query}, {@code list}, {@code get}, {@code find}, {@code exists} and {@code count}
      */
     String[] filter() default { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exists", "notExist", "count" };
 }

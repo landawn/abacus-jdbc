@@ -1425,8 +1425,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     /**
      * Sets the specified named parameter to an object value.
      * The appropriate SQL type is automatically inferred from the runtime class of {@code x}
-     * via the registered type system. If {@code x} is {@code null}, the parameter will be
-     * set to SQL {@code NULL}.
+     * via the abacus type system. If {@code x} is {@code null}, the parameter will be
+     * set to SQL {@code NULL} by delegating to {@link CallableStatement#setObject(String, Object)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -79,7 +79,7 @@ import com.landawn.abacus.util.stream.CharStream;
  *   <tr>
  *     <td>CSV Import</td>
  *     <td>{@code importCsv()}</td>
- *     <td>CSV File or Reader to database via DataSource or PreparedStatement</td>
+ *     <td>CSV File or Reader to database via DataSource, Connection, or PreparedStatement</td>
  *   </tr>
  *   <tr>
  *     <td>CSV Export</td>

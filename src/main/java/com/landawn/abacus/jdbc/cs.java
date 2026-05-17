@@ -223,11 +223,11 @@ public final class cs { // NOSONAR
      */
     public static final String propNamesToRefresh = "propNamesToRefresh";
     /**
-     * Parameter name for qualifier strings used to distinguish or categorize objects.
+     * Parameter name for qualifier strings used as a unique key to identify or categorize a registered object.
      */
     public static final String qualifier = "qualifier";
     /**
-     * Parameter name for registration operations or registry objects.
+     * Parameter name for the {@code ParametersSetter} that registers OUT parameters of a callable statement.
      */
     public static final String register = "register";
     /**

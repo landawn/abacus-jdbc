@@ -401,9 +401,9 @@ final class DaoImpl {
      *
      * <p>The decision rules are:</p>
      * <ul>
-     *   <li>{@link OP#list} or {@link OP#listAll}: return type must be a proper {@link Collection} subtype (not
-     *       raw {@code Collection.class} itself); otherwise an {@link UnsupportedOperationException} is raised, and
-     *       the method is treated as a list query.</li>
+     *   <li>{@link OP#list} or {@link OP#listAll}: treated as a list query, but only if the return type is a proper
+     *       {@link Collection} subtype (not raw {@code Collection.class} itself); otherwise an
+     *       {@link UnsupportedOperationException} is raised.</li>
      *   <li>Methods annotated with {@link MappedByKey @MappedByKey}: always treated as list queries.</li>
      *   <li>Any explicit {@code op} other than {@link OP#DEFAULT}: not a list query.</li>
      *   <li>{@link OP#DEFAULT}: a list query when the return type is a {@code Collection} subtype and either the

@@ -1636,10 +1636,9 @@ public final class Jdbc {
          * The mapping from columns to entity properties is done automatically.
          *
          * <p>
-         * This method internally uses a stateful {@code BiRowMapper} that caches metadata on its first run.
-         * While the returned {@code BiResultExtractor} itself is stateless, for performance-critical
-         * scenarios, consider creating the stateful {@code BiRowMapper} once and reusing it if the
-         * result set structure is consistent.
+         * The returned {@code BiResultExtractor} is stateless and safe to reuse: a fresh stateful
+         * {@code BiRowMapper} is created internally for each {@code ResultSet} that is processed, so no
+         * metadata is shared across separate query executions.
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -4137,11 +4136,13 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
              *
+             * <p>Note: when {@code targetClass} is a bean class, the returned mapper's {@code apply} method throws
+             * an {@link IllegalArgumentException} on its first invocation if a result column cannot be mapped to
+             * any property; use {@link #to(Class, boolean)} with {@code true} to ignore unmatched columns.</p>
+             *
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
-             * @throws IllegalArgumentException at first row execution if {@code targetClass} is a bean class and a result column
-             *         cannot be mapped to any property; use {@link #to(Class, boolean)} with {@code true} to ignore unmatched columns
              */
             @SequentialOnly
             @Stateful
@@ -4157,12 +4158,14 @@ public final class Jdbc {
              * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
              * </p>
              *
+             * <p>Note: when {@code targetClass} is a bean class and {@code ignoreUnmatchedColumns} is
+             * {@code false}, the returned mapper's {@code apply} method throws an {@link IllegalArgumentException}
+             * on its first invocation if a result column cannot be mapped to any property.</p>
+             *
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are ignored
              * @return a new stateful {@code BiRowMapper<T>}
-             * @throws IllegalArgumentException at first row execution if {@code targetClass} is a bean class,
-             *         {@code ignoreUnmatchedColumns} is {@code false}, and a result column cannot be mapped to any property
              */
             @SequentialOnly
             @Stateful
@@ -5384,8 +5387,10 @@ public final class Jdbc {
              * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It should be built for each
              * execution context and must not be cached or shared across incompatible queries.</p>
              *
+             * <p>Note: the returned extractor's {@code accept} method throws an {@link IllegalArgumentException}
+             * if the supplied output array is shorter than the result set's column count.</p>
+             *
              * @return a new stateful {@code RowExtractor}.
-             * @throws IllegalArgumentException if the output array provided to the extractor is shorter than the column count
              */
             @SequentialOnly
             @Stateful
@@ -5562,6 +5567,7 @@ public final class Jdbc {
          * @param <T> target type
          * @param cls the class for which to get a {@code ColumnGetter}.
          * @return a {@code ColumnGetter} for the specified type.
+         * @throws IllegalArgumentException if the resolved {@code Type} is {@code null}.
          */
         static <T> ColumnGetter<T> get(final Class<? extends T> cls) {
             return get(N.typeOf(cls));

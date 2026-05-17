@@ -389,7 +389,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *     rs -> rs.getString(1).toUpperCase());
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the value type produced by the row mapper
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result
@@ -465,7 +465,7 @@ public interface CrudDaoL<T, SB extends SqlBuilder, TD extends CrudDaoL<T, SB, T
      *     rs -> rs.getString(1).toUpperCase());
      * }</pre>
      *
-     * @param <V> the specific property value type to be retrieved and converted
+     * @param <V> the value type produced by the row mapper
      * @param singleSelectPropName the property name to select
      * @param id the primitive long ID of the entity
      * @param rowMapper the custom mapper to transform the result

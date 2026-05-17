@@ -63,14 +63,16 @@ public enum OP {
      * Returns an {@code Optional} that is empty if no records are found.
      * 
      * <p>This operation is useful when you want at most one result but don't require
-     * exactly one. The query typically includes an ORDER BY clause to ensure
-     * deterministic results.</p>
-     * 
+     * exactly one. The query should typically include an {@code ORDER BY} clause to
+     * ensure deterministic results.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "SELECT * FROM users WHERE age >= ? ORDER BY age", op = OP.findFirst)
      * Optional<User> findYoungestAdult(int minAge);
      * }</pre>
+     *
+     * @see AbstractQuery#findFirst(Class)
      */
     findFirst,
 

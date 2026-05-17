@@ -71,7 +71,9 @@ public @interface RefreshCache {
      * matches the full method name as a regular expression. This filter is ignored for
      * method-level usage.</p>
      *
-     * @return array of filter patterns for method names that should trigger cache refresh
+     * @return array of filter patterns for method names that should trigger cache refresh;
+     *         the default targets common write methods such as {@code update}, {@code delete},
+     *         {@code insert}, {@code save} and their {@code batch*} variants
      */
     String[] filter() default { "update", "delete", "deleteById", "insert", "save", "add", "remove", "upsert", "batchUpdate", "batchDelete", "batchDeleteByIds",
             "batchInsert", "batchSave", "batchAdd", "batchRemove", "batchUpsert", "execute" };

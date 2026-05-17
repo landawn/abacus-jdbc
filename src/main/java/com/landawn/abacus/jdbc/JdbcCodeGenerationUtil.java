@@ -904,7 +904,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
-     * Column names are properly escaped with backticks if they contain special characters.
+     * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1035,7 +1036,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
-     * Column names are properly escaped with backticks if they contain special characters.
+     * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1059,7 +1061,8 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an INSERT SQL statement for the specified table using an existing connection.
-     * Column names are properly escaped with backticks if they contain special characters.
+     * Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      * 
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1914,9 +1917,15 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Checks if the supplied name is a syntactically valid Java identifier and not a reserved word/literal.
-     * Used to warn callers when a derived field name (e.g. from a snake_case column converted to camelCase)
-     * would prevent the generated source from compiling.
+     * Checks whether the supplied name is a syntactically valid Java identifier that is not a Java
+     * keyword or reserved literal. A name qualifies only when it is non-empty, its first character is a
+     * valid Java identifier start, every remaining character is a valid Java identifier part, and the
+     * name is not a reserved keyword or literal (as determined by
+     * {@link javax.lang.model.SourceVersion#isKeyword(CharSequence)}, which also rejects
+     * {@code true}, {@code false} and {@code null}).
+     *
+     * @param name the candidate identifier to validate; may be {@code null} or empty
+     * @return {@code true} if {@code name} is a valid, non-keyword Java identifier; {@code false} otherwise
      */
     static boolean isValidJavaIdentifier(final String name) {
         if (Strings.isEmpty(name)) {

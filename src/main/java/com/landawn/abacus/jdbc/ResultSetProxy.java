@@ -438,10 +438,13 @@ final class ResultSetProxy implements ResultSet {
      *
      * <p>This method provides optimized retrieval with intelligent type handling:</p>
      * <ul>
-     *   <li>Caches the appropriate getter strategy for each column on first access</li>
-     *   <li>Automatically converts Oracle-specific types (oracle.sql.TIMESTAMP, oracle.sql.DATE) to standard Java SQL types</li>
-     *   <li>Disambiguates between DATE and TIMESTAMP types using metadata when necessary</li>
+     *   <li>Caches the appropriate getter strategy for each column on the first access that returns a non-null value</li>
+     *   <li>Automatically converts Oracle-specific types ({@code oracle.sql.TIMESTAMP}, {@code oracle.sql.DATE}) to standard Java SQL types</li>
+     *   <li>Disambiguates between {@code DATE} and {@code TIMESTAMP} types using metadata when necessary</li>
      * </ul>
+     *
+     * <p>If the column index is out of the cached range, the call is delegated directly to the
+     * underlying {@link ResultSet} without caching.</p>
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is null
@@ -519,9 +522,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * <p>This method provides optimized retrieval with intelligent type handling:</p>
      * <ul>
-     *   <li>Caches the appropriate getter strategy for each column label on first access</li>
-     *   <li>Automatically converts Oracle-specific types (oracle.sql.TIMESTAMP, oracle.sql.DATE) to standard Java SQL types</li>
-     *   <li>Disambiguates between DATE and TIMESTAMP types using metadata when necessary</li>
+     *   <li>Caches the appropriate getter strategy for each column label on the first access that returns a non-null value</li>
+     *   <li>Automatically converts Oracle-specific types ({@code oracle.sql.TIMESTAMP}, {@code oracle.sql.DATE}) to standard Java SQL types</li>
+     *   <li>Disambiguates between {@code DATE} and {@code TIMESTAMP} types using metadata when necessary</li>
      * </ul>
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
