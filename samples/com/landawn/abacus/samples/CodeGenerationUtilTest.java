@@ -173,7 +173,7 @@ class CodeGenerationUtilTest {
 
     @Test
     public void test_convertInsertSqlToUpdateSql() {
-        User user = Beans.newRandom(User.class);
+        User user = Beans.newRandomBean(User.class);
         user.setEmail(null);
 
         String sql = SCSB.insert(user).into(User.class).build().query();
