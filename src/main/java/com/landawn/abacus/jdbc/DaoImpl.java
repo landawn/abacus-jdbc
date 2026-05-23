@@ -605,7 +605,7 @@ final class DaoImpl {
         }
 
         if ((op == OP.executeAndGetOutParameters && !returnType.isAssignableFrom(Jdbc.OutParamResult.class))
-                || (Stream.class.isAssignableFrom(returnType) && !(op == OP.stream || op == OP.DEFAULT))) {
+                || (Stream.class.isAssignableFrom(returnType) && !(op == OP.stream || op == OP.streamAll || op == OP.DEFAULT))) {
             throw new UnsupportedOperationException(
                     "The return type: " + returnType + " of method: " + fullClassMethodName + " is not supported the specified op: " + op);
         }
@@ -1768,6 +1768,7 @@ final class DaoImpl {
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
      *         non-{@code NoUpdateDao} interface, or {@code RowMapper}/{@code ResultExtractor} as a method parameter)
+     * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SqlMapper sqlMapper,

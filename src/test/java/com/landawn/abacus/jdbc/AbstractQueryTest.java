@@ -680,6 +680,92 @@ public class AbstractQueryTest extends TestBase {
         assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
     }
 
+    // Regression: setMaxRows used to skip both capture and restore (twin-divergence with the four
+    // sibling setters). When the underlying PreparedStatement comes from a statement pool (the
+    // closeAfterExecution(false) path, or driver-side statement caching), a stale max-rows limit
+    // from a prior caller would silently truncate later result sets.
+    @Test
+    public void testClose_RestoresMaxRows() throws SQLException {
+        when(preparedStatement.getMaxRows()).thenReturn(50);
+
+        query.setMaxRows(200); // capture default = 50, then apply 200
+
+        verify(preparedStatement).setMaxRows(200);
+
+        query.close();
+
+        verify(preparedStatement).setMaxRows(50); // restored on close
+    }
+
+    @Test
+    public void testClose_WhenResetMaxRowsFails_LogsWarning() throws SQLException {
+        when(preparedStatement.getMaxRows()).thenReturn(50);
+        doThrow(new SQLException("reset maxRows failed")).when(preparedStatement).setMaxRows(50);
+
+        query.setMaxRows(200);
+
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // Regression: setLargeMaxRows used to skip both capture and restore.
+    @Test
+    public void testClose_RestoresLargeMaxRows() throws SQLException {
+        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
+
+        query.setLargeMaxRows(500L);
+
+        verify(preparedStatement).setLargeMaxRows(500L);
+
+        query.close();
+
+        verify(preparedStatement).setLargeMaxRows(75L);
+    }
+
+    @Test
+    public void testClose_WhenResetLargeMaxRowsFails_LogsWarning() throws SQLException {
+        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
+        doThrow(new SQLException("reset largeMaxRows failed")).when(preparedStatement).setLargeMaxRows(75L);
+
+        query.setLargeMaxRows(500L);
+
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // setMaxRows second call should reuse the captured default (covers the
+    // `if (defaultMaxRows < 0)` else branch).
+    @Test
+    public void testSetMaxRows_SecondCallDoesNotRecaptureDefault() throws SQLException {
+        when(preparedStatement.getMaxRows()).thenReturn(50);
+
+        query.setMaxRows(200);
+        query.setMaxRows(300);
+
+        // getMaxRows captured exactly once
+        verify(preparedStatement, times(1)).getMaxRows();
+        verify(preparedStatement).setMaxRows(200);
+        verify(preparedStatement).setMaxRows(300);
+
+        query.close();
+
+        verify(preparedStatement).setMaxRows(50); // still restored to original
+    }
+
+    @Test
+    public void testSetLargeMaxRows_SecondCallDoesNotRecaptureDefault() throws SQLException {
+        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
+
+        query.setLargeMaxRows(500L);
+        query.setLargeMaxRows(600L);
+
+        verify(preparedStatement, times(1)).getLargeMaxRows();
+        verify(preparedStatement).setLargeMaxRows(500L);
+        verify(preparedStatement).setLargeMaxRows(600L);
+
+        query.close();
+
+        verify(preparedStatement).setLargeMaxRows(75L);
+    }
+
     // findFirst(BiRowFilter, BiRowMapper) no match returns empty Optional (L5962 + L6240)
     @Test
     public void testFindFirst_BiRowFilter_BiRowMapper_NoMatchingRow() throws SQLException {

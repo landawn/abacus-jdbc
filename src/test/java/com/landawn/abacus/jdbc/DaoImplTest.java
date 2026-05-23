@@ -95,6 +95,15 @@ public class DaoImplTest extends TestBase {
         void callProc(@Bind("p1") String first, String second);
     }
 
+    // Regression: a stored-procedure DAO method declared as Stream<Dataset> with op=OP.streamAll
+    // used to fail at proxy creation time because the Stream-return guard rejected anything other
+    // than OP.stream / OP.DEFAULT — even though the OP.streamAll dispatch branch (procedure path)
+    // was explicitly written to handle it.
+    interface StreamAllProcedureDao extends Dao<TestEntity, PSC, StreamAllProcedureDao> {
+        @Query(value = "call test_proc()", isProcedure = true, op = OP.streamAll)
+        com.landawn.abacus.util.stream.Stream<Dataset> streamAll();
+    }
+
     interface PrimitiveExtractorDao {
         @Query("select count(*) from test")
         int count(Jdbc.ResultExtractor<Integer> extractor);
@@ -329,6 +338,17 @@ public class DaoImplTest extends TestBase {
     void testCreateDaoRejectsRowFilterInUnsupportedPosition() throws Exception {
         assertThrows(UnsupportedOperationException.class,
                 () -> DaoImpl.createDao(InvalidRowFilterPositionDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+    }
+
+    // Regression: @Query(isProcedure=true, op=OP.streamAll) Stream<Dataset> proc()
+    // previously threw "is not supported the specified op: streamAll" at proxy creation
+    // because the Stream-return guard in createQueryFunctionByMethod only allowed
+    // OP.stream and OP.DEFAULT — the dedicated OP.streamAll handler was unreachable.
+    @Test
+    void testCreateDaoAcceptsStreamAllForProcedure() throws Exception {
+        StreamAllProcedureDao dao = assertDoesNotThrow(
+                () -> DaoImpl.createDao(StreamAllProcedureDao.class, null, mockDataSourceForDaoCreation(), null, null, null));
+        assertNotNull(dao);
     }
 
     // DAO query classifier branches are private factory inputs exercised through reflection.

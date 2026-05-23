@@ -4086,6 +4086,7 @@ public final class JdbcUtil {
      * @param ds The DataSource to use for the query
      * @param namedSql The named SQL string to prepare
      * @return A NamedQuery object configured for big result sets
+     * @throws IllegalArgumentException if the DataSource or named SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
@@ -4107,6 +4108,7 @@ public final class JdbcUtil {
      * @param ds The DataSource to use for the query
      * @param namedSql The ParsedSql object containing the named SQL
      * @return A NamedQuery object configured for big result sets
+     * @throws IllegalArgumentException if the DataSource or named SQL is {@code null} or invalid
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
@@ -4123,6 +4125,7 @@ public final class JdbcUtil {
      * @param conn The Connection to use for the query
      * @param namedSql The named SQL string to prepare
      * @return A NamedQuery object configured for big result sets
+     * @throws IllegalArgumentException if the Connection or named SQL string is {@code null} or empty
      * @throws SQLException if a SQL exception occurs while preparing the query
      */
     @Beta
@@ -7255,7 +7258,7 @@ public final class JdbcUtil {
      * @param tableName the table name (optionally qualified); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
-     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
      */
     public static boolean tableExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);
@@ -7334,7 +7337,7 @@ public final class JdbcUtil {
      * @param tableName the table name (optionally qualified); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
-     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
      * @deprecated use {@link #tableExists(Connection, String)} instead.
      */
     @Deprecated
@@ -7569,11 +7572,11 @@ public final class JdbcUtil {
      *
      * @param conn the database connection to use for creating the table
      * @param tableName the name of the table to create (optionally qualified); must not be blank
-     * @param schema the SQL DDL statement (typically {@code CREATE TABLE ...}) used to create the table
+     * @param schema the SQL DDL statement (typically {@code CREATE TABLE ...}) used to create the table; must not be {@code null} or empty
      * @return {@code true} if this call created the table; {@code false} if the table already existed
      *         when checked, or was created concurrently while this call was running
      * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing
-     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is blank or otherwise invalid, or {@code schema} is {@code null} or empty
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
         if (tableExists(conn, tableName)) {
@@ -7618,7 +7621,7 @@ public final class JdbcUtil {
      * @return {@code true} if the table was dropped by this call; {@code false} if the table did not exist
      *         (either at the time of the existence check or by the time the {@code DROP} executed)
      * @throws UncheckedSQLException if a database error other than "table not found" occurs during the drop
-     * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid
      */
     public static boolean dropTableIfExists(final Connection conn, final String tableName) {
         N.checkArgNotNull(conn, cs.conn);

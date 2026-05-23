@@ -4141,6 +4141,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     int defaultFetchSize = -1;
     int defaultQueryTimeout = -1;
     int defaultMaxFieldSize = -1;
+    int defaultMaxRows = -1;
+    long defaultLargeMaxRows = -1L;
 
     /**
      * Sets the direction for fetching rows from database tables.
@@ -4272,6 +4274,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public This setMaxRows(final int max) throws SQLException {
         assertNotClosed();
 
+        if (defaultMaxRows < 0) {
+            defaultMaxRows = stmt.getMaxRows();
+        }
+
         stmt.setMaxRows(max);
 
         return (This) this;
@@ -4295,6 +4301,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public This setLargeMaxRows(final long max) throws SQLException {
         assertNotClosed();
+
+        if (defaultLargeMaxRows < 0) {
+            defaultLargeMaxRows = stmt.getLargeMaxRows();
+        }
 
         stmt.setLargeMaxRows(max);
 
@@ -10209,6 +10219,22 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                     stmt.setQueryTimeout(defaultQueryTimeout);
                 } catch (final SQLException e) {
                     logger.warn(e, "Failed to reset query timeout");
+                }
+            }
+
+            if (defaultMaxRows >= 0) {
+                try {
+                    stmt.setMaxRows(defaultMaxRows);
+                } catch (final SQLException e) {
+                    logger.warn(e, "Failed to reset max rows");
+                }
+            }
+
+            if (defaultLargeMaxRows >= 0) {
+                try {
+                    stmt.setLargeMaxRows(defaultLargeMaxRows);
+                } catch (final SQLException e) {
+                    logger.warn(e, "Failed to reset large max rows");
                 }
             }
         } finally {

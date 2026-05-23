@@ -920,7 +920,9 @@ public final class JoinInfo {
      *
      * @param entities the source entities to populate with joined entities
      * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities
-     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key
+     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
+     *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
+     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
@@ -952,7 +954,9 @@ public final class JoinInfo {
      * @param entities the source entities to populate with joined entities
      * @param groupedPropEntities a map of grouped joined entities keyed by their referenced join key (the value extracted
      *                            via the {@code @JoinedBy} target property on the joined entity)
-     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key
+     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
+     *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
+     *                                  {@code @DaoConfig(allowJoiningByNullOrDefaultValue = true)}
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();

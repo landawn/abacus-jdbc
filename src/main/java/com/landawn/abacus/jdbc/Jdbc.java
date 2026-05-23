@@ -409,10 +409,11 @@ public final class Jdbc {
      * This interface is responsible for iterating over the {@code ResultSet} and
      * converting its contents into a desired object or collection.
      *
-     * <p><b>Important Note:</b> In most execution contexts (like {@code SqlExecutor}),
-     * the {@code ResultSet} passed to the {@code apply} method will be closed automatically
-     * after the method returns. Therefore, you should process all required data within
-     * the method and not attempt to return or store the {@code ResultSet} itself.</p>
+     * <p><b>Important Note:</b> In most execution contexts (e.g., {@code AbstractQuery} and its
+     * subclasses, or annotation-driven DAO methods), the {@code ResultSet} passed to the
+     * {@code apply} method will be closed automatically after the method returns. Therefore, you
+     * should process all required data within the method and not attempt to return or store the
+     * {@code ResultSet} itself.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

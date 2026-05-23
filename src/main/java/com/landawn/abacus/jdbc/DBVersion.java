@@ -91,12 +91,12 @@ public enum DBVersion {
     MySQL_5_7,
 
     /**
-     * MySQL version 5.x (major version 5, minor version 8 or higher, not specifically enumerated).
+     * MySQL version 5.8.
      */
     MySQL_5_8,
 
     /**
-     * MySQL version 5.x (major version 5, minor version 9 or higher, not specifically enumerated).
+     * MySQL version 5.9.
      */
     MySQL_5_9,
 
