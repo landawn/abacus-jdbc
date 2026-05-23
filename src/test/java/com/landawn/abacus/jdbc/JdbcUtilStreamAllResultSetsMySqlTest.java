@@ -52,20 +52,14 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
         try {
             ds = JdbcUtil.createHikariDataSource(URL, USER, PASSWORD);
 
-            try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
                 st.execute("DROP PROCEDURE IF EXISTS sars_three_rs");
                 st.execute("DROP TABLE IF EXISTS sars_widget");
-                st.execute("CREATE TABLE sars_widget ("
-                        + "id INT PRIMARY KEY AUTO_INCREMENT, "
-                        + "name VARCHAR(64), "
-                        + "qty INT)");
+                st.execute("CREATE TABLE sars_widget (" + "id INT PRIMARY KEY AUTO_INCREMENT, " + "name VARCHAR(64), " + "qty INT)");
                 st.execute("INSERT INTO sars_widget (name, qty) VALUES ('a', 1), ('b', 2), ('c', 3)");
-                st.execute("CREATE PROCEDURE sars_three_rs() "
-                        + "BEGIN "
-                        + "  SELECT name FROM sars_widget WHERE id = 1; "
-                        + "  SELECT name FROM sars_widget WHERE id IN (2, 3) ORDER BY id; "
-                        + "  SELECT name, qty FROM sars_widget ORDER BY id; "
-                        + "END");
+                st.execute("CREATE PROCEDURE sars_three_rs() " + "BEGIN " + "  SELECT name FROM sars_widget WHERE id = 1; "
+                        + "  SELECT name FROM sars_widget WHERE id IN (2, 3) ORDER BY id; " + "  SELECT name, qty FROM sars_widget ORDER BY id; " + "END");
             }
         } catch (final SQLException | RuntimeException e) {
             // MySQL not available in this environment — skip the whole class.
@@ -78,7 +72,8 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
         if (ds == null) {
             return;
         }
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
             st.execute("DROP PROCEDURE IF EXISTS sars_three_rs");
             st.execute("DROP TABLE IF EXISTS sars_widget");
         }
@@ -89,7 +84,7 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
     @Test
     public void testStreamAllResultSets_StoredProcedure_ThreeResults() throws SQLException {
         try (Connection conn = ds.getConnection();
-                CallableStatement cs = conn.prepareCall("{call sars_three_rs()}")) {
+             CallableStatement cs = conn.prepareCall("{call sars_three_rs()}")) {
 
             cs.execute();
 
@@ -124,11 +119,10 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
         cs.execute();
 
         final List<Integer> rowCounts;
-        try (Stream<Dataset> stream = JdbcUtil.streamAllResultSets(cs)
-                .onClose(() -> {
-                    JdbcUtil.closeQuietly(cs);
-                    JdbcUtil.closeQuietly(conn);
-                })) {
+        try (Stream<Dataset> stream = JdbcUtil.streamAllResultSets(cs).onClose(() -> {
+            JdbcUtil.closeQuietly(cs);
+            JdbcUtil.closeQuietly(conn);
+        })) {
             rowCounts = stream.map(Dataset::size).toList();
         }
 
@@ -139,12 +133,11 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
     // multi-result-set Statement; streamAllResultSets walks every SELECT's result set.
     @Test
     public void testStreamAllResultSets_MultiQueryScript_TwoResults() throws SQLException {
-        final DataSource mqDs = JdbcUtil.createHikariDataSource(
-                URL + "?allowMultiQueries=true", USER, PASSWORD);
+        final DataSource mqDs = JdbcUtil.createHikariDataSource(URL + "?allowMultiQueries=true", USER, PASSWORD);
 
-        try (Connection conn = mqDs.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute("SELECT name FROM sars_widget WHERE id = 1; "
-                    + "SELECT name, qty FROM sars_widget ORDER BY id");
+        try (Connection conn = mqDs.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("SELECT name FROM sars_widget WHERE id = 1; " + "SELECT name, qty FROM sars_widget ORDER BY id");
 
             final List<Dataset> datasets = JdbcUtil.streamAllResultSets(stmt).toList();
 
@@ -160,7 +153,8 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
     // multi-result iteration terminates after the first/only result set).
     @Test
     public void testStreamAllResultSets_SingleResult() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute("SELECT name, qty FROM sars_widget ORDER BY id");
 
             final List<Dataset> datasets = JdbcUtil.streamAllResultSets(stmt).toList();
@@ -180,7 +174,8 @@ public class JdbcUtilStreamAllResultSetsMySqlTest extends TestBase {
     // An UPDATE/DDL-only statement exposes no result set, so the stream is empty.
     @Test
     public void testStreamAllResultSets_NoResultSet_EmptyStream() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
             final boolean isResultSet = stmt.execute("UPDATE sars_widget SET qty = qty WHERE id = 1");
             assertFalse(isResultSet);
 

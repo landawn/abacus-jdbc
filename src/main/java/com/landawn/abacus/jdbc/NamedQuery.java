@@ -2848,7 +2848,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }</pre>
      *
      * @param parameterName the name of the parameter (without the ':' prefix)
-     * @param x the Reader object containing the CLOB data
+     * @param x the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the query
@@ -3044,7 +3044,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }</pre>
      *
      * @param parameterName the name of the parameter (without the ':' prefix)
-     * @param x the Reader object containing the NCLOB data
+     * @param x the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the query

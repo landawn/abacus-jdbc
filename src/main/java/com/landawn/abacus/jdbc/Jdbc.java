@@ -194,8 +194,8 @@ public final class Jdbc {
      * <pre>{@code
      * // Assuming a User class with getName() and getAge()
      * BiParametersSetter<PreparedStatement, User> setter = (ps, user) -> {
-     * ps.setString(1, user.getName());
-     * ps.setInt(2, user.getAge());
+     *     ps.setString(1, user.getName());
+     *     ps.setInt(2, user.getAge());
      * };
      * }</pre>
      *
@@ -370,9 +370,9 @@ public final class Jdbc {
      * <pre>{@code
      * // Assuming a User class and a ParsedSql object
      * TriParametersSetter<PreparedStatement, User> setter = (parsedSql, ps, user) -> {
-     * // Use parsedSql to find parameter indices dynamically if needed
-     * ps.setString(1, user.getName());
-     * ps.setInt(2, user.getAge());
+     *     // Use parsedSql to find parameter indices dynamically if needed
+     *     ps.setString(1, user.getName());
+     *     ps.setInt(2, user.getAge());
      * };
      * }</pre>
      *
@@ -417,11 +417,11 @@ public final class Jdbc {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultExtractor<List<String>> extractor = rs -> {
-     * List<String> names = new ArrayList<>();
-     * while (rs.next()) {
-     * names.add(rs.getString("name"));
-     * }
-     * return names;
+     *     List<String> names = new ArrayList<>();
+     *     while (rs.next()) {
+     *         names.add(rs.getString("name"));
+     *     }
+     *     return names;
      * };
      * }</pre>
      *
@@ -451,7 +451,7 @@ public final class Jdbc {
          * framework immediately after this method completes. Do not return the {@code ResultSet}
          * or any resources tied to it that might become invalid after closing.</p>
          *
-         * @param rs the {@code ResultSet} to extract data from; may be {@code null}.
+         * @param rs the {@code ResultSet} to extract data from.
          * @return the extracted result.
          * @throws SQLException if a database access error occurs.
          */
@@ -893,8 +893,8 @@ public final class Jdbc {
          * <pre>{@code
          * // Extracts a list of users who are 18 or older.
          * ResultExtractor<List<User>> adultUserExtractor = ResultExtractor.toList(
-         * rs -> rs.getInt("age") >= 18,
-         * rs -> new User(rs.getString("name"), rs.getInt("age"))
+         *     rs -> rs.getInt("age") >= 18,
+         *     rs -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
          *
@@ -1605,8 +1605,8 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiResultExtractor<List<User>> extractor = BiResultExtractor.toList(
-         * (rs, cols) -> rs.getInt("age") >= 18,  // Filter for adults
-         * (rs, cols) -> new User(rs.getString("name"), rs.getInt("age"))
+         *     (rs, cols) -> rs.getInt("age") >= 18,  // Filter for adults
+         *     (rs, cols) -> new User(rs.getString("name"), rs.getInt("age"))
          * );
          * }</pre>
          *
@@ -1679,8 +1679,8 @@ public final class Jdbc {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * RowMapper<User> userMapper = rs -> new User(
-     * rs.getInt("id"),
-     * rs.getString("name")
+     *     rs.getInt("id"),
+     *     rs.getString("name")
      * );
      * }</pre>
      *
@@ -2618,11 +2618,11 @@ public final class Jdbc {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * BiRowMapper<Map<String, Object>> dynamicMapper = (rs, columnLabels) -> {
-     * Map<String, Object> rowMap = new LinkedHashMap<>();
-     * for (int i = 0; i < columnLabels.size(); i++) {
-     * rowMap.put(columnLabels.get(i), rs.getObject(i + 1));
-     * }
-     * return rowMap;
+     *     Map<String, Object> rowMap = new LinkedHashMap<>();
+     *     for (int i = 0; i < columnLabels.size(); i++) {
+     *         rowMap.put(columnLabels.get(i), rs.getObject(i + 1));
+     *     }
+     *     return rowMap;
      * };
      * }</pre>
      *
@@ -2870,8 +2870,8 @@ public final class Jdbc {
          *
          * @param <T> target type
          * @param targetClass the class to map rows to
-         * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are ignored;
-         * if {@code false}, an {@code IllegalArgumentException} is thrown.
+         * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are silently skipped;
+         * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column.
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
@@ -2926,8 +2926,9 @@ public final class Jdbc {
          * @param targetClass the class to map rows to
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
-         * @param ignoreUnmatchedColumns if {@code true}, filtered columns without a corresponding property are ignored;
-         * if {@code false}, an {@code IllegalArgumentException} is thrown.
+         * @param ignoreUnmatchedColumns if {@code true}, columns that pass the filter but cannot be matched
+         * to a property of {@code targetClass} are silently skipped;
+         * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column.
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          */
@@ -3261,7 +3262,8 @@ public final class Jdbc {
          * @param <T> target entity type
          * @param entityClass the class to map rows to
          * @param prefixAndFieldNameMap a map where keys are column prefixes and values are corresponding property paths
-         * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are ignored
+         * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are silently skipped;
+         * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          * @throws IllegalArgumentException if {@code entityClass} is {@code null} or not a valid bean class
          */
@@ -4165,7 +4167,8 @@ public final class Jdbc {
              *
              * @param <T> target type
              * @param targetClass the class to map rows to
-             * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are ignored
+             * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are silently skipped;
+             * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (for bean target classes)
              * @return a new stateful {@code BiRowMapper<T>}
              */
             @SequentialOnly
@@ -4409,7 +4412,7 @@ public final class Jdbc {
          * <pre>{@code
          * // A consumer that prints the value of each column in a row.
          * RowConsumer consumer = RowConsumer.create((rs, columnIndex) -> {
-         * System.out.println("Column " + columnIndex + ": " + rs.getObject(columnIndex));
+         *     System.out.println("Column " + columnIndex + ": " + rs.getObject(columnIndex));
          * });
          * preparedQuery.forEach(consumer);
          * }</pre>
@@ -4618,7 +4621,7 @@ public final class Jdbc {
          * <pre>{@code
          * // A consumer that prints each column's name and value.
          * BiRowConsumer consumer = BiRowConsumer.create((rs, columnIndex) -> {
-         * System.out.println("Column index " + columnIndex + ": " + rs.getObject(columnIndex));
+         *     System.out.println("Column index " + columnIndex + ": " + rs.getObject(columnIndex));
          * });
          * preparedQuery.forEach(consumer);
          * }</pre>
@@ -4779,7 +4782,7 @@ public final class Jdbc {
      *                            .negate();
      *
      * // Use in query
-     * list = preparedQuery.list(composed, rowMapper);
+     * List<MyEntity> list = preparedQuery.list(composed, rowMapper);
      * }</pre>
      *
      * @see BiRowFilter
@@ -4888,7 +4891,7 @@ public final class Jdbc {
      * BiRowFilter composed = filter.and((rs, cls) -> rs.getInt(1) > 0);
      *
      * // Use in query
-     * list = preparedQuery.list(composed, biRowMapper);
+     * List<MyEntity> list = preparedQuery.list(composed, biRowMapper);
      * }</pre>
      *
      * <p>To convert a {@link RowFilter} to a {@code BiRowFilter}, use {@link RowFilter#toBiRowFilter()}.</p>
@@ -5865,10 +5868,12 @@ public final class Jdbc {
             static final Map<Type<?>, RowMapper> rowMapperPool = new ObjectPool<>(1024);
 
             /**
-             * Gets a generic {@code RowMapper} that extracts a value as an {@code Object} from the first column.
+             * Returns the pre-defined {@link #GET_OBJECT} mapper cast to the caller's inferred type.
+             * The actual value returned at runtime is always the raw column object; the generic
+             * type parameter {@code T} is unchecked.
              *
-             * @param <T> target type (inferred).
-             * @return a {@code RowMapper} that extracts an {@code Object} from the first column.
+             * @param <T> the inferred target type; unchecked at runtime
+             * @return a {@code RowMapper} that extracts an {@code Object} from the first column
              */
             public static <T> RowMapper<T> getObject() {
                 return (RowMapper<T>) GET_OBJECT;
@@ -6398,7 +6403,7 @@ public final class Jdbc {
          *
          * @param <T> proxy type
          * @param <E> exception type that action can throw
-         * @param afterInvokeAction the action to perform after the method returns.
+         * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception).
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if {@code afterInvokeAction} is {@code null}.
          */
@@ -6423,7 +6428,7 @@ public final class Jdbc {
          * @param <T> proxy type
          * @param <E> exception type that actions can throw
          * @param beforeInvokeAction the action to perform before the method is called.
-         * @param afterInvokeAction the action to perform after the method returns.
+         * @param afterInvokeAction the action to perform after the method completes (whether normally or with an exception).
          * @return a new {@code Handler} instance.
          * @throws IllegalArgumentException if either action is {@code null}.
          */
@@ -6705,6 +6710,10 @@ public final class Jdbc {
             return true;
         }
 
+        /**
+         * Stores the result in the cache. The {@code liveTime} and {@code maxIdleTime} parameters
+         * are ignored because this implementation does not support TTL-based eviction.
+         */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {

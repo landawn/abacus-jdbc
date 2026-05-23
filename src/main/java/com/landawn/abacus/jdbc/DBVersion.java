@@ -44,7 +44,7 @@ import com.landawn.abacus.util.Strings;
  * } else if (currentDbVersion.isPostgreSQL()) {
  *     query = "SELECT * FROM products OFFSET 20 LIMIT 10";
  * } else if (currentDbVersion == DBVersion.Oracle) {
- *     query = "SELECT * FROM (SELECT p.*, ROWNUM rnum FROM products p) WHERE rnum > 20 AND ROWNUM <= 10";
+ *     query = "SELECT * FROM (SELECT p.*, ROWNUM rnum FROM products p) WHERE rnum > 20 AND rnum <= 30";
  * } else {
  *     query = "SELECT * FROM products";  // Fallback or generic SQL
  * }
@@ -91,12 +91,12 @@ public enum DBVersion {
     MySQL_5_7,
 
     /**
-     * MySQL version 5.8.
+     * MySQL version 5.x (major version 5, minor version 8 or higher, not specifically enumerated).
      */
     MySQL_5_8,
 
     /**
-     * MySQL version 5.9.
+     * MySQL version 5.x (major version 5, minor version 9 or higher, not specifically enumerated).
      */
     MySQL_5_9,
 

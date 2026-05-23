@@ -500,6 +500,7 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      *
      * @param id the entity ID as primitive long
      * @return an Optional containing the entity if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -517,8 +518,10 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @param selectPropNames the properties to select, or {@code null} to select all
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
      * @return an Optional containing the entity with selected properties if found, otherwise empty
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -539,7 +542,8 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @return the entity if found, otherwise null
+     * @return the entity if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -557,8 +561,10 @@ public interface UncheckedCrudDaoL<T, SB extends SqlBuilder, TD extends Unchecke
      * }</pre>
      *
      * @param id the entity ID as primitive long
-     * @param selectPropNames the properties to select, or {@code null} to select all
-     * @return the entity with selected properties if found, otherwise null
+     * @param selectPropNames the properties to select, excluding properties of joining entities.
+     *                        All properties will be selected if {@code null}
+     * @return the entity with selected properties if found, otherwise {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

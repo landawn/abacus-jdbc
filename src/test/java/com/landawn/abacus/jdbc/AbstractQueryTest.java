@@ -1325,6 +1325,38 @@ public class AbstractQueryTest extends TestBase {
         assertEquals(OptionalDouble.of(2.718), query.queryForDouble());
     }
 
+    // ---- addBatchParameters(Iterator) must clear parameters between rows ----
+    // Regression: AbstractQuery.addBatchParameters(Iterator) iterated setParameters(Collection)/setParameters(Object[])
+    // without calling stmt.clearParameters() first — so when a follow-up row was shorter than the first, positions
+    // beyond the new row's length retained values from the earlier row. NamedQuery already had the defensive
+    // clearParameters; AbstractQuery now matches that pattern.
+
+    @Test
+    public void testAddBatchParameters_Iterator_Collection_ClearsBetweenRows() throws SQLException {
+        final java.util.List<java.util.Collection<?>> rows = new java.util.ArrayList<>();
+        rows.add(java.util.Arrays.asList("a", "b", "c"));
+        rows.add(java.util.Arrays.asList("x", "y"));
+
+        query.addBatchParameters(rows.iterator());
+
+        // clearParameters() must be called exactly once — before the SECOND row, not the first.
+        verify(preparedStatement, times(1)).clearParameters();
+        // Both rows reached addBatch.
+        verify(preparedStatement, times(2)).addBatch();
+    }
+
+    @Test
+    public void testAddBatchParameters_Iterator_ObjectArray_ClearsBetweenRows() throws SQLException {
+        final java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        rows.add(new Object[] { "a", "b", "c" });
+        rows.add(new Object[] { "x", "y" });
+
+        query.addBatchParameters(rows.iterator());
+
+        verify(preparedStatement, times(1)).clearParameters();
+        verify(preparedStatement, times(2)).addBatch();
+    }
+
     // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable
     // TODO: L7427, L7477 (stream(RowFilter/BiRowFilter) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
     // TODO: L7688-L7689, L7741-L7742 (streamAllResultSets(Extractor/BiExtractor) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods

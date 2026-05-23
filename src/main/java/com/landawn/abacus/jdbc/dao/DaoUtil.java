@@ -75,7 +75,7 @@ import com.landawn.abacus.util.function.Function;
  *   <li>Query preparation and SQL type detection</li>
  *   <li>Join entity information retrieval</li>
  * </ul>
- * </p>
+ *
  * <p>
  * This class is marked as {@link Internal} and is not intended for direct use by application code.
  * It is designed to support the internal implementation of DAO interfaces and should only be
@@ -632,10 +632,9 @@ final class DaoUtil {
      * }</pre>
      *
      * @param dao the DAO instance for which to get query preparation functions
-     * @return a tuple containing two bi-functions: the first for creating PreparedQuery instances,
-     *         the second for creating NamedQuery instances
-     * @throws IllegalArgumentException if the DAO's SqlBuilder type parameter is not one of
-     *         PSC, PAC, PLC, or PSB
+     * @return a tuple containing two bi-functions: the first for creating {@link PreparedQuery} instances,
+     *         the second for creating {@link NamedQuery} instances; defaults to {@code PSC}/{@code NSC}
+     *         when the DAO's {@code SB} type parameter cannot be resolved
      */
     @SuppressWarnings("rawtypes")
     static Tuple2<Throwables.BiFunction<Collection<String>, Condition, PreparedQuery, SQLException>, Throwables.BiFunction<Collection<String>, Condition, NamedQuery, SQLException>> getDaoPreparedQueryFunc(

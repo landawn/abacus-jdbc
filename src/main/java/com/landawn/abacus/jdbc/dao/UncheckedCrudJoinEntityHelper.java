@@ -27,10 +27,11 @@ import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
 /**
- * The UncheckedCrudJoinEntityHelper interface combines CRUD operations with join entity management capabilities,
- * providing a comprehensive solution for handling entities with relationships. It extends both CRUD DAO
- * and join entity helper interfaces with unchecked exceptions.
- * 
+ * Unchecked-exception variant of {@link CrudJoinEntityHelper} that combines CRUD-by-ID operations
+ * with join entity loading, throwing {@link UncheckedSQLException} instead of {@link java.sql.SQLException}.
+ * It extends both {@link UncheckedJoinEntityHelper} and {@link CrudJoinEntityHelper}, overriding every
+ * method to narrow the declared exception from {@code SQLException} to {@code UncheckedSQLException}.
+ *
  * <p>This interface enables efficient loading of related entities when retrieving data by ID,
  * making it ideal for entities with complex relationships that need to be fetched together.</p>
  * 
@@ -58,8 +59,8 @@ import com.landawn.abacus.util.u.Optional;
  * @param <T> the entity type that this helper manages
  * @param <ID> the ID type of the entity
  * @param <SB> the SqlBuilder type used to generate SQL scripts (must be one of SqlBuilder.PSC/PAC/PLC/PSB)
- * @param <TD> the companion {@link UncheckedCrudDao} type that owns this helper (used for fluent
- *             method chaining and access to CRUD operations)
+ * @param <TD> the concrete DAO type, bounded by {@link UncheckedCrudDao}, that owns this helper
+ *             (used for fluent method chaining and access to CRUD operations)
  * @see UncheckedJoinEntityHelper
  * @see UncheckedCrudDao
  * @see CrudJoinEntityHelper

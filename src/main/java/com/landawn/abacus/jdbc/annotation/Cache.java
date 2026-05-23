@@ -58,7 +58,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Using custom cache implementation
  * @Cache(capacity = 500, evictDelay = 30000, impl = MyCustomDaoCache.class)
- * public interface ConfigDao extends ReadOnlyDao<Config, Long, SqlBuilder.PSC, ConfigDao> {
+ * public interface ConfigDao extends ReadOnlyDao<Config, SqlBuilder.PSC, ConfigDao> {
  *     // Query results cached with custom implementation
  * }
  * }</pre>
@@ -118,7 +118,7 @@ public @interface Cache {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Cache(evictDelay = 60000) // Sweep expired entries every 60 seconds
-     * public interface CurrencyDao extends ReadOnlyDao<Currency, String, SqlBuilder.PSC, CurrencyDao> {
+     * public interface CurrencyDao extends ReadOnlyDao<Currency, SqlBuilder.PSC, CurrencyDao> {
      *     // Methods here
      * }
      * }</pre>

@@ -2612,7 +2612,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param param8 the eighth parameter
      * @param param9 the ninth parameter
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if any parameter is invalid
      * @throws SQLException if a database access error occurs
      */
     public This setParameters(final Object param1, final Object param2, final Object param3, final Object param4, final Object param5, final Object param6,
@@ -3729,6 +3728,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
 
                 while (iter.hasNext()) {
+                    // Clear between rows so a shorter follow-up row can't inherit positions bound by an earlier row
+                    // (mirrors the defensive pattern in NamedQuery.addBatchParameters).
+                    stmt.clearParameters();
                     setParameters((Collection) iter.next());
 
                     addBatch();
@@ -3738,6 +3740,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
 
                 while (iter.hasNext()) {
+                    stmt.clearParameters();
                     setParameters((Object[]) iter.next());
 
                     addBatch();
@@ -4106,7 +4109,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return this AbstractQuery instance for method chaining
-     * @throws SQLException if a database access error occurs or this method is called on a closed statement
+     * @throws IllegalStateException if this query is already closed
+     * @throws SQLException if a database access error occurs
      * @see java.sql.PreparedStatement#addBatch()
      */
     public This addBatch() throws SQLException {
@@ -4148,10 +4152,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *      .stream();
      * }</pre>
      *
-     * @param direction One of {@code ResultSet.FETCH_FORWARD}, {@code ResultSet.FETCH_REVERSE}, 
-     *                  or {@code ResultSet.FETCH_UNKNOWN}
+     * @param direction one of {@link FetchDirection#FORWARD}, {@link FetchDirection#REVERSE},
+     *                  or {@link FetchDirection#UNKNOWN}
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
+     * @see FetchDirection
      * @see java.sql.Statement#setFetchDirection(int)
      */
     public This setFetchDirection(final FetchDirection direction) throws SQLException {
@@ -4180,6 +4186,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see #setFetchDirection(FetchDirection)
      */
@@ -4201,6 +4208,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param fetchSize the number of rows to fetch. Use 0 to let the JDBC driver choose.
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see java.sql.Statement#setFetchSize(int)
      */
@@ -4229,6 +4237,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new column size limit in bytes; zero means there is no limit
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see java.sql.Statement#setMaxFieldSize(int)
      */
@@ -4256,6 +4265,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new max rows limit; zero means there is no limit
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see java.sql.Statement#setMaxRows(int)
      */
@@ -4279,6 +4289,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new max rows limit; zero means there is no limit
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
@@ -4302,6 +4313,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param seconds the new query timeout limit in seconds; zero means there is no limit
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      * @see java.sql.Statement#setQueryTimeout(int)
      */
@@ -4337,6 +4349,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param stmtSetter the function to configure the statement
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if stmtSetter is null
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4376,6 +4389,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param stmtSetter the function to configure the statement
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if stmtSetter is null
+     * @throws IllegalStateException if this query is already closed
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -4410,8 +4424,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a boolean value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalBoolean} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalBoolean.empty()} is returned <i>only</i> when
+     * the query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code OptionalBoolean} is <i>present</i> and holds the JDBC primitive default {@code false}
+     * (matching {@link ResultSet#getBoolean(int)} which maps SQL {@code NULL} to {@code false}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Boolean.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code false}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4420,8 +4440,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBoolean();   // SELECT is_active FROM users WHERE id = ?
      * }</pre>
      *
-     * @return an {@code OptionalBoolean} containing the boolean value if at least one
-     *         row is returned; otherwise {@code OptionalBoolean.empty()}
+     * @return a <i>present</i> {@code OptionalBoolean} holding the column value (or {@code false} for
+     *         SQL {@code NULL}) when at least one row is returned; {@code OptionalBoolean.empty()}
+     *         when the query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4440,9 +4461,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a char value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalChar} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalChar.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code OptionalChar} is <i>present</i> and holds the JDBC primitive default {@code (char) 0} — the
+     * NUL character, equivalent to the default {@code char} value. Use {@link #queryForSingleValue(Class)}
+     * with {@code Character.class} if you need to distinguish SQL {@code NULL} from a real {@code (char) 0}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalChar grade = query
@@ -4450,8 +4476,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForChar();   // SELECT grade FROM students WHERE id = ?
      * }</pre>
      *
-     * @return an {@code OptionalChar} containing the char value if at least one
-     *         row is returned; otherwise {@code OptionalChar.empty()}
+     * @return a <i>present</i> {@code OptionalChar} holding the column value (or the default {@code char}
+     *         for SQL {@code NULL}) when at least one row is returned; {@code OptionalChar.empty()} when
+     *         the query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4472,9 +4499,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a byte value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalByte} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalByte.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code OptionalByte} is <i>present</i> and holds the JDBC primitive default {@code (byte) 0}
+     * (matching {@link ResultSet#getByte(int)} which maps SQL {@code NULL} to {@code 0}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Byte.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code 0}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalByte status = query
@@ -4482,8 +4515,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForByte();   // SELECT status_code FROM records WHERE id = ?
      * }</pre>
      *
-     * @return an {@code OptionalByte} containing the byte value if at least one
-     *         row is returned; otherwise {@code OptionalByte.empty()}
+     * @return a <i>present</i> {@code OptionalByte} holding the column value (or {@code 0} for SQL
+     *         {@code NULL}) when at least one row is returned; {@code OptionalByte.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4500,9 +4534,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a short value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalShort} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalShort.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code OptionalShort} is <i>present</i> and holds the JDBC primitive default {@code (short) 0}
+     * (matching {@link ResultSet#getShort(int)} which maps SQL {@code NULL} to {@code 0}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Short.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code 0}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalShort year = query
@@ -4510,8 +4550,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForShort();   // SELECT release_year FROM movies WHERE id = ?
      * }</pre>
      *
-     * @return an {@code OptionalShort} containing the short value if at least one
-     *         row is returned; otherwise {@code OptionalShort.empty()}
+     * @return a <i>present</i> {@code OptionalShort} holding the column value (or {@code 0} for SQL
+     *         {@code NULL}) when at least one row is returned; {@code OptionalShort.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4528,21 +4569,28 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as an int value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalInt} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.
      * Commonly used for COUNT queries.</p>
-     * 
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalInt.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code OptionalInt} is <i>present</i> and holds the JDBC primitive default {@code 0} (matching
+     * {@link ResultSet#getInt(int)} which maps SQL {@code NULL} to {@code 0}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Integer.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code 0}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalInt count = query
      *     .setString(1, "Active")
      *     .queryForInt();   // SELECT COUNT(*) FROM users WHERE status = ?
-     * 
+     *
      * int totalUsers = count.orElse(0);
      * }</pre>
      *
-     * @return an {@code OptionalInt} containing the int value if at least one
-     *         row is returned; otherwise {@code OptionalInt.empty()}
+     * @return a <i>present</i> {@code OptionalInt} holding the column value (or {@code 0} for SQL
+     *         {@code NULL}) when at least one row is returned; {@code OptionalInt.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4559,9 +4607,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a long value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalLong} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalLong.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL} (for example, an aggregate
+     * such as {@code SUM(amount)} over zero matching rows), the returned {@code OptionalLong} is
+     * <i>present</i> and holds the JDBC primitive default {@code 0L} (matching
+     * {@link ResultSet#getLong(int)} which maps SQL {@code NULL} to {@code 0}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Long.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code 0L}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalLong totalRevenue = query
@@ -4569,8 +4624,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForLong();   // SELECT SUM(amount) FROM sales WHERE year = ?
      * }</pre>
      *
-     * @return an {@code OptionalLong} containing the long value if at least one
-     *         row is returned; otherwise {@code OptionalLong.empty()}
+     * @return a <i>present</i> {@code OptionalLong} holding the column value (or {@code 0L} for SQL
+     *         {@code NULL}) when at least one row is returned; {@code OptionalLong.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4587,9 +4643,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a float value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalFloat} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalFloat.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code OptionalFloat} is <i>present</i> and holds the JDBC primitive default {@code 0.0f} (matching
+     * {@link ResultSet#getFloat(int)} which maps SQL {@code NULL} to {@code 0.0f}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Float.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code 0.0f}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalFloat rating = query
@@ -4597,8 +4659,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForFloat();   // SELECT avg_rating FROM products WHERE id = ?
      * }</pre>
      *
-     * @return an {@code OptionalFloat} containing the float value if at least one
-     *         row is returned; otherwise {@code OptionalFloat.empty()}
+     * @return a <i>present</i> {@code OptionalFloat} holding the column value (or {@code 0.0f} for SQL
+     *         {@code NULL}) when at least one row is returned; {@code OptionalFloat.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4615,9 +4678,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a double value.
      *
-     * <p>If the query produces no rows, an empty {@code OptionalDouble} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code OptionalDouble.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL} (for example, an aggregate
+     * such as {@code AVG(salary)} over zero matching rows), the returned {@code OptionalDouble} is
+     * <i>present</i> and holds the JDBC primitive default {@code 0.0d} (matching
+     * {@link ResultSet#getDouble(int)} which maps SQL {@code NULL} to {@code 0.0d}). Use
+     * {@link #queryForSingleValue(Class)} with {@code Double.class} if you need to distinguish SQL
+     * {@code NULL} from a real {@code 0.0d}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * OptionalDouble average = query
@@ -4625,8 +4695,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForDouble();   // SELECT AVG(salary) FROM employees WHERE dept = ?
      * }</pre>
      *
-     * @return an {@code OptionalDouble} containing the double value if at least one
-     *         row is returned; otherwise {@code OptionalDouble.empty()}
+     * @return a <i>present</i> {@code OptionalDouble} holding the column value (or {@code 0.0d} for SQL
+     *         {@code NULL}) when at least one row is returned; {@code OptionalDouble.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4643,20 +4714,27 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a string value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<String>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}). {@link Nullable} preserves
+     * this distinction: callers can use {@link Nullable#isPresent()} to check for "row found" and
+     * {@link Nullable#isNotNull()} (or {@link Nullable#orElse(Object) orElse(...)}) to check for a
+     * non-null value.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> name = query
      *     .setInt(1, userId)
      *     .queryForString();   // SELECT name FROM users WHERE id = ?
-     * 
+     *
      * String userName = name.orElse("Unknown");
      * }</pre>
      *
-     * @return A {@code Nullable<String>} containing the string value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<String>} holding the column value (possibly {@code null}
+     *         for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4675,9 +4753,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a BigInteger value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<BigInteger>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigInteger> largeNumber = query
@@ -4685,8 +4767,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBigInteger();   // SELECT balance FROM accounts WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<BigInteger>} containing the BigInteger value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<BigInteger>} holding the column value (possibly {@code null}
+     *         for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4704,9 +4787,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a BigDecimal value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<BigDecimal>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<BigDecimal> price = query
@@ -4714,8 +4801,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBigDecimal();   // SELECT price FROM products WHERE code = ?
      * }</pre>
      *
-     * @return A {@code Nullable<BigDecimal>} containing the BigDecimal value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<BigDecimal>} holding the column value (possibly {@code null}
+     *         for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4733,9 +4821,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a Date value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<java.sql.Date>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p> 
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Date> birthDate = query
@@ -4743,8 +4835,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForDate();   // SELECT birth_date FROM employees WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<java.sql.Date>} containing the Date value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<java.sql.Date>} holding the column value (possibly
+     *         {@code null} for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()}
+     *         when the query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4761,9 +4854,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a Time value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<java.sql.Time>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<java.sql.Time> startTime = query
@@ -4771,8 +4868,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForTime();   // SELECT start_time FROM events WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<java.sql.Time>} containing the Time value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<java.sql.Time>} holding the column value (possibly
+     *         {@code null} for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()}
+     *         when the query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4789,9 +4887,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a Timestamp value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<java.sql.Timestamp>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<Timestamp> lastLogin = query
@@ -4799,8 +4901,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForTimestamp();   // SELECT last_login FROM users WHERE username = ?
      * }</pre>
      *
-     * @return A {@code Nullable<java.sql.Timestamp>} containing the Timestamp value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<java.sql.Timestamp>} holding the column value (possibly
+     *         {@code null} for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()}
+     *         when the query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4817,9 +4920,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a byte[] value.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<byte[]>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<byte[]> avatar = query
@@ -4827,8 +4934,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .queryForBytes();   // SELECT avatar_data FROM users WHERE id = ?
      * }</pre>
      *
-     * @return A {@code Nullable<byte[]>} containing the byte[] value if at least one
-     *         row is returned; otherwise {@code Nullable.empty()}
+     * @return a <i>present</i> {@code Nullable<byte[]>} holding the column value (possibly {@code null}
+     *         for SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()} when the
+     *         query returns no rows
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
      */
@@ -4845,9 +4953,16 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as the specified type.
      *
-     * <p>If the query produces no rows, an empty {@code Nullable<V>} is returned.
-     * Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}). {@link Nullable} preserves
+     * the distinction between "no row matched" and "row matched but value is null". Unlike the primitive
+     * {@code queryForXxx} variants (which surface SQL {@code NULL} as the JDBC primitive default value
+     * wrapped in a present Optional), this overload — driven by a wrapper / object {@code Type<V>} —
+     * always conveys NULL precisely as Java {@code null} inside the Nullable.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<LocalDate> date = query
@@ -4857,7 +4972,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
-     * @return A {@code Nullable} containing the value if present, otherwise empty
+     * @return a <i>present</i> {@code Nullable<V>} holding the column value (possibly {@code null} for
+     *         SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()} when the
+     *         query returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4871,7 +4988,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Executes the query and returns the first value from the result set using a custom Type handler.
-     * 
+     *
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
+     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
+     * between "no row matched" and "row matched but value is null".</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<MyCustomType> customType = TypeFactory.getType(MyCustomType.class);
@@ -4882,7 +5006,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
-     * @return A {@code Nullable} containing the value if present, otherwise empty
+     * @return a <i>present</i> {@code Nullable<V>} holding the column value (possibly {@code null} for
+     *         SQL {@code NULL}) when at least one row is returned; {@code Nullable.empty()} when the
+     *         query returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
@@ -4899,26 +5025,37 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first non-null value from the result set as the specified type.
+     * Executes the query and returns the first column of the first row as the specified type, wrapped
+     * in an {@link Optional} that is guaranteed to be non-null when present.
      *
-     * <p>If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Optional.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists and the column value is non-null, the returned
+     * {@code Optional} is <i>present</i> and holds that value. If a row exists but the column is SQL
+     * {@code NULL}, this method throws {@link NullPointerException} — because {@code Optional} cannot
+     * carry a null payload, this overload is strict and refuses to collapse the distinction between
+     * "absent" and "present-but-null". Use {@link #queryForSingleValue(Class)} (returns
+     * {@link Nullable}) when SQL {@code NULL} is a legitimate value.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<String> email = query
      *     .setInt(1, userId)
      *     .queryForSingleNonNull(String.class);   // SELECT email FROM users WHERE id = ?
-     * 
+     *
      * email.ifPresent(e -> sendNotification(e));
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
-     * @return An {@code Optional} containing the non-null value if present, otherwise empty
+     * @return a <i>present</i> {@code Optional<V>} holding the (non-null) column value when at least
+     *         one row is returned with a non-null value; {@code Optional.empty()} when the query
+     *         returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
-     * @throws NullPointerException if a null value is encountered in the result set
+     * @throws NullPointerException if a row is found but its column value is SQL {@code NULL}
      */
     public <V> Optional<V> queryForSingleNonNull(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException {
@@ -4929,10 +5066,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the first non-null value from the result set using a custom Type handler.
+     * Executes the query and returns the first column of the first row using a custom Type handler,
+     * wrapped in an {@link Optional} that is guaranteed to be non-null when present.
      *
-     * <p>If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
-     * 
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Optional.empty()} is returned <i>only</i> when the
+     * query produces no rows. If a row exists and the column value is non-null, the returned
+     * {@code Optional} is <i>present</i> and holds that value. If a row exists but the column is SQL
+     * {@code NULL}, this method throws {@link NullPointerException} — because {@code Optional} cannot
+     * carry a null payload. Use {@link #queryForSingleValue(Type)} (returns {@link Nullable}) when SQL
+     * {@code NULL} is a legitimate value.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<UUID> uuidType = Type.of(UUID.class);
@@ -4943,11 +5088,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
-     * @return An {@code Optional} containing the non-null value if present, otherwise empty
+     * @return a <i>present</i> {@code Optional<V>} holding the (non-null) column value when at least
+     *         one row is returned with a non-null value; {@code Optional.empty()} when the query
+     *         returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if a database access error occurs
-     * @throws NullPointerException if a null value is encountered in the result set
+     * @throws NullPointerException if a row is found but its column value is SQL {@code NULL}
      */
     public <V> Optional<V> queryForSingleNonNull(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, SQLException, NullPointerException {
@@ -4962,20 +5109,32 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the unique result value from the result set as the specified type.
-     * Throws DuplicateResultException if more than one row is found.
-     * 
+     * Executes the query and returns the first column of the unique result row as the specified type.
+     * Throws {@link DuplicateResultException} if more than one row is found.
+     *
+     * <p>Only the first column of the result row is read; any remaining columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If exactly one row is found, the returned {@code Nullable} is
+     * <i>present</i> and holds the column value — {@code null} when the column is SQL {@code NULL},
+     * otherwise the converted value. {@link Nullable} preserves the distinction between "no row
+     * matched" and "row matched but value is null"; callers can use {@link Nullable#isPresent()} and
+     * {@link Nullable#isNotNull()} accordingly. If two or more rows are found,
+     * {@link DuplicateResultException} is thrown instead of returning a result.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Nullable<String> username = query
      *     .setString(1, email)
      *     .queryForUniqueValue(String.class);   // SELECT username FROM users WHERE email = ?
-     * // Throws exception if multiple users have the same email
+     * // Throws DuplicateResultException if multiple users have the same email
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
-     * @return A {@code Nullable} containing the unique value if present, otherwise empty
+     * @return a <i>present</i> {@code Nullable<V>} holding the column value (possibly {@code null}
+     *         for SQL {@code NULL}) when exactly one row is returned; {@code Nullable.empty()} when
+     *         the query returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws DuplicateResultException if more than one row is found
@@ -4990,9 +5149,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the unique result value from the result set using a custom Type handler.
-     * Throws DuplicateResultException if more than one row is found.
-     * 
+     * Executes the query and returns the first column of the unique result row using a custom Type
+     * handler. Throws {@link DuplicateResultException} if more than one row is found.
+     *
+     * <p>Only the first column of the result row is read; any remaining columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
+     * query produces no rows. If exactly one row is found, the returned {@code Nullable} is
+     * <i>present</i> and holds the column value — {@code null} when the column is SQL {@code NULL},
+     * otherwise the converted value, preserving the distinction between "no row matched" and "row
+     * matched but value is null". If two or more rows are found, {@link DuplicateResultException} is
+     * thrown instead of returning a result.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<BigDecimal> moneyType = Type.of(BigDecimal.class);
@@ -5003,7 +5171,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
-     * @return A {@code Nullable} containing the unique value if present, otherwise empty
+     * @return a <i>present</i> {@code Nullable<V>} holding the column value (possibly {@code null}
+     *         for SQL {@code NULL}) when exactly one row is returned; {@code Nullable.empty()} when
+     *         the query returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws DuplicateResultException if more than one row is found
@@ -5032,27 +5202,38 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the unique non-null result value as the specified type.
+     * Executes the query and returns the first column of the unique result row as the specified type,
+     * wrapped in an {@link Optional} that is guaranteed to be non-null when present.
+     * Throws {@link DuplicateResultException} if more than one row is found.
      *
-     * <p>If more than one row is found, a DuplicateResultException is thrown.
-     * If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
-     * 
+     * <p>Only the first column of the result row is read; any remaining columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Optional.empty()} is returned <i>only</i> when the
+     * query produces no rows. If exactly one row is found and the column value is non-null, the
+     * returned {@code Optional} is <i>present</i> and holds that value. If exactly one row is found
+     * but the column is SQL {@code NULL}, this method throws {@link NullPointerException} — because
+     * {@code Optional} cannot carry a null payload. If two or more rows are found,
+     * {@link DuplicateResultException} is thrown instead. Use {@link #queryForUniqueValue(Class)}
+     * (returns {@link Nullable}) when SQL {@code NULL} is a legitimate value.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Integer> userId = query
      *     .setString(1, sessionToken)
      *     .queryForUniqueNonNull(Integer.class);   // SELECT user_id FROM sessions WHERE token = ?
-     * // Throws exception if multiple sessions exist for the token
+     * // Throws DuplicateResultException if multiple sessions exist for the token
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the class of the desired result type
-     * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
+     * @return a <i>present</i> {@code Optional<V>} holding the (non-null) column value when exactly
+     *         one row is returned with a non-null value; {@code Optional.empty()} when the query
+     *         returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws DuplicateResultException if more than one row is found
      * @throws SQLException if a database access error occurs
-     * @throws NullPointerException if a null value is encountered in the result set
+     * @throws NullPointerException if a row is found but its column value is SQL {@code NULL}
      */
     public <V> Optional<V> queryForUniqueNonNull(final Class<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException {
@@ -5063,11 +5244,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns the unique non-null result value using a custom Type handler.
+     * Executes the query and returns the first column of the unique result row using a custom Type
+     * handler, wrapped in an {@link Optional} that is guaranteed to be non-null when present.
+     * Throws {@link DuplicateResultException} if more than one row is found.
      *
-     * <p>If more than one row is found, a DuplicateResultException is thrown.
-     * If the value encountered in the first row/column is null, a NullPointerException is thrown.</p>
-     * 
+     * <p>Only the first column of the result row is read; any remaining columns are ignored.</p>
+     *
+     * <p><b>Empty vs. present semantics:</b> {@code Optional.empty()} is returned <i>only</i> when the
+     * query produces no rows. If exactly one row is found and the column value is non-null, the
+     * returned {@code Optional} is <i>present</i> and holds that value. If exactly one row is found
+     * but the column is SQL {@code NULL}, this method throws {@link NullPointerException} — because
+     * {@code Optional} cannot carry a null payload. If two or more rows are found,
+     * {@link DuplicateResultException} is thrown instead. Use {@link #queryForUniqueValue(Type)}
+     * (returns {@link Nullable}) when SQL {@code NULL} is a legitimate value.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Type<CustomId> idType = Type.of(CustomId.class);
@@ -5078,12 +5268,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <V> the type of the single result value to be returned
      * @param targetValueType the Type handler for converting the result
-     * @return An {@code Optional} containing the unique non-null value if present, otherwise empty
+     * @return a <i>present</i> {@code Optional<V>} holding the (non-null) column value when exactly
+     *         one row is returned with a non-null value; {@code Optional.empty()} when the query
+     *         returns no rows
      * @throws IllegalArgumentException if targetValueType is null
      * @throws IllegalStateException if this query is closed
      * @throws DuplicateResultException if more than one row is found
      * @throws SQLException if a database access error occurs
-     * @throws NullPointerException if a null value is encountered in the result set
+     * @throws NullPointerException if a row is found but its column value is SQL {@code NULL}
      */
     public <V> Optional<V> queryForUniqueNonNull(final Type<? extends V> targetValueType)
             throws IllegalArgumentException, IllegalStateException, DuplicateResultException, SQLException, NullPointerException {

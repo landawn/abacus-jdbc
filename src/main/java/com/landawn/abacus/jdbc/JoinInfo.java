@@ -59,8 +59,9 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * generating appropriate SQL statements and managing parameter bindings for join operations.
  *
  * <p>The class supports joining entities through {@code @JoinedBy} annotations and provides
- * methods to retrieve joined entities and update join relationships. It automatically generates
- * optimized SQL queries for both single and batch join operations.</p>
+ * methods to build SQL for loading and deleting joined entities, and to populate join properties
+ * on source entities from already-fetched collections. It automatically generates
+ * optimized SQL for both single and batch join operations.</p>
  *
  * <p><b>Supported Join Types:</b></p>
  * <ul>
@@ -799,7 +800,7 @@ public final class JoinInfo {
 
     /**
      * Retrieves the SQL plan for delete operations.
-     * This method returns SQL statements for deleting joined entities and optionally the join table entries.
+     * This method returns SQL statements for deleting joined entities.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -809,14 +810,14 @@ public final class JoinInfo {
      *     deletePlan = joinInfo.getDeleteSqlPlan(PSC.class);
      *
      * String deleteSql = deletePlan._1;  // Main delete SQL
-     * String middleTableDeleteSql = deletePlan._2;  // Join table delete SQL (if many-to-many)
+     * String middleTableDeleteSql = deletePlan._2;  // Always null in current implementation
      * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL, the optional middle (join) table delete SQL
-     *         (which is {@code null} for one-to-many joins, and also {@code null} for many-to-many
-     *         joins when cascade-delete is configured at the database level), and the parameter setter
+     * @return a tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
+     *         ({@code _2}, always {@code null} in the current implementation — reserved for future
+     *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3})
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
      * @see SqlBuilder.PSC
@@ -837,7 +838,7 @@ public final class JoinInfo {
      * Retrieves the SQL plan for delete operations.
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple containing the delete SQL, the optional middle (join) table delete SQL, and the parameter setter
+     * @return a tuple containing the delete SQL, the middle (join) table delete SQL (always {@code null}), and the parameter setter
      * @deprecated Use {@link #getDeleteSqlPlan(Class)}.
      */
     @Deprecated
@@ -858,14 +859,14 @@ public final class JoinInfo {
      *
      * List<Employee> employees = getEmployeesToDelete();
      * String deleteSql = batchDeletePlan._1.apply(employees.size());   // Main delete SQL
-     * String middleTableDeleteSql = batchDeletePlan._2 != null ? batchDeletePlan._2.apply(employees.size()) : null;
+     * // batchDeletePlan._2 is always null in the current implementation
      * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDeletePlan._3;
      * }</pre>
      *
      * @param sbc the SQL builder class type (PSC, PAC, or PLC)
-     * @return a tuple of (main delete SQL builder, optional middle/join table delete SQL builder, parameter setter).
-     *         The middle SQL builder is {@code null} for one-to-many joins, and also {@code null} for many-to-many
-     *         joins when cascade-delete is configured at the database level
+     * @return a tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder ({@code _2},
+     *         always {@code null} in the current implementation — reserved for future use when per-entity
+     *         cascade-delete control is supported), and parameter setter ({@code _3}))
      * @throws IllegalArgumentException if the SQL builder class is not supported
      *
      * @see SqlBuilder.PSC

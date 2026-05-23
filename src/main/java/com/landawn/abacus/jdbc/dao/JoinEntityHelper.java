@@ -61,11 +61,11 @@ import com.landawn.abacus.util.stream.Stream;
  *     private List<Order> orders;
  * }
  *
- * // Load user with orders
+ * // Find the first matching user and eagerly load their orders in one call
  * Optional<User> user = userDao.findFirst(null, Order.class, Filters.eq("id", 1L));
  *
- * // Load orders for multiple users
- * List<User> users = userDao.list(null, Order.class, Filters.gt("id", 0));
+ * // List users without join entities, then load orders for all of them separately
+ * List<User> users = userDao.list(Filters.gt("id", 0));
  * userDao.loadJoinEntities(users, "orders");
  * }</pre>
  *

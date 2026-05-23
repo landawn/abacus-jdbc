@@ -2216,10 +2216,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param <R> the type of the result returned by the function
      * @param getter the tri-function to apply. Parameters are:
      *               1. The executed CallableStatement
-     *               2. List of registered OUT parameters
+     *               2. List of registered OUT parameters (never {@code null}; empty if none were registered)
      *               3. Boolean indicating if the first result is a ResultSet
      * @return the result of applying the tri-function
      * @throws IllegalArgumentException if getter is null
+     * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs or the function throws an exception
      * @see Jdbc.OutParam
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -2330,9 +2331,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param consumer the tri-consumer to apply. Parameters are:
      *                 1. The executed CallableStatement
-     *                 2. List of registered OUT parameters  
+     *                 2. List of registered OUT parameters (never {@code null}; empty if none were registered)
      *                 3. Boolean indicating if the first result is a ResultSet
      * @throws IllegalArgumentException if consumer is null
+     * @throws IllegalStateException if this CallableQuery is closed
      * @throws SQLException if a database access error occurs or the consumer throws an exception
      * @see Jdbc.OutParam
      */

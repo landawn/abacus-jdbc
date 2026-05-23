@@ -24,8 +24,8 @@ import com.landawn.abacus.query.SqlBuilder;
  *
  * <p>This interface is particularly useful in scenarios where you need to fetch entities with their
  * relationships (like one-to-many or many-to-many) but want to ensure that the related entities
- * cannot be modified through this DAO. It maintains data integrity by preventing cascading updates
- * or deletes on joined entities while avoiding checked exception handling.</p>
+ * cannot be deleted through this DAO. It maintains data integrity by preventing cascading deletes
+ * on joined entities while avoiding checked exception handling.</p>
  *
  * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityHelper} and
  * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}

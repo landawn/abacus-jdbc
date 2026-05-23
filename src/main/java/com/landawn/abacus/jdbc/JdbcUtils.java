@@ -162,7 +162,6 @@ public final class JdbcUtils {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
@@ -196,7 +195,6 @@ public final class JdbcUtils {
      * <p>The insert SQL can be generated using:</p>
      * <pre>{@code
      * List<String> columnNameList = new ArrayList<>(dataset.columnNames());
-     * columnNameList.retainAll(yourSelectColumnNames);
      * String sql = PSC.insert(columnNameList).into(tableName).sql();
      * }</pre>
      *
@@ -1495,6 +1493,8 @@ public final class JdbcUtils {
      * Imports data from a CSV file to the database using the provided Connection with configurable batch processing.
      * This method provides control over batch size and processing intervals for optimal performance.
      *
+     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.</p>
+     *
      * <p>This method is useful for importing large CSV files where you need to control memory usage
      * and database load through batch processing parameters.</p>
      *
@@ -1583,6 +1583,8 @@ public final class JdbcUtils {
      * Imports data from a CSV file to the database using the provided PreparedStatement with configurable batch processing.
      * This method provides full control over the import process including batch size and processing intervals.
      *
+     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.</p>
+     *
      * <p>This is useful for importing large CSV files where you need fine-grained control over
      * memory usage and database load through batch processing parameters.</p>
      *
@@ -1629,7 +1631,8 @@ public final class JdbcUtils {
      * Imports data from a CSV file to the database with row filtering capability.
      * This method allows selective import of CSV rows based on a filter predicate.
      *
-     * <p>The filter predicate is applied to each CSV row (as a String array) before import.
+     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.
+     * The filter predicate is applied to each subsequent CSV row (as a String array).
      * Only rows for which the filter returns {@code true} will be imported to the database.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -1722,7 +1725,8 @@ public final class JdbcUtils {
      * Imports data from a CSV Reader to the database using the provided PreparedStatement with default batch settings.
      * This method provides direct control over the PreparedStatement used for import.
      *
-     * <p>The PreparedStatement will not be closed by this method, allowing for reuse.
+     * <p>The first line read from the Reader is treated as a header row and will be skipped during import.
+     * The PreparedStatement will not be closed by this method, allowing for reuse.
      * The Reader will be wrapped in a BufferedReader for optimal performance if not already buffered.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -1758,6 +1762,8 @@ public final class JdbcUtils {
     /**
      * Imports data from a CSV Reader to the database using the provided PreparedStatement with configurable batch processing.
      * This method provides control over batch size and processing intervals.
+     *
+     * <p>The first line read from the Reader is treated as a header row and will be skipped during import.</p>
      *
      * <p>This method is useful for importing CSV data from various sources with optimized batch processing
      * for better performance and resource management.</p>
@@ -1799,6 +1805,8 @@ public final class JdbcUtils {
     /**
      * Imports data from a CSV Reader to the database with row filtering capability and configurable batch processing.
      * This is the most comprehensive CSV import method providing full control over the import process.
+     *
+     * <p>The first line read from the Reader is treated as a header row and will be skipped during import.</p>
      *
      * <p>This method combines all import features:</p>
      * <ul>

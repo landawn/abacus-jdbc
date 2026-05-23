@@ -75,33 +75,30 @@ public class JdbcUtilIntegrationTest extends TestBase {
     public void initDb() throws SQLException {
         ds = JdbcUtil.createHikariDataSource("jdbc:h2:mem:jdbcutil_it;DB_CLOSE_DELAY=-1", "sa", "");
 
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
-            st.execute("CREATE TABLE IF NOT EXISTS widget ("
-                    + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-                    + "name VARCHAR(64), "
-                    + "qty INT)");
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS widget (" + "id BIGINT AUTO_INCREMENT PRIMARY KEY, " + "name VARCHAR(64), " + "qty INT)");
         }
     }
 
     @AfterAll
     public void dropDb() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
             st.execute("DROP TABLE IF EXISTS widget");
         }
     }
 
     @BeforeEach
     public void cleanTable() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
             st.execute("TRUNCATE TABLE widget");
         }
     }
 
     private long insertWidget(final String name, final int qty) throws SQLException {
-        final Optional<Long> key = JdbcUtil.prepareQuery(ds, "INSERT INTO widget (name, qty) VALUES (?, ?)", true)
-                .setString(1, name)
-                .setInt(2, qty)
-                .insert();
+        final Optional<Long> key = JdbcUtil.prepareQuery(ds, "INSERT INTO widget (name, qty) VALUES (?, ?)", true).setString(1, name).setInt(2, qty).insert();
         assertTrue(key.isPresent());
         return key.get();
     }
@@ -132,9 +129,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
                 .update();
         assertEquals(1, updated);
 
-        final List<Widget> rows = JdbcUtil.prepareQuery(ds, "SELECT id, name, qty FROM widget WHERE id = ?")
-                .setLong(1, id)
-                .list(Widget.class);
+        final List<Widget> rows = JdbcUtil.prepareQuery(ds, "SELECT id, name, qty FROM widget WHERE id = ?").setLong(1, id).list(Widget.class);
         assertEquals(1, rows.size());
         assertEquals("new", rows.get(0).getName());
         assertEquals(99, rows.get(0).getQty());
@@ -228,13 +223,10 @@ public class JdbcUtilIntegrationTest extends TestBase {
             try (Statement st = conn.createStatement()) {
                 st.execute("CREATE TABLE t (id INT, name VARCHAR(20))");
                 st.execute("INSERT INTO t VALUES (1,'a'),(2,'b'),(3,'c')");
-                st.execute("CREATE PROCEDURE three_rs() READS SQL DATA DYNAMIC RESULT SETS 3 "
-                        + "BEGIN ATOMIC "
+                st.execute("CREATE PROCEDURE three_rs() READS SQL DATA DYNAMIC RESULT SETS 3 " + "BEGIN ATOMIC "
                         + "  DECLARE r1 CURSOR WITH RETURN FOR SELECT name FROM t WHERE id = 1; "
                         + "  DECLARE r2 CURSOR WITH RETURN FOR SELECT name FROM t WHERE id IN (2,3) ORDER BY id; "
-                        + "  DECLARE r3 CURSOR WITH RETURN FOR SELECT name FROM t ORDER BY id; "
-                        + "  OPEN r1; OPEN r2; OPEN r3; "
-                        + "END");
+                        + "  DECLARE r3 CURSOR WITH RETURN FOR SELECT name FROM t ORDER BY id; " + "  OPEN r1; OPEN r2; OPEN r3; " + "END");
             }
 
             try (CallableStatement cs = conn.prepareCall("{call three_rs()}")) {
@@ -259,7 +251,8 @@ public class JdbcUtilIntegrationTest extends TestBase {
                 iter.close();
             }
         } finally {
-            try (Connection c = hsqlDs.getConnection(); Statement st = c.createStatement()) {
+            try (Connection c = hsqlDs.getConnection();
+                 Statement st = c.createStatement()) {
                 st.execute("DROP PROCEDURE three_rs");
                 st.execute("DROP TABLE t");
             }
@@ -272,7 +265,8 @@ public class JdbcUtilIntegrationTest extends TestBase {
     public void testIterateAllResultSets_SingleResult_H2() throws SQLException {
         insertWidget("only", 42);
 
-        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
             final boolean isFirstResultSet = stmt.execute("SELECT name FROM widget WHERE qty = 42");
 
             final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(stmt, isFirstResultSet);

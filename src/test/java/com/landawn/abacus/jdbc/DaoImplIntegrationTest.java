@@ -26,6 +26,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlBuilder.PSC;
@@ -111,13 +112,10 @@ public class DaoImplIntegrationTest extends TestBase {
     public void initDb() throws SQLException {
         ds = JdbcUtil.createHikariDataSource("jdbc:h2:mem:daoimpl_it;DB_CLOSE_DELAY=-1", "sa", "");
 
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
-            st.execute("CREATE TABLE IF NOT EXISTS user_account ("
-                    + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-                    + "first_name VARCHAR(64), "
-                    + "last_name VARCHAR(64), "
-                    + "age INT, "
-                    + "active BOOLEAN)");
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS user_account (" + "id BIGINT AUTO_INCREMENT PRIMARY KEY, " + "first_name VARCHAR(64), "
+                    + "last_name VARCHAR(64), " + "age INT, " + "active BOOLEAN)");
         }
 
         dao = JdbcUtil.createDao(UserAccountDao.class, ds);
@@ -125,14 +123,16 @@ public class DaoImplIntegrationTest extends TestBase {
 
     @AfterAll
     public void dropDb() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
             st.execute("DROP TABLE IF EXISTS user_account");
         }
     }
 
     @BeforeEach
     public void cleanTable() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement st = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
             st.execute("TRUNCATE TABLE user_account");
         }
     }
@@ -281,6 +281,50 @@ public class DaoImplIntegrationTest extends TestBase {
     @Test
     public void testCreateDao_InvalidEntityId_Throws() {
         assertThrows(Exception.class, () -> JdbcUtil.createDao(NoIdBadDao.class, ds).insert(new NoIdBad()));
+    }
+
+    // A custom @Query UPDATE method declared with a WRAPPER return type (Integer/Long/Boolean) must dispatch into
+    // the update path at OP.DEFAULT. Regression: DaoImpl#isUpdateReturnType used to be primitive-only, so
+    // wrapper returns silently fell through to "Unsupported sql annotation", even though the error message and
+    // the result converter both explicitly advertised wrapper support.
+    public interface WrapperReturnDao extends CrudDao<UserAccount, Long, PSC, WrapperReturnDao> {
+        @Query("UPDATE user_account SET age = ? WHERE id = ?")
+        Integer bumpAgeReturnInteger(int newAge, long id) throws SQLException;
+
+        @Query("UPDATE user_account SET age = ? WHERE id = ?")
+        Long bumpAgeReturnLong(int newAge, long id) throws SQLException;
+
+        @Query("UPDATE user_account SET age = ? WHERE id = ?")
+        Boolean bumpAgeReturnBoolean(int newAge, long id) throws SQLException;
+    }
+
+    @Test
+    public void testCustomQuery_WrapperReturnTypes_DispatchToUpdatePath() throws SQLException {
+        final WrapperReturnDao wrapDao = JdbcUtil.createDao(WrapperReturnDao.class, ds);
+        final Long id = dao.insert(newUser("Wrap", "Return", 10));
+
+        // Integer return — receives row-affected count converted via Numbers::toIntExact.
+        final Integer intResult = wrapDao.bumpAgeReturnInteger(11, id);
+        assertNotNull(intResult);
+        assertEquals(Integer.valueOf(1), intResult);
+        assertEquals(11, dao.gett(id).getAge());
+
+        // Long return — receives the raw long count.
+        final Long longResult = wrapDao.bumpAgeReturnLong(12, id);
+        assertNotNull(longResult);
+        assertEquals(Long.valueOf(1L), longResult);
+        assertEquals(12, dao.gett(id).getAge());
+
+        // Boolean return — receives true when at least one row was affected.
+        final Boolean boolResult = wrapDao.bumpAgeReturnBoolean(13, id);
+        assertNotNull(boolResult);
+        assertTrue(boolResult);
+        assertEquals(13, dao.gett(id).getAge());
+
+        // And the false branch: an UPDATE that affects zero rows must return Boolean.FALSE, not throw.
+        final Boolean noMatch = wrapDao.bumpAgeReturnBoolean(99, 999999L);
+        assertNotNull(noMatch);
+        assertFalse(noMatch);
     }
 
     public static class NoIdBad {

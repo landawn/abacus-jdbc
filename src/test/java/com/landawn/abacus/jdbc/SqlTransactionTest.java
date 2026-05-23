@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -790,5 +791,46 @@ public class SqlTransactionTest extends TestBase {
         // Stacks must remain symmetric (same size) so subsequent decrements stay consistent.
         assertEquals(isolationStack.size(), forUpdateStack.size(),
                 "_isolationLevelStack and _isForUpdateOnlyStack must remain the same size after restore failure");
+    }
+
+    // ---- Failure-during-beginTransaction must restore the connection's original state ----
+    // Regression: SqlTransaction's constructor mutates the connection (autoCommit=false, then setTransactionIsolation)
+    // BEFORE the SqlTransaction is published. If either the constructor's isolation change or the subsequent
+    // incrementAndGetRef threw, the partially-mutated connection used to be released back to the pool dirty.
+    // The fix: (1) make the constructor's mutations atomic (restore-on-failure); (2) on a post-construction
+    // failure in JdbcUtil.beginTransaction, call SqlTransaction.resetAndCloseConnection to restore before release.
+
+    @Test
+    public void testBeginTransaction_ConstructorIsolationFailure_RestoresConnectionState() throws SQLException {
+        // Connection accepts setAutoCommit(false), then throws on the requested isolation change.
+        final int serializable = IsolationLevel.SERIALIZABLE.intValue();
+        doThrow(new SQLException("isolation rejected")).when(connection).setTransactionIsolation(serializable);
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE));
+
+        // Constructor's atomic restore must have called setAutoCommit back to the captured original value (true).
+        verify(connection).setAutoCommit(false);
+        verify(connection).setAutoCommit(true);
+    }
+
+    @Test
+    public void testBeginTransaction_PostConstructionFailure_RestoresConnectionState() throws SQLException {
+        // Constructor's setTransactionIsolation succeeds; the second call (from incrementAndGetRef) throws.
+        final int serializable = IsolationLevel.SERIALIZABLE.intValue();
+        doThrow(new SQLException("transient")).doNothing().when(connection).setTransactionIsolation(serializable);
+
+        // First call (constructor) is rigged to throw to force the failure path AFTER the constructor; rearrange so
+        // that the constructor's isolation set succeeds and the second one fails. Mockito doAnswer chains by order:
+        Mockito.reset(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        doNothing().doThrow(new SQLException("transient")).when(connection).setTransactionIsolation(serializable);
+
+        assertThrows(UncheckedSQLException.class, () -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE));
+
+        // resetAndCloseConnection (invoked from JdbcUtil.beginTransaction's failure path) must have restored
+        // both autoCommit and the original isolation level before the connection went back to the pool.
+        verify(connection).setAutoCommit(true);
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
     }
 }

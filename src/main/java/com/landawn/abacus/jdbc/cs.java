@@ -247,7 +247,7 @@ public final class cs { // NOSONAR
      */
     public static final String resultExtractor3 = "resultExtractor3";
     /**
-     * Parameter name for ResultSet objects (lowercase variant of ResultSet constant).
+     * Parameter name for ResultSet objects (camelCase form, used when the parameter is named {@code resultSet}).
      */
     public static final String resultSet = "resultSet"; // NOSONAR
     /**

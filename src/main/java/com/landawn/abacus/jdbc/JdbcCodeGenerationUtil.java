@@ -936,8 +936,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns (MySQL): "SELECT user_id, first_name, last_name, `created-date` FROM user_profile"
-     *     // Returns (PostgreSQL): "SELECT user_id, first_name, last_name, "created-date" FROM user_profile"
+     *     // Returns (MySQL):      SELECT user_id, first_name, last_name, `created-date` FROM user_profile
+     *     // Returns (PostgreSQL): SELECT user_id, first_name, last_name, "created-date" FROM user_profile
      * }
      * }</pre>
      *
@@ -2026,8 +2026,11 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * List of customized database type annotations.
-         * Each tuple contains: (field name, database type).
-         * Used to generate @Type annotations for special database types.
+         * Each tuple contains: (field name, {@code @Type} annotation argument expression).
+         * The second element is emitted verbatim as the argument to {@code @Type(...)},
+         * e.g., {@code Tuple.of("tags", "List<String>")} produces {@code @Type(List<String>)}.
+         * Used to generate {@code @Type} annotations for fields whose database types
+         * require explicit type mapping.
          */
         private List<Tuple2<String, String>> customizedFieldDbTypes;
 

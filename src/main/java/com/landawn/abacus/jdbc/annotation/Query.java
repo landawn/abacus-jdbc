@@ -76,7 +76,7 @@ public @interface Query {
      * @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
      * List<Order> findOrders(@Bind("user") User user, @Bind("status") String status);
      *
-     * // IN clause with collection (note: use @BindList, not @Bind, to expand collections)
+     * // IN clause with collection (uses {ids} template variable expanded via @BindList)
      * @Query("SELECT * FROM users WHERE id IN ({ids})")
      * List<User> findByIds(@BindList("ids") List<Long> ids);
      * }</pre>
@@ -595,8 +595,9 @@ public @interface Query {
      *   <li>When you need different timestamps for different parts of a complex operation</li>
      * </ul>
      *
-     * @return {@code true} to automatically inject current timestamp/date as {@code :sysTime/sysDate} parameter;
-     *         {@code false} (default) for no automatic timestamp injection
+     * @return {@code true} to automatically inject current timestamp as {@code :sysTime} or {@code :now},
+     *         and current date as {@code :sysDate}, without requiring them as method parameters;
+     *         {@code false} (default) for no automatic injection
      */
     @Beta
     boolean autoSetSysTimeParam() default false;

@@ -900,11 +900,9 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         Mockito.doReturn("test_entity").when(dao).targetTableName();
 
         try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
-            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-                    .thenReturn(new ArrayList<>());
+            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(new ArrayList<>());
 
-            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> dao.loadJoinEntities(entity, Integer.class, List.of("id")));
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(entity, Integer.class, List.of("id")));
         }
     }
 
@@ -939,6 +937,27 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
             dao.loadJoinEntities(entities, String.class, selectProps);
 
             verify(dao).loadJoinEntities(entities, "orders", selectProps);
+        }
+    }
+
+    // ---- deleteJoinEntities(Collection<T>, Class<?>) — empty input must short-circuit BEFORE prop-name resolution ----
+
+    // Regression: the unchecked twin used to resolve join-prop names (and throw IllegalArgumentException when none of
+    // the requested type existed) BEFORE checking for an empty collection, diverging from the checked JoinEntityHelper
+    // twin which returns 0 for empty input regardless of join configuration. An empty collection must be a pure no-op.
+    @Test
+    public void testDeleteJoinEntities_EntitiesByClass_EmptyShortCircuitsBeforePropLookup() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            // Even when no join property of the requested type exists, an empty collection returns 0 without throwing.
+            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(new ArrayList<>());
+
+            int result = dao.deleteJoinEntities(new ArrayList<TestEntity>(), String.class);
+
+            assertEquals(0, result);
+            // The short-circuit must happen before any prop-name resolution.
+            daoUtil.verify(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()), Mockito.never());
         }
     }
 }

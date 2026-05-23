@@ -162,7 +162,7 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  * <p>This is a non-instantiable utility class. Its primary responsibility is the
  * {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Jdbc.DaoCache, Executor) createDao} factory
  * method, which builds an {@link InvocationHandler} for a JDK dynamic proxy that implements a user-defined DAO
- * interface. The handler intercepts each method call and dispatches it to a pre-built executor derived from the
+ * interface. The handler intercepts each method call and dispatches it to a pre-built invoker derived from the
  * method's annotation metadata. Supported annotations include {@code @Query} (covering SELECT/INSERT/UPDATE/DELETE
  * and stored-procedure calls) together with helpers such as {@code @Bind}, {@code @BindList}, {@code @SqlScript},
  * {@code @SqlFragment}, {@code @SqlFragmentList}, and {@code @SqlSource}. The SQL operation type is determined from
@@ -1758,12 +1758,16 @@ final class DaoImpl {
      * @param ds the {@link javax.sql.DataSource} providing database connections
      * @param sqlMapper an optional {@link SqlMapper} containing pre-defined SQL statements keyed by ID; may be {@code null}
      * @param inputDaoCache an optional {@link Jdbc.DaoCache} for caching query results of methods annotated with
-     *        {@code @CacheResult}; may be {@code null}
+     *        {@code @CacheResult} or {@code @RefreshCache}; if {@code null} a cache is created from the
+     *        {@code @Cache} class-level annotation (if present) or a default-capacity cache is used
      * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
      * @return a proxy instance implementing the specified DAO interface
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
      *         is {@code null}, if duplicate SQL keys are defined, or if the DAO interface has invalid annotation
      *         configurations or generic type arguments
+     * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
+     *         incompatible return type for the declared {@link OP}, or a feature not yet enabled (e.g., cache on a
+     *         non-{@code NoUpdateDao} interface, or {@code RowMapper}/{@code ResultExtractor} as a method parameter)
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends Dao> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final SqlMapper sqlMapper,
@@ -5192,8 +5196,14 @@ final class DaoImpl {
 
                     final Class<?> lastParamType = paramLen == 0 ? null : paramTypes[paramLen - 1];
 
+                    // Includes primitive AND wrapper update return types: the converter at the bottom of the isUpdate
+                    // branch (LongFunction<?> updateResultConverter) already handles Boolean/Integer via ClassUtil.wrap,
+                    // and isLargeUpdate explicitly recognizes Long.class for OP.DEFAULT — keeping the predicate
+                    // primitive-only meant those wrapper branches were unreachable and @Update methods declared with
+                    // Integer/Long/Boolean returns failed at the OP.DEFAULT dispatch with "Unsupported sql annotation".
                     final boolean isUpdateReturnType = returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class)
-                            || returnType.equals(void.class);
+                            || returnType.equals(void.class) || returnType.equals(Integer.class) || returnType.equals(Long.class)
+                            || returnType.equals(Boolean.class);
 
                     final QueryInfo queryInfo = sqlAnnoMap.get(sqlAnno.annotationType()).apply(sqlAnno, newSqlMapper);
                     final String query = N.checkArgNotEmpty(queryInfo.sql, "sql can't be null or empty");

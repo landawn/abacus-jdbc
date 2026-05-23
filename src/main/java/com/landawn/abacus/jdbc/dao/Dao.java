@@ -1347,9 +1347,8 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the mapped value
+     * @return Optional containing the mapped value, empty if no row matches or the value is {@code null}
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -1427,10 +1426,9 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param singleSelectPropName the property name to select
      * @param cond the search condition
      * @param rowMapper the function to map the result
-     * @return Optional containing the unique mapped value
+     * @return Optional containing the unique mapped value, empty if no row matches or the value is {@code null}
      * @throws DuplicateResultException if more than one row matches
      * @throws SQLException if a database access error occurs
-     * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
@@ -2411,6 +2409,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      * @param <R> the result type
      * @param sqlAction function that performs database operations
      * @return ContinuableFuture with the operation result
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -2464,6 +2463,7 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
      *
      * @param sqlAction consumer that performs database operations
      * @return ContinuableFuture that completes when operation finishes
+     * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      */
     @SuppressWarnings("deprecation")
     @Beta

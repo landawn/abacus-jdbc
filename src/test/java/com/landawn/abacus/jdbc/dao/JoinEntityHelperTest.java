@@ -1870,4 +1870,20 @@ public class JoinEntityHelperTest extends TestBase {
             verify(tran).rollbackIfNotCommitted();
         }
     }
+
+    // deleteJoinEntities(Collection<T>, Class<?>) — empty input is a no-op that short-circuits before prop-name
+    // resolution. This documents the contract the unchecked twin must match (see UncheckedJoinEntityHelper).
+    @Test
+    public void testDeleteJoinEntities_EntitiesByClass_EmptyShortCircuitsBeforePropLookup() throws SQLException {
+        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class)) {
+            daoUtil.when(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(new ArrayList<>());
+
+            int result = dao.deleteJoinEntities(new ArrayList<TestEntity>(), String.class);
+
+            assertEquals(0, result);
+            daoUtil.verify(() -> DaoUtil.getJoinEntityPropNamesByType(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()), Mockito.never());
+        }
+    }
 }

@@ -1016,7 +1016,7 @@ public interface CrudDao<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID,
     /**
      * Performs batch update of multiple entities using the default batch size
      * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
-     * All non-null properties of each entity will be updated.
+     * All updatable properties of each entity will be updated.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

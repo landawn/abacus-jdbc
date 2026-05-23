@@ -56,9 +56,8 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  * 
  * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
  * public interface OrderDao extends CrudDao<Order, Long> {
- *     // Allows joins even when foreign key might be null
- *     @Query("SELECT * FROM orders o LEFT JOIN customers c ON o.customer_id = c.id")
- *     List<Order> findAllOrdersWithCustomers();
+ *     // Framework-managed @JoinedBy joins are allowed even when the join key is null
+ *     List<Order> listAllWithItems(Collection<String> selectPropNames);
  * }
  * }</pre>
  *
@@ -149,25 +148,27 @@ public @interface DaoConfig {
     boolean callGenerateIdForInsertWithSqlIfIdNotSet() default false;
 
     /**
-     * Controls whether joins can be performed using null or default values in join conditions.
-     * When false (default), joins with null values are skipped for safety.
-     * When true, allows joins even when the joining column contains null.
-     * 
-     * <p>This is useful for outer joins where {@code null} values are expected and valid.</p>
-     * 
+     * Controls whether framework-managed join operations (driven by {@code @JoinedBy} entity annotations)
+     * can be performed when the join key value is {@code null} or the type's default value.
+     * When {@code false} (default), an {@code IllegalArgumentException} is thrown at runtime if a
+     * null or default join key is encountered. When {@code true}, such joins are silently skipped
+     * rather than raising an error.
+     *
+     * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
+     * (e.g., {@code listAllJoinEntities}, {@code findFirstWithJoinEntities}).
+     * It does not affect user-written SQL in {@link Query @Query} methods.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(allowJoiningByNullOrDefaultValue = true)
      * public interface CustomerDao extends CrudDao<Customer, Long> {
-     *     // Allows join even if preferred_contact_id is null
-     *     @Query("SELECT c.*, p.* FROM customers c " +
-     *             "LEFT JOIN contacts p ON c.preferred_contact_id = p.id")
-     *     @MergedById
-     *     List<Customer> findAllWithPreferredContacts();
+     *     // @JoinedBy-driven joins are allowed even if the join key is null or zero
+     *     List<Customer> listAllWithPreferredContacts(Collection<String> selectPropNames);
      * }
      * }</pre>
      *
-     * @return {@code true} to allow joins with null/default values
+     * @return {@code true} to allow framework-managed joins when join key values are null or default;
+     *         {@code false} (default) to throw an exception in that case
      */
     boolean allowJoiningByNullOrDefaultValue() default false;
 

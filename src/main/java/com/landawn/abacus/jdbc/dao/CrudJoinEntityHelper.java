@@ -79,7 +79,6 @@ import com.landawn.abacus.util.u.Optional;
  *             method chaining and access to CRUD operations)
  *
  * @see com.landawn.abacus.annotation.JoinedBy
- * @see com.landawn.abacus.query.Filters
  */
 public interface CrudJoinEntityHelper<T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> extends JoinEntityHelper<T, SB, TD> {
 

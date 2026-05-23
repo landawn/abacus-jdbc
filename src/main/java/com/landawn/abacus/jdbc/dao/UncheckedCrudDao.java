@@ -106,9 +106,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * @return the generated ID
      * @throws UncheckedSQLException if a database access error occurs
      * @throws UnsupportedOperationException if the operation is not supported (default behavior)
-     * @deprecated This operation is deprecated as ID generation should typically be handled by the database
-     *             (e.g., via auto-increment columns or sequences). Override this method only if a client-side
-     *             ID generation strategy is required.
+     * @deprecated ID generation should typically be handled by the database (e.g., via auto-increment
+     *             columns or sequences). Override this method only if a client-side ID generation
+     *             strategy is required.
      */
     @Deprecated
     @NonDBOperation
@@ -129,7 +129,7 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * System.out.println("Created user with ID: " + id);
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be null)
+     * @param entityToInsert the entity to insert (must not be {@code null})
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entityToInsert} is {@code null}
@@ -151,9 +151,9 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
      * Long id = userDao.insert(user, Arrays.asList("firstName", "email"));
      * }</pre>
      *
-     * @param entityToInsert the entity to insert (must not be null)
+     * @param entityToInsert the entity to insert (must not be {@code null})
      * @param propNamesToInsert the property names to include in the INSERT statement.
-     *                          If {@code null} or empty, all properties will be inserted
+     *                          If {@code null} or empty, all insertable properties will be included
      * @return the generated ID of the inserted entity
      * @throws UncheckedSQLException if a database access error occurs
      */
@@ -1024,8 +1024,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Batch updates multiple entities using the default batch size.
-     * All non-null properties in each entity will be updated.
-     * 
+     * All updatable properties of each entity will be included in the UPDATE statement.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> users = userDao.list(Filters.eq("needsUpdate", true));
@@ -1047,8 +1047,8 @@ public interface UncheckedCrudDao<T, ID, SB extends SqlBuilder, TD extends Unche
 
     /**
      * Batch updates multiple entities using the specified batch size.
-     * All non-null properties in each entity will be updated.
-     * 
+     * All updatable properties of each entity will be included in the UPDATE statement.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> largeUserList = getThousandsOfUsers();

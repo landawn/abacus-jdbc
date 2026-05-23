@@ -26,15 +26,15 @@ import com.landawn.abacus.query.SqlBuilder;
  * <ul>
  *   <li>Entities have relationships that need to be loaded</li>
  *   <li>The entity uses long/Long as the ID type</li>
- *   <li>Data should never be modified (read-only access)</li>
+ *   <li>Join entity relationships must not be deleted through this interface</li>
  *   <li>Performance is critical (avoiding ID boxing/unboxing)</li>
  *   <li>Unchecked exception handling is preferred</li>
  * </ul>
  *
  * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityHelperL} and
  * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
- * instead of the checked {@link java.sql.SQLException}. All write/delete operations throw
- * {@link UnsupportedOperationException}.</p>
+ * instead of the checked {@link java.sql.SQLException}. All {@code deleteJoinEntities} and
+ * {@code deleteAllJoinEntities} operations throw {@link UnsupportedOperationException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -56,11 +56,9 @@ import com.landawn.abacus.query.SqlBuilder;
  * // Get with selected properties and join entities
  * User userSelected = dao.gett(123L, Arrays.asList("id", "name", "email"), Order.class);
  *
- * // All write operations are disabled:
- * // dao.insert(user);   // throws UnsupportedOperationException
- * // dao.update(user);   // throws UnsupportedOperationException
- * // dao.deleteById(123L);   // throws UnsupportedOperationException
- * // dao.deleteJoinEntities(...);   // throws UnsupportedOperationException
+ * // All delete-join operations are disabled:
+ * // dao.deleteJoinEntities(user, Order.class);   // throws UnsupportedOperationException
+ * // dao.deleteAllJoinEntities(user);   // throws UnsupportedOperationException
  * }</pre>
  *
  * @param <T> the entity type that this helper manages

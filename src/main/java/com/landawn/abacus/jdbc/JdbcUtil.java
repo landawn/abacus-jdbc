@@ -3217,6 +3217,7 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param sql The SQL query to prepare.
      * @return A {@link PreparedQuery} instance optimized for large result sets.
+     * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      * @see #prepareQueryForLargeResult(Connection, String)
      */
@@ -3249,6 +3250,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use. It will not be closed by this method.
      * @param sql The SQL query to prepare.
      * @return A {@link PreparedQuery} instance optimized for large result sets.
+     * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException if a database access error occurs.
      * @see #prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
@@ -7713,7 +7715,7 @@ public final class JdbcUtil {
      *
      * @param value the value to check
      * @return {@code true} if the value is a default ID property value, {@code false} otherwise
-     * @deprecated for internal only.
+     * @deprecated This method is intended for internal use only and is not part of the public API.
      */
     @Deprecated
     @Internal
@@ -9660,7 +9662,14 @@ public final class JdbcUtil {
                 throw new UncheckedSQLException(e);
             } finally {
                 if (!noException) {
-                    JdbcUtil.releaseConnection(conn, ds);
+                    if (tran != null) {
+                        // Constructor succeeded (so conn was mutated to autoCommit=false / requested isolation) but a
+                        // later step (incrementAndGetRef) failed — restore the connection's original state via
+                        // SqlTransaction's reset path before it goes back to the pool.
+                        tran.resetAndCloseConnection();
+                    } else {
+                        JdbcUtil.releaseConnection(conn, ds);
+                    }
                 }
             }
 

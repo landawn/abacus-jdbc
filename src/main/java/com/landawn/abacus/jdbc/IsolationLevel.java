@@ -79,13 +79,12 @@ public enum IsolationLevel {
     DEFAULT(-1),
 
     /**
-     * Indicates that transactions are not supported.
-     * This level signifies that the database or driver does not provide transactional capabilities.
+     * Indicates that transactions are not supported by the underlying database or driver.
+     * Corresponds to {@link Connection#TRANSACTION_NONE}.
      *
-     * @deprecated This isolation level is rarely encountered in modern relational databases
-     *             and may not be supported by all JDBC drivers. It is generally recommended
-     *             to use at least {@link #READ_UNCOMMITTED} if any form of concurrency control
-     *             is desired, or to ensure the underlying data source supports transactions.
+     * @deprecated This isolation level is rarely encountered in modern relational databases.
+     *             Ensure the underlying data source actually supports transactions before
+     *             selecting a different level.
      */
     @Deprecated
     NONE(Connection.TRANSACTION_NONE),

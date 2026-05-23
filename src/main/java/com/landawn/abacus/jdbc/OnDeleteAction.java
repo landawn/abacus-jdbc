@@ -30,14 +30,19 @@ import com.landawn.abacus.annotation.Beta;
 @Deprecated
 public enum OnDeleteAction {
     /**
-     * No action is taken when the referenced row is deleted.
-     * The delete operation will fail if there are still child rows referencing the parent.
+     * No action is taken when the referenced row is deleted; the database engine defers
+     * the referential-integrity check until the end of the statement (or transaction in
+     * some databases). The delete operation will fail if child rows still reference the
+     * parent at that point.
      *
-     * <p>This is equivalent to the SQL RESTRICT action and is the most conservative approach,
-     * preventing accidental data loss by requiring explicit deletion of child records first.</p>
+     * <p>This is similar to—but distinct from—SQL {@code RESTRICT}, which checks the
+     * constraint immediately rather than at statement end. It is the most conservative
+     * approach, preventing accidental data loss by requiring explicit deletion of child
+     * records first.</p>
      *
-     * <p><b>Database Behavior:</b> DELETE operation on parent table will fail with a foreign key
-     * constraint violation if any child records exist.</p>
+     * <p><b>Database Behavior:</b> DELETE operation on the parent table will fail with a
+     * foreign key constraint violation if any child records still exist when the check
+     * is performed.</p>
      */
     NO_ACTION(0),
 

@@ -114,10 +114,28 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         _originalAutoCommit = conn.getAutoCommit();
         _originalIsolationLevel = conn.getTransactionIsolation();
 
-        conn.setAutoCommit(false);
+        // Atomically apply both mutations: if the isolation change throws AFTER setAutoCommit(false) succeeded,
+        // best-effort restore the original autoCommit before propagating the exception so the partially-mutated
+        // connection isn't observed (e.g., released back to the pool by an outer try/finally).
+        try {
+            conn.setAutoCommit(false);
 
-        if (isolationLevel != IsolationLevel.DEFAULT) {
-            conn.setTransactionIsolation(isolationLevel.intValue());
+            if (isolationLevel != IsolationLevel.DEFAULT) {
+                conn.setTransactionIsolation(isolationLevel.intValue());
+            }
+        } catch (final SQLException e) {
+            try {
+                conn.setAutoCommit(_originalAutoCommit);
+            } catch (final SQLException ignore) {
+                // best-effort restore — preserve the original (more meaningful) exception
+            }
+            try {
+                conn.setTransactionIsolation(_originalIsolationLevel);
+            } catch (final SQLException ignore) {
+                // best-effort restore
+            }
+
+            throw e;
         }
 
         logger.info("Started transaction(id={}, isolationLevel={}, closeConnection={})", _timedId, _isolationLevel, _closeConnection);
@@ -298,7 +316,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalStateException if the transaction is not in a valid state for committing
+     * @throws IllegalStateException if the transaction is not {@link Status#ACTIVE} when the
+     *         outermost transaction scope attempts to commit
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -317,7 +336,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalStateException if the transaction is not in a valid state for committing
+     * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE} when the
+     *         outermost scope attempts the actual commit
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         _isMarkedByCommitOrRollbackPreviously = true;
@@ -400,6 +420,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if the transaction is not in a valid state for rollback
+     *         (i.e. its status is not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK},
+     *         or {@link Status#FAILED_COMMIT})
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
@@ -418,7 +440,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @param actionAfterRollback the action to be executed after the current transaction is rolled back, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
-     * @throws IllegalStateException if the transaction is not in a valid state for rollback
+     * @throws IllegalStateException if the transaction status is not {@link Status#ACTIVE},
+     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         _isMarkedByCommitOrRollbackPreviously = true;
@@ -548,8 +571,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * creation, the connection will be released back to the data source pool.</p>
      *
      * <p>This method is called automatically after commit or rollback operations.</p>
+     *
+     * <p>Package-private so {@link JdbcUtil#beginTransaction} can invoke it on the failure path after a
+     * partially-constructed transaction (constructor succeeded, then {@link #incrementAndGetRef} threw), so the
+     * polluted connection is restored before being released back to the pool.</p>
      */
-    private void resetAndCloseConnection() {
+    void resetAndCloseConnection() {
         try {
             _conn.setAutoCommit(_originalAutoCommit);
         } catch (final SQLException e) {

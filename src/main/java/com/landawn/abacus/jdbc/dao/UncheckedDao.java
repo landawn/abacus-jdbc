@@ -1536,21 +1536,24 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
             throws UncheckedSQLException;
 
     /**
-     * Processes each record with selected properties using a consumer that receives DisposableObjArray.
-     * This is a beta API that provides an alternative way to consume row data.
-     * 
+     * Processes each record with selected properties using a consumer that receives a {@link DisposableObjArray}.
+     * The array is reused for each row to minimize object allocation.
+     *
+     * <p><b>WARNING:</b> Do not store or cache the array parameter passed to the consumer, as it is
+     * reused for every row. Process the values immediately within the consumer.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.foreach(
      *     Arrays.asList("id", "email", "status"),
      *     Filters.eq("needsVerification", true),
-     *     arr -> verifyUser((Long)arr.get(0), (String)arr.get(1))
+     *     arr -> verifyUser((Long) arr.get(0), (String) arr.get(1))
      * );
      * }</pre>
      *
      * @param selectPropNames the properties (columns) to be selected
      * @param cond the condition to match
-     * @param rowConsumer the consumer that receives row data as DisposableObjArray
+     * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
@@ -1562,9 +1565,13 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
     }
 
     /**
-     * Processes each record matching the condition using a consumer that receives DisposableObjArray.
-     * This is a beta API that selects all properties.
-     * 
+     * Processes each record matching the condition using a consumer that receives a {@link DisposableObjArray}.
+     * Convenience overload that selects all properties. The array is reused for each row to minimize
+     * object allocation.
+     *
+     * <p><b>WARNING:</b> Do not store or cache the array parameter passed to the consumer, as it is
+     * reused for every row. Process the values immediately within the consumer.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.foreach(
@@ -1574,7 +1581,7 @@ public interface UncheckedDao<T, SB extends SqlBuilder, TD extends UncheckedDao<
      * }</pre>
      *
      * @param cond the condition to match
-     * @param rowConsumer the consumer that receives row data as DisposableObjArray
+     * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @SuppressWarnings("deprecation")
