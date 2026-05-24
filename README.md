@@ -1,6 +1,6 @@
 # abacus-jdbc
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://maven-badges.herokuapp.com/maven-central/com.landawn.abacus/abacus-jdbc/)
+[![Maven Central](https://img.shields.io/maven-central/v/com.landawn.abacus/abacus-jdbc.svg)](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.7.2)
 [![Javadocs](https://img.shields.io/badge/javadoc-4.7.2-brightgreen.svg)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/4.7.2/index.html)
 
 Experience the simplicity of working with SQL/DB as naturally as working with Collections.
@@ -144,7 +144,7 @@ Refer to: [Abacus-JDBC vs Spring Data (JPA & JDBC), MyBatis, and Hibernate – A
 
 ## Download/Installation & [Changes](https://github.com/landawn/abacus-jdbc/blob/master/CHANGES.md):
 
-* [Maven](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc)
+* [Maven](https://central.sonatype.com/artifact/com.landawn.abacus/abacus-jdbc/4.7.2)
 
 ```xml
 <dependency>
