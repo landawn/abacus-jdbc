@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.landawn</groupId>
+	<groupId>com.landawn.abacus</groupId>
 	<artifactId>abacus-jdbc</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
@@ -75,15 +75,15 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>com.landawn</groupId>
+			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>7.7.1</version>
+			<version>7.7.2</version>
 		</dependency>
 
 		<dependency>
-			<groupId>com.landawn</groupId>
+			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>4.7.1</version>
+			<version>4.7.2</version>
 		</dependency>
 	</dependencies>
 
