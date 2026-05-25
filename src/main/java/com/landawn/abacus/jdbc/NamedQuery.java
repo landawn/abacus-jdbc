@@ -3863,24 +3863,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Sets multiple parameters from a Map containing parameter names and their values.
-     * 
-     * <p>This method provides a convenient way to set multiple parameters at once. Only parameters 
-     * that exist in both the map and the query will be set. Parameters in the query that are not 
-     * present in the map will remain unset.
-     * 
+     *
+     * <p>For each named parameter declared in the SQL, this method looks the name up in the map;
+     * if the map contains a matching key, {@link #setObject(String, Object)} is called for that
+     * parameter. Map entries whose keys do not correspond to named parameters in the SQL are
+     * ignored. Named parameters that are absent from the map are left unbound and must be bound
+     * before the query is executed.
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Map<String, Object> params = new HashMap<>();
      * params.put("name", "John Doe");
      * params.put("age", 30);
      * params.put("email", "john@example.com");
-     * 
+     *
      * query.setParameters(params);
      * }</pre>
      *
-     * @param parameters a map containing parameter names (without ':' prefix) as keys and their values
+     * @param parameters a map containing parameter names (without the ':' prefix) as keys and their values
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameters map is null
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {

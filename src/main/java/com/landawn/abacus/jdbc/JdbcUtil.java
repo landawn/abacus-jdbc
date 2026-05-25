@@ -193,58 +193,71 @@ public final class JdbcUtil {
     static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
 
     /**
-     * Default batch size for batch operations. Value: 200
+     * Default batch size for batch operations (insert/update/delete). Value: {@code 200}.
      */
     public static final int DEFAULT_BATCH_SIZE = 200;
 
     /**
-     * Default fetch size for retrieving large result sets. Value: 1000
+     * Default fetch size used by {@code prepareQueryForLargeResult} when retrieving large result sets.
+     * Value: {@code 1000}.
      */
     public static final int DEFAULT_FETCH_SIZE_FOR_BIG_RESULT = 1000;
 
     /**
-     * Default fetch size for stream-based result processing. Value: 100
+     * Default fetch size for stream-based result processing. Value: {@code 100}.
      */
     public static final int DEFAULT_FETCH_SIZE_FOR_STREAM = 100;
 
     /**
-     * Default capacity for internal caches. Value: 1000
+     * Default capacity for internal caches. Value: {@code 1000}.
      */
     public static final int DEFAULT_CACHE_CAPACITY = 1000;
 
     /**
-     * Default cache evict delay in milliseconds. Value: 3000 (3 seconds)
+     * Default cache evict delay in milliseconds. Value: {@code 3000} (3 seconds).
      */
     public static final int DEFAULT_CACHE_EVICT_DELAY = 3 * 1000;
 
     /**
-     * Default cache live time in milliseconds. Value: 1800000 (30 minutes)
+     * Default cache live time in milliseconds. Value: {@code 1_800_000} (30 minutes).
      */
     public static final int DEFAULT_CACHE_LIVE_TIME = 30 * 60 * 1000;
 
     /**
-     * Default maximum length for SQL logs. Value: 1024
+     * Default maximum length (in characters) for SQL statements written to the SQL log.
+     * Longer SQL is abbreviated before being logged. Value: {@code 1024}.
      */
     public static final int DEFAULT_MAX_SQL_LOG_LENGTH = 1024;
 
     /**
-     * Default minimum execution time in milliseconds for SQL performance logging. Value: 1000 (1 second)
+     * Default minimum execution time (in milliseconds) for SQL performance logging. SQL statements
+     * that complete in less than this threshold are not logged at the {@code SQL-PERF} level.
+     * Value: {@code 1000} (1 second).
      */
     public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_SQL_PERF_LOG = 1000L;
 
     /**
-     * Default minimum execution time in milliseconds for DAO method performance logging. Value: 3000 (3 seconds)
+     * Default minimum execution time (in milliseconds) for DAO method performance logging.
+     * Value: {@code 3000} (3 seconds).
      */
     public static final long DEFAULT_MIN_EXECUTION_TIME_FOR_DAO_METHOD_PERF_LOG = 3000L;
 
     /**
-     * Default maximum idle time for cache entries in milliseconds. Value: 180000 (3 minutes)
+     * Default maximum idle time for cache entries in milliseconds. Value: {@code 180_000} (3 minutes).
      */
     public static final int DEFAULT_CACHE_MAX_IDLE_TIME = 3 * 60 * 1000;
 
     /**
-     * Default SQL extractor function used to extract SQL statements from Statement objects.
-     * This function handles various JDBC driver implementations including HikariCP and C3P0 wrapped statements.
+     * Default SQL extractor function used to extract SQL statements from {@link Statement} objects for
+     * logging and performance monitoring.
+     *
+     * <p>This function unwraps statements produced by common connection pools (HikariCP and C3P0) and,
+     * for Oracle prepared statements, returns the original SQL via
+     * {@code oracle.jdbc.internal.OraclePreparedStatement#getOriginalSql()}. For all other statements it
+     * falls back to {@link Statement#toString()}, which most JDBC drivers implement to return the SQL.</p>
+     *
+     * <p>If a {@link SQLException} is thrown while unwrapping or while calling {@code getOriginalSql()},
+     * the function silently falls back to {@code toString()} rather than propagating the exception.</p>
      */
     public static final Throwables.Function<Statement, String, SQLException> DEFAULT_SQL_EXTRACTOR = stmt -> {
         Statement stmtToUse = stmt;
@@ -1626,8 +1639,10 @@ public final class JdbcUtil {
     }
 
     /**
-     * Skips a specified number of rows in a {@link ResultSet}.
-     * This method attempts to move the cursor forward by the given number of rows.
+     * Skips up to {@code rowsToSkip} rows in the given {@link ResultSet} by advancing the cursor.
+     *
+     * <p>This overload simply delegates to {@link #skip(ResultSet, long)}. Values
+     * {@code rowsToSkip <= 0} are no-ops and return {@code 0}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1643,11 +1658,11 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to skip rows in.
-     * @param rowsToSkip The number of rows to skip.
-     * @return The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the
-     *         {@code ResultSet} is reached.
-     * @throws SQLException if a database access error occurs.
+     * @param rs the {@link ResultSet} to advance; must not be {@code null}
+     * @param rowsToSkip the number of rows to skip; values {@code <= 0} are no-ops
+     * @return the number of rows actually skipped (may be less than {@code rowsToSkip} if the end of
+     *         the {@code ResultSet} is reached)
+     * @throws SQLException if a database access error occurs
      * @see #skip(ResultSet, long)
      */
     public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException {
@@ -1751,8 +1766,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the number of columns in a {@link ResultSet}.
-     * This is a convenience method that retrieves the column count from the {@link ResultSetMetaData}.
+     * Returns the number of columns in the given {@link ResultSet}.
+     *
+     * <p>Equivalent to {@code rs.getMetaData().getColumnCount()}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1761,9 +1777,10 @@ public final class JdbcUtil {
      * System.out.println("The ResultSet has " + count + " columns.");   // Prints 3
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to get the column count from.
-     * @return The number of columns in the result set.
-     * @throws SQLException if a database access error occurs.
+     * @param rs the {@link ResultSet} to query; must not be {@code null}
+     * @return the number of columns in the result set
+     * @throws SQLException if a database access error occurs (including {@link NullPointerException}
+     *                      semantics if {@code rs} is {@code null})
      * @see ResultSet#getMetaData()
      * @see ResultSetMetaData#getColumnCount()
      */
@@ -1946,9 +1963,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns an ordered list of column labels from a {@link ResultSet}.
-     * Column labels are the display names for columns, which can be aliases assigned in the SQL query.
-     * If a column has no explicit label, its name is returned instead.
+     * Returns an ordered list of column labels from the given {@link ResultSet}.
+     *
+     * <p>Each label is obtained via {@link #getColumnLabel(ResultSetMetaData, int)}, which prefers
+     * the column label (alias) and falls back to the column name when no label is set. The returned
+     * list is in column-order (positions 1..n).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1960,10 +1979,10 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param rs The {@link ResultSet} from which to retrieve column labels.
-     * @return A {@link List} of column labels in the order they appear in the {@code ResultSet}.
-     * @throws SQLException if a database access error occurs.
-     * @see #getColumnNames(Connection, String)
+     * @param rs the {@link ResultSet} to read; must not be {@code null}
+     * @return a {@link List} of column labels (or column names when no label is set), in column-order
+     * @throws SQLException if a database access error occurs
+     * @see #getColumnLabel(ResultSetMetaData, int)
      * @see ResultSetMetaData#getColumnLabel(int)
      */
     public static List<String> getColumnLabels(final ResultSet rs) throws SQLException {
@@ -1992,9 +2011,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the column label for a specified column index from {@link ResultSetMetaData}.
-     * This method prioritizes the column label, but falls back to the column name if the label is {@code null} or empty.
-     * This is useful for consistently getting a meaningful name for a column, especially when aliases are used.
+     * Returns the column label for a specified 1-based column index from {@link ResultSetMetaData},
+     * falling back to the column name when the label is {@code null} or empty.
+     *
+     * <p>This method prioritizes the column label (i.e., any alias assigned in the SQL), so it produces
+     * a meaningful, caller-controlled identifier when aliases are used and the underlying column name
+     * when they are not.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2006,10 +2028,10 @@ public final class JdbcUtil {
      * String sameLabel = JdbcUtil.getColumnLabel(metaData, 1);   // Returns "first_name"
      * }</pre>
      *
-     * @param rsmd The {@link ResultSetMetaData} to get the label from.
-     * @param columnIndex The 1-based index of the column.
-     * @return The column label if available; otherwise, the column name.
-     * @throws SQLException if a database access error occurs.
+     * @param rsmd the {@link ResultSetMetaData} to read from; must not be {@code null}
+     * @param columnIndex the 1-based index of the column
+     * @return the column label if non-empty, otherwise the column name
+     * @throws SQLException if a database access error occurs
      * @see ResultSetMetaData#getColumnLabel(int)
      * @see ResultSetMetaData#getColumnName(int)
      */
@@ -2020,8 +2042,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the 1-based index of a column in a {@link ResultSet} given its name.
-     * The search for the column is case-insensitive and checks both column labels (aliases) and actual column names.
+     * Returns the 1-based index of the column with the given name (or label) in a {@link ResultSet}.
+     *
+     * <p>The search iterates columns in order, comparing {@code columnName} case-insensitively against
+     * the column's {@link ResultSetMetaData#getColumnLabel(int) label} first and then its
+     * {@link ResultSetMetaData#getColumnName(int) name}. The first match wins. Returns {@code -1} when
+     * no column matches.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2030,14 +2056,13 @@ public final class JdbcUtil {
      *
      * int indexByName = JdbcUtil.getColumnIndex(rs, "user_id");             // Returns 1
      * int indexByLabel = JdbcUtil.getColumnIndex(rs, "name");               // Returns 2
-     * int caseInsensitiveIndex = JdbcUtil.getColumnIndex(rs, "USERNAME");   // Still returns 2 if "user_name" is the original name
      * int notFoundIndex = JdbcUtil.getColumnIndex(rs, "email");             // Returns -1
      * }</pre>
      *
-     * @param rs The {@link ResultSet} to search within.
-     * @param columnName The name or label of the column to find.
-     * @return The 1-based index of the column, or -1 if not found.
-     * @throws SQLException if a database access error occurs.
+     * @param rs the {@link ResultSet} to search within; must not be {@code null}
+     * @param columnName the column label or name to look up; case-insensitive
+     * @return the 1-based index of the matching column, or {@code -1} if none matches
+     * @throws SQLException if a database access error occurs
      * @see #getColumnIndex(ResultSetMetaData, String)
      */
     public static int getColumnIndex(final ResultSet rs, final String columnName) throws SQLException {
@@ -4663,28 +4688,40 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL query using the provided Connection and SQL string with optional parameters.
-     * This method does not close the provided Connection after the query is executed.
-     * 
+     * Executes a SQL SELECT statement on the supplied {@link Connection} and returns all rows as a
+     * {@link Dataset}.
+     *
+     * <p>This method does not manage the lifecycle of the connection — the caller is responsible for
+     * closing {@code conn}. A {@link PreparedStatement} is created, parameters are bound, the query is
+     * executed, the {@link ResultSet} is fully consumed into a {@link Dataset}, and both the statement
+     * and result set are closed before this method returns.</p>
+     *
+     * <p>The SQL string may use either positional ({@code ?}) or named ({@code :paramName})
+     * parameter placeholders. When named parameters are used, a single entity, {@link Map}, or
+     * {@link EntityId} may be passed in {@code parameters} to bind them by name.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try {
-     *     Dataset result = JdbcUtil.executeQuery(conn, 
-     *         "SELECT * FROM products WHERE price BETWEEN ? AND ?", 
+     *     Dataset result = JdbcUtil.executeQuery(conn,
+     *         "SELECT * FROM products WHERE price BETWEEN ? AND ?",
      *         10.0, 100.0);
      * } finally {
      *     conn.close();
      * }
      * }</pre>
      *
-     * @param conn The Connection to use for the query
-     * @param sql The SQL string to execute
-     * @param parameters Optional parameters for the SQL query
-     * @return A Dataset object containing the result of the query
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the query
+     * @param conn the {@link Connection} to use for the query; must not be {@code null} and not closed
+     *             by this method
+     * @param sql the SQL SELECT statement to execute; must not be {@code null} or empty
+     * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
+     *                   the SQL; may be empty if the SQL has no parameters
+     * @return a {@link Dataset} containing all rows of the result set
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws SQLException if a database access error occurs while executing the query
      * @see PreparedStatement#executeQuery()
+     * @see #executeQuery(javax.sql.DataSource, String, Object...)
      */
     public static Dataset executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -4799,28 +4836,38 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL update using the provided Connection and SQL string with optional parameters.
-     * This method does not close the provided Connection after the update is executed.
-     * 
+     * Executes a SQL update (INSERT, UPDATE, DELETE, or DDL) on the supplied {@link Connection} and
+     * returns the number of affected rows.
+     *
+     * <p>This method does not manage the lifecycle of the connection — the caller is responsible for
+     * closing {@code conn}. The internally created {@link PreparedStatement} is always closed before
+     * this method returns.</p>
+     *
+     * <p>The SQL string may use either positional ({@code ?}) or named ({@code :paramName})
+     * parameter placeholders.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Connection conn = dataSource.getConnection();
      * try {
-     *     int rowsDeleted = JdbcUtil.executeUpdate(conn, 
-     *         "DELETE FROM orders WHERE order_date < ? AND status = ?", 
+     *     int rowsDeleted = JdbcUtil.executeUpdate(conn,
+     *         "DELETE FROM orders WHERE order_date < ? AND status = ?",
      *         cutoffDate, "CANCELLED");
      * } finally {
      *     conn.close();
      * }
      * }</pre>
      *
-     * @param conn The Connection to use for the update
-     * @param sql The SQL string to execute
-     * @param parameters Optional parameters for the SQL update
-     * @return The number of rows affected by the update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the update
+     * @param conn the {@link Connection} to use for the update; must not be {@code null} and not closed
+     *             by this method
+     * @param sql the SQL INSERT/UPDATE/DELETE/DDL statement; must not be {@code null} or empty
+     * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
+     *                   the SQL; may be empty if the SQL has no parameters
+     * @return the number of rows affected by the update (0 for DDL or when no rows match)
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws SQLException if a database access error occurs while executing the update
      * @see PreparedStatement#executeUpdate()
+     * @see #executeUpdate(javax.sql.DataSource, String, Object...)
      */
     public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -4946,16 +4993,21 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a batch SQL update using the provided Connection with default batch size.
-     * This method does not close the provided Connection after the batch update is executed.
+     * Executes a batch SQL update on the supplied {@link Connection} using the default batch size
+     * ({@link #DEFAULT_BATCH_SIZE}).
      *
-     * @param conn The Connection to use for the batch update
-     * @param sql The SQL string to execute
-     * @param listOfParameters A list of parameter sets for the batch update
-     * @return The number of rows affected by the batch update
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * <p>This method does not close {@code conn} — the caller is responsible. See
+     * {@link #executeBatchUpdate(Connection, String, List, int)} for the auto-commit / atomicity
+     * semantics that apply when {@code listOfParameters.size() > 1}.</p>
+     *
+     * @param conn the {@link Connection} to use; must not be {@code null} and not closed by this method
+     * @param sql the SQL statement to execute; must not be {@code null} or empty
+     * @param listOfParameters a list of parameter sets for the batch update; may be empty (no-op returning {@code 0})
+     * @return the total number of rows affected by the batch update across all batches
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws SQLException if a database access error occurs while executing the batch
      * @see PreparedStatement#executeBatch()
+     * @see #executeBatchUpdate(Connection, String, List, int)
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters)
             throws IllegalArgumentException, SQLException {
@@ -5046,16 +5098,22 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a large batch SQL update using the provided DataSource with default batch size.
-     * This method returns a long value to support updates affecting more than Integer.MAX_VALUE rows.
+     * Executes a large batch SQL update using the supplied DataSource and the default batch size
+     * ({@link #DEFAULT_BATCH_SIZE}).
      *
-     * @param ds The DataSource to use for the batch update
-     * @param sql The SQL string to execute
-     * @param listOfParameters A list of parameter sets for the batch update
-     * @return The number of rows affected by the batch update as a long value
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the batch update
+     * <p>This method delegates to {@link PreparedStatement#executeLargeBatch()} and returns a
+     * {@code long} sum of affected rows, suitable for updates whose total row counts may exceed
+     * {@link Integer#MAX_VALUE}.</p>
+     *
+     * @param ds the {@link javax.sql.DataSource} to use for the batch update; must not be {@code null}
+     * @param sql the SQL statement to execute; must not be {@code null} or empty
+     * @param listOfParameters a list of parameter sets; each element supplies one set of parameter
+     *                         values for one batch entry; may be empty (no-op returning {@code 0})
+     * @return the total number of rows affected by the batch update across all batches
+     * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws SQLException if a database access error occurs while executing the batch
      * @see PreparedStatement#executeLargeBatch()
+     * @see #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters)
             throws IllegalArgumentException, SQLException {
@@ -5213,15 +5271,21 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL statement using the provided DataSource with optional parameters.
-     * This method can execute any SQL statement and returns a boolean indicating the type of result.
+     * Executes a SQL statement of any kind using a connection obtained from the supplied DataSource.
      *
-     * @param ds The DataSource to use for the SQL execution
-     * @param sql The SQL string to execute
-     * @param parameters Optional parameters for the SQL statement
-     * @return {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
-     * @throws IllegalArgumentException if the DataSource or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the statement
+     * <p>This is a thin wrapper over {@link PreparedStatement#execute()} that handles connection
+     * acquisition, transaction participation (an active transaction's connection is reused), parameter
+     * binding, and resource cleanup. Use it when you do not know in advance whether the SQL returns a
+     * {@link ResultSet} or an update count.</p>
+     *
+     * @param ds the {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null}
+     * @param sql the SQL statement to execute; must not be {@code null} or empty
+     * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
+     *                   the SQL; may be empty
+     * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update
+     *         count or there are no results
+     * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws SQLException if a database access error occurs while executing the statement
      * @see PreparedStatement#execute()
      */
     public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -5244,15 +5308,20 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes a SQL statement using the provided Connection with optional parameters.
-     * This method does not close the provided Connection after the statement is executed.
+     * Executes a SQL statement of any kind on the supplied {@link Connection}.
      *
-     * @param conn The Connection to use for the SQL execution
-     * @param sql The SQL string to execute
-     * @param parameters Optional parameters for the SQL statement
-     * @return {@code true} if the first result is a ResultSet object; {@code false} if it is an update count or there are no results
-     * @throws IllegalArgumentException if the Connection or SQL string is {@code null} or empty
-     * @throws SQLException if a SQL exception occurs while executing the statement
+     * <p>This method does not manage the lifecycle of the connection — the caller is responsible for
+     * closing {@code conn}. The internally created {@link PreparedStatement} is always closed before
+     * this method returns.</p>
+     *
+     * @param conn the {@link Connection} to use; must not be {@code null} and not closed by this method
+     * @param sql the SQL statement to execute; must not be {@code null} or empty
+     * @param parameters optional parameters bound to {@code ?} placeholders (or named parameters) in
+     *                   the SQL; may be empty
+     * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update
+     *         count or there are no results
+     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty
+     * @throws SQLException if a database access error occurs while executing the statement
      * @see PreparedStatement#execute()
      */
     public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
@@ -5561,19 +5630,24 @@ public final class JdbcUtil {
     };
 
     /**
-     * Extracts data from the provided ResultSet and returns it as a Dataset.
-     * This method reads all rows from the current position of the ResultSet.
-     * 
+     * Extracts all rows from the provided {@link ResultSet} and returns them as a {@link Dataset}.
+     *
+     * <p>Reading starts at the {@code ResultSet}'s current cursor position. The cursor is advanced row
+     * by row via {@link ResultSet#next()}; the {@code ResultSet} is not closed by this method.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
      * Dataset dataset = JdbcUtil.extractData(rs);
      * }</pre>
      *
-     * @param rs The ResultSet to extract data from
-     * @return A Dataset containing the extracted data
+     * @param rs the {@link ResultSet} to extract data from; must not be {@code null}
+     * @return a {@link Dataset} containing the extracted data; column names are taken from the
+     *         {@link ResultSetMetaData} labels (or column names if no label is set)
      * @throws IllegalArgumentException if {@code rs} is {@code null}
-     * @throws SQLException if a SQL exception occurs while extracting data
+     * @throws SQLException if a database access error occurs while extracting data
+     * @see #extractData(ResultSet, boolean)
+     * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs) throws SQLException {
         return extractData(rs, false);
@@ -5876,10 +5950,14 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a stream from the provided ResultSet.
-     * Each element in the stream is an Object array containing values from all columns of a row.
-     * It's the user's responsibility to close the ResultSet after the stream is finished.
-     * 
+     * Creates a lazy {@link Stream} over the rows of the provided {@link ResultSet}, with each row
+     * mapped to an {@code Object[]} containing the values of all columns of that row.
+     *
+     * <p>The {@code ResultSet} is consumed lazily as the stream is traversed; if you only consume a
+     * prefix of the stream the remaining rows are skipped. The caller is responsible for closing the
+     * input {@code ResultSet} — typically by attaching {@code onClose(Fn.closeQuietly(rs))} to the
+     * returned stream and consuming it inside a try-with-resources.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultSet rs = stmt.executeQuery("SELECT * FROM users");
@@ -5891,15 +5969,15 @@ public final class JdbcUtil {
      * } finally {
      *     rs.close();
      * }
-     * 
+     *
      * // Or with auto-close:
      * JdbcUtil.stream(resultSet).onClose(Fn.closeQuietly(resultSet))
      *     .forEach(row -> processRow(row));
      * }</pre>
      *
-     * @param rs The ResultSet to create a stream from
-     * @return A Stream of Object arrays containing the data from the ResultSet
-     * @throws IllegalArgumentException if the provided ResultSet is null
+     * @param rs the {@link ResultSet} to stream; must not be {@code null}
+     * @return a {@link Stream} of {@code Object[]}, each array containing the column values of one row
+     * @throws IllegalArgumentException if {@code rs} is {@code null}
      */
     public static Stream<Object[]> stream(final ResultSet rs) {
         return stream(rs, Object[].class);
@@ -7202,11 +7280,12 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param ds the data source to get the connection from
-     * @param tableName the table name (optionally qualified); must not be blank
+     * @param ds the {@link javax.sql.DataSource} to obtain a connection from; must not be {@code null}
+     * @param tableName the table name (optionally qualified, e.g., {@code schema.table} or {@code catalog.schema.table}); must not be blank
      * @return {@code true} if the table exists, {@code false} otherwise
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error
      * @throws IllegalArgumentException if {@code tableName} is blank or otherwise invalid
+     * @see #tableExists(Connection, String)
      */
     public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) {
         Connection conn = null;
@@ -7659,8 +7738,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns a new instance of {@code DBLock} for implementing global locks using a database table.
-     * This provides a distributed locking mechanism that works across multiple application instances.
+     * Creates a new {@link DBLock} backed by the specified database table for implementing
+     * cross-process / cross-JVM advisory locks.
+     *
+     * <p>The lock table must already exist (this method does not create it). See {@link DBLock} for the
+     * required schema. A successful {@code lock(target)} call returns a unique lock code that the caller
+     * must pass back to {@code unlock(target, code)} to release the lock.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7675,9 +7758,10 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param ds The data source to use for database connections
-     * @param tableName The name of the table used for storing lock information
-     * @return A new instance of {@code DBLock} for distributed locking
+     * @param ds the {@link javax.sql.DataSource} to use for acquiring connections
+     * @param tableName the name of the existing table that stores lock records
+     * @return a new {@link DBLock} instance bound to {@code ds} and {@code tableName}
+     * @see DBLock
      */
     public static DBLock getDBLock(final javax.sql.DataSource ds, final String tableName) {
         return new DBLock(ds, tableName);
@@ -8503,11 +8587,20 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param stmt The CallableStatement from which to retrieve the output parameters
-     * @param outParams The list of OutParam objects representing the output parameters to retrieve
-     * @return An OutParamResult containing the retrieved output parameter values
-     * @throws IllegalArgumentException if the provided arguments are invalid
-     * @throws SQLException if a SQL exception occurs while retrieving the output parameters
+     * <p>Special handling: any output parameter that returns a {@link ResultSet}, {@link Blob}, or
+     * {@link Clob} is converted to a more convenient Java representation (a {@link Dataset},
+     * {@code byte[]}, and {@link String} respectively) and the underlying LOB or {@code ResultSet} is
+     * freed/closed automatically.</p>
+     *
+     * @param stmt the {@link CallableStatement} from which to retrieve the output parameters; must not
+     *             be {@code null}
+     * @param outParams the list of {@link OutParam} objects describing the output parameters to retrieve;
+     *                  if {@code null} or empty, an empty {@link OutParamResult} is returned
+     * @return an {@link OutParamResult} containing the retrieved output parameter values keyed by
+     *         parameter index (for index-based out params) or parameter name (for name-based out params)
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}
+     * @throws SQLException if a database access error occurs while reading any output parameter, or if a
+     *         returned {@link Blob}/{@link Clob} exceeds {@link Integer#MAX_VALUE} bytes/characters
      */
     public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(stmt, cs.stmt);
@@ -8605,9 +8698,12 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the property names suitable for INSERT operations for the given entity.
-     * This method returns all property names that should be included in an INSERT statement,
-     * excluding properties marked with annotations like @ReadOnly, @Id (for auto-generated IDs), etc.
+     * Returns the property names of {@code entity} that should be included in an {@code INSERT}
+     * statement.
+     *
+     * <p>Properties annotated with {@code @ReadOnly}, {@code @NonInsertable}, or {@code @Id} (when the
+     * id is auto-generated and not yet set on the instance) are excluded. The exact set is determined
+     * by {@link com.landawn.abacus.query.QueryUtil#getInsertPropNames(Object, Set)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8616,8 +8712,10 @@ public final class JdbcUtil {
      * // Returns property names that should be included in INSERT statement
      * }</pre>
      *
-     * @param entity the entity object to analyze
-     * @return a collection of property names suitable for INSERT operations
+     * @param entity the entity instance to analyze; the values stored on the instance can influence the
+     *               result (e.g., a non-default id is included whereas a default one is excluded)
+     * @return the collection of property names suitable for {@code INSERT}
+     * @see #getInsertPropNames(Object, Set)
      */
     public static Collection<String> getInsertPropNames(final Object entity) {
         return getInsertPropNames(entity, null);
@@ -9104,17 +9202,30 @@ public final class JdbcUtil {
     }
 
     /**
-     * Enables SQL logging for the current thread with the default maximum log length.
-     * When enabled, all SQL statements executed in the current thread will be logged.
-     * The default maximum SQL log length is 1024 characters.
+     * Enables SQL logging on the current thread with the default maximum log length
+     * ({@link #DEFAULT_MAX_SQL_LOG_LENGTH} = 1024 characters).
+     *
+     * <p>Once enabled, every SQL statement prepared on this thread is written to the
+     * {@code com.landawn.abacus.SQL} logger at DEBUG level. Statements longer than the maximum log
+     * length are abbreviated. The flag is stored in a {@link ThreadLocal}, so it only affects the
+     * thread that called this method — do not rely on it propagating to threads you submit to an
+     * {@link java.util.concurrent.Executor}.</p>
+     *
+     * <p>Has no effect if SQL logging has been globally disabled via {@link #turnOffSqlLogGlobally()}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.enableSqlLog();
-     * // Execute SQL operations - they will be logged
-     * // ...
-     * JdbcUtil.disableSqlLog();
+     * try {
+     *     // Execute SQL operations - they will be logged
+     * } finally {
+     *     JdbcUtil.disableSqlLog();
+     * }
      * }</pre>
+     *
+     * @see #enableSqlLog(int)
+     * @see #disableSqlLog()
+     * @see #isSqlLogEnabled()
      */
     public static void enableSqlLog() {
         enableSqlLog(DEFAULT_MAX_SQL_LOG_LENGTH);
@@ -9437,8 +9548,20 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if there is an active transaction for the given DataSource in the current thread.
-     * This includes both JdbcUtil-managed transactions and Spring-managed transactions.
+     * Returns whether an active transaction exists for the given {@link javax.sql.DataSource} on the
+     * current thread.
+     *
+     * <p>This includes:</p>
+     * <ul>
+     *   <li>Transactions started by this library via {@link #beginTransaction(javax.sql.DataSource)}
+     *       (or {@link #runInTransaction} / {@link #callInTransaction}).</li>
+     *   <li>Spring-managed transactions, when Spring is on the classpath and Spring transaction
+     *       participation is not disabled on this thread (see
+     *       {@link #runWithoutUsingSpringTransaction(Throwables.Runnable)}).</li>
+     * </ul>
+     *
+     * <p>For the Spring check, this method may briefly acquire and release a {@link Connection} from
+     * {@code ds} (silently on failure), so callers should not assume it is side-effect-free.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9451,8 +9574,9 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * @param ds the DataSource to check for an active transaction
-     * @return {@code true} if there is an active transaction, {@code false} otherwise
+     * @param ds the {@link javax.sql.DataSource} to check
+     * @return {@code true} if a transaction is active on the current thread for {@code ds};
+     *         {@code false} otherwise
      */
     public static boolean isInTransaction(final javax.sql.DataSource ds) {
         if (SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
@@ -10758,9 +10882,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Sets the ID extractor for the specified DAO interface.
-     * This allows customization of how IDs are extracted from ResultSets for a specific DAO.
-     * The extractor is used when retrieving generated keys after insert operations.
+     * Registers a custom ID extractor for the specified {@link CrudDao} interface.
+     *
+     * <p>The supplied {@link RowMapper} is invoked against the generated-keys {@link ResultSet} returned
+     * by JDBC after an {@code INSERT} so that the DAO can populate the entity's ID property. Register a
+     * custom extractor when the default extraction (single column → ID) does not fit your schema — for
+     * example, when the entity has a composite ID that is returned across several generated columns.</p>
+     *
+     * <p>The registration is process-wide: it affects every instance of the DAO created via
+     * {@link #createDao}. Calling this method twice for the same interface replaces the previous extractor.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10770,13 +10900,15 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
-     * @param <T> the type of the entity
-     * @param <ID> the type of the ID
-     * @param <SB> the type of the SqlBuilder
-     * @param <TD> the type of the CrudDao
-     * @param daoInterface the DAO interface class
-     * @param idExtractor the RowMapper used to extract the ID from ResultSet
-     * @throws IllegalArgumentException if daoInterface or idExtractor is null
+     * @param <T> the entity type managed by the DAO
+     * @param <ID> the ID type returned by the extractor
+     * @param <SB> the {@link SqlBuilder} type used by the DAO
+     * @param <TD> the concrete {@link CrudDao} subtype
+     * @param daoInterface the DAO interface class, must not be {@code null}
+     * @param idExtractor the {@link RowMapper} used to read the generated key(s) from the generated-keys
+     *                    {@code ResultSet}, must not be {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code idExtractor} is {@code null}
+     * @see #setIdExtractorForDao(Class, BiRowMapper)
      */
     public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException {
@@ -10787,8 +10919,16 @@ public final class JdbcUtil {
     }
 
     /**
-     * Sets the ID extractor for the specified DAO interface using a BiRowMapper.
-     * This allows customization of how IDs are extracted from ResultSets with access to column labels.
+     * Registers a custom ID extractor for the specified {@link CrudDao} interface using a
+     * {@link BiRowMapper}, which additionally receives the column labels of the generated-keys
+     * {@link ResultSet}.
+     *
+     * <p>Use this overload when extraction logic needs to dispatch on the names/positions of the
+     * generated columns (e.g., the driver returns a different column set depending on which auto-generated
+     * keys are configured).</p>
+     *
+     * <p>The registration is process-wide: it affects every instance of the DAO created via
+     * {@link #createDao}. Calling this method twice for the same interface replaces the previous extractor.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10801,13 +10941,16 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
-     * @param <T> the type of the entity
-     * @param <ID> the type of the ID
-     * @param <SB> the type of the SqlBuilder
-     * @param <TD> the type of the CrudDao
-     * @param daoInterface the DAO interface class
-     * @param idExtractor the BiRowMapper used to extract the ID with column information
-     * @throws IllegalArgumentException if daoInterface or idExtractor is null
+     * @param <T> the entity type managed by the DAO
+     * @param <ID> the ID type returned by the extractor
+     * @param <SB> the {@link SqlBuilder} type used by the DAO
+     * @param <TD> the concrete {@link CrudDao} subtype
+     * @param daoInterface the DAO interface class, must not be {@code null}
+     * @param idExtractor the {@link BiRowMapper} used to read the generated key(s) from the
+     *                    generated-keys {@code ResultSet}; receives the {@code ResultSet} and the list of
+     *                    column labels; must not be {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} or {@code idExtractor} is {@code null}
+     * @see #setIdExtractorForDao(Class, RowMapper)
      */
     public static <T, ID, SB extends SqlBuilder, TD extends CrudDao<T, ID, SB, TD>> void setIdExtractorForDao(
             final Class<? extends CrudDao<T, ID, SB, TD>> daoInterface, final BiRowMapper<? extends ID> idExtractor) throws IllegalArgumentException {

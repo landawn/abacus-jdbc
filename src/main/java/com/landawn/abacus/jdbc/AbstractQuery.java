@@ -8857,12 +8857,20 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Executes the query and returns a ResultSet.
-     * 
-     * <p>This protected method is used internally by other query methods. It sets
-     * the fetch direction to FORWARD if not already set, then executes the query.</p>
+     * Executes the underlying prepared statement as a query and returns the resulting
+     * {@code ResultSet}.
      *
-     * @return The ResultSet from the executed query
+     * <p>This protected helper is used internally by all read-side methods (e.g. {@code list},
+     * {@code stream}, {@code findFirst}, {@code queryForXxx}). When the user has not explicitly
+     * set a fetch direction via {@link #setFetchDirection(FetchDirection)}, this method sets it
+     * to {@link ResultSet#FETCH_FORWARD} once before delegating to
+     * {@link JdbcUtil#executeQuery(PreparedStatement)}.</p>
+     *
+     * <p>The returned {@code ResultSet} is owned by the caller and must be closed (typically
+     * via try-with-resources) along with the surrounding cleanup performed by
+     * {@link #closeAfterExecutionIfAllowed()}.</p>
+     *
+     * @return the {@code ResultSet} from the executed query
      * @throws SQLException if a database access error occurs
      */
     protected ResultSet executeQuery() throws SQLException {
@@ -9687,11 +9695,23 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * PreparedStatement, allowing custom result extraction. This is useful when you need
      * to access statement metadata or handle complex result processing.</p>
      * 
+     * <p><b>Important:</b> Do not return the {@code PreparedStatement}, a {@code ResultSet},
+     * or any other unfinished JDBC resource from {@code getter} unless
+     * {@code closeAfterExecution(false)} has been set — the statement (and any associated
+     * {@code ResultSet}) is closed in this method's {@code finally} block once {@code getter}
+     * returns. Finish all consumption inside the function.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Get the first result set after execution
-     * ResultSet rs = preparedQuery.executeThenApply(stmt -> stmt.getResultSet());
-     * 
+     * // Drain the first result set fully inside the getter
+     * List<String> rows = preparedQuery.executeThenApply(stmt -> {
+     *     final List<String> out = new ArrayList<>();
+     *     try (ResultSet rs = stmt.getResultSet()) {
+     *         while (rs.next()) out.add(rs.getString(1));
+     *     }
+     *     return out;
+     * });
+     *
      * // Get update count and check warnings
      * Integer count = preparedQuery.executeThenApply(stmt -> {
      *     int updateCount = stmt.getUpdateCount();
@@ -9706,12 +9726,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> the type of result returned from the operation
      * @param getter the function to apply to the PreparedStatement after execution.
      *               Must not be {@code null}.
-     * @return The result of applying the function to the PreparedStatement
-     * @throws IllegalArgumentException if the provided function is null
+     * @return the result of applying {@code getter} to the executed PreparedStatement
+     * @throws IllegalArgumentException if {@code getter} is {@code null}
      * @throws IllegalStateException if this query is closed
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if a database access error occurs or {@code getter} throws
      * @see #execute()
-     * @see #executeThenApply(Throwables.BiFunction) 
+     * @see #executeThenApply(Throwables.BiFunction)
      */
     public <R> R executeThenApply(final Throwables.Function<? super Stmt, ? extends R, SQLException> getter)
             throws IllegalArgumentException, IllegalStateException, SQLException {
@@ -10172,16 +10192,28 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Closes the underlying PreparedStatement and resets any modified properties.
-     * 
-     * <p>This method is called internally by {@link #close()} to perform the actual
-     * statement cleanup. It resets any modified statement properties (fetch direction,
-     * fetch size, max field size, query timeout) to their original values before
-     * closing the statement.</p>
-     * 
-     * @see JdbcUtil#execute(PreparedStatement)
-     * @see JdbcUtil#executeUpdate(PreparedStatement)
-     * @see JdbcUtil#clearParameters(PreparedStatement)
+     * Closes the underlying {@code PreparedStatement} and resets any properties this query
+     * temporarily modified.
+     *
+     * <p>This method is called internally by {@link #close()} to perform the actual statement
+     * cleanup. Before closing the statement, it restores the original values (captured the
+     * first time each property was changed via this query's fluent setters) of:</p>
+     * <ul>
+     *   <li>fetch direction</li>
+     *   <li>fetch size</li>
+     *   <li>max field size</li>
+     *   <li>query timeout</li>
+     *   <li>max rows</li>
+     *   <li>large max rows</li>
+     * </ul>
+     *
+     * <p>The {@link #addBatchAction} is also reset to the default to avoid retaining a
+     * reference (helpful when the underlying statement is pooled). Any
+     * {@link SQLException} raised while resetting a property is logged and swallowed so the
+     * statement is still closed. The actual close is performed via
+     * {@link JdbcUtil#closeQuietly(java.sql.Statement)} and never throws.</p>
+     *
+     * @see #close()
      */
     protected void closeStatement() {
         try {

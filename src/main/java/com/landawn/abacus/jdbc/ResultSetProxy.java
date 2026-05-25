@@ -232,7 +232,7 @@ final class ResultSetProxy implements ResultSet {
     /**
      * {@inheritDoc}
      *
-     * @deprecated Use {@link #getBigDecimal(int)} instead.
+     * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getBigDecimal(int)} instead.
      */
     @Deprecated(since = "1.2")
     @Override
@@ -277,7 +277,7 @@ final class ResultSetProxy implements ResultSet {
     /**
      * {@inheritDoc}
      *
-     * @deprecated Use {@link #getCharacterStream(int)} instead.
+     * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getCharacterStream(int)} instead.
      */
     @Deprecated(since = "1.2")
     @Override
@@ -348,7 +348,7 @@ final class ResultSetProxy implements ResultSet {
     /**
      * {@inheritDoc}
      *
-     * @deprecated Use {@link #getBigDecimal(String)} instead.
+     * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getBigDecimal(String)} instead.
      */
     @Deprecated(since = "1.2")
     @Override
@@ -393,7 +393,7 @@ final class ResultSetProxy implements ResultSet {
     /**
      * {@inheritDoc}
      *
-     * @deprecated Use {@link #getCharacterStream(String)} instead.
+     * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getCharacterStream(String)} instead.
      */
     @Deprecated(since = "1.2")
     @Override

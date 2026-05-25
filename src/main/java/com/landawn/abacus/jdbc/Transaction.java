@@ -252,16 +252,18 @@ public interface Transaction {
     }
 
     /**
-     * Enumeration representing the possible actions that can be performed on a transaction.
-     * This enum is typically used in transaction management frameworks to specify
-     * the desired outcome of a transactional operation.
+     * Enumeration representing the terminal action to take on a transaction.
+     * Used to signal the desired outcome (commit or rollback) of a transactional operation.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Action action = shouldCommit ? Action.COMMIT : Action.ROLLBACK;
-     * transactionManager.completeTransaction(transaction, action);
+     * if (action == Action.COMMIT) {
+     *     transaction.commit();
+     * } else {
+     *     transaction.rollback();
+     * }
      * }</pre>
-     *
      */
     enum Action {
         /**

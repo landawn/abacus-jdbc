@@ -1758,8 +1758,14 @@ final class DaoImpl {
      * @param ds the {@link javax.sql.DataSource} providing database connections
      * @param sqlMapper an optional {@link SqlMapper} containing pre-defined SQL statements keyed by ID; may be {@code null}
      * @param inputDaoCache an optional {@link Jdbc.DaoCache} for caching query results of methods annotated with
-     *        {@code @CacheResult} or {@code @RefreshCache}; if {@code null} a cache is created from the
-     *        {@code @Cache} class-level annotation (if present) or a default-capacity cache is used
+     *        {@code @CacheResult} (and invalidated by {@code @RefreshCache}). When {@code null}, the cache is
+     *        derived from the class-level {@code @Cache} annotation (using its {@code impl()}, {@code capacity()}
+     *        and {@code evictDelay()}) if present, otherwise a {@link Jdbc.DefaultDaoCache} with
+     *        {@link JdbcUtil#DEFAULT_CACHE_CAPACITY default capacity} and
+     *        {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY default evict delay} is used. Note: result caching is
+     *        currently only supported for {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes — supplying a
+     *        non-{@code null} {@code inputDaoCache} (or declaring {@code @Cache}) on a DAO that supports
+     *        update/delete operations will fail with {@link UnsupportedOperationException}
      * @param executor an optional {@link Executor} for asynchronous operations; if {@code null}, the default async executor is used
      * @return a proxy instance implementing the specified DAO interface
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}

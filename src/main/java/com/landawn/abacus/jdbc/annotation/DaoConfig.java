@@ -173,13 +173,21 @@ public @interface DaoConfig {
     boolean allowJoiningByNullOrDefaultValue() default false;
 
     /**
-     * Controls whether DataSet queries should fetch only columns that match entity class properties.
-     * When true (default), DataSet queries will only include columns that correspond
-     * to properties in the target entity class, similar to {@link FetchColumnByEntityClass}.
+     * Controls the default column-selection behavior of built-in {@code DataSet}-returning
+     * methods (e.g., {@code query(Condition)}, {@code query(Collection<String>, Condition)})
+     * provided by {@code Dao}/{@code CrudDao}, when individual call sites do not override it
+     * with {@link FetchColumnByEntityClass @FetchColumnByEntityClass}.
      *
-     * <p>This provides consistency between entity queries and DataSet queries,
-     * and can improve performance by reducing unnecessary data transfer.</p>
-     * 
+     * <p>When {@code true} (default), the framework restricts the projected columns to those
+     * that map to properties on the DAO's target entity class, producing a {@code DataSet} that
+     * mirrors the entity shape. When {@code false}, the underlying SELECT keeps every column
+     * referenced by the SQL (useful for joins with extra columns, calculated columns, or
+     * aggregations that have no corresponding entity property).</p>
+     *
+     * <p>This setting only affects the framework-generated {@code DataSet} methods; SQL declared
+     * by {@link Query @Query} is untouched, and a method-level
+     * {@link FetchColumnByEntityClass @FetchColumnByEntityClass} always wins over this default.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(fetchColumnByEntityClassForDatasetQuery = false)
@@ -192,7 +200,8 @@ public @interface DaoConfig {
      * }
      * }</pre>
      *
-     * @return {@code true} to fetch only entity columns in DataSet queries
+     * @return {@code true} (default) to restrict built-in {@code DataSet} queries to entity-mapped columns;
+     *         {@code false} to retain every column referenced by the SELECT
      */
     boolean fetchColumnByEntityClassForDatasetQuery() default true;
 }

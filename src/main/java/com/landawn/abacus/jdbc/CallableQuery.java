@@ -2086,15 +2086,19 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     }
 
     /**
-     * Executes the query and returns the first result set if available.
-     * This method handles the complexity of stored procedures that may return multiple
-     * result sets, update counts, or both. It iterates through all results until it
-     * finds the first result set.
-     * 
-     * <p>The fetch direction is set to FETCH_FORWARD if not explicitly set by the user.</p>
+     * Executes the underlying stored procedure and returns the first {@link ResultSet} it produces, skipping
+     * any update counts that come before it.
      *
-     * @return the first {@link ResultSet} if available, or {@code null} if the stored procedure
-     *         doesn't return any result sets
+     * <p>Stored procedures may return any mix of result sets and update counts; this method walks the
+     * results in order (via {@link CallableStatement#getMoreResults()} and {@link CallableStatement#getUpdateCount()})
+     * and returns the first {@code ResultSet} encountered. It returns {@code null} if no result set
+     * is ever produced.
+     *
+     * <p>If {@link #setFetchDirection(int)} was not previously called on this query, the fetch direction
+     * is set to {@link ResultSet#FETCH_FORWARD} before execution.
+     *
+     * @return the first {@link ResultSet} produced by the procedure, or {@code null} if the procedure
+     *         did not return one
      * @throws SQLException if a database access error occurs
      */
     @Override

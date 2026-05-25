@@ -557,7 +557,7 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
      */
@@ -586,7 +586,7 @@ public final class JdbcUtils {
      *
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if any name in {@code selectColumnNames} is not a column of the dataset
      * @throws SQLException if a database access error occurs
@@ -616,7 +616,7 @@ public final class JdbcUtils {
      *
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
@@ -656,7 +656,7 @@ public final class JdbcUtils {
      * @param dataset the Dataset containing the data to be imported
      * @param selectColumnNames the collection of column names to be selected for import
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of rows successfully imported
@@ -711,7 +711,7 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of rows successfully imported
      * @throws IllegalArgumentException if any key in {@code columnTypeMap} is not a column of the dataset
@@ -740,7 +740,7 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
@@ -784,7 +784,7 @@ public final class JdbcUtils {
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion;
@@ -864,7 +864,7 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row
      * @return the number of rows successfully imported
      * @throws SQLException if a database access error occurs
@@ -891,7 +891,7 @@ public final class JdbcUtils {
      * }</pre>
      *
      * @param dataset the Dataset containing the data to be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row
@@ -927,7 +927,7 @@ public final class JdbcUtils {
      * @param <E> exception type that filter might throw
      * @param dataset the Dataset containing the data to be imported
      * @param filter a predicate to filter the rows; only rows returning {@code true} will be imported
-     * @param stmt the PreparedStatement to be used for the import
+     * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param stmtSetter a BiConsumer to set the parameters of the PreparedStatement for each row

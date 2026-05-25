@@ -295,12 +295,22 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     //    }
 
     /**
-     * Commits the current transaction, making all changes permanent.
-     * After a successful commit, the transaction is no longer active and the connection
-     * will be automatically reset and closed (if applicable).
+     * Commits this transaction scope.
      *
-     * <p>If the transaction is marked for rollback only, it will be rolled back instead
-     * of committed. After successful commit, the transaction status is set to {@link Status#COMMITTED}.</p>
+     * <p>Behaviour with nested scopes: each call to this method decrements the internal scope
+     * reference count. The actual JDBC {@code COMMIT} is issued only when the outermost scope
+     * commits (reference count reaches zero). Nested invocations simply return after
+     * decrementing the counter.</p>
+     *
+     * <p>If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK}
+     * because an inner scope rolled back), the outermost commit is converted into a rollback
+     * rather than a commit; this method returns normally in that case.</p>
+     *
+     * <p>When the outermost scope actually commits, the status transitions to
+     * {@link Status#COMMITTED} on success or {@link Status#FAILED_COMMIT} on failure. After the
+     * commit attempt (success or failure) the connection's original auto-commit and isolation
+     * level are restored, and the connection is released back to its data source if this
+     * transaction was created with connection ownership.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -315,9 +325,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the commit
-     * @throws IllegalStateException if the transaction is not {@link Status#ACTIVE} when the
-     *         outermost transaction scope attempts to commit
+     * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
+     *         automatic rollback is also attempted, and any rollback failure is suppressed in
+     *         favour of this exception
+     * @throws IllegalStateException if the outermost commit is attempted while the transaction is
+     *         not in {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -399,12 +411,23 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Rolls back the current transaction, undoing all changes made within the transaction scope.
-     * After a successful rollback, the transaction is no longer active and the connection
-     * will be automatically reset and closed (if applicable).
+     * Rolls back this transaction scope.
      *
-     * <p><b>Note:</b> This method is deprecated. Use {@link #rollbackIfNotCommitted()} instead
-     * for better transaction management in try-finally blocks.</p>
+     * <p>Behaviour with nested scopes: each call decrements the internal scope reference count.
+     * For non-outermost scopes the transaction is marked as {@link Status#MARKED_ROLLBACK} and
+     * the actual JDBC {@code ROLLBACK} is deferred until the outermost scope completes; the
+     * outermost scope then performs the rollback regardless of whether it was asked to commit
+     * or rollback.</p>
+     *
+     * <p>After a successful rollback the status transitions to {@link Status#ROLLED_BACK}, the
+     * connection's original auto-commit and isolation level are restored, and the connection is
+     * released back to its data source if this transaction was created with connection ownership.
+     * If the underlying {@code Connection.rollback()} fails, the status becomes
+     * {@link Status#FAILED_ROLLBACK} and an {@link UncheckedSQLException} is thrown.</p>
+     *
+     * <p><b>Note:</b> Prefer {@link #rollbackIfNotCommitted()} in finally blocks; it is
+     * idempotent and avoids double-decrement bugs when the rollback path is also reached after
+     * a failed commit.</p>
      *
      * <p>Example of preferred usage:</p>
      * <pre>{@code
@@ -419,9 +442,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }</pre>
      *
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
-     * @throws IllegalStateException if the transaction is not in a valid state for rollback
-     *         (i.e. its status is not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK},
-     *         or {@link Status#FAILED_COMMIT})
+     * @throws IllegalStateException if the outermost rollback is attempted while the transaction
+     *         status is not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
+     *         {@link Status#FAILED_COMMIT}
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated

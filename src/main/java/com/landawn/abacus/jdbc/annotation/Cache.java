@@ -35,11 +35,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Implementing cache at the Data Access Layer (DAL) can lead to data consistency issues if not
  * managed properly. Consider whether caching should be implemented at a higher layer instead.</p>
  *
- * <p><strong>Restriction:</strong> Class-level {@link CacheResult} or {@link RefreshCache} declarations
- * are only honored on {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Declaring class-level
- * {@code @CacheResult} or {@code @RefreshCache} on a DAO that supports updates/deletes will fail with
- * {@code UnsupportedOperationException} at initialization time. {@code @Cache} itself only configures
- * the cache pool used by methods that opt in via {@code @CacheResult}.</p>
+ * <p><strong>Restriction:</strong> {@link CacheResult @CacheResult} and {@link RefreshCache @RefreshCache}
+ * (whether declared at the type or method level) are only honored on
+ * {@code NoUpdateDao}/{@code UncheckedNoUpdateDao} subtypes. Using either annotation on a DAO that
+ * supports updates/deletes fails with {@code UnsupportedOperationException} at initialization time.
+ * {@code @Cache} itself only configures the cache pool used by methods that opt in via
+ * {@code @CacheResult}; it has no caching effect on its own.</p>
  *
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} (or eligible
  * methods when {@code @CacheResult} is applied at the type level) will have their results cached

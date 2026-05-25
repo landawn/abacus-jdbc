@@ -87,18 +87,33 @@ import lombok.ToString;
 
 /**
  * Provides a collection of utility interfaces and classes for simplifying JDBC operations.
- * This class serves as a central hub for functional interfaces like {@code ParametersSetter},
- * {@code ResultExtractor}, and {@code RowMapper}, which are designed to streamline database
- * interactions in a type-safe and efficient manner.
+ * This class serves as a non-instantiable namespace for nested functional interfaces such as
+ * {@link ParametersSetter}, {@link ResultExtractor}, {@link RowMapper}, {@link RowConsumer},
+ * {@link RowFilter}, {@link ColumnGetter}, and related builders, which are designed to streamline
+ * database interactions in a type-safe and efficient manner.
  *
  * <p>Key features include:</p>
  * <ul>
- * <li>Functional interfaces for setting parameters on {@code PreparedStatement}s.</li>
- * <li>Flexible mechanisms for extracting data from a {@code ResultSet} into various data structures like Lists, Maps, and custom objects.</li>
- * <li>Row mappers for converting individual {@code ResultSet} rows into objects.</li>
- * <li>Type-safe column getters for retrieving values from a {@code ResultSet}.</li>
- * <li>Fluent builders for creating complex row mappers with customized column handling.</li>
+ *   <li>Functional interfaces for setting parameters on {@code PreparedStatement}s
+ *       ({@link ParametersSetter}, {@link BiParametersSetter}, {@link TriParametersSetter}).</li>
+ *   <li>Flexible mechanisms for extracting data from a {@code ResultSet} into various data structures
+ *       like Lists, Maps, {@code Multimap}s and custom objects
+ *       ({@link ResultExtractor}, {@link BiResultExtractor}).</li>
+ *   <li>Row mappers for converting individual {@code ResultSet} rows into objects
+ *       ({@link RowMapper}, {@link BiRowMapper}).</li>
+ *   <li>Row consumers and filters ({@link RowConsumer}, {@link BiRowConsumer},
+ *       {@link RowFilter}, {@link BiRowFilter}).</li>
+ *   <li>Type-safe column getters for retrieving values from a {@code ResultSet}
+ *       ({@link ColumnGetter}, {@link Columns.ColumnOne}).</li>
+ *   <li>Fluent builders for creating complex row mappers with customized column handling
+ *       ({@link RowMapper.RowMapperBuilder}, {@link BiRowMapper.BiRowMapperBuilder},
+ *       {@link RowExtractor.RowExtractorBuilder}).</li>
+ *   <li>Support types for stored procedure invocation ({@link OutParam}, {@link OutParamResult}),
+ *       DAO interception ({@link Handler}, {@link HandlerFactory}) and DAO-level result caching
+ *       ({@link DaoCache}, {@link DefaultDaoCache}).</li>
  * </ul>
+ *
+ * <p>This class is a stateless utility namespace and is not instantiable.</p>
  *
  * @see ParametersSetter
  * @see ResultExtractor
@@ -432,8 +447,9 @@ public final class Jdbc {
     public interface ResultExtractor<T> extends Throwables.Function<ResultSet, T, SQLException> {
 
         /**
-         * A pre-defined {@code ResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
-         * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}.
+         * A pre-defined {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
+         * via {@link JdbcUtil#extractData(ResultSet)}. If the input {@code ResultSet} is {@code null},
+         * an empty {@code Dataset} is returned.
          */
         ResultExtractor<Dataset> TO_DATASET = rs -> {
             if (rs == null) {
@@ -506,9 +522,10 @@ public final class Jdbc {
          *
          * @param <K> map key type
          * @param <V> map value type
-         * @param keyExtractor a {@code RowMapper} to extract the key from each row
-         * @param valueExtractor a {@code RowMapper} to extract the value from each row
+         * @param keyExtractor a {@code RowMapper} to extract the key from each row; must not be {@code null}
+         * @param valueExtractor a {@code RowMapper} to extract the value from each row; must not be {@code null}
          * @return a {@code ResultExtractor} that produces a {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor} or {@code valueExtractor} is {@code null}
          * @see #toMap(RowMapper, RowMapper, BinaryOperator)
          */
         static <K, V> ResultExtractor<Map<K, V>> toMap(final RowMapper<? extends K> keyExtractor, final RowMapper<? extends V> valueExtractor) {
@@ -900,9 +917,10 @@ public final class Jdbc {
          * }</pre>
          *
          * @param <T> list element type
-         * @param rowFilter a predicate to filter rows from the result set
-         * @param rowMapper the function to map each accepted row to an element
+         * @param rowFilter a predicate to filter rows from the result set; must not be {@code null}
+         * @param rowMapper the function to map each accepted row to an element; must not be {@code null}
          * @return a {@code ResultExtractor} that produces a filtered {@code List}
+         * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
          */
         static <T> ResultExtractor<List<T>> toList(final RowFilter rowFilter, final RowMapper<? extends T> rowMapper) {
             N.checkArgNotNull(rowFilter, cs.rowFilter);
@@ -926,6 +944,10 @@ public final class Jdbc {
          * The mapping from columns to entity properties is done automatically based on column names
          * and property names in the {@code targetClass}.
          *
+         * <p>The returned {@code ResultExtractor} is stateless and safe to reuse: a fresh stateful
+         * {@code BiRowMapper} is created internally for each {@code ResultSet} that is processed, so
+         * no metadata is shared across separate query executions.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Assumes User class has properties matching column names (e.g., 'id', 'name').
@@ -935,6 +957,7 @@ public final class Jdbc {
          * @param <T> entity type
          * @param targetClass the class of the entities to be created
          * @return a {@code ResultExtractor} that produces a {@code List} of entities
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          * @see BiResultExtractor#toList(Class)
          */
         static <T> ResultExtractor<List<T>> toList(final Class<? extends T> targetClass) {
@@ -973,6 +996,7 @@ public final class Jdbc {
          * @param <T> entity type
          * @param targetClass the class of the entities to create and merge
          * @return a {@code ResultExtractor} that produces a {@code List} of merged entities
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
          * @see Dataset#toMergedEntities(Class)
          */
         static <T> ResultExtractor<List<T>> toMergedList(final Class<? extends T> targetClass) {
@@ -1179,7 +1203,9 @@ public final class Jdbc {
 
         /**
          * A pre-defined {@code BiResultExtractor} that converts a {@code ResultSet} to a {@code Dataset}.
-         * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}.
+         * If the {@code ResultSet} is {@code null}, it returns an empty {@code Dataset}. The
+         * {@code columnLabels} argument is ignored; this extractor reads metadata from the {@code ResultSet}
+         * directly via {@link JdbcUtil#extractData(ResultSet)}.
          */
         BiResultExtractor<Dataset> TO_DATASET = (rs, columnLabels) -> {
             if (rs == null) {
@@ -1240,9 +1266,10 @@ public final class Jdbc {
          *
          * @param <K> map key type
          * @param <V> map value type
-         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row
-         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row
+         * @param keyExtractor a {@code BiRowMapper} to extract the key from each row; must not be {@code null}
+         * @param valueExtractor a {@code BiRowMapper} to extract the value from each row; must not be {@code null}
          * @return a {@code BiResultExtractor} that produces a {@code Map}
+         * @throws IllegalArgumentException if {@code keyExtractor} or {@code valueExtractor} is {@code null}
          */
         static <K, V> BiResultExtractor<Map<K, V>> toMap(final BiRowMapper<? extends K> keyExtractor, final BiRowMapper<? extends V> valueExtractor) {
             return toMap(keyExtractor, valueExtractor, Suppliers.ofMap());
@@ -2695,9 +2722,10 @@ public final class Jdbc {
         };
 
         /**
-         * A pre-defined mapper that converts a row into an {@code EntityId}, where each column label
-         * becomes a property name and each column value becomes a property value. This is useful for
-         * creating lightweight identifier objects from query results without defining a full entity class.
+         * A pre-defined mapper that converts a row into an {@link EntityId} (specifically a {@link Seid}
+         * with an empty entity name), where each column label becomes a property name and each column
+         * value becomes a property value. This is useful for creating lightweight identifier objects
+         * from query results without defining a full entity class.
          */
         @SuppressWarnings("deprecation")
         BiRowMapper<EntityId> TO_ENTITY_ID = (rs, columnLabels) -> {
@@ -2924,14 +2952,19 @@ public final class Jdbc {
          * </p>
          *
          * @param <T> target type
-         * @param targetClass the class to map rows to
-         * @param columnNameFilter a predicate to filter which columns should be considered for mapping
-         * @param columnNameConverter a function to transform column names before matching them to properties
+         * @param targetClass the class to map rows to (bean, array, {@code Map}, {@code List}, or single-column scalar type)
+         * @param columnNameFilter a predicate to filter which columns should be considered for mapping;
+         *                         may be {@code null}, in which case all columns are considered
+         * @param columnNameConverter a function to transform column names before matching them to properties;
+         *                            may be {@code null}, in which case the original column name is used
          * @param ignoreUnmatchedColumns if {@code true}, columns that pass the filter but cannot be matched
          * to a property of {@code targetClass} are silently skipped;
-         * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column.
+         * if {@code false}, an {@code IllegalArgumentException} is thrown by the returned mapper on its
+         * first invocation when an unmatched column is encountered (only relevant for bean targets).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null}, or if a non-trivial
+         *         {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
+         *         single-column scalar {@code targetClass} (which does not support filtering or conversion).
          */
         @SequentialOnly
         @Stateful
@@ -4421,6 +4454,7 @@ public final class Jdbc {
          * @param consumerForAll the action to be performed for each column. The first parameter is the
          * {@code ResultSet}, and the second is the 1-based column index.
          * @return a new stateful {@code RowConsumer}.
+         * @throws IllegalArgumentException if {@code consumerForAll} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -4456,6 +4490,7 @@ public final class Jdbc {
          *
          * @param consumer the consumer to process the {@code DisposableObjArray} for each row.
          * @return a new stateful {@code RowConsumer}.
+         * @throws IllegalArgumentException if {@code consumer} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -4497,6 +4532,7 @@ public final class Jdbc {
          * @param entityClass the class used to infer column types for fetching values from the {@code ResultSet}.
          * @param consumer the consumer to process the typed {@code DisposableObjArray} for each row.
          * @return a new stateful {@code RowConsumer}.
+         * @throws IllegalArgumentException if {@code entityClass} or {@code consumer} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -4630,6 +4666,7 @@ public final class Jdbc {
          * @param consumerForAll the action to be performed for each column. The first parameter is the
          * {@code ResultSet}, and the second is the 1-based column index.
          * @return a new {@code BiRowConsumer}.
+         * @throws IllegalArgumentException if {@code consumerForAll} is {@code null}
          */
         @Beta
         static BiRowConsumer create(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
@@ -4655,6 +4692,7 @@ public final class Jdbc {
          *
          * @param consumer the consumer to process the column labels and {@code DisposableObjArray} for each row.
          * @return a new stateful {@code BiRowConsumer}.
+         * @throws IllegalArgumentException if {@code consumer} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -4696,6 +4734,7 @@ public final class Jdbc {
          * @param entityClass the class used to infer column types for fetching values from the {@code ResultSet}.
          * @param consumer the consumer to process the column labels and typed {@code DisposableObjArray} for each row.
          * @return a new stateful {@code BiRowConsumer}.
+         * @throws IllegalArgumentException if {@code entityClass} or {@code consumer} is {@code null}
          */
         @Beta
         @SequentialOnly
@@ -5000,11 +5039,16 @@ public final class Jdbc {
 
         /**
          * Extracts data from the current row of the {@code ResultSet} and populates the {@code outputRow} array.
-         * The implementation is responsible for mapping columns to array indices.
+         * The implementation is responsible for mapping columns to array indices; typically position {@code i}
+         * in {@code outputRow} (0-based) corresponds to column index {@code i + 1} in {@code rs}.
          *
-         * @param rs the {@code ResultSet} positioned at a valid row.
-         * @param outputRow the array to be populated with data from the current row.
-         * @throws SQLException if a database access error occurs.
+         * <p>The {@code outputRow} must be at least as long as the number of columns the implementation
+         * intends to write; an implementation may throw {@link IllegalArgumentException} if the array is
+         * too short. The implementation must not advance the cursor (e.g. call {@code rs.next()}).</p>
+         *
+         * @param rs the {@code ResultSet} positioned at a valid row; must not be {@code null}
+         * @param outputRow the array to be populated with data from the current row; must not be {@code null}
+         * @throws SQLException if a database access error occurs
          */
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
@@ -5383,19 +5427,19 @@ public final class Jdbc {
             /**
              * Builds a stateful {@code RowExtractor} that fills a supplied output array with the mapped row values.
              *
-             * <p>
-             * The extractor initializes its internal column getter cache on first use. When invoked, if the
-             * output array is shorter than the number of result set columns, an {@link IllegalArgumentException}
-             * is thrown by the extractor's {@code accept} method.
-             * </p>
+             * <p>The extractor initializes its internal column getter cache on first use, based on the
+             * column count read from {@code ResultSetMetaData}. Position {@code i} in the output array
+             * (0-based) is populated using the {@code ColumnGetter} configured for column {@code i + 1}
+             * (or the default getter if none was configured).</p>
              *
              * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It should be built for each
-             * execution context and must not be cached or shared across incompatible queries.</p>
+             * execution context and must not be cached or shared across incompatible queries or used in
+             * parallel streams.</p>
              *
              * <p>Note: the returned extractor's {@code accept} method throws an {@link IllegalArgumentException}
              * if the supplied output array is shorter than the result set's column count.</p>
              *
-             * @return a new stateful {@code RowExtractor}.
+             * @return a new stateful {@code RowExtractor}
              */
             @SequentialOnly
             @Stateful
@@ -5731,7 +5775,10 @@ public final class Jdbc {
             public static final RowMapper<Clob> GET_CLOB = rs -> rs.getClob(1);
 
             /**
-             * A {@code RowMapper} for getting an {@code Object} value from the first column.
+             * A {@code RowMapper} for getting a value from the first column as a generic {@code Object},
+             * with the runtime type chosen by {@link JdbcUtil#getColumnValue(ResultSet, int)}
+             * (which adapts driver-specific types such as {@code java.sql.Date}, {@code Timestamp},
+             * {@code BigDecimal}, etc.).
              */
             public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 1);
 
@@ -5901,11 +5948,11 @@ public final class Jdbc {
             }
 
             /**
-             * Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type} from the first column.
+             * Gets a {@code RowMapper} that extracts a value of the specified Abacus-common {@code Type}
+             * from the first column.
              *
-             * <p>
-             * This method reuses a cached mapper per type.
-             * </p>
+             * <p>This method reuses a cached mapper per {@code Type}, so repeated calls with the same
+             * {@code Type} return the same {@code RowMapper} instance.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -5915,9 +5962,8 @@ public final class Jdbc {
              * }</pre>
              *
              * @param <T> target type
-             * @param type the {@code Type} of the value in the first column.
-             * @return a {@code RowMapper} for the specified type.
-             * @throws NullPointerException if {@code type} is {@code null}.
+             * @param type the {@code Type} of the value in the first column; must not be {@code null}
+             * @return a {@code RowMapper} for the specified type
              */
             @SuppressWarnings("cast")
             public static <T> RowMapper<T> get(final Type<? extends T> type) {
@@ -6000,10 +6046,11 @@ public final class Jdbc {
 
     /**
      * Represents an output parameter for a stored procedure call. This class encapsulates all
-     * necessary information to register an output parameter with a {@code CallableStatement}.
+     * information needed to register an output parameter with a {@code java.sql.CallableStatement}
+     * via {@code registerOutParameter}.
      *
-     * <p>This class provides both a no-argument constructor (via Lombok's {@code @NoArgsConstructor})
-     * and an all-arguments constructor (via Lombok's {@code @AllArgsConstructor}) for flexible instantiation.</p>
+     * <p>Lombok generates a no-argument constructor, an all-arguments constructor, and standard
+     * getter/setter/equals/hashCode/toString methods for the fields below.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6014,7 +6061,12 @@ public final class Jdbc {
      *
      * // Using all-args constructor (parameterIndex, parameterName, sqlType, typeName, scale)
      * OutParam outParam = new OutParam(1, "result", Types.INTEGER, null, 0);
+     *
+     * // Shortcut factory
+     * OutParam idOut = OutParam.of(1, Types.INTEGER);
      * }</pre>
+     *
+     * @see OutParamResult
      */
     @NoArgsConstructor
     @AllArgsConstructor
@@ -6062,8 +6114,12 @@ public final class Jdbc {
     }
 
     /**
-     * A container for the results of output parameters from a stored procedure execution.
-     * It provides methods to retrieve parameter values by their 1-based index or name.
+     * An immutable container for the values of output parameters produced by a stored procedure
+     * execution. Values can be retrieved by their 1-based parameter index or by parameter name,
+     * depending on how the underlying {@link OutParam} was registered.
+     *
+     * <p>This type is not directly instantiable by callers; instances are produced by the framework
+     * (e.g. by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6142,6 +6198,12 @@ public final class Jdbc {
      * A handler interface for intercepting method invocations on DAO proxies, similar to an Aspect-Oriented
      * Programming (AOP) interceptor. It allows for executing custom logic before and after a DAO method is called.
      *
+     * <p>Both {@link #beforeInvoke} and {@link #afterInvoke} have empty default implementations, so
+     * implementations only need to override the hooks they care about.</p>
+     *
+     * <p>Implementations should be thread-safe if the same handler instance is registered against
+     * multiple DAO proxies or invoked concurrently.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Handler<UserDao> loggingHandler = new Handler<>() {
@@ -6157,6 +6219,7 @@ public final class Jdbc {
      * }</pre>
      *
      * @param <P> DAO proxy type
+     * @see HandlerFactory
      */
     @Beta
     public interface Handler<P> {
@@ -6175,10 +6238,16 @@ public final class Jdbc {
 
         /**
          * This method is invoked after the DAO method completes, whether successfully or with an exception.
-         * It can be used for logging results, result transformation, or resource cleanup.
+         * It is also invoked for handlers that were entered via {@link #beforeInvoke}, in reverse order; if this
+         * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke}
+         * is not invoked for it. It can be used for logging results, result transformation, or resource cleanup.
          *
-         * @param result the value returned by the method. Will be {@code null} if the method's return type is void
-         *               or if the method threw an exception.
+         * <p>Exceptions thrown from this method are logged and suppressed onto any underlying invocation failure;
+         * they will not replace a primary exception from the DAO method itself.</p>
+         *
+         * @param result the value returned by the method. Will be {@code null} if the method's return type is
+         *               {@code void} or if the method threw an exception (in which case the throwable is not
+         *               surfaced here).
          * @param proxy the proxy instance on which the method was invoked.
          * @param args the arguments passed to the method.
          * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type.
@@ -6241,9 +6310,11 @@ public final class Jdbc {
         /**
          * Registers a handler by creating a new instance of the specified handler class.
          * The handler is registered using its canonical class name as the qualifier.
+         * The class must have an accessible no-argument constructor; the instance is created
+         * via reflection.
          *
          * @param handlerClass the handler class to instantiate and register.
-         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same name already exists.
+         * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
          * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
          */
         public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {

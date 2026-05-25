@@ -32,17 +32,23 @@ import java.lang.annotation.Target;
  *   <li>No {@code @Transactional} annotations will be processed</li>
  * </ul>
  * 
- * <p>By default, the following utility methods in DAO interfaces are automatically treated as non-DB operations:</p>
+ * <p>The framework's built-in DAO base interfaces ({@code Dao}, {@code CrudDao},
+ * {@code NoUpdateDao}, etc.) already carry {@code @NonDBOperation} on the utility/accessor
+ * methods they declare, including (non-exhaustive):</p>
  * <ul>
  *   <li>{@code targetEntityClass()} - Returns the entity class associated with the DAO</li>
  *   <li>{@code dataSource()} - Returns the data source used by the DAO</li>
  *   <li>{@code sqlMapper()} - Returns the SQL mapper instance</li>
  *   <li>{@code executor()} - Returns the query executor</li>
  *   <li>{@code asyncExecutor()} - Returns the async query executor</li>
- *   <li>{@code prepareQuery()} - Creates a query builder</li>
- *   <li>{@code prepareNamedQuery()} - Creates a named query builder</li>
- *   <li>{@code prepareCallableQuery()} - Creates a callable query builder</li>
+ *   <li>{@code prepareQuery(...)} - Creates a query builder</li>
+ *   <li>{@code prepareNamedQuery(...)} - Creates a named query builder</li>
+ *   <li>{@code prepareCallableQuery(...)} - Creates a callable query builder</li>
  * </ul>
+ *
+ * <p>Apply {@code @NonDBOperation} to your own {@code default} or {@code static} DAO methods
+ * whenever they should be excluded from the DAO proxy's database-related processing (handlers,
+ * SQL/perf logging, transactional weaving).</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

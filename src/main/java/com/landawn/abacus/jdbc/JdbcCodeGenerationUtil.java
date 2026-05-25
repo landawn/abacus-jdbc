@@ -1803,6 +1803,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * <ul>
      *   <li>Column and value counts must match or conversion fails.</li>
+     *   <li>Column names that contain characters other than ASCII letters, digits, or underscores are quoted
+     *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
+     *       {@link DBProductInfo} resolved from {@code ds}.</li>
      *   <li>String values are rendered as single-quoted SQL literals; embedded single quotes are escaped by doubling.</li>
      *   <li>All other value types are rendered using {@link com.landawn.abacus.util.N#stringOf(Object)}.</li>
      *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>

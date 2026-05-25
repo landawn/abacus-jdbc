@@ -1754,6 +1754,9 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Returns a lazy Stream of entities matching the condition.
      * The stream uses lazy evaluation - no database connection or query execution occurs until a terminal operation is called.
+     * Any {@link SQLException} raised during stream consumption is wrapped as an
+     * {@link com.landawn.abacus.exception.UncheckedSQLException}. The stream must be closed
+     * (e.g. via try-with-resources) to release the underlying JDBC resources.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1824,6 +1827,9 @@ public interface Dao<T, SB extends SqlBuilder, TD extends Dao<T, SB, TD>> {
     /**
      * Returns a lazy Stream of entities with selected properties.
      * Only specified properties are loaded for each entity.
+     * Any {@link SQLException} raised during stream consumption is wrapped as an
+     * {@link com.landawn.abacus.exception.UncheckedSQLException}. The stream must be closed
+     * (e.g. via try-with-resources) to release the underlying JDBC resources.
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition

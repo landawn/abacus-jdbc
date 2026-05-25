@@ -67,18 +67,17 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends 
         extends UncheckedNoUpdateCrudDao<T, Long, SB, TD>, UncheckedCrudDaoL<T, SB, TD> {
 
     /**
-     * This operation is not supported in a no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * This {@code long}-keyed single-property update overload is disallowed by
+     * {@code UncheckedNoUpdateCrudDaoL} because it would mutate an existing record,
+     * violating the read/insert-only contract.
      *
-     * <p>Even though this method accepts a convenient primitive {@code long} ID,
-     * update operations are not allowed in no-update DAOs.</p>
-     *
-     * @param propName the name of the property to update (unused; method always throws)
-     * @param propValue the new value for the property (unused; method always throws)
-     * @param id the entity ID as a primitive {@code long} (unused; method always throws)
+     * @param propName the property name to update
+     * @param propValue the new value for the property
+     * @param id the primitive {@code long} ID of the entity to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as update operations are not supported
-     * @deprecated This operation is not supported and will always throw an exception
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code UncheckedNoUpdateCrudDaoL}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -87,17 +86,16 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * This operation is not supported in a no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * This {@code long}-keyed multi-property update overload is disallowed by
+     * {@code UncheckedNoUpdateCrudDaoL} because it would mutate an existing record,
+     * violating the read/insert-only contract.
      *
-     * <p>Even though this method accepts a convenient primitive {@code long} ID,
-     * update operations are not allowed in no-update DAOs.</p>
-     *
-     * @param updateProps map of property names to their new values (unused; method always throws)
-     * @param id the entity ID as a primitive {@code long} (unused; method always throws)
+     * @param updateProps a map of property names to their new values
+     * @param id the primitive {@code long} ID of the entity to update
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as update operations are not supported
-     * @deprecated This operation is not supported and will always throw an exception
+     * @throws UnsupportedOperationException always, since updates are not permitted
+     * @deprecated Unsupported in {@code UncheckedNoUpdateCrudDaoL}. Updates are not allowed.
      */
     @Deprecated
     @Override
@@ -106,16 +104,15 @@ public interface UncheckedNoUpdateCrudDaoL<T, SB extends SqlBuilder, TD extends 
     }
 
     /**
-     * This operation is not supported in a no-update DAO.
-     * Always throws {@link UnsupportedOperationException}.
+     * Unsupported operation that always throws {@link UnsupportedOperationException}.
+     * This {@code long}-keyed delete-by-id overload is disallowed by
+     * {@code UncheckedNoUpdateCrudDaoL} because it would remove an existing record,
+     * violating the read/insert-only contract.
      *
-     * <p>Even though this method accepts a convenient primitive {@code long} ID,
-     * delete operations are not allowed in this no-update DAO variant.</p>
-     *
-     * @param id the entity ID as a primitive {@code long} (unused; method always throws)
+     * @param id the primitive {@code long} ID of the entity to delete
      * @return never returns normally
-     * @throws UnsupportedOperationException always thrown as delete operations are not supported
-     * @deprecated This operation is not supported and will always throw an exception
+     * @throws UnsupportedOperationException always, since deletes are not permitted
+     * @deprecated Unsupported in {@code UncheckedNoUpdateCrudDaoL}. Deletes are not allowed.
      */
     @Deprecated
     @Override
