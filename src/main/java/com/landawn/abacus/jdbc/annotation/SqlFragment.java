@@ -21,11 +21,48 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Performs SQL template substitution for one query fragment.
+ * Performs SQL template substitution for one query fragment. The annotated method parameter's
+ * string value replaces the {@code {name}} token in the surrounding {@link Query @Query} SQL
+ * <em>before</em> the statement is prepared.
  *
- * <p>Unlike {@link Bind}, this annotation changes the SQL text itself rather than binding a
- * JDBC value. Only use it with trusted or validated input such as whitelisted identifiers or
- * predefined SQL snippets.</p>
+ * <p>Unlike {@link Bind} — which sends the value through a JDBC parameter placeholder —
+ * {@code @SqlFragment} rewrites the SQL text itself. That makes it the right tool for tokens
+ * that JDBC cannot parameterize (table names, column lists, {@code ORDER BY} expressions,
+ * sub-conditions) but a dangerous one for untrusted input. Always supply pre-validated or
+ * whitelisted strings; otherwise the framework offers no protection against SQL injection at
+ * this layer.</p>
+ *
+ * <p>The DAO proxy ({@code DaoImpl}) resolves these substitutions when building the SQL for a
+ * call. If the replacement text itself contains named parameter placeholders (e.g.,
+ * {@code "discount &gt;= :minDiscount"}), set
+ * {@link Query#fragmentContainsNamedParameters() @Query(fragmentContainsNamedParameters = true)}
+ * so the proxy re-scans the assembled SQL for them.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ *
+ * <p><b>Whitelisted table / schema substitution:</b></p>
+ * <pre>{@code
+ * public interface UserDao extends Dao<User, SqlBuilder.PSC, UserDao> {
+ *
+ *     @Query("SELECT * FROM {schema}.{table} WHERE id = :id")
+ *     User findById(
+ *         @SqlFragment("schema") String schema,    // e.g., "tenant_a"
+ *         @SqlFragment("table")  String table,     // e.g., "users"
+ *         @Bind("id")            long id);
+ * }
+ * }</pre>
+ *
+ * <p><b>Dynamic WHERE clause that itself binds named parameters:</b></p>
+ * <pre>{@code
+ * @Query(value = "SELECT * FROM promotions WHERE {whereClause}",
+ *        fragmentContainsNamedParameters = true)
+ * List<Promotion> findActive(
+ *     @SqlFragment("whereClause") String whereClause,
+ *     @Bind("minDiscount")        int    minDiscount);
+ *
+ * // Caller:
+ * dao.findActive("discount >= :minDiscount AND status = 'ACTIVE'", 10);
+ * }</pre>
  *
  * @see SqlFragmentList
  * @see Bind

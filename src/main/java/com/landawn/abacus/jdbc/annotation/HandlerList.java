@@ -21,13 +21,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Container annotation for multiple {@link Handler} annotations.
- * This annotation is used internally by the Java compiler to support the
- * {@code @Repeatable} feature of the {@link Handler} annotation.
- * 
- * <p>You typically don't use this annotation directly. Instead, you can apply
- * multiple {@code @Handler} annotations to the same element, and the compiler
- * will automatically wrap them in a {@code @HandlerList}.</p>
+ * Container annotation for multiple {@link Handler} declarations on the same DAO method or type.
+ * Synthesized automatically by the Java compiler from the {@link java.lang.annotation.Repeatable}
+ * declaration on {@link Handler}; direct use is rarely necessary.
+ *
+ * <p>The DAO proxy ({@code DaoImpl}) reads the {@code @HandlerList} (whether explicit or
+ * compiler-synthesized), resolves each {@link Handler#qualifier() qualifier} or
+ * {@link Handler#type() type} to a {@code Jdbc.Handler} instance, then composes them into an
+ * <em>onion-style</em> interceptor chain around the actual DAO call: outer handlers see the
+ * invocation first on the way in and last on the way out (see "Execution flow" below).</p>
  * 
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

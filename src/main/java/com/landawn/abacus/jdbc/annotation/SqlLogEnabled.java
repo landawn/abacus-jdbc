@@ -23,11 +23,40 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Enables or disables SQL logging for a DAO method or DAO type.
+ * Toggles whether SQL statements are logged for a DAO method (or all matching methods on a DAO
+ * type). When enabled, every prepared statement executed through the DAO proxy is written to the
+ * SQL logger, truncated to {@link #maxSqlLogLength()} characters.
  *
- * <p>Method-level usage affects only the annotated method. Type-level usage applies to
- * methods whose names match {@link #filter()} by case-insensitive containment or by a full
- * regular-expression match.</p>
+ * <p>The DAO proxy reads this annotation at proxy-build time ({@code DaoImpl}). A method-level
+ * {@code @SqlLogEnabled} wins over a type-level one. When neither is present, logging follows
+ * the global default configured on {@link JdbcUtil}.</p>
+ *
+ * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when it is
+ * contained in the method name (case-insensitive) or matches the full method name as a regular
+ * expression. The filter is ignored entirely for method-level usage. Typical patterns:</p>
+ * <ul>
+ *   <li>{@code ".*"} (default) — every method.</li>
+ *   <li>{@code "insert", "update", "delete"} — only write methods.</li>
+ *   <li>{@code "find.*"} — methods whose name starts with {@code find}.</li>
+ * </ul>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * // Method-level: hide a query that prints sensitive payment data.
+ * public interface PaymentDao extends CrudDao<Payment, Long, SqlBuilder.PSC, PaymentDao> {
+ *     @SqlLogEnabled(false)
+ *     @Query("SELECT * FROM payment_card WHERE id = :id")
+ *     Payment findById(@Bind("id") Long id);
+ *
+ *     @Query("UPDATE payment_card SET status = :status WHERE id = :id")
+ *     int updateStatus(@Bind("id") Long id, @Bind("status") String status);
+ * }
+ *
+ * // Type-level: log only the write methods, truncated to 2 KB.
+ * @SqlLogEnabled(value = true, maxSqlLogLength = 2048,
+ *                filter = { "insert", "update", "delete", "save", "remove" })
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> { ... }
+ * }</pre>
  *
  * @see PerfLog
  * @see JdbcUtil

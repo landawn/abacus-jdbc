@@ -23,11 +23,48 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Enables SQL and DAO-method performance logging.
+ * Enables SQL and DAO-method performance logging for the annotated method (or for the DAO type,
+ * with optional {@link #filter()} matching).
  *
- * <p>Method-level usage applies only to the annotated method. Type-level usage applies to
- * methods whose names match {@link #filter()} by case-insensitive containment or by a full
- * regular-expression match.</p>
+ * <p>The DAO proxy reads this annotation at build time ({@code DaoImpl}). For each invocation,
+ * the proxy snapshots {@code System.currentTimeMillis()} before and after the call and emits a
+ * log entry only when:</p>
+ * <ul>
+ *   <li>The SQL portion of the call exceeded {@link #minExecutionTimeForSql()} milliseconds — the
+ *       statement text (capped at {@link #maxSqlLogLength()} characters) is logged at WARN level.</li>
+ *   <li>The whole DAO-method invocation exceeded {@link #minExecutionTimeForOperation()} ms —
+ *       the method name and total elapsed time are logged.</li>
+ * </ul>
+ *
+ * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one. When
+ * neither is present, the global defaults configured on {@link JdbcUtil} are used.</p>
+ *
+ * <p><b>Filter semantics (type-level only):</b> each entry matches when it is contained in the
+ * method name (case-insensitive) or matches the full method name as a regular expression. The
+ * filter is ignored entirely when the annotation is placed on a single method.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * // Type-level: every method in the DAO is monitored, with a relaxed 5-second budget.
+ * @PerfLog(minExecutionTimeForSql = 1000,
+ *          minExecutionTimeForOperation = 5000)
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ *
+ *     // Method-level override: this hot path uses a tighter threshold and shorter logs.
+ *     @PerfLog(minExecutionTimeForSql = 100,
+ *              maxSqlLogLength = 200)
+ *     @Query("SELECT * FROM users WHERE id = :id")
+ *     User findById(@Bind("id") Long id);
+ *
+ *     // Type-level @PerfLog also applies here, with the defaults from the type.
+ *     @Query("SELECT COUNT(*) FROM users")
+ *     long countAll();
+ * }
+ *
+ * // Filter only the read paths at the type level.
+ * @PerfLog(filter = { "find", "get", "query", "list", "count" })
+ * public interface ReportDao { ... }
+ * }</pre>
  *
  * @see SqlLogEnabled
  * @see JdbcUtil

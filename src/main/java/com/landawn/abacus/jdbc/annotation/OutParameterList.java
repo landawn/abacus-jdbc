@@ -21,10 +21,41 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Container annotation for repeatable {@link OutParameter} declarations.
+ * Container annotation for repeatable {@link OutParameter} declarations on a single stored-procedure
+ * DAO method.
  *
- * <p>You normally do not use this annotation directly; it is synthesized by the compiler
- * when multiple {@code @OutParameter} annotations are declared on the same method.</p>
+ * <p>You normally do not write {@code @OutParameterList(...)} by hand: the Java compiler
+ * synthesizes it automatically when more than one {@link OutParameter @OutParameter} appears on
+ * the same method. Direct use is only needed in rare cases (for example, when generating
+ * annotations programmatically).</p>
+ *
+ * <p>The DAO proxy registers each contained {@code @OutParameter} on the underlying
+ * {@link java.sql.CallableStatement} in declaration order; the registered values are then
+ * exposed to the caller through the method's return value (typically a
+ * {@code Jdbc.OutParamResult}, a single scalar, or a result holder).</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * // Implicit form — preferred. The compiler wraps the two @OutParameters in an @OutParameterList.
+ * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
+ *        isProcedure = true, op = OP.executeAndGetOutParameters)
+ * @OutParameter(name = "discount",   sqlType = Types.DECIMAL)
+ * @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
+ * Jdbc.OutParamResult calculateDiscount(
+ *         @Bind("price")      BigDecimal price,
+ *         @Bind("customerId") long       customerId);
+ *
+ * // Explicit form — equivalent to the above.
+ * @Query(value = "{call calculate_discount(:price, :customerId, :discount, :finalPrice)}",
+ *        isProcedure = true, op = OP.executeAndGetOutParameters)
+ * @OutParameterList({
+ *     @OutParameter(name = "discount",   sqlType = Types.DECIMAL),
+ *     @OutParameter(name = "finalPrice", sqlType = Types.DECIMAL)
+ * })
+ * Jdbc.OutParamResult calculateDiscountExplicit(
+ *         @Bind("price")      BigDecimal price,
+ *         @Bind("customerId") long       customerId);
+ * }</pre>
  *
  * @see OutParameter
  * @see Query

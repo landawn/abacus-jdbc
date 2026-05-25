@@ -21,11 +21,46 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Associates a DAO interface with an external SQL mapper resource.
+ * Associates a DAO interface with an external SQL mapper resource. The mapped file provides
+ * named SQL definitions (each with a unique id) that the DAO methods reference via
+ * {@link Query#id() @Query(id = ...)}.
  *
- * <p>The mapped resource provides named SQL definitions that can be referenced from
- * {@link Query#id()}. Use this when inline SQL becomes too large or when several DAO
- * methods need to share the same statement text.</p>
+ * <p>The DAO proxy loads the mapper at proxy-build time ({@code DaoImpl} uses
+ * {@code SqlMapper.load(...)} to parse the resource). Resolved entries become the SQL text used
+ * by every {@code @Query(id = "...")} on the same DAO. Use this when:</p>
+ * <ul>
+ *   <li>Inline SQL strings would crowd the Java source.</li>
+ *   <li>The same statement is shared across several DAO methods.</li>
+ *   <li>You want SQL to be edited by people who do not touch Java code.</li>
+ *   <li>You want to maintain database-specific variants of the same query in one place.</li>
+ * </ul>
+ *
+ * <p>If the resolved id list contains an entry that is also declared by a {@link SqlScript}
+ * field on the DAO type, DAO initialization fails with {@code IllegalArgumentException} — every
+ * id must be unique across both sources.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * @SqlSource("sql/UserDao.xml")
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ *
+ *     @Query(id = "findActiveAdults")              // Reference into the mapper file.
+ *     List<User> findActiveAdults(@Bind("minAge") int minAge);
+ *
+ *     @Query(id = "softDeleteById")
+ *     int softDeleteById(@Bind("id") Long id);
+ * }
+ *
+ * // sql/UserDao.xml:
+ * // <sqlMapper>
+ * //   <sql id="findActiveAdults">
+ * //     SELECT * FROM users WHERE status = 'ACTIVE' AND age >= :minAge
+ * //   </sql>
+ * //   <sql id="softDeleteById">
+ * //     UPDATE users SET deleted = 1, deleted_at = NOW() WHERE id = :id
+ * //   </sql>
+ * // </sqlMapper>
+ * }</pre>
  *
  * @see Query#id()
  * @see SqlScript

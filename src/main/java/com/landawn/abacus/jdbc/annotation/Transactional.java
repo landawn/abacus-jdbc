@@ -29,10 +29,55 @@ import com.landawn.abacus.jdbc.Propagation;
  * <p>The annotation selects a {@link Propagation propagation policy} and an
  * {@link IsolationLevel isolation level} for the method invocation. It is intended for DAO
  * methods; for service-layer transaction orchestration, prefer the transaction mechanism of
- * the surrounding framework.</p>
+ * the surrounding framework (e.g., Spring's {@code @Transactional}).</p>
+ *
+ * <p>The DAO proxy ({@code DaoImpl}) inspects {@code @Transactional} when building the method
+ * invocation chain. At invocation time the proxy:</p>
+ * <ol>
+ *   <li>Begins a {@link com.landawn.abacus.jdbc.Transaction Transaction} on the DAO's
+ *       {@code DataSource}, honoring {@link #propagation()} and {@link #isolation()}.</li>
+ *   <li>Runs the method body.</li>
+ *   <li>Commits on normal return, or rolls back if a {@link java.sql.SQLException} or runtime
+ *       exception propagates out.</li>
+ * </ol>
+ * The propagation rules follow the same semantics as the Spring equivalent: {@code REQUIRED}
+ * joins an existing transaction or starts a new one, {@code REQUIRES_NEW} always starts a new
+ * one (suspending any current transaction), {@code MANDATORY} requires an existing transaction,
+ * etc.
+ *
+ * <p>This annotation may only be placed on methods (not on the DAO type). To make every method
+ * transactional, mix in a base interface or apply {@code @Transactional} to each method
+ * explicitly.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * public interface OrderDao extends CrudDao<Order, Long, SqlBuilder.PSC, OrderDao> {
+ *
+ *     // Default: REQUIRED + database-default isolation.
+ *     @Transactional
+ *     default void placeOrder(Order order, List<OrderItem> items) {
+ *         insert(order);
+ *         itemDao().batchInsert(items);          // joins the same transaction.
+ *     }
+ *
+ *     // Independent audit record — survives even if the outer transaction rolls back.
+ *     @Transactional(propagation = Propagation.REQUIRES_NEW)
+ *     @Query("INSERT INTO audit_log (event, ts) VALUES (:event, :ts)")
+ *     int logAudit(@Bind("event") String event, @Bind("ts") Instant ts);
+ *
+ *     // Money transfer needs the strictest isolation.
+ *     @Transactional(propagation = Propagation.REQUIRED,
+ *                    isolation = IsolationLevel.SERIALIZABLE)
+ *     default void transfer(long from, long to, BigDecimal amount) {
+ *         decrement(from, amount);
+ *         increment(to, amount);
+ *     }
+ * }
+ * }</pre>
  *
  * @see Propagation
  * @see IsolationLevel
+ * @see com.landawn.abacus.jdbc.Transaction
  * @see org.springframework.transaction.annotation.Transactional
  */
 @Retention(RetentionPolicy.RUNTIME)

@@ -23,11 +23,43 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.annotation.Beta;
 
 /**
- * Triggers cache invalidation after matching DAO methods complete.
+ * Triggers invalidation of the DAO's result cache after the annotated method completes. Use it on
+ * write-side operations (insert, update, delete, save, etc.) so that subsequent read-side calls
+ * marked with {@link CacheResult} re-issue the SQL instead of returning stale results.
  *
- * <p>Method-level usage affects only the annotated method. Type-level usage applies to
- * methods whose names match {@link #filter()} by method-name prefix or by a full
- * regular-expression match.</p>
+ * <p>The DAO proxy ({@code DaoImpl}) collects {@code @RefreshCache} annotations at build time. At
+ * runtime, after a matching method finishes (success or failure), the proxy clears the entries
+ * in the DAO's {@link Cache cache pool}. A method-level {@code @RefreshCache} can override the
+ * type-level one — most importantly, {@code @RefreshCache(disabled = true)} <em>opts a single
+ * method back out</em> of the cache-invalidation set declared at the type level.</p>
+ *
+ * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
+ * method name starts with that entry, or when the entry matches the full method name as a regular
+ * expression. The filter is ignored entirely for method-level usage. The default value already
+ * covers the common write-method names emitted by the Abacus DAO base interfaces.</p>
+ *
+ * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * @Cache(capacity = 1000)
+ * @RefreshCache                                   // type-level: defaults cover insert/update/delete/...
+ * public interface ProductDao extends CrudDao<Product, Long, SqlBuilder.PSC, ProductDao> {
+ *
+ *     @CacheResult(liveTime = 600_000)
+ *     @Query("SELECT * FROM product WHERE id = :id")
+ *     Product findById(@Bind("id") Long id);
+ *
+ *     @Query("UPDATE product SET price = :price WHERE id = :id")
+ *     int updatePrice(@Bind("id") Long id, @Bind("price") BigDecimal price);
+ *     // ← falls under the type-level filter; cache is invalidated after each call.
+ *
+ *     // High-frequency update that is intentionally exempt from cache invalidation.
+ *     @RefreshCache(disabled = true)
+ *     @Query("UPDATE product SET view_count = view_count + 1 WHERE id = :id")
+ *     int incrementViews(@Bind("id") Long id);
+ * }
+ * }</pre>
  *
  * @see Cache
  * @see CacheResult

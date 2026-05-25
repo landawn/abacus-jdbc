@@ -21,16 +21,44 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a {@code static final String} field as a named SQL script.
+ * Marks a {@code static final String} field as a named SQL script — an inline alternative to
+ * pulling SQL in from an external mapper via {@link SqlSource}.
  *
- * <p>Annotated constants can be resolved by {@link Query#id()} and are useful for moving
- * large SQL definitions out of method annotations while keeping them close to the DAO type.</p>
+ * <p>The DAO proxy ({@code DaoImpl}) scans the DAO interface for fields carrying this annotation
+ * at build time and registers each one as a named entry. Methods annotated with
+ * {@link Query @Query(id = "name")} then resolve their SQL by looking up that name. This lets
+ * you keep large or reused SQL definitions next to the DAO without sprinkling multi-line
+ * {@code @Query(value = "...")} strings throughout the interface.</p>
  *
- * <p>The annotated field must be declared as {@code static final String} on the DAO interface
- * (or a nested class within it). DAO initialization fails with {@code IllegalArgumentException}
- * if these requirements are violated, if the resolved id is empty or contains whitespace, if
- * two annotated fields resolve to the same id, or if the id collides with an entry already
- * defined by an external SQL mapper loaded via {@link SqlSource}.</p>
+ * <p><b>Constraints (enforced at DAO initialization, otherwise {@code IllegalArgumentException}):</b></p>
+ * <ul>
+ *   <li>The annotated field must be declared {@code static final String} on the DAO interface
+ *       (or a nested class within it).</li>
+ *   <li>The resolved id (either {@link #id()} when non-empty, or the field name) must be a
+ *       non-empty, whitespace-free Java identifier.</li>
+ *   <li>No two annotated fields may resolve to the same id.</li>
+ *   <li>The id must not collide with any entry already loaded by {@link SqlSource}.</li>
+ * </ul>
+ *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * public interface UserDao extends CrudDao<User, Long, SqlBuilder.PSC, UserDao> {
+ *
+ *     @SqlScript
+ *     String sql_listUserWithBiggerId =
+ *             PSC.selectFrom(User.class).where(Filters.gt("id")).sql();
+ *
+ *     @SqlScript(id = "sql_softDeleteById")          // explicit id overrides field name
+ *     String softDeleteByIdSql =
+ *             "UPDATE user SET deleted = 1, deleted_at = NOW() WHERE id = :id";
+ *
+ *     @Query(id = "sql_listUserWithBiggerId")
+ *     List<User> listUserWithBiggerId(@Bind("id") long minId);
+ *
+ *     @Query(id = "sql_softDeleteById")
+ *     int softDeleteById(@Bind("id") long id);
+ * }
+ * }</pre>
  *
  * @see Query
  * @see SqlSource

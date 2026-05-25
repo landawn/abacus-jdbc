@@ -23,10 +23,13 @@ import java.lang.annotation.Target;
 import com.landawn.abacus.jdbc.OnDeleteAction;
 
 /**
- * Deprecated metadata placeholder for delete-cascade behavior.
+ * Deprecated metadata placeholder for declaring delete-cascade behavior in Java.
  *
- * <p>This annotation is not implemented by the framework. Define {@code ON DELETE} behavior
- * in the database schema instead of relying on application-side metadata.</p>
+ * <p>The DAO proxy ({@code DaoImpl}) does not consume this annotation in any way — it has no
+ * runtime effect. The annotation is retained only so existing code that references it continues
+ * to compile. Define {@code ON DELETE CASCADE} / {@code ON DELETE SET NULL} / etc. in the
+ * database schema (foreign-key constraints) instead, where it is enforced consistently regardless
+ * of the access path.</p>
  *
  * @deprecated This annotation is not implemented. Define {@code ON DELETE} behavior in the database schema instead.
  * @see OnDeleteAction

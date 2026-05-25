@@ -21,10 +21,46 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Maps prefixed column aliases to nested target paths during row mapping.
+ * Maps prefixed column aliases to nested target paths during row-to-bean mapping. This is the
+ * companion to {@link MergedById} for queries that join multiple tables and want to populate
+ * nested entity properties from columns whose aliases use a short prefix.
  *
- * <p>For example, a mapping such as {@code d=device} lets a column alias like
- * {@code d.id} populate {@code device.id} on the target object.</p>
+ * <p>The DAO proxy ({@code DaoImpl}) reads this annotation when building the row mapper for a
+ * {@link Query @Query} method. For each column whose alias starts with {@code prefix.}, the
+ * proxy strips the {@code prefix.} and then assigns the value to the corresponding nested
+ * property on the target object.</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ *
+ * <p><b>Single-table prefix, simple one-to-one nesting:</b></p>
+ * <pre>{@code
+ * public class User {
+ *     long      id;
+ *     String    name;
+ *     Address   address;     // nested target
+ * }
+ *
+ * public interface UserDao extends Dao<User, SqlBuilder.PSC, UserDao> {
+ *
+ *     @PrefixFieldMapping("addr=address")
+ *     @Query("SELECT u.id, u.name, " +
+ *            "       a.street AS \"addr.street\", a.city AS \"addr.city\" " +
+ *            "FROM users u JOIN addresses a ON a.user_id = u.id WHERE u.id = :id")
+ *     User getWithAddress(@Bind("id") long id);
+ * }
+ * // addr.street -> address.street, addr.city -> address.city
+ * }</pre>
+ *
+ * <p><b>Multiple prefixes and a one-to-many merge:</b></p>
+ * <pre>{@code
+ * @PrefixFieldMapping("d=devices")
+ * @MergedById
+ * @Query("SELECT u.id, u.name, " +
+ *        "       d.id AS \"d.id\", d.model AS \"d.model\" " +
+ *        "FROM users u LEFT JOIN devices d ON d.user_id = u.id " +
+ *        "WHERE u.id IN ({ids})")
+ * List<User> usersWithDevices(@BindList("ids") List<Long> ids);
+ * }</pre>
  *
  * @see Query
  * @see MergedById

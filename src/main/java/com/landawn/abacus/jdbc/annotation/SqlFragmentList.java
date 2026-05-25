@@ -21,10 +21,43 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Joins a collection or array into a comma-separated SQL fragment.
+ * Joins a collection or array of strings into a comma-separated SQL fragment that replaces the
+ * {@code {name}} token in the surrounding {@link Query @Query} SQL. This is the "list" form of
+ * {@link SqlFragment}.
  *
- * <p>Unlike {@link BindList}, this annotation performs direct SQL text substitution. Use it only
- * for trusted tokens such as validated column lists, table names, or other pre-approved fragments.</p>
+ * <p>Unlike {@link BindList} — which expands a collection into a parenthesized list of JDBC
+ * placeholders for an {@code IN} clause — {@code @SqlFragmentList} rewrites the SQL text itself
+ * with the comma-joined elements (with no surrounding parentheses and no value binding). Use it
+ * for trusted, whitelisted tokens such as column lists, table names, sort keys, or other
+ * pre-approved SQL fragments; do not use it for caller-supplied data.</p>
+ *
+ * <p>The DAO proxy ({@code DaoImpl}) performs these substitutions while assembling the SQL.
+ * Empty collections produce an empty string in place of the token (which is usually a SQL syntax
+ * error — callers should guard against that case).</p>
+ *
+ * <p><b>Usage Examples:</b></p>
+ *
+ * <p><b>Caller-selected projection columns:</b></p>
+ * <pre>{@code
+ * public interface UserDao extends Dao<User, SqlBuilder.PSC, UserDao> {
+ *
+ *     @Query("SELECT {cols} FROM users WHERE active = TRUE")
+ *     List<Map<String, Object>> projectActive(
+ *         @SqlFragmentList("cols") List<String> cols);
+ *
+ *     // dao.projectActive(List.of("id", "email", "created_at"))
+ *     //   -> "SELECT id, email, created_at FROM users WHERE active = TRUE"
+ * }
+ * }</pre>
+ *
+ * <p><b>Dynamic ORDER BY:</b></p>
+ * <pre>{@code
+ * @Query("SELECT * FROM products ORDER BY {sortKeys}")
+ * List<Product> sorted(@SqlFragmentList("sortKeys") List<String> sortKeys);
+ *
+ * // dao.sorted(List.of("category ASC", "price DESC"))
+ * //   -> "SELECT * FROM products ORDER BY category ASC, price DESC"
+ * }</pre>
  *
  * @see SqlFragment
  * @see BindList
