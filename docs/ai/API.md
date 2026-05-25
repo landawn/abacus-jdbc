@@ -1,4 +1,4 @@
-# abacus-jdbc API Index (v4.7.2)
+# abacus-jdbc API Index (v4.7.3)
 - Build: unknown
 - Java: 17
 - Generated: 2026-05-24
