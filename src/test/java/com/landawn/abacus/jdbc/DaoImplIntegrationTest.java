@@ -341,4 +341,49 @@ public class DaoImplIntegrationTest extends TestBase {
 
     public interface NoIdBadDao extends CrudDao<NoIdBad, Long, PSC, NoIdBadDao> {
     }
+
+    // Regression: the @Transactional + @SqlLogEnabled/@PerfLog wrapper used to call
+    // JdbcUtil.beginTransaction BEFORE entering the try-block that restores SQL-log and perf-log
+    // thread-locals. If beginTransaction itself threw (e.g., the DataSource went down between the
+    // SqlLog mutation and the connection acquisition), the thread-locals were never restored,
+    // leaking the annotation's settings into all subsequent calls on the same thread.
+    public interface TxLeakDao extends CrudDao<UserAccount, Long, PSC, TxLeakDao> {
+        @com.landawn.abacus.jdbc.annotation.Transactional
+        @com.landawn.abacus.jdbc.annotation.SqlLogEnabled(value = true, maxSqlLogLength = 4242)
+        @com.landawn.abacus.jdbc.annotation.PerfLog(minExecutionTimeForSql = 7777L, minExecutionTimeForOperation = 8888L)
+        @Query("SELECT COUNT(*) FROM user_account")
+        long countWithTx() throws SQLException;
+    }
+
+    @Test
+    public void testTransactionalSqlLogState_RestoredOnBeginTransactionFailure() throws Exception {
+        // Use a dedicated H2 datasource for this test so closing it doesn't disturb the shared one.
+        final DataSource scratchDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:daoimpl_txleak;DB_CLOSE_DELAY=-1", "sa", "");
+        try (Connection conn = scratchDs.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS user_account (" + "id BIGINT AUTO_INCREMENT PRIMARY KEY, " + "first_name VARCHAR(64), "
+                    + "last_name VARCHAR(64), " + "age INT, " + "active BOOLEAN)");
+        }
+
+        final TxLeakDao txDao = JdbcUtil.createDao(TxLeakDao.class, scratchDs);
+
+        // Snapshot the thread-local SQL-log + perf-log state before the failed call.
+        final boolean priorSqlLogEnabled = JdbcUtil.isSqlLogEnabled();
+        final long priorMinPerfLog = JdbcUtil.getMinExecutionTimeForSqlPerfLog();
+
+        // Closing the Hikari pool makes beginTransaction's getConnection() throw, simulating a
+        // mid-method DataSource failure that occurs after the @SqlLogEnabled/@PerfLog wrapper has
+        // already mutated the thread-locals.
+        ((com.zaxxer.hikari.HikariDataSource) scratchDs).close();
+
+        assertThrows(Exception.class, txDao::countWithTx);
+
+        // The fix: even though beginTransaction threw, the wrapper's finally block must have
+        // restored both thread-locals.
+        assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(),
+                "SQL log thread-local must be restored after beginTransaction failure");
+        assertEquals(priorMinPerfLog, JdbcUtil.getMinExecutionTimeForSqlPerfLog(),
+                "Perf log thread-local must be restored after beginTransaction failure");
+    }
+
 }

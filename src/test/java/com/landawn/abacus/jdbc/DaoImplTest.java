@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -827,5 +828,66 @@ public class DaoImplTest extends TestBase {
         org.mockito.Mockito.when(meta.getDatabaseProductVersion()).thenReturn("8.0");
 
         return ds;
+    }
+
+    // Regression: handleLimit's Expression-already-has-limit check used to omit " FETCH FIRST ", so an
+    // Expression containing FETCH FIRST (which DaoImpl itself emits for Oracle/SQLServer/DB2 and which
+    // users may write inline) would fall through to the count>0 branch and get wrapped in a Criteria
+    // with a second LIMIT/FETCH appended — producing invalid SQL on those databases.
+    @Test
+    public void testHandleLimit_FetchFirstExpressionNotDuplicated() throws Exception {
+        Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class, DBVersion.class);
+        handleLimit.setAccessible(true);
+
+        com.landawn.abacus.query.condition.Expression expr = com.landawn.abacus.query.Filters
+                .expr("id > 0 FETCH FIRST 10 ROWS ONLY");
+
+        // Oracle: prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
+        Object out = handleLimit.invoke(null, expr, 5, DBVersion.Oracle);
+        assertSame(expr, out, "Expression already containing FETCH FIRST must not be re-wrapped");
+
+        // Sanity: an Expression containing a plain LIMIT is also returned as-is (already covered before fix).
+        com.landawn.abacus.query.condition.Expression limitExpr = com.landawn.abacus.query.Filters
+                .expr("id > 0 LIMIT 10");
+        Object out2 = handleLimit.invoke(null, limitExpr, 5, DBVersion.MySQL_5_5);
+        assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
+    }
+
+    // Regression: getApplicableDaoForJoinEntity used to return a cache hit blindly. Because the cache key
+    // mixes System.identityHashCode(ds) — which is not guaranteed unique across live objects — a hit
+    // for a DAO bound to DataSource A could be served for an unrelated lookup against DataSource B.
+    // After the fix, a cache hit is only returned when the cached DAO's dataSource() also matches.
+    @Test
+    public void testGetApplicableDaoForJoinEntity_HitVerifiesDataSourceMatch() throws Exception {
+        DataSource ds1 = mockDataSourceForDaoCreation();
+        DataSource ds2 = mockDataSourceForDaoCreation();
+
+        // Create a real DAO bound to ds1 — registers it in DaoImpl.daoPool keyed on ds1's identity.
+        IdOnlyCrudDao daoForDs1 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds1, null, null, null);
+
+        // Poison joinEntityDaoPool with daoForDs1 under the key that would be computed for ds2 + IdOnlyEntity.
+        // The cache-hit path used to return daoForDs1; the fix forces fall-through when ds doesn't match.
+        java.lang.reflect.Field poolField = DaoImpl.class.getDeclaredField("joinEntityDaoPool");
+        poolField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, Dao<?, ?, ?>> pool = (Map<String, Dao<?, ?, ?>>) poolField.get(null);
+
+        String poisonedKey = com.landawn.abacus.util.ClassUtil.getCanonicalClassName(IdOnlyEntity.class) + "_" + System.identityHashCode(ds2);
+        pool.put(poisonedKey, daoForDs1);
+
+        try {
+            Method m = DaoImpl.class.getDeclaredMethod("getApplicableDaoForJoinEntity", Class.class, DataSource.class, Dao.class);
+            m.setAccessible(true);
+
+            // Create a real DAO bound to ds2 so the fall-through scan can find it.
+            IdOnlyCrudDao daoForDs2 = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds2, null, null, null);
+
+            Object resolved = m.invoke(null, IdOnlyEntity.class, ds2, daoForDs2);
+
+            assertSame(daoForDs2, resolved, "DAO bound to ds2 must be returned, not the poisoned ds1 entry");
+            assertFalse(resolved == daoForDs1, "Must not return the cached DAO bound to a different DataSource");
+        } finally {
+            pool.remove(poisonedKey);
+        }
     }
 }

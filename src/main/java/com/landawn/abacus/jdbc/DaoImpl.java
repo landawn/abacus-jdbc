@@ -1611,7 +1611,7 @@ final class DaoImpl {
 
             return criteriaBuilder.build();
         } else if (cond instanceof final Expression expr //
-                && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ")) {
+                && Strings.containsAnyIgnoreCase(expr.getLiteral(), " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ")) {
             // ignore.
         } else if (count > 0) {
             Criteria.Builder criteriaBuilder = Criteria.builder();
@@ -5030,6 +5030,18 @@ final class DaoImpl {
                                     c.addAll(propEntities);
                                     propJoinInfo.joinPropInfo.setPropValue(entity, c);
                                 }
+                            } else if (propJoinInfo.joinPropInfo.type.isMap()) {
+                                final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
+
+                                if (propEntities.size() > 1) {
+                                    throw new IllegalArgumentException("Multiple join entities found for map property: " + propJoinInfo.joinPropInfo.name);
+                                }
+
+                                if (!propEntities.isEmpty()) {
+                                    final Map<Object, Object> m = N.newMap((Class) propJoinInfo.joinPropInfo.clazz, 1);
+                                    m.put(propJoinInfo.srcEntityKeyExtractor.apply(entity), propEntities.get(0));
+                                    propJoinInfo.joinPropInfo.setPropValue(entity, m);
+                                }
                             } else {
                                 propJoinInfo.joinPropInfo.setPropValue(entity, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orElseNull());
                             }
@@ -5069,6 +5081,18 @@ final class DaoImpl {
                                         final Collection<Object> c = N.newCollection((Class) propJoinInfo.joinPropInfo.clazz);
                                         c.addAll(propEntities);
                                         propJoinInfo.joinPropInfo.setPropValue(first, c);
+                                    }
+                                } else if (propJoinInfo.joinPropInfo.type.isMap()) {
+                                    final List<?> propEntities = preparedQuery.list(propJoinInfo.referencedEntityClass);
+
+                                    if (propEntities.size() > 1) {
+                                        throw new IllegalArgumentException("Multiple join entities found for map property: " + propJoinInfo.joinPropInfo.name);
+                                    }
+
+                                    if (!propEntities.isEmpty()) {
+                                        final Map<Object, Object> m = N.newMap((Class) propJoinInfo.joinPropInfo.clazz, 1);
+                                        m.put(propJoinInfo.srcEntityKeyExtractor.apply(first), propEntities.get(0));
+                                        propJoinInfo.joinPropInfo.setPropValue(first, m);
                                     }
                                 } else {
                                     propJoinInfo.joinPropInfo.setPropValue(first, preparedQuery.findFirst(propJoinInfo.referencedEntityClass).orElseNull());
@@ -6013,32 +6037,28 @@ final class DaoImpl {
 
                             final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                            SqlTransaction tran = null;
                             Object result = null;
 
                             try {
+                                tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                 result = tmp.apply(proxy, args);
 
                                 tran.commit();
                             } finally {
-                                if (hasSqlLogAnno || hasPerfLogAnno) {
-                                    try {
+                                try {
+                                    if (tran != null) {
                                         tran.rollbackIfNotCommitted();
-                                    } finally {
-                                        if (hasPerfLogAnno) {
-                                            logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
-                                        }
-
-                                        if (hasPerfLogAnno) {
-                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
-                                        }
-
-                                        if (hasSqlLogAnno) {
-                                            JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
-                                        }
                                     }
-                                } else {
-                                    tran.rollbackIfNotCommitted();
+                                } finally {
+                                    if (hasPerfLogAnno) {
+                                        logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                        JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                    }
+
+                                    if (hasSqlLogAnno) {
+                                        JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                    }
                                 }
                             }
 
@@ -6088,32 +6108,28 @@ final class DaoImpl {
 
                                 final long startTime = hasPerfLogAnno ? System.currentTimeMillis() : -1;
 
-                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
+                                SqlTransaction tran = null;
                                 Object result = null;
 
                                 try {
+                                    tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolation());
                                     result = tmp.apply(proxy, args);
 
                                     tran.commit();
                                 } finally {
-                                    if (hasSqlLogAnno || hasPerfLogAnno) {
-                                        try {
+                                    try {
+                                        if (tran != null) {
                                             tran.rollbackIfNotCommitted();
-                                        } finally {
-                                            if (hasPerfLogAnno) {
-                                                logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
-                                            }
-
-                                            if (hasPerfLogAnno) {
-                                                JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
-                                            }
-
-                                            if (hasSqlLogAnno) {
-                                                JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
-                                            }
                                         }
-                                    } else {
-                                        tran.rollbackIfNotCommitted();
+                                    } finally {
+                                        if (hasPerfLogAnno) {
+                                            logDaoMethodPerf(daoLogger, simpleClassMethodName, perfLogAnno, startTime);
+                                            JdbcUtil.setMinExecutionTimeForSqlPerfLog(prevMinExecutionTimeForSqlPerfLog, prevMaxPerfSqlLogLength);
+                                        }
+
+                                        if (hasSqlLogAnno) {
+                                            JdbcUtil.enableSqlLog(prevSqlLogEnabled, prevMaxSqlLogLength);
+                                        }
                                     }
                                 }
 
@@ -6588,7 +6604,7 @@ final class DaoImpl {
         final String key = ClassUtil.getCanonicalClassName(referencedEntityClass) + "_" + System.identityHashCode(ds);
         final Dao joinEntityDao = joinEntityDaoPool.get(key);
 
-        if (joinEntityDao != null) {
+        if (joinEntityDao != null && joinEntityDao.dataSource().equals(ds)) {
             return joinEntityDao;
         } else {
             for (final Dao dao : daoPool.values()) {
