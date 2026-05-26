@@ -406,7 +406,8 @@ public class NamedQueryTest extends TestBase {
 
         NamedQuery result = namedQuery.setFloat(paramName, value);
 
-        verify(mockPreparedStatement).setNull(1, Types.FLOAT);
+        // Per JDBC spec, Java float maps to SQL REAL (Types.FLOAT is the alias for Types.DOUBLE).
+        verify(mockPreparedStatement).setNull(1, Types.REAL);
         assertSame(namedQuery, result);
     }
 

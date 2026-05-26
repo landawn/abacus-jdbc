@@ -843,7 +843,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public This setFloat(final int parameterIndex, final Float value) throws SQLException {
         if (value == null) {
-            stmt.setNull(parameterIndex, java.sql.Types.FLOAT);
+            // Per JDBC spec (Appendix B.4), Java float maps to SQL REAL (4-byte). Types.FLOAT is
+            // an alias for Types.DOUBLE (8-byte); using it here causes strict drivers to reject
+            // the SQL-type/value mismatch or coerce to double precision. Sibling setDouble
+            // correctly uses Types.DOUBLE; this method now uses Types.REAL for parity.
+            stmt.setNull(parameterIndex, java.sql.Types.REAL);
         } else {
             stmt.setFloat(parameterIndex, value);
         }
@@ -8875,6 +8879,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     protected ResultSet executeQuery() throws SQLException {
         if (!isFetchDirectionSet) {
+            // Capture the driver-default direction before mutating so closeStatement() can restore
+            // it. Without this, a pooled statement is silently left at FETCH_FORWARD even when
+            // its prior caller had configured a different direction (e.g., FETCH_REVERSE on DB2
+            // z/OS scrollable cursors).
+            if (defaultFetchDirection < 0) {
+                defaultFetchDirection = stmt.getFetchDirection();
+            }
+
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
         }
 

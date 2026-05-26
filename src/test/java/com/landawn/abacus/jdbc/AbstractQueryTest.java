@@ -233,7 +233,8 @@ public class AbstractQueryTest extends TestBase {
     public void testSetFloat_Wrapper_Null() throws SQLException {
         TestQuery result = query.setFloat(1, (Float) null);
         assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.FLOAT);
+        // Per JDBC spec, Java float maps to SQL REAL. (Types.FLOAT is the alias for Types.DOUBLE.)
+        verify(preparedStatement).setNull(1, Types.REAL);
     }
 
     @Test
@@ -1446,4 +1447,40 @@ public class AbstractQueryTest extends TestBase {
     // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable
     // TODO: L7427, L7477 (stream(RowFilter/BiRowFilter) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
     // TODO: L7688-L7689, L7741-L7742 (streamAllResultSets(Extractor/BiExtractor) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
+
+    // Regression: setFloat(int, Float) used Types.FLOAT for SQL null. Per JDBC spec Appendix B.4,
+    // Java float maps to SQL REAL (4-byte); Types.FLOAT is an alias for Types.DOUBLE (8-byte).
+    // Strict drivers reject the SQL-type/value mismatch or coerce, losing precision metadata.
+    // Sibling setDouble correctly uses Types.DOUBLE.
+    @Test
+    public void testSetFloat_NullUsesTypesREAL() throws SQLException {
+        query.setFloat(1, (Float) null);
+        verify(preparedStatement).setNull(1, Types.REAL);
+        // Pre-fix this was setNull(1, Types.FLOAT) — make sure the wrong type is NOT used.
+        verify(preparedStatement, never()).setNull(1, Types.FLOAT);
+    }
+
+    // Regression: executeQuery() forced FETCH_FORWARD without capturing the driver-default
+    // direction first, so closeStatement() couldn't restore it. For pooled PreparedStatements
+    // this silently leaked the FETCH_FORWARD setting to the next caller.
+    // executeQuery is protected; we exercise it via reflection through a TestQuery instance.
+    @Test
+    public void testExecuteQuery_CapturesDefaultFetchDirectionForRestoration() throws Exception {
+        // Pre-set the "current" fetch direction the driver would report (e.g., FETCH_REVERSE).
+        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
+
+        // Invoke the protected executeQuery via reflection.
+        final java.lang.reflect.Method m = AbstractQuery.class.getDeclaredMethod("executeQuery");
+        m.setAccessible(true);
+        m.invoke(query);
+
+        // The fix captures the prior fetch direction before forcing FORWARD.
+        verify(preparedStatement).getFetchDirection();
+        verify(preparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+
+        // close() must restore the original FETCH_REVERSE direction. Pre-fix the capture never
+        // happened and the restoration in closeStatement was a no-op (default == -1).
+        query.close();
+        verify(preparedStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
+    }
 }

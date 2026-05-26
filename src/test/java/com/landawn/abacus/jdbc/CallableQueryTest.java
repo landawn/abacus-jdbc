@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import java.sql.Date;
 import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLXML;
@@ -232,7 +234,8 @@ public class CallableQueryTest extends TestBase {
     public void testSetFloat_ByName_WrapperNull() throws SQLException {
         CallableQuery result = callableQuery.setFloat("f", (Float) null);
         assertSame(callableQuery, result);
-        verify(callableStatement).setNull("f", Types.FLOAT);
+        // Per JDBC spec, Java float maps to SQL REAL (Types.FLOAT is the alias for Types.DOUBLE).
+        verify(callableStatement).setNull("f", Types.REAL);
     }
 
     // Tests for setDouble by name
@@ -1098,6 +1101,9 @@ public class CallableQueryTest extends TestBase {
         ResultSet rs = Mockito.mock(ResultSet.class);
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters(resultSet -> "extracted");
         assertNotNull(result);
@@ -1115,6 +1121,9 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
         when(rs.getString(1)).thenReturn("Alice");
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(r -> r.getString(1));
         assertNotNull(result);
@@ -1131,6 +1140,9 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
         when(rs.getString(1)).thenReturn("match");
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(r -> true, r -> r.getString(1));
         assertNotNull(result);
@@ -1149,6 +1161,9 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters((r, labels) -> "row");
         assertNotNull(result);
@@ -1167,6 +1182,9 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters((r, labels) -> true,
                 (r, labels) -> "birow");
@@ -1208,6 +1226,9 @@ public class CallableQueryTest extends TestBase {
         when(meta.getColumnCount()).thenReturn(0);
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<String, Jdbc.OutParamResult> result = callableQuery
                 .queryAndGetOutParameters((resultSet, labels) -> "bi-extracted");
@@ -1489,6 +1510,9 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
         when(rs.getString(1)).thenReturn("shouldBeFiltered");
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(r -> false, r -> r.getString(1));
         assertNotNull(result);
@@ -1517,6 +1541,9 @@ public class CallableQueryTest extends TestBase {
         when(callableStatement.execute()).thenReturn(true);
         when(callableStatement.getResultSet()).thenReturn(rs);
         when(rs.next()).thenReturn(true, false);
+        // Real drivers return -1 once results are drained; without this stub the post-extraction
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters((r, labels) -> false,
                 (r, labels) -> "filtered");
@@ -1793,5 +1820,71 @@ public class CallableQueryTest extends TestBase {
         assertNotNull(result);
         assertEquals(1, result._1.size());
         assertEquals(0, result._1.get(0).size());
+    }
+
+    // Regression: queryAndGetOutParameters / listAndGetOutParameters used to read OUT params
+    // immediately after extracting the FIRST result set. Per JDBC spec (and explicitly documented
+    // for SQL Server and Oracle), OUT param values become reliably available only after ALL
+    // result sets and update counts have been drained. Without draining, the OUT values may be
+    // null/stale or the driver may throw. The fix drains via getMoreResults/getUpdateCount.
+    @Test
+    public void testQueryAndGetOutParameters_DrainsRemainingResultsBeforeReadingOutParams() throws SQLException {
+        ResultSet firstRs = mock(ResultSet.class);
+        ResultSetMetaData rsMd = mock(ResultSetMetaData.class);
+        when(firstRs.getMetaData()).thenReturn(rsMd);
+        when(rsMd.getColumnCount()).thenReturn(0);
+        when(firstRs.next()).thenReturn(false);
+
+        // First call returns the ResultSet; second call returns null then loop reads update counts.
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(firstRs);
+        // Simulate two more result sets behind the first that the fix must drain past:
+        // getMoreResults(): true (another RS) → true (another RS) → false (no more RS).
+        // After the false return, getUpdateCount(): -1 means no more results.
+        when(callableStatement.getMoreResults()).thenReturn(true, true, false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1).thenReturn(-1);
+
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.getInt(1)).thenReturn(42);
+
+        com.landawn.abacus.util.Tuple.Tuple2<Long, Jdbc.OutParamResult> result = callableQuery
+                .queryAndGetOutParameters(rs -> {
+                    long count = 0;
+                    while (rs.next()) count++;
+                    return count;
+                });
+
+        assertNotNull(result);
+        assertEquals(0L, result._1);
+        // Fix guarantees drain happened — verify getMoreResults was called multiple times.
+        verify(callableStatement, org.mockito.Mockito.atLeast(2)).getMoreResults();
+        // OUT param retrieval happens AFTER drain.
+        assertEquals(Integer.valueOf(42), result._2.getOutParamValue(1));
+    }
+
+    @Test
+    public void testListAndGetOutParameters_DrainsRemainingResultsBeforeReadingOutParams() throws SQLException {
+        ResultSet firstRs = mock(ResultSet.class);
+        ResultSetMetaData rsMd = mock(ResultSetMetaData.class);
+        when(firstRs.getMetaData()).thenReturn(rsMd);
+        when(rsMd.getColumnCount()).thenReturn(0);
+        when(firstRs.next()).thenReturn(false);
+
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(firstRs);
+        when(callableStatement.getMoreResults()).thenReturn(true, false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.getInt(1)).thenReturn(99);
+
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery
+                .listAndGetOutParameters((Jdbc.RowMapper<String>) rs -> "row");
+
+        assertNotNull(result);
+        assertEquals(0, result._1.size());
+        // Fix guarantees drain happened — verify getMoreResults was called at least once after extraction.
+        verify(callableStatement, org.mockito.Mockito.atLeast(1)).getMoreResults();
+        assertEquals(Integer.valueOf(99), result._2.getOutParamValue(1));
     }
 }

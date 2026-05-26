@@ -478,7 +478,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setFloat(final String parameterName, final Float x) throws SQLException {
         if (x == null) {
-            cstmt.setNull(parameterName, java.sql.Types.FLOAT);
+            // Per JDBC spec Appendix B.4, Java float maps to SQL REAL (not Types.FLOAT, which is
+            // an alias for Types.DOUBLE). Matches AbstractQuery.setFloat(int, Float) fix.
+            cstmt.setNull(parameterName, java.sql.Types.REAL);
         } else {
             cstmt.setFloat(parameterName, x);
         }
@@ -2472,6 +2474,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             if (rs != null) {
                 result = JdbcUtil.extractAndCloseResultSet(rs, resultExtractor);
+                drainRemainingResultsForOutParams();
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -2525,6 +2528,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             if (rs != null) {
                 result = JdbcUtil.extractAndCloseResultSet(rs, resultExtractor);
+                drainRemainingResultsForOutParams();
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -2995,6 +2999,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 }
             }
 
+            drainRemainingResultsForOutParams();
+
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
@@ -3061,6 +3067,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 }
             }
 
+            drainRemainingResultsForOutParams();
+
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             closeAfterExecutionIfAllowed();
@@ -3126,6 +3134,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                     }
                 }
             }
+
+            drainRemainingResultsForOutParams();
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -3207,6 +3217,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                     }
                 }
             }
+
+            drainRemainingResultsForOutParams();
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
@@ -3642,6 +3654,23 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             logger.warn(e, "Failed to reset statement");
         } finally {
             super.closeStatement();
+        }
+    }
+
+    /**
+     * Drains any remaining result sets and update counts from this CallableStatement so OUT
+     * parameter values become reliably available. Per JDBC spec, OUT params produced by a
+     * stored procedure are only guaranteed to be final once all results have been processed —
+     * SQL Server and Oracle in particular will report null/stale OUT values if extra result sets
+     * or update counts remain in the call's buffer.
+     */
+    private void drainRemainingResultsForOutParams() throws SQLException {
+        // getMoreResults() returns true when the next result is a ResultSet (auto-closing the
+        // prior one), false when next is an update count OR there are no more results. To
+        // distinguish those two "false" cases, also check getUpdateCount() != -1. Loop until
+        // both conditions report "nothing left".
+        while (cstmt.getMoreResults() || cstmt.getUpdateCount() != -1) {
+            // empty loop body — we only need to advance past every remaining result
         }
     }
 }

@@ -360,7 +360,8 @@ public class PreparedQueryTest extends TestBase {
     public void testSetFloatWithNull() throws SQLException {
         PreparedQuery result = query.setFloat(1, (Float) null);
         assertSame(query, result);
-        verify(mockStmt).setNull(1, Types.FLOAT);
+        // Per JDBC spec, Java float maps to SQL REAL (Types.FLOAT is the alias for Types.DOUBLE).
+        verify(mockStmt).setNull(1, Types.REAL);
     }
 
     @Test

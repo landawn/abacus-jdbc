@@ -6101,11 +6101,16 @@ public final class Jdbc {
         /**
          * A factory method to create an {@code OutParam} with the specified index and SQL type.
          *
-         * @param parameterIndex the 1-based index of the parameter.
+         * @param parameterIndex the 1-based index of the parameter (must be {@code > 0}).
          * @param sqlType the SQL type from {@code java.sql.Types}.
          * @return a new {@code OutParam} instance.
+         * @throws IllegalArgumentException if {@code parameterIndex <= 0} — index is 1-based,
+         *         and passing 0 here would cause the downstream consumer to fall through to the
+         *         name-based path with a null name, producing an opaque driver error.
          */
         public static OutParam of(int parameterIndex, int sqlType) {
+            N.checkArgument(parameterIndex > 0, "'parameterIndex' must be greater than 0 (1-based), but was: %s", parameterIndex);
+
             final OutParam outParam = new OutParam();
             outParam.setParameterIndex(parameterIndex);
             outParam.setSqlType(sqlType);
@@ -6441,7 +6446,16 @@ public final class Jdbc {
                 result = N.newInstance(handlerClass);
 
                 if (result != null) {
-                    register(result);
+                    // register(...) returns false if another thread won the race and registered
+                    // its own instance first. Without re-fetching, this thread would return its
+                    // own unregistered instance — breaking the once-per-qualifier identity
+                    // contract callers rely on for stateful handler bookkeeping.
+                    if (!register(result)) {
+                        final Handler<?> registered = get(handlerClass);
+                        if (registered != null) {
+                            result = registered;
+                        }
+                    }
                 }
             }
 
@@ -6684,6 +6698,13 @@ public final class Jdbc {
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
 
+            // Reject null result to match DaoCacheByMap.put — otherwise a cached null is
+            // indistinguishable from a miss (the sentinel-free contract of get()) and the
+            // entry silently poisons cache capacity without ever being useful.
+            if (result == null) {
+                return false;
+            }
+
             return pool.put(defaultCacheKey, Poolable.wrap(result, JdbcUtil.DEFAULT_CACHE_LIVE_TIME, JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME));
         }
 
@@ -6691,6 +6712,10 @@ public final class Jdbc {
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
                 Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
             N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+
+            if (result == null) {
+                return false;
+            }
 
             return pool.put(defaultCacheKey, Poolable.wrap(result, liveTime, maxIdleTime));
         }

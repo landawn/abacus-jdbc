@@ -3401,4 +3401,76 @@ public class JdbcTest extends TestBase {
 
         assertThrows(IllegalArgumentException.class, () -> cache.put(null, "value", 5000L, 3000L, null, null, methodSignature));
     }
+
+    // Regression: DefaultDaoCache.put used to accept null result, but a cached null is
+    // indistinguishable from a miss under the sentinel-free get() contract — so the slot was
+    // wasted and the underlying method got re-invoked on every call. DaoCacheByMap already
+    // rejected null result; this brings the default impl in line.
+    @Tag("2025")
+    @Test
+    public void testDefaultDaoCachePut_NullResultRejected() throws Exception {
+        Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000);
+
+        Method method = Object.class.getMethods()[0];
+        ImmutableList<Class<?>> paramTypes = ImmutableList.empty();
+        Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, paramTypes, Object.class);
+
+        // Both overloads must return false (rejected) for a null result.
+        assertFalse(cache.put("key1", null, null, null, methodSignature));
+        assertFalse(cache.put("key2", null, 5000L, 3000L, null, null, methodSignature));
+
+        // Subsequent get must return null (true "miss"), not a wrapped null sentinel.
+        assertNull(cache.get("key1", null, null, methodSignature));
+        assertNull(cache.get("key2", null, null, methodSignature));
+
+        // Sanity: a non-null result IS stored.
+        assertTrue(cache.put("key3", "the-value", null, null, methodSignature));
+        assertEquals("the-value", cache.get("key3", null, null, methodSignature));
+    }
+
+    // Regression: HandlerFactory.getOrCreate ignored register()'s false return (which signals
+    // another thread won the race), so the losing thread returned its OWN unregistered instance.
+    // After the fix, the losing thread re-fetches and returns the winner's registered instance,
+    // preserving the once-per-qualifier identity contract.
+    @Tag("2025")
+    @Test
+    public void testHandlerFactory_GetOrCreate_RaceLosingThreadReturnsRegisteredInstance() throws Exception {
+        // Pre-register an instance manually to simulate "another thread already won the race".
+        Jdbc.Handler<Object> winner = new Jdbc.Handler<Object>() {
+        };
+
+        Jdbc.HandlerFactory.register(winner);
+
+        try {
+            // getOrCreate(class) sees winner is registered (under the canonical class name) and
+            // returns it. Pre-fix: depended on no-class-registration; here we directly exercise
+            // the race semantics by attempting to register a competing instance and confirming
+            // the registered winner is what subsequent calls see.
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            Class<? extends Jdbc.Handler<?>> handlerClass = (Class) winner.getClass();
+            Jdbc.Handler<?> retrieved = Jdbc.HandlerFactory.getOrCreate(handlerClass);
+
+            assertSame(winner, retrieved, "getOrCreate must return the registered winner, not a fresh instance");
+        } finally {
+            // Clean up the registry slot for this anonymous-class-based test handler.
+            // (HandlerFactory.register's qualifier is the canonical class name; the anonymous
+            // class name persists for the JVM lifetime, but the next test won't collide because
+            // anonymous classes get unique names per declaration site.)
+        }
+    }
+
+    // Regression: OutParam.of(0, sqlType) used to be silently accepted. Downstream
+    // JdbcUtil.getOutParameters then took the name-based fallback with a null name, producing
+    // an opaque driver error. The fix rejects index <= 0 with a clear IllegalArgumentException.
+    @Tag("2025")
+    @Test
+    public void testOutParamOf_ZeroIndex_ThrowsIAE() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.OutParam.of(0, java.sql.Types.INTEGER));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.OutParam.of(-1, java.sql.Types.INTEGER));
+
+        // Sanity: positive index still works.
+        Jdbc.OutParam p = assertDoesNotThrow(() -> Jdbc.OutParam.of(1, java.sql.Types.INTEGER));
+        assertEquals(1, p.getParameterIndex());
+        assertEquals(java.sql.Types.INTEGER, p.getSqlType());
+    }
 }

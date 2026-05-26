@@ -875,7 +875,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     public NamedQuery setFloat(final String parameterName, final Float x) throws IllegalArgumentException, SQLException {
         if (x == null) {
-            setNull(parameterName, java.sql.Types.FLOAT);
+            // Per JDBC spec Appendix B.4, Java float maps to SQL REAL (not Types.FLOAT, which is
+            // an alias for Types.DOUBLE). Matches AbstractQuery.setFloat(int, Float) fix.
+            setNull(parameterName, java.sql.Types.REAL);
         } else {
             setFloat(parameterName, x.floatValue());
         }
