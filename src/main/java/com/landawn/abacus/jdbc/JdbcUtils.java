@@ -965,7 +965,10 @@ public final class JdbcUtils {
 
             stmtSetter.accept(stmtForSetter, row);
 
-            stmtForSetter.addBatch();
+            // Call stmt.addBatch() directly rather than stmtForSetter.addBatch(), because the
+            // latter (via AbstractQuery.addBatch) closes the underlying stmt on failure — which
+            // would break the documented contract that this method does not close the caller's stmt.
+            stmt.addBatch();
 
             if ((++result % batchSize) == 0) {
                 JdbcUtil.executeBatch(stmt);
@@ -1425,7 +1428,9 @@ public final class JdbcUtils {
             next = iter.next();
 
             stmtSetter.accept(stmtForSetter, next);
-            stmtForSetter.addBatch();
+            // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
+            // stmt on failure (the doc guarantees this method does not close it).
+            stmt.addBatch();
 
             if ((++result % batchSize) == 0) {
                 JdbcUtil.executeBatch(stmt);
@@ -1902,7 +1907,9 @@ public final class JdbcUtils {
                 }
 
                 stmtSetter.accept(stmtForSetter, output);
-                stmtForSetter.addBatch();
+                // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
+                // stmt on failure (the doc guarantees this method does not close it).
+                stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
                     JdbcUtil.executeBatch(stmt);
@@ -2546,8 +2553,12 @@ public final class JdbcUtils {
             sourceConn = JdbcUtil.getConnection(sourceDataSource);
             targetConn = JdbcUtil.getConnection(targetDataSource);
 
+            // Generate the SELECT from source first, then derive the column ordering from the
+            // source's result-set metadata and use it to drive the INSERT against the target.
+            // Otherwise, when source and target have the same column set but different metadata
+            // orders, positional setObject(i, ...) silently swaps values between columns.
             selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
-            insertSql = JdbcCodeGenerationUtil.generateInsertSql(targetConn, targetTableName);
+            insertSql = generateInsertSqlFromSelectColumns(sourceConn, selectSql, targetConn, targetTableName);
         } finally {
             // Release both connections even if one release throws (avoid leaking the second).
             try {
@@ -2884,10 +2895,29 @@ public final class JdbcUtils {
      */
     public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName,
             final int batchSize) throws SQLException {
+        // Generate the SELECT from source first, then derive the column ordering from the
+        // source's result-set metadata and use it to drive the INSERT against the target.
+        // Otherwise, when source and target have the same column set but different metadata
+        // orders, positional setObject(i, ...) silently swaps values between columns.
         final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
-        final String insertSql = JdbcCodeGenerationUtil.generateInsertSql(targetConn, targetTableName);
+        final String insertSql = generateInsertSqlFromSelectColumns(sourceConn, selectSql, targetConn, targetTableName);
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_BIG_RESULT, batchSize), targetConn, insertSql, batchSize);
+    }
+
+    /**
+     * Generates an INSERT SQL for {@code targetTableName} on {@code targetConn} using the column
+     * ordering taken from executing {@code selectSql} on {@code sourceConn}. This guarantees the
+     * INSERT column order matches the SELECT, so positional parameter binding stays aligned even
+     * when the two databases store columns in different orders.
+     */
+    private static String generateInsertSqlFromSelectColumns(final Connection sourceConn, final String selectSql, final Connection targetConn,
+            final String targetTableName) throws SQLException {
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(sourceConn, selectSql);
+             ResultSet rs = stmt.executeQuery()) {
+            final java.util.List<String> sourceColumns = JdbcUtil.getColumnLabels(rs);
+            return generateInsertSql(targetConn, targetTableName, sourceColumns);
+        }
     }
 
     /**
@@ -3865,7 +3895,13 @@ public final class JdbcUtils {
     private static void setFetchForLargeResult(final Connection conn, final PreparedStatement stmt, final int fetchSize) throws SQLException {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
-        if (JdbcUtil.getDBProductInfo(conn).version().isMySQL()) {
+        // MariaDB shares MySQL's protocol-level requirement for Integer.MIN_VALUE to enable
+        // row-by-row streaming; without it the driver buffers the entire result set in client
+        // memory. DBVersion.isMySQL() returns true only for MySQL_* constants and excludes
+        // MariaDB, so we check the enum explicitly.
+        final DBVersion version = JdbcUtil.getDBProductInfo(conn).version();
+
+        if (version.isMySQL() || version == DBVersion.MariaDB) {
             stmt.setFetchSize(Integer.MIN_VALUE);
         } else {
             stmt.setFetchSize(fetchSize);

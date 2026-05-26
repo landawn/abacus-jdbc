@@ -1276,4 +1276,116 @@ public class JdbcUtilsTest extends TestBase {
         // source's close() threw a RuntimeException in the finally block.
         verify(targetConn).close();
     }
+
+    // Regression: JdbcUtils.importData(Dataset, ..., PreparedStatement, ...) used to delegate the
+    // addBatch call via a PreparedQuery wrapper. AbstractQuery.addBatch closes the underlying
+    // statement on failure (intended for fluent-API ownership), which violated the documented
+    // contract that this method does NOT close the caller's stmt. The fix calls stmt.addBatch()
+    // directly so a driver-thrown addBatch error no longer closes the user's stmt.
+    @Test
+    public void testImportData_AddBatchFailureDoesNotCloseCallerStmt() throws Exception {
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        // Driver throws on addBatch (e.g., bind-type mismatch detected late).
+        Mockito.doThrow(new SQLException("simulated addBatch failure")).when(stmt).addBatch();
+
+        final Dataset dataset = new RowDataset(ImmutableList.of("id", "name"), ImmutableList.of(ImmutableList.of(1, 2), ImmutableList.of("a", "b")));
+
+        // The stmtSetter is a no-op binder; the failure must come from addBatch itself.
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> noopSetter = (pq, row) -> {
+            // intentionally empty
+        };
+
+        assertThrows(SQLException.class, () -> JdbcUtils.importData(dataset, stmt, noopSetter));
+
+        // Pre-fix: the wrapper's close-on-failure path called JdbcUtil.closeQuietly(stmt) which
+        // invokes stmt.close(). Post-fix: stmt.close() must NOT have been called.
+        verify(stmt, never()).close();
+    }
+
+    // Regression: setFetchForLargeResult only enabled row-by-row streaming for MySQL_* enums.
+    // MariaDB has its own DBVersion constant and shares MySQL's protocol-level requirement for
+    // setFetchSize(Integer.MIN_VALUE); without it, the driver buffers the entire result set in
+    // client memory. The fix checks both MySQL and MariaDB.
+    //
+    // setFetchForLargeResult is package-private; we invoke it reflectively against a connection
+    // whose metadata reports productName="MariaDB".
+    @Test
+    public void testSetFetchForLargeResult_MariaDBUsesStreamingFetchSize() throws Exception {
+        final Connection conn = mock(Connection.class);
+        final DatabaseMetaData md = mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("MariaDB");
+        when(md.getDatabaseProductVersion()).thenReturn("11.0");
+
+        final java.lang.reflect.Method m = JdbcUtils.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
+        m.setAccessible(true);
+        m.invoke(null, conn, stmt, 1000);
+
+        verify(stmt).setFetchDirection(ResultSet.FETCH_FORWARD);
+        // Pre-fix: stmt.setFetchSize(1000); post-fix: stmt.setFetchSize(Integer.MIN_VALUE).
+        verify(stmt).setFetchSize(Integer.MIN_VALUE);
+        // Sanity: ensure the non-streaming branch was NOT taken.
+        verify(stmt, never()).setFetchSize(1000);
+    }
+
+    @Test
+    public void testSetFetchForLargeResult_PostgreSQLUsesProvidedFetchSize() throws Exception {
+        // Sanity check: a non-MySQL/MariaDB vendor still receives the user-supplied fetchSize.
+        final Connection conn = mock(Connection.class);
+        final DatabaseMetaData md = mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getDatabaseProductVersion()).thenReturn("16.0");
+
+        final java.lang.reflect.Method m = JdbcUtils.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class, int.class);
+        m.setAccessible(true);
+        m.invoke(null, conn, stmt, 5000);
+
+        verify(stmt).setFetchSize(5000);
+        verify(stmt, never()).setFetchSize(Integer.MIN_VALUE);
+    }
+
+    // Regression: copy(srcConn, tgtConn, srcTable, tgtTable, batchSize) previously generated the
+    // SELECT and INSERT independently from source/target metadata. When the two schemas had the
+    // same column SET but a different declaration ORDER, positional setObject(i,...) silently
+    // swapped values between columns. The fix derives the column list once from the source and
+    // uses it for both SQL statements.
+    @Test
+    public void testCopy_AlignsInsertColumnOrderToSource() throws Exception {
+        // Two in-memory H2 datasources with the same table but different column declaration orders.
+        final DataSource srcDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:copy_src_order;DB_CLOSE_DELAY=-1", "sa", "");
+        final DataSource tgtDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:copy_tgt_order;DB_CLOSE_DELAY=-1", "sa", "");
+
+        try {
+            try (Connection conn = srcDs.getConnection(); java.sql.Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE T_ORDER (a INT, b INT, c INT)");
+                st.execute("INSERT INTO T_ORDER (a, b, c) VALUES (10, 20, 30)");
+            }
+            // Target has the SAME columns in REVERSE order: c, b, a
+            try (Connection conn = tgtDs.getConnection(); java.sql.Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE T_ORDER (c INT, b INT, a INT)");
+            }
+
+            try (Connection srcConn = srcDs.getConnection(); Connection tgtConn = tgtDs.getConnection()) {
+                long copied = JdbcUtils.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", 10);
+                assertEquals(1L, copied);
+            }
+
+            // After the fix, the target row must hold (a=10, b=20, c=30) matching the source.
+            // Before the fix, positional binding into the target's (c, b, a) order would store
+            // c=10, b=20, a=30 — i.e., a and c swapped.
+            try (Connection conn = tgtDs.getConnection(); java.sql.Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT a, b, c FROM T_ORDER")) {
+                assertTrue(rs.next());
+                assertEquals(10, rs.getInt("a"), "column 'a' must hold the source value 10, not the swapped 30");
+                assertEquals(20, rs.getInt("b"));
+                assertEquals(30, rs.getInt("c"), "column 'c' must hold the source value 30, not the swapped 10");
+            }
+        } finally {
+            ((com.zaxxer.hikari.HikariDataSource) srcDs).close();
+            ((com.zaxxer.hikari.HikariDataSource) tgtDs).close();
+        }
+    }
 }
