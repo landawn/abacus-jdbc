@@ -1730,6 +1730,52 @@ final class DaoImpl {
         return entities;
     }
 
+    private static Tuple2<Annotation, String> resolveFragmentAnnoAndPlaceholder(final Method method, final int paramIndex, final String fullClassMethodName) {
+        final Annotation[] annotations = method.getParameterAnnotations()[paramIndex];
+
+        for (final Annotation annotation : annotations) {
+            if (annotation.annotationType().equals(SqlFragment.class)) {
+                return Tuple.of(annotation, normalizeSqlFragmentPlaceholder(((SqlFragment) annotation).value(), method, paramIndex, fullClassMethodName,
+                        annotation.annotationType()));
+            } else if (annotation.annotationType().equals(SqlFragmentList.class)) {
+                return Tuple.of(annotation, normalizeSqlFragmentPlaceholder(((SqlFragmentList) annotation).value(), method, paramIndex, fullClassMethodName,
+                        annotation.annotationType()));
+            } else if (annotation.annotationType().equals(BindList.class)) {
+                return Tuple.of(annotation,
+                        normalizeSqlFragmentPlaceholder(((BindList) annotation).value(), method, paramIndex, fullClassMethodName, annotation.annotationType()));
+            }
+        }
+
+        throw new IllegalArgumentException("Parameter[" + paramIndex + "] in method: " + fullClassMethodName
+                + " is expected to be annotated with @SqlFragment/@SqlFragmentList/@BindList.");
+    }
+
+    private static String normalizeSqlFragmentPlaceholder(final String configuredName, final Method method, final int paramIndex,
+            final String fullClassMethodName, final Class<? extends Annotation> annotationType) {
+        String placeholderName = configuredName;
+
+        if (Strings.isEmpty(placeholderName)) {
+            final java.lang.reflect.Parameter parameter = method.getParameters()[paramIndex];
+
+            if (!parameter.isNamePresent()) {
+                throw new UnsupportedOperationException("Empty value in @" + annotationType.getSimpleName() + " on parameter[" + paramIndex + "] in method: "
+                        + fullClassMethodName + ". Specify annotation value explicitly or compile with '-parameters'.");
+            }
+
+            placeholderName = parameter.getName();
+        }
+
+        if (Strings.isEmpty(placeholderName)) {
+            throw new UnsupportedOperationException(
+                    "Empty placeholder name in @" + annotationType.getSimpleName() + " on parameter[" + paramIndex + "] in method: " + fullClassMethodName);
+        }
+
+        return placeholderName.charAt(0) == '{' && placeholderName.charAt(placeholderName.length() - 1) == '}' ? placeholderName : "{" + placeholderName + "}";
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static final Map<String, Dao> joinEntityDaoPool = new ConcurrentHashMap<>();
+
     /**
      * Creates a dynamic proxy implementation of the specified DAO interface backed by the given {@link javax.sql.DataSource}.
      *
@@ -6524,52 +6570,6 @@ final class DaoImpl {
 
         return daoInstance;
     }
-
-    private static Tuple2<Annotation, String> resolveFragmentAnnoAndPlaceholder(final Method method, final int paramIndex, final String fullClassMethodName) {
-        final Annotation[] annotations = method.getParameterAnnotations()[paramIndex];
-
-        for (final Annotation annotation : annotations) {
-            if (annotation.annotationType().equals(SqlFragment.class)) {
-                return Tuple.of(annotation, normalizeSqlFragmentPlaceholder(((SqlFragment) annotation).value(), method, paramIndex, fullClassMethodName,
-                        annotation.annotationType()));
-            } else if (annotation.annotationType().equals(SqlFragmentList.class)) {
-                return Tuple.of(annotation, normalizeSqlFragmentPlaceholder(((SqlFragmentList) annotation).value(), method, paramIndex, fullClassMethodName,
-                        annotation.annotationType()));
-            } else if (annotation.annotationType().equals(BindList.class)) {
-                return Tuple.of(annotation,
-                        normalizeSqlFragmentPlaceholder(((BindList) annotation).value(), method, paramIndex, fullClassMethodName, annotation.annotationType()));
-            }
-        }
-
-        throw new IllegalArgumentException("Parameter[" + paramIndex + "] in method: " + fullClassMethodName
-                + " is expected to be annotated with @SqlFragment/@SqlFragmentList/@BindList.");
-    }
-
-    private static String normalizeSqlFragmentPlaceholder(final String configuredName, final Method method, final int paramIndex,
-            final String fullClassMethodName, final Class<? extends Annotation> annotationType) {
-        String placeholderName = configuredName;
-
-        if (Strings.isEmpty(placeholderName)) {
-            final java.lang.reflect.Parameter parameter = method.getParameters()[paramIndex];
-
-            if (!parameter.isNamePresent()) {
-                throw new UnsupportedOperationException("Empty value in @" + annotationType.getSimpleName() + " on parameter[" + paramIndex + "] in method: "
-                        + fullClassMethodName + ". Specify annotation value explicitly or compile with '-parameters'.");
-            }
-
-            placeholderName = parameter.getName();
-        }
-
-        if (Strings.isEmpty(placeholderName)) {
-            throw new UnsupportedOperationException(
-                    "Empty placeholder name in @" + annotationType.getSimpleName() + " on parameter[" + paramIndex + "] in method: " + fullClassMethodName);
-        }
-
-        return placeholderName.charAt(0) == '{' && placeholderName.charAt(placeholderName.length() - 1) == '}' ? placeholderName : "{" + placeholderName + "}";
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static final Map<String, Dao> joinEntityDaoPool = new ConcurrentHashMap<>();
 
     /**
      * Resolves the most appropriate DAO instance for loading a join entity referenced by a {@code @JoinedBy} relationship.
