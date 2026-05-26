@@ -56,6 +56,7 @@ import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.Holder;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -549,5 +550,14 @@ public class JdbcTest {
             JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
         }
 
+    }
+
+    @Test
+    public void perf_test_createDAO() {
+        Profiler.run(1, 1, 3, () -> {
+            for (int i = 0; i < 100; i++) {
+                JdbcUtil.createDao(AddressDao.class, dataSource);
+            }
+        }).printResult();
     }
 }

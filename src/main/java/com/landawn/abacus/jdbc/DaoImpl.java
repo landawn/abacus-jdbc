@@ -32,7 +32,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +39,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Internal;
@@ -123,7 +123,6 @@ import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.ImmutableSet;
 import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.Joiner;
-import com.landawn.abacus.util.MutableBoolean;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Numbers;
@@ -2016,7 +2015,7 @@ final class DaoImpl {
             }
         }
 
-        final Map<Method, Throwables.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new HashMap<>();
+        final Map<Method, Throwables.BiFunction<Dao, Object[], ?, Throwable>> methodInvokerMap = new ConcurrentHashMap<>();
 
         final List<Method> sqlMethods = StreamEx.of(allInterfaces)
                 .reversed()
@@ -2269,8 +2268,8 @@ final class DaoImpl {
             }
         }
 
-        final MutableBoolean hasCacheResult = MutableBoolean.of(false);
-        final MutableBoolean hasRefreshCache = MutableBoolean.of(false);
+        final AtomicBoolean hasCacheResult = new AtomicBoolean(false);
+        final AtomicBoolean hasRefreshCache = new AtomicBoolean(false);
 
         final List<Handler> daoClassHandlerList = StreamEx.of(allInterfaces)
                 .reversed()
@@ -2315,7 +2314,7 @@ final class DaoImpl {
                         : ClassUtil.invokeConstructor(ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class), capacity, evictDelay)
                 : inputDaoCache;
 
-        final Set<Method> nonDBOperationSet = new HashSet<>();
+        final Set<Method> nonDBOperationSet = N.newConcurrentHashSet();
 
         //    final Map<String, String> sqlCache = new ConcurrentHashMap<>(0);
         //    final Map<String, ImmutableList<String>> sqlsCache = new ConcurrentHashMap<>(0);
@@ -2356,11 +2355,7 @@ final class DaoImpl {
             return true;
         };
 
-        for (final Method method : sqlMethods) {
-            if (!Modifier.isPublic(method.getModifiers())) {
-                continue;
-            }
-
+        Stream.of(sqlMethods).parallel().filter(method -> Modifier.isPublic(method.getModifiers())).forEach(method -> {
             final boolean isNonDBOperation = StreamEx.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
 
             final Predicate<String> filterByMethodNameStartsWith = it -> Strings.isNotEmpty(it)
@@ -6483,16 +6478,16 @@ final class DaoImpl {
                 }
 
                 if (isAnnotatedCacheResult) {
-                    hasCacheResult.setTrue();
+                    hasCacheResult.set(true);
                 }
 
                 if (isAnnotatedRefreshResult) {
-                    hasRefreshCache.setTrue();
+                    hasRefreshCache.set(true);
                 }
             }
 
             // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
-            if ((hasRefreshCache.isTrue() || hasCacheResult.isTrue()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
+            if ((hasRefreshCache.get() || hasCacheResult.get()) && !NoUpdateDao.class.isAssignableFrom(daoInterface)) {
                 throw new UnsupportedOperationException(
                         "Cache is only supported for the methods declared NoUpdateDao/UncheckedNoUpdateDao interface right now, not supported for method: "
                                 + fullClassMethodName);
@@ -6503,9 +6498,9 @@ final class DaoImpl {
             if (daoLogger.isDebugEnabled()) {
                 daoLogger.debug("Registered Dao method invoker(method={}, nonDBOperation={})", fullClassMethodName, isNonDBOperation);
             }
-        }
+        });
 
-        if (hasRefreshCache.isTrue() && hasCacheResult.isFalse()) {
+        if (hasRefreshCache.get() && !hasCacheResult.get()) {
             throw new UnsupportedOperationException("Class: " + daoInterface
                     + " or its super interfaces or methods are annotated by @RefreshCache, but none of them is annotated with @CacheResult. "
                     + "Please remove the unnecessary @RefreshCache annotations or Add @CacheResult annotation if it's really needed.");
