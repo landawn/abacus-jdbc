@@ -2883,4 +2883,232 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(stmtEx, thrown.getCause().getSuppressed()[0], "first suppressed should be from Statement.close()");
         assertEquals(connEx, thrown.getCause().getSuppressed()[1], "second suppressed should be from Connection.close()");
     }
+
+    // Regression: tableExists(metadata, ...) used to verify only TABLE_NAME when the pattern contained
+    // a wildcard, so a request for "my_app.users" matched "users" in any schema (e.g., "myXapp") because
+    // schemaPattern's `_` is also a JDBC wildcard. The fix verifies TABLE_SCHEM on hit as well.
+    @Test
+    public void testTableExists_SchemaWildcardVerifiedAgainstActualSchemaName() throws Exception {
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        final ResultSet rows = mock(ResultSet.class);
+        when(metadata.getTables(null, "my_app", "users", null)).thenReturn(rows);
+        // One matching row: same table name, but wrong schema (wildcard expansion matched "myXapp").
+        when(rows.next()).thenReturn(true).thenReturn(false);
+        when(rows.getString("TABLE_NAME")).thenReturn("users");
+        when(rows.getString("TABLE_SCHEM")).thenReturn("myXapp");
+
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("tableExists", DatabaseMetaData.class, String.class, String.class, String.class);
+        m.setAccessible(true);
+
+        Object result = m.invoke(null, metadata, null, "my_app", "users");
+
+        assertEquals(Boolean.FALSE, result, "wildcard expansion to wrong schema must be rejected");
+    }
+
+    @Test
+    public void testTableExists_SchemaWildcardAcceptsRealSchemaMatch() throws Exception {
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        final ResultSet rows = mock(ResultSet.class);
+        when(metadata.getTables(null, "my_app", "users", null)).thenReturn(rows);
+        when(rows.next()).thenReturn(true).thenReturn(false);
+        when(rows.getString("TABLE_NAME")).thenReturn("users");
+        when(rows.getString("TABLE_SCHEM")).thenReturn("MY_APP"); // case-insensitive match
+
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("tableExists", DatabaseMetaData.class, String.class, String.class, String.class);
+        m.setAccessible(true);
+
+        Object result = m.invoke(null, metadata, null, "my_app", "users");
+
+        assertEquals(Boolean.TRUE, result, "actual schema match must still return true");
+    }
+
+    // Regression: streamAllResultSets(stmt) hardcoded isFirstResultSet=true. If the user called
+    // stmt.execute(...) and the first result was an update count (so stmt.getResultSet() returns null),
+    // the iterator broke out of its loop and the stream terminated empty even when more ResultSets
+    // followed. The fix falls through to advance via getMoreResults/getUpdateCount in that case.
+    @Test
+    public void testIterateAllResultSets_FirstIsUpdateCountAdvancesToNextResultSet() throws Exception {
+        final Statement stmt = mock(Statement.class);
+        final ResultSet realRs = mock(ResultSet.class);
+
+        // 1st hasNext: getResultSet() returns null (update count); fall through; getUpdateCount()
+        // returns >=0 so getMoreResults() runs; 2nd iteration getResultSet() returns the real RS.
+        when(stmt.getResultSet()).thenReturn(null).thenReturn(realRs);
+        when(stmt.getUpdateCount()).thenReturn(1).thenReturn(-1);
+        when(stmt.getMoreResults()).thenReturn(true);
+        when(stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(false);
+
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("iterateAllResultSets", Statement.class, boolean.class);
+        m.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        java.util.Iterator<ResultSet> it = (java.util.Iterator<ResultSet>) m.invoke(null, stmt, true);
+
+        assertTrue(it.hasNext(), "iterator must surface the ResultSet that comes after the leading update count");
+        assertEquals(realRs, it.next());
+        assertFalse(it.hasNext(), "iterator must terminate when there are no more results");
+    }
+
+    // Regression: getDriverClassByUrl used bare substring matching, so a SQL Server URL whose
+    // connection string happened to contain "oracle" (e.g., a database name) was routed to the
+    // Oracle driver. The fix anchors each check to the `:<vendor>:` scheme token.
+    //
+    // SQL Server / Oracle drivers may not be on the test classpath, so we assert routing via the
+    // class name that getDriverClassByUrl tried to load (surfaced in the exception message).
+    @Test
+    public void testGetDriverClassByUrl_VendorNameInDatabaseDoesNotConfuseMatcher() throws Exception {
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("getDriverClassByUrl", String.class);
+        m.setAccessible(true);
+
+        // jdbc:sqlserver URL with database "oracle_archive" — pre-fix would route to Oracle.
+        assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;Database=oracle_archive", "SQLServerDriver", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+
+        // jdbc:sqlserver URL with database "mysql_audit" — pre-fix would route to MySQL.
+        assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;Database=mysql_audit", "SQLServerDriver", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+
+        // Sanity: legitimate MySQL URL still resolves to the MySQL driver.
+        assertResolvesToVendorDriver(m, "jdbc:mysql://host:3306/anything", "mysql", "com.mysql.cj.jdbc.Driver");
+
+        // Sanity: legitimate PostgreSQL URL still resolves to the PostgreSQL driver.
+        assertResolvesToVendorDriver(m, "jdbc:postgresql://host:5432/anything", "postgresql", "org.postgresql.Driver");
+    }
+
+    private static void assertResolvesToVendorDriver(final java.lang.reflect.Method m, final String url, final String expectedSubstring,
+            final String fullClassName) throws Exception {
+        try {
+            Class<?> driverClass = (Class<?>) m.invoke(null, url);
+            assertEquals(fullClassName, driverClass.getName(), "URL '" + url + "' should resolve to " + fullClassName);
+        } catch (java.lang.reflect.InvocationTargetException ex) {
+            // Driver class not on test classpath — accept as long as the attempted class is the right vendor.
+            final Throwable cause = ex.getCause();
+            assertNotNull(cause);
+            assertTrue(cause.getMessage() != null && cause.getMessage().contains(expectedSubstring),
+                    "URL '" + url + "' should attempt to load a driver whose name contains '" + expectedSubstring + "' but got: " + cause.getMessage());
+        }
+    }
+
+    // Regression: stripIdentifierDelimiters did not unescape doubled quotes inside a quoted body,
+    // so toQualifiedSqlIdentifier (which re-quotes) would double-escape and emit corrupt SQL.
+    @Test
+    public void testStripIdentifierDelimiters_UnescapesDoubledQuote() throws Exception {
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("stripIdentifierDelimiters", String.class);
+        m.setAccessible(true);
+
+        assertEquals("a\"b", m.invoke(null, "\"a\"\"b\""), "doubled \" inside double-quoted identifier must unescape");
+        assertEquals("a`b", m.invoke(null, "`a``b`"), "doubled ` inside backtick identifier must unescape");
+        assertEquals("a]b", m.invoke(null, "[a]]b]"), "doubled ] inside bracketed identifier must unescape");
+        // Single-quoted bodies without doubled quotes are returned as the literal body.
+        assertEquals("plain", m.invoke(null, "\"plain\""));
+    }
+
+    // Regression: isTableNotExistsException relied solely on SQLState (which Oracle/SQL Server do not
+    // populate reliably) and Locale-dependent message matching. The fix adds vendor errorCode checks
+    // and uses Locale.ROOT for lowercasing.
+    @Test
+    public void testIsTableNotExistsException_VendorErrorCodes() throws Exception {
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("isTableNotExistsException", Throwable.class);
+        m.setAccessible(true);
+
+        // Oracle ORA-00942 — message is in a non-English form so the message check would miss it.
+        SQLException oracle = new SQLException("ORA-00942: opaque error", "72000", 942);
+        assertEquals(Boolean.TRUE, m.invoke(null, oracle));
+
+        // SQL Server error 208 ("Invalid object name") with non-matching SQLState
+        SQLException mssql = new SQLException("Invalid object name 'dbo.foo'", "S0002", 208);
+        assertEquals(Boolean.TRUE, m.invoke(null, mssql));
+
+        // MySQL ER_NO_SUCH_TABLE
+        SQLException mysql = new SQLException("Table 'db.foo' doesn't exist", "42S02", 1146);
+        assertEquals(Boolean.TRUE, m.invoke(null, mysql));
+
+        // DB2 SQLState 42704
+        SQLException db2 = new SQLException("undefined name", "42704", -204);
+        assertEquals(Boolean.TRUE, m.invoke(null, db2));
+
+        // Unrelated SQLException must NOT match.
+        SQLException unrelated = new SQLException("primary key violation", "23000", 1062);
+        assertEquals(Boolean.FALSE, m.invoke(null, unrelated));
+    }
+
+    // Regression: writeBlobToFile / writeClobToFile leaked the InputStream / Reader they obtained
+    // from the Blob/Clob, because IOUtil.write closes only the output stream. The fix wraps the
+    // input in try-with-resources.
+    @Test
+    public void testWriteBlobToFile_ClosesBinaryStream() throws Exception {
+        final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.io.InputStream tracked = new java.io.ByteArrayInputStream("hello".getBytes(StandardCharsets.UTF_8)) {
+            @Override public void close() throws IOException {
+                closed.set(true);
+                super.close();
+            }
+        };
+        Blob blob = mock(Blob.class);
+        when(blob.getBinaryStream()).thenReturn(tracked);
+
+        File tmp = File.createTempFile("blob-leak-test", ".bin");
+        tmp.deleteOnExit();
+        try {
+            JdbcUtil.writeBlobToFile(blob, tmp);
+        } finally {
+            tmp.delete();
+        }
+
+        assertTrue(closed.get(), "writeBlobToFile must close the InputStream returned by Blob.getBinaryStream()");
+        verify(blob).free();
+    }
+
+    @Test
+    public void testWriteClobToFile_ClosesCharacterStream() throws Exception {
+        final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.io.Reader tracked = new java.io.StringReader("hello") {
+            @Override public void close() {
+                closed.set(true);
+                super.close();
+            }
+        };
+        Clob clob = mock(Clob.class);
+        when(clob.getCharacterStream()).thenReturn(tracked);
+
+        File tmp = File.createTempFile("clob-leak-test", ".txt");
+        tmp.deleteOnExit();
+        try {
+            JdbcUtil.writeClobToFile(clob, tmp);
+        } finally {
+            tmp.delete();
+        }
+
+        assertTrue(closed.get(), "writeClobToFile must close the Reader returned by Clob.getCharacterStream()");
+        verify(clob).free();
+    }
+
+    // Regression: getSqlOperation's fallback loop used SqlOperation.name() (which uses Java enum
+    // constant naming, e.g., "BEGIN_TRANSACTION" with underscore) instead of sqlToken() ("BEGIN
+    // TRANSACTION" with space), so multi-word operations never matched. It also lacked a word
+    // boundary so "CREATEX foo" was misclassified as CREATE.
+    @Test
+    public void testGetSqlOperation_BeginTransactionMatchesSpaceVariant() throws Exception {
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("getSqlOperation", String.class);
+        m.setAccessible(true);
+
+        Object op = m.invoke(null, "BEGIN TRANSACTION");
+        assertEquals(com.landawn.abacus.query.SqlOperation.BEGIN_TRANSACTION, op);
+
+        op = m.invoke(null, "begin transaction read only");
+        assertEquals(com.landawn.abacus.query.SqlOperation.BEGIN_TRANSACTION, op);
+    }
+
+    @Test
+    public void testGetSqlOperation_RequiresWordBoundary() throws Exception {
+        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("getSqlOperation", String.class);
+        m.setAccessible(true);
+
+        // "CREATEX foo" should NOT match CREATE — there is no word boundary after CREATE.
+        assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, m.invoke(null, "CREATEX foo"));
+
+        // But "CREATE TABLE foo (...)" should match CREATE.
+        assertEquals(com.landawn.abacus.query.SqlOperation.CREATE, m.invoke(null, "CREATE TABLE foo (id INT)"));
+
+        // Punctuation also counts as a boundary.
+        assertEquals(com.landawn.abacus.query.SqlOperation.DROP, m.invoke(null, "DROP(TABLE foo)"));
+    }
 }

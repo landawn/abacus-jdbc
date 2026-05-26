@@ -315,9 +315,10 @@ public final class JdbcUtil {
     private static final Set<String> sqlStateForTableNotExists = N.newHashSet();
 
     static {
-        sqlStateForTableNotExists.add("42S02"); // for MySQFilters.
-        sqlStateForTableNotExists.add("42P01"); // for PostgreSQFilters.
-        sqlStateForTableNotExists.add("42501"); // for HSQLDB.
+        sqlStateForTableNotExists.add("42S02"); // MySQL, SQL Server
+        sqlStateForTableNotExists.add("42P01"); // PostgreSQL
+        sqlStateForTableNotExists.add("42501"); // HSQLDB
+        sqlStateForTableNotExists.add("42704"); // DB2
     }
 
     static final Set<String> QUERY_METHOD_NAME_SET = N.toSet("query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "load",
@@ -850,28 +851,30 @@ public final class JdbcUtil {
     private static Class<? extends Driver> getDriverClassByUrl(final String url) {
         N.checkArgNotEmpty(url, cs.url);
 
+        // Anchor each check to the `:<vendor>:` token so a connection string containing another
+        // vendor's name in a database/property value (e.g., `jdbc:sqlserver://h/db=oracle_audit`)
+        // doesn't match the wrong driver.
         Class<? extends Driver> driverClass = null;
         // jdbc:mysql://localhost:3306/abacustest
-        if (Strings.indexOfIgnoreCase(url, "mysql") >= 0) {
+        if (Strings.indexOfIgnoreCase(url, ":mysql:") >= 0) {
             driverClass = ClassUtil.forName("com.mysql.cj.jdbc.Driver");
             // jdbc:postgresql://localhost:5432/abacustest
-        } else if (Strings.indexOfIgnoreCase(url, "postgresql") >= 0) {
+        } else if (Strings.indexOfIgnoreCase(url, ":postgresql:") >= 0) {
             driverClass = ClassUtil.forName("org.postgresql.Driver");
-            // jdbc:hsqldb:hsql://localhost/abacustest -- must be checked before "h2" because an HSQLDB
-            // database name (e.g., "h2_compat") would otherwise be mis-detected as H2.
-        } else if (Strings.indexOfIgnoreCase(url, "hsqldb") >= 0) {
+            // jdbc:hsqldb:hsql://localhost/abacustest
+        } else if (Strings.indexOfIgnoreCase(url, ":hsqldb:") >= 0) {
             driverClass = ClassUtil.forName("org.hsqldb.jdbc.JDBCDriver");
             // jdbc:h2:hsql://<host>:<port>/<database>
         } else if (Strings.indexOfIgnoreCase(url, ":h2:") >= 0) {
             driverClass = ClassUtil.forName("org.h2.Driver");
             // url=jdbc:oracle:thin:@localhost:1521:abacustest
-        } else if (Strings.indexOfIgnoreCase(url, "oracle") >= 0) {
+        } else if (Strings.indexOfIgnoreCase(url, ":oracle:") >= 0) {
             driverClass = ClassUtil.forName("oracle.jdbc.driver.OracleDriver");
             // url=jdbc:sqlserver://localhost:1433;Database=abacustest
-        } else if (Strings.indexOfIgnoreCase(url, "sqlserver") >= 0) {
+        } else if (Strings.indexOfIgnoreCase(url, ":sqlserver:") >= 0) {
             driverClass = ClassUtil.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             // jdbc:db2://localhost:50000/abacustest
-        } else if (Strings.indexOfIgnoreCase(url, "db2") >= 0) {
+        } else if (Strings.indexOfIgnoreCase(url, ":db2:") >= 0) {
             driverClass = ClassUtil.forName("com.ibm.db2.jcc.DB2Driver");
         } else {
             throw new IllegalArgumentException(
@@ -2669,8 +2672,18 @@ public final class JdbcUtil {
         } else if (Strings.startsWithIgnoreCase(trimmedSql, "merge ")) {
             return SqlOperation.MERGE;
         } else {
+            // Use sqlToken() rather than name() so multi-word operations match SQL syntax
+            // (e.g., BEGIN_TRANSACTION -> "BEGIN TRANSACTION"), and require a word boundary so
+            // "CREATEX..." doesn't falsely match CREATE.
             for (final SqlOperation so : SqlOperation.values()) {
-                if (Strings.startsWithIgnoreCase(trimmedSql, so.name())) {
+                if (so == SqlOperation.UNKNOWN) {
+                    continue;
+                }
+
+                final String token = so.sqlToken();
+
+                if (Strings.startsWithIgnoreCase(trimmedSql, token) //
+                        && (trimmedSql.length() == token.length() || !Character.isLetterOrDigit(trimmedSql.charAt(token.length())))) {
                     return so;
                 }
             }
@@ -6616,9 +6629,17 @@ public final class JdbcUtil {
                     try {
                         while (true) {
                             if (isNextResultSet) {
-                                resultSetHolder.setValue(stmt.getResultSet());
+                                final ResultSet currentRs = stmt.getResultSet();
                                 isNextResultSet = false;
-                                break;
+
+                                if (currentRs != null) {
+                                    resultSetHolder.setValue(currentRs);
+                                    break;
+                                }
+                                // First-result claim was wrong (driver returned null, meaning the
+                                // first result was actually an update count or no result). Fall
+                                // through to advance via getMoreResults/getUpdateCount below
+                                // instead of terminating the iteration early.
                             } else if (stmt.getUpdateCount() != -1) {
                                 isNextResultSet = stmt.getMoreResults();
                             } else {
@@ -7432,22 +7453,38 @@ public final class JdbcUtil {
             return false;
         }
 
-        // DatabaseMetaData.getTables treats '_' and '%' in the table-name argument as wildcards.
-        // A bare rows.next() can therefore return true for an unrelated table whose name happens to
-        // match the wildcard expansion (e.g., looking up "users_log" matches "usersXlog"). When the
-        // requested pattern contains a wildcard meta-character, verify the returned TABLE_NAME
-        // actually matches (case-insensitive) the requested name; otherwise rely on rows.next().
+        // DatabaseMetaData.getTables treats '_' and '%' in the schemaPattern/tableNamePattern arguments
+        // as wildcards. A bare rows.next() can therefore return true for an unrelated table whose name
+        // (or schema) happens to match the wildcard expansion (e.g., looking up "users_log" matches
+        // "usersXlog"; looking up "my_app.users" matches "myXapp.users"). When either argument contains
+        // a wildcard meta-character, verify the returned TABLE_NAME and TABLE_SCHEM (and TABLE_CAT)
+        // actually match (case-insensitive) the requested values; otherwise rely on rows.next().
+        final boolean tableNameHasWildcard = tableNamePattern != null && (tableNamePattern.indexOf('_') >= 0 || tableNamePattern.indexOf('%') >= 0);
+        final boolean schemaHasWildcard = schemaPattern != null && (schemaPattern.indexOf('_') >= 0 || schemaPattern.indexOf('%') >= 0);
+
         try (ResultSet rows = rs) {
-            if (tableNamePattern == null || (tableNamePattern.indexOf('_') < 0 && tableNamePattern.indexOf('%') < 0)) {
+            if (!tableNameHasWildcard && !schemaHasWildcard) {
                 return rows.next();
             }
 
             while (rows.next()) {
-                final String tableNameInMetadata = rows.getString("TABLE_NAME");
+                if (tableNameHasWildcard) {
+                    final String tableNameInMetadata = rows.getString("TABLE_NAME");
 
-                if (tableNameInMetadata != null && tableNameInMetadata.equalsIgnoreCase(tableNamePattern)) {
-                    return true;
+                    if (tableNameInMetadata == null || !tableNameInMetadata.equalsIgnoreCase(tableNamePattern)) {
+                        continue;
+                    }
                 }
+
+                if (schemaHasWildcard) {
+                    final String schemaInMetadata = rows.getString("TABLE_SCHEM");
+
+                    if (schemaInMetadata == null || !schemaInMetadata.equalsIgnoreCase(schemaPattern)) {
+                        continue;
+                    }
+                }
+
+                return true;
             }
 
             return false;
@@ -7505,8 +7542,15 @@ public final class JdbcUtil {
             final char first = trimmed.charAt(0);
             final char last = trimmed.charAt(trimmed.length() - 1);
 
-            if ((first == '"' && last == '"') || (first == '`' && last == '`') || (first == '[' && last == ']')) {
-                return trimmed.substring(1, trimmed.length() - 1).trim();
+            // Unescape doubled delimiters inside the quoted body so the returned identifier holds
+            // the literal name. Otherwise downstream re-quoting via toQualifiedSqlIdentifier would
+            // double-escape (e.g., `"a""b"` -> body `a""b` -> re-quoted `"a""""b"`).
+            if ((first == '"' && last == '"') || (first == '`' && last == '`')) {
+                return trimmed.substring(1, trimmed.length() - 1).trim().replace("" + first + first, String.valueOf(first));
+            }
+
+            if (first == '[' && last == ']') {
+                return trimmed.substring(1, trimmed.length() - 1).trim().replace("]]", "]");
             }
         }
 
@@ -7779,7 +7823,17 @@ public final class JdbcUtil {
                 return true;
             }
 
-            final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase();
+            // Vendor-specific error codes for "table does not exist". These are checked because
+            // Oracle and SQL Server do not always populate SQLState reliably.
+            final int errorCode = sqlException.getErrorCode();
+            if (errorCode == 942 // Oracle ORA-00942
+                    || errorCode == 208 // SQL Server: Invalid object name
+                    || errorCode == 1146) { // MySQL ER_NO_SUCH_TABLE
+                return true;
+            }
+
+            // Locale-independent lowercase to avoid Turkish-locale `I` ambiguity.
+            final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase(java.util.Locale.ROOT);
             return Strings.isNotEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
         }
 
@@ -8967,7 +9021,11 @@ public final class JdbcUtil {
         }
 
         try {
-            return IOUtil.write(blob.getBinaryStream(), output);
+            // IOUtil.write(InputStream, File) closes only the output FileOutputStream — the input
+            // stream is the caller's responsibility, so wrap it in try-with-resources to avoid leak.
+            try (java.io.InputStream in = blob.getBinaryStream()) {
+                return IOUtil.write(in, output);
+            }
         } finally {
             blob.free();
         }
@@ -9028,7 +9086,11 @@ public final class JdbcUtil {
         }
 
         try {
-            return IOUtil.write(clob.getCharacterStream(), output);
+            // IOUtil.write(Reader, File) closes only the output writer — the input reader is the
+            // caller's responsibility, so wrap it in try-with-resources to avoid leak.
+            try (java.io.Reader reader = clob.getCharacterStream()) {
+                return IOUtil.write(reader, output);
+            }
         } finally {
             clob.free();
         }
