@@ -45,6 +45,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.BiMap;
+import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.CodeGenerationUtil;
 import com.landawn.abacus.util.EnumType;
@@ -510,7 +511,32 @@ public final class JdbcCodeGenerationUtil {
                 final Connection conn = stmt == null ? null : stmt.getConnection();
 
                 if (conn != null) {
-                    try (ResultSet pkColumns = conn.getMetaData().getPrimaryKeys(null, null, entityName)) {
+                    // Pre-fix this passed entityName verbatim, so a qualified name like
+                    // "schema.users" was sent as a literal table name (drivers never match);
+                    // PK auto-detection silently produced no @Id. Split the identifier so
+                    // catalog/schema/table get the correct slots. Unqualified names retain the
+                    // null/null/entityName shape so existing tests keep working.
+                    String pkCatalog = null;
+                    String pkSchema = null;
+                    String pkTable = entityName;
+                    try {
+                        final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(entityName, "entityName");
+                        if (parts.length == 2) {
+                            pkSchema = parts[0];
+                            pkTable = parts[1];
+                        } else if (parts.length >= 3) {
+                            pkCatalog = parts[0];
+                            pkSchema = parts[1];
+                            pkTable = parts[2];
+                        }
+                    } catch (final RuntimeException ignore) {
+                        // entityName is not a parseable SQL identifier (e.g., a synthesized Java
+                        // class name from the entityName+query overloads). Fall through with
+                        // pkTable=entityName so the metadata query simply returns empty —
+                        // matching the prior best-effort behavior.
+                    }
+
+                    try (ResultSet pkColumns = conn.getMetaData().getPrimaryKeys(pkCatalog, pkSchema, pkTable)) {
                         while (pkColumns.next()) {
                             idFields.add(pkColumns.getString("COLUMN_NAME"));
                         }
@@ -659,7 +685,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             sb.append("@Table(name = \"")
-                    .append(entityName)
+                    .append(escapeJavaStringLiteral(entityName))
                     .append("\")")
                     .append(LINE_SEPARATOR)
                     .append("public class ")
@@ -684,7 +710,7 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
-                sb.append("    @Column(name = \"").append(columnName).append("\")").append(LINE_SEPARATOR);
+                sb.append("    @Column(name = \"").append(escapeJavaStringLiteral(columnName)).append("\")").append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
@@ -825,7 +851,11 @@ public final class JdbcCodeGenerationUtil {
 
                 IOUtil.createFileIfNotExists(file);
 
-                IOUtil.write(result, file);
+                // Explicit UTF-8 instead of IOUtil's platform default (Cp1252 on Windows). Non-ASCII
+                // characters in table/column names, dateFormat config, or additionalFieldsOrLines
+                // otherwise become mojibake when the on-disk source is compiled with javac's standard
+                // -encoding UTF-8.
+                IOUtil.write(result, Charsets.UTF_8, file);
 
                 logger.info("Generated entity class(className={}, file={})", finalClassName, file.getAbsolutePath());
             }
@@ -1946,6 +1976,52 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return !javax.lang.model.SourceVersion.isKeyword(name);
+    }
+
+    /**
+     * Escapes a string for safe embedding inside a generated Java double-quoted string literal.
+     * Without this, schema-declared identifiers containing a quote, backslash, or newline (legal in
+     * PostgreSQL/Oracle/SQL Server quoted/bracketed identifiers) would produce malformed Java when
+     * interpolated into {@code @Table(name = "...")} / {@code @Column(name = "...")} annotations.
+     */
+    static String escapeJavaStringLiteral(final String s) {
+        if (s == null || s.isEmpty()) {
+            return s;
+        }
+
+        // Fast-path: most identifiers contain no characters that need escaping.
+        for (int i = 0, len = s.length(); i < len; i++) {
+            final char ch = s.charAt(i);
+            if (ch == '"' || ch == '\\' || ch == '\n' || ch == '\r' || ch == '\t') {
+                final StringBuilder sb = new StringBuilder(s.length() + 8);
+                sb.append(s, 0, i);
+                for (int j = i; j < len; j++) {
+                    final char c = s.charAt(j);
+                    switch (c) {
+                        case '"':
+                            sb.append("\\\"");
+                            break;
+                        case '\\':
+                            sb.append("\\\\");
+                            break;
+                        case '\n':
+                            sb.append("\\n");
+                            break;
+                        case '\r':
+                            sb.append("\\r");
+                            break;
+                        case '\t':
+                            sb.append("\\t");
+                            break;
+                        default:
+                            sb.append(c);
+                    }
+                }
+                return sb.toString();
+            }
+        }
+
+        return s;
     }
 
     /**

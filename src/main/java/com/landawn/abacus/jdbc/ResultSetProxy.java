@@ -484,7 +484,11 @@ final class ResultSetProxy implements ResultSet {
                     ret = ((oracle.sql.Datum) ret).timestampValue();
                     columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
                 } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-                    ret = ((oracle.sql.Datum) ret).timestampValue();
+                    // Datum.timestampValue() (no-arg) throws SQLException on TIMESTAMPLTZ because
+                    // LTZ requires the originating Connection's session timezone to materialize.
+                    // delegate.getTimestamp lets the driver perform the timezone-aware conversion
+                    // correctly for both TZ and LTZ.
+                    ret = delegate.getTimestamp(columnIndex);
                     columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
@@ -500,13 +504,41 @@ final class ResultSetProxy implements ResultSet {
                 } else if (ret instanceof java.sql.Date) {
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
 
-                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                    // Mirror the oracle.sql.DATE branch above: oracle.sql.TIMESTAMP as the declared
+                    // metadata type also indicates the column carries time-of-day info; reading via
+                    // getDate would silently truncate. Pre-fix, only "java.sql.Timestamp" was checked.
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         ret = delegate.getTimestamp(columnIndex);
                         columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
                     } else {
                         columnGetters[columnIndex] = ColumnGetter.GET_DATE;
                     }
                 } else {
+                    // Materialize Blob/Clob inline so the row-1 return matches what subsequent rows
+                    // produce via the cached GET_OBJECT (which delegates to JdbcUtil.getColumnValue
+                    // and unconditionally materializes LOBs). Pre-fix, row 1 returned the raw Blob
+                    // while rows 2+ returned byte[] — inconsistent for the same column.
+                    if (ret instanceof Blob blob) {
+                        try {
+                            final long len = blob.length();
+                            if (len > Integer.MAX_VALUE) {
+                                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                            }
+                            ret = blob.getBytes(1, (int) len);
+                        } finally {
+                            blob.free();
+                        }
+                    } else if (ret instanceof Clob clob) {
+                        try {
+                            final long len = clob.length();
+                            if (len > Integer.MAX_VALUE) {
+                                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                            }
+                            ret = clob.getSubString(1, (int) len);
+                        } finally {
+                            clob.free();
+                        }
+                    }
                     columnGetters[columnIndex] = ColumnGetter.GET_OBJECT;
                 }
             }
@@ -565,7 +597,10 @@ final class ResultSetProxy implements ResultSet {
                     ret = ((oracle.sql.Datum) ret).timestampValue();
                     getter = rs -> rs.getTimestamp(columnIndex);
                 } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-                    ret = ((oracle.sql.Datum) ret).timestampValue();
+                    // Datum.timestampValue() (no-arg) throws SQLException on TIMESTAMPLTZ because
+                    // LTZ requires the originating Connection's session timezone to materialize.
+                    // Delegate to driver getTimestamp for both TZ and LTZ; see index-path variant.
+                    ret = delegate.getTimestamp(columnIndex);
                     getter = rs -> rs.getTimestamp(columnIndex);
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
@@ -580,14 +615,43 @@ final class ResultSetProxy implements ResultSet {
                 } else if (ret instanceof java.sql.Date) {
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
 
-                    if ("java.sql.Timestamp".equals(metaDataClassName)) {
+                    // Mirror the oracle.sql.DATE branch and the index-path java.sql.Date branch:
+                    // an oracle.sql.TIMESTAMP declared metadata type means the column carries
+                    // time-of-day info; reading via getDate would silently truncate. Pre-fix,
+                    // only "java.sql.Timestamp" was checked here.
+                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         ret = delegate.getTimestamp(columnIndex);
                         getter = rs -> rs.getTimestamp(columnIndex);
                     } else {
                         getter = rs -> rs.getDate(columnIndex);
                     }
                 } else {
-                    getter = rs -> rs.getObject(columnIndex);
+                    // Mirror the index-path fall-through: materialize Blob/Clob inline so this
+                    // first-row return matches what subsequent rows produce via the cached getter.
+                    // The cached getter goes through JdbcUtil.getColumnValue (matching the index
+                    // path) so the same column read via int or label yields the same type.
+                    if (ret instanceof Blob blob) {
+                        try {
+                            final long len = blob.length();
+                            if (len > Integer.MAX_VALUE) {
+                                throw new SQLException("Blob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                            }
+                            ret = blob.getBytes(1, (int) len);
+                        } finally {
+                            blob.free();
+                        }
+                    } else if (ret instanceof Clob clob) {
+                        try {
+                            final long len = clob.length();
+                            if (len > Integer.MAX_VALUE) {
+                                throw new SQLException("Clob size " + len + " exceeds maximum supported size of " + Integer.MAX_VALUE);
+                            }
+                            ret = clob.getSubString(1, (int) len);
+                        } finally {
+                            clob.free();
+                        }
+                    }
+                    getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
                 }
             }
 

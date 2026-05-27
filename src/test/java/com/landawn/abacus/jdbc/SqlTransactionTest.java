@@ -833,4 +833,100 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).setAutoCommit(true);
         verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
     }
+
+    // Regression: incrementAndGetRef on a NESTED scope pre-fix called conn.setTransactionIsolation
+    // BEFORE pushing recovery state onto the isolation/forUpdateOnly stacks. If the JDBC call
+    // failed, the outer scope's recovery state was never preserved (no push happened on this
+    // entry, so a subsequent commit/rollback would have nothing to restore from). Fix pushes
+    // first, then mutates the connection, and pops back the pushed values on failure.
+    @Test
+    public void testIncrementAndGetRef_NestedFailure_RestoresStacksAndRefcount() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        // Outer scope: refCount=1, _isolationLevel=READ_COMMITTED. Now arrange that the NESTED
+        // increment's setTransactionIsolation throws — pre-fix this would push nothing AND throw
+        // before _refCount.incrementAndGet; post-fix the push-then-pop pattern leaves refCount and
+        // stacks identical to their pre-call state.
+        doThrow(new SQLException("nested-isolation-fail")).when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+
+        assertThrows(UncheckedSQLException.class, () -> outer.incrementAndGetRef(IsolationLevel.SERIALIZABLE, false));
+
+        // Outer scope must remain fully intact:
+        assertEquals(IsolationLevel.READ_COMMITTED, outer.isolationLevel());
+        // RefCount should still be 1 (incrementAndGet never ran).
+        final Field refCountField = SqlTransaction.class.getDeclaredField("_refCount");
+        refCountField.setAccessible(true);
+        assertEquals(1, ((AtomicInteger) refCountField.get(outer)).get());
+
+        // Outer commit must succeed cleanly without "isolation stack empty" errors.
+        Mockito.reset(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        outer.commit();
+    }
+
+    // Regression: decrementAndGetRef failure path used to push the popped values back to the
+    // isolation/forUpdateOnly stacks but did NOT restore the _isolationLevel/_isForUpdateOnly
+    // FIELDS. After a setTransactionIsolation failure, the transaction was left in an inconsistent
+    // state — fields reflected the outer scope, stacks held the outer scope's values, so the next
+    // nested entry would push the OUTER value (not the original NESTED value) onto the stack,
+    // causing wrong unwind behavior later.
+    @Test
+    public void testDecrementAndGetRef_RestoreFailure_RestoresBothStacksAndFields() throws Exception {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        tran.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true); // refCount 1 -> 2; stack pushes READ_COMMITTED/false
+
+        // On decrement, the code pops READ_COMMITTED from the stack and tries to restore it on the
+        // connection. Make THAT setTransactionIsolation throw.
+        doThrow(new SQLException("restore-fail")).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        assertThrows(UncheckedSQLException.class, tran::decrementAndGetRef);
+
+        // After the failure, the FIELD should be restored to its pre-pop value (SERIALIZABLE),
+        // matching the stack which has been re-pushed with READ_COMMITTED. Pre-fix the field was
+        // left at READ_COMMITTED (stale post-pop value) — observable inconsistency.
+        assertEquals(IsolationLevel.SERIALIZABLE, tran.isolationLevel());
+
+        // Stack should hold the re-pushed value.
+        final Field stackField = SqlTransaction.class.getDeclaredField("_isolationLevelStack");
+        stackField.setAccessible(true);
+        final java.util.Deque<?> stack = (java.util.Deque<?>) stackField.get(tran);
+        assertEquals(1, stack.size());
+        assertEquals(IsolationLevel.READ_COMMITTED, stack.peek());
+    }
+
+    // Regression: executeRollback's finally block called actionAfterRollback.run() unguarded.
+    // If the action threw a RuntimeException AFTER a rollback that itself failed, the action's
+    // exception escaped the finally and replaced the primary UncheckedSQLException from the
+    // failed rollback — the caller would never see the underlying SQL error. Fix wraps the
+    // action in a try/catch that suppresses+logs action exceptions when a primary rollback
+    // failure is propagating, and re-throws otherwise.
+    @Test
+    public void testRollback_ActionAfterRollbackDoesNotMaskPrimaryRollbackFailure() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        // Force the rollback itself to fail.
+        doThrow(new SQLException("rollback-boom")).when(connection).rollback();
+
+        final UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, () -> tran.rollback(() -> {
+            throw new RuntimeException("post-rollback-action-boom");
+        }));
+
+        // Primary cause must be the rollback SQLException, not the post-action exception.
+        assertNotNull(ex.getCause());
+        assertEquals("rollback-boom", ex.getCause().getMessage());
+    }
+
+    @Test
+    public void testRollback_ActionAfterRollbackPropagatesWhenRollbackSucceeded() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        // rollback succeeds; only the action throws.
+        doNothing().when(connection).rollback();
+
+        // With no primary rollback failure, the action's exception is the only signal — it must
+        // propagate so the caller knows the action failed.
+        final RuntimeException ex = assertThrows(RuntimeException.class, () -> tran.rollback(() -> {
+            throw new RuntimeException("post-rollback-action-boom");
+        }));
+        assertEquals("post-rollback-action-boom", ex.getMessage());
+    }
 }

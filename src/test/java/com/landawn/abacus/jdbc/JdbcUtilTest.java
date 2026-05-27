@@ -2961,7 +2961,8 @@ public class JdbcUtilTest extends TestBase {
         m.setAccessible(true);
 
         // jdbc:sqlserver URL with database "oracle_archive" — pre-fix would route to Oracle.
-        assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;Database=oracle_archive", "SQLServerDriver", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;Database=oracle_archive", "SQLServerDriver",
+                "com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
         // jdbc:sqlserver URL with database "mysql_audit" — pre-fix would route to MySQL.
         assertResolvesToVendorDriver(m, "jdbc:sqlserver://host:1433;Database=mysql_audit", "SQLServerDriver", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -3037,7 +3038,8 @@ public class JdbcUtilTest extends TestBase {
     public void testWriteBlobToFile_ClosesBinaryStream() throws Exception {
         final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean(false);
         java.io.InputStream tracked = new java.io.ByteArrayInputStream("hello".getBytes(StandardCharsets.UTF_8)) {
-            @Override public void close() throws IOException {
+            @Override
+            public void close() throws IOException {
                 closed.set(true);
                 super.close();
             }
@@ -3061,7 +3063,8 @@ public class JdbcUtilTest extends TestBase {
     public void testWriteClobToFile_ClosesCharacterStream() throws Exception {
         final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean(false);
         java.io.Reader tracked = new java.io.StringReader("hello") {
-            @Override public void close() {
+            @Override
+            public void close() {
                 closed.set(true);
                 super.close();
             }

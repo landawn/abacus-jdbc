@@ -2106,6 +2106,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     @Override
     protected ResultSet executeQuery() throws SQLException {
         if (!isFetchDirectionSet) {
+            // Mirror AbstractQuery.executeQuery(): capture the driver-default direction before
+            // mutating so closeStatement() can restore it. Without this, a pooled CallableStatement
+            // is silently left at FETCH_FORWARD when its prior caller had configured a different
+            // direction (e.g., FETCH_REVERSE on DB2 z/OS scrollable cursors).
+            if (defaultFetchDirection < 0) {
+                defaultFetchDirection = cstmt.getFetchDirection();
+            }
+
             cstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
         }
 
@@ -2390,6 +2398,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             JdbcUtil.execute(cstmt);
+
+            // Per JDBC spec, OUT params are only guaranteed final after all result sets and update
+            // counts are consumed. SQL Server and Oracle in particular report null/stale OUT values
+            // if extra results remain. Procedures often emit side-effect result sets in addition
+            // to OUT params; this caller said they only want the OUT params, so drain them all.
+            drainRemainingResultsForOutParams();
 
             return JdbcUtil.getOutParameters(cstmt, outParams);
         } finally {
@@ -2780,6 +2794,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 result2 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor2);
             }
 
+            // If the procedure produced more than two result sets (or trailing update counts), they
+            // remain buffered in the cstmt and would cause stale OUT params on SQL Server / Oracle.
+            // iter.close() only releases the cached RS in the iterator's holder, not buffered results.
+            drainRemainingResultsForOutParams();
+
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {
             try {
@@ -2872,6 +2891,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             if (iter.hasNext()) {
                 result3 = JdbcUtil.extractAndCloseResultSet(iter.next(), resultExtractor3);
             }
+
+            // If the procedure produced more than three result sets (or trailing update counts),
+            // they remain buffered in the cstmt and would cause stale OUT params on SQL Server /
+            // Oracle. iter.close() only releases the iterator's cached RS, not buffered results.
+            drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
         } finally {

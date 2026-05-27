@@ -1432,9 +1432,14 @@ public class JoinInfoTest extends TestBase {
         assertEquals(1, user.getOrders().size());
     }
 
-    // m2m setJoinPropEntities (L481 srcEntityKeyExtractor lambda for m2m)
+    // Regression: pre-fix the Collection overload silently produced empty/wrong results for M:M
+    // joins because srcEntityKeyExtractor (e.g., employee.employeeId) and
+    // referencedEntityKeyExtractor (e.g., project.projectId) read unrelated namespaces. The
+    // previous form of this test only "passed" because userId=1L and roleId=1L coincidentally
+    // matched. Fix throws UnsupportedOperationException to fail fast — callers must use the
+    // Map overload with junction-table-augmented keys (DaoImpl's path).
     @Test
-    public void testSetJoinPropEntities_ManyToMany() {
+    public void testSetJoinPropEntities_ManyToMany_ThrowsForCollectionOverload() {
         final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_set", "roles");
         final UserRoleUserEntity user = new UserRoleUserEntity();
         user.setUserId(1L);
@@ -1442,7 +1447,25 @@ public class JoinInfoTest extends TestBase {
         role.setRoleId(1L);
         role.setName("Admin");
 
-        joinInfo.setJoinPropEntities(List.of(user), List.of(role));
+        assertThrows(UnsupportedOperationException.class, () -> joinInfo.setJoinPropEntities(List.of(user), List.of(role)));
+    }
+
+    // The Map overload remains the supported entry point for M:M: callers/the framework augment
+    // each joined entity with the source-side junction key, then group by that key.
+    @Test
+    public void testSetJoinPropEntities_ManyToMany_MapOverloadWorks() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_set", "roles");
+        final UserRoleUserEntity user = new UserRoleUserEntity();
+        user.setUserId(42L);
+        final RoleLookupEntity role = new RoleLookupEntity();
+        role.setRoleId(7L);
+        role.setName("Admin");
+
+        // Caller (DaoImpl in production) provides the junction-keyed map; here we simulate it by
+        // keying on the source's userId.
+        final java.util.Map<Object, java.util.List<Object>> grouped = new java.util.HashMap<>();
+        grouped.put(42L, new java.util.ArrayList<>(List.of(role)));
+        joinInfo.setJoinPropEntities(List.of(user), grouped);
 
         assertNotNull(user.getRoles());
         assertEquals(1, user.getRoles().size());
@@ -1593,6 +1616,32 @@ public class JoinInfoTest extends TestBase {
     // commented out), so they are unreachable in isolation and intentionally left uncovered.
     // TODO: JoinInfo L296 ("intermediate entity class is required but not found" when forName
     // returns null) is defensive dead code — ClassUtil.forName throws before returning null.
+
+    // Regression: pre-fix the M2M batch SELECT SQL builder relied on fixed token offsets
+    // (.get(2)/.get(10)/.get(14)) of the parsed middle SELECT SQL. Those positions only hold
+    // the right tokens when SqlBuilder emits `AS "alias"` for every column — but it omits AS
+    // when the column name already equals the property name. PLC (LOWER_CAMEL_CASE) never
+    // emits AS, so pre-fix middleTableName resolved to a column name like "userId" instead of
+    // the actual middle table name, producing nonsense SQL like `... INNER JOIN userId ON ...
+    // WHERE userId.? IN (...)`. Fix anchors lookups on SELECT/FROM/WHERE keyword tokens
+    // instead of fixed offsets.
+    @Test
+    public void testGetBatchSelectSqlPlan_PLC_ManyToMany_BuildsCorrectSql() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_plc_m2m", "roles");
+        final Tuple2<BiFunction<Collection<String>, Integer, String>, ?> plan = joinInfo.getBatchSelectSqlPlan(com.landawn.abacus.query.SqlBuilder.PLC.class);
+        assertNotNull(plan);
+        final String sql = plan._1.apply(null, 2);
+        assertNotNull(sql);
+        // PLC = LOWER_CAMEL_CASE, so SqlBuilder lowercase-first the middle class name to
+        // `userRoleLink`. Post-fix this appears as the JOIN target and as the source-side
+        // condition column qualifier. Pre-fix middleTableName resolved to `userId` (a column
+        // name, not a table), producing broken SQL.
+        assertTrue(sql.contains("INNER JOIN userRoleLink ON"), "Expected join against middle table 'userRoleLink', got:\n" + sql);
+        assertTrue(sql.contains("userRoleLink.userId IN ("), "Expected WHERE on middle table's source-side column, got:\n" + sql);
+        // Pre-fix the magic indices read column-name tokens as the table name; "INNER JOIN userId"
+        // would have appeared instead of "INNER JOIN userRoleLink".
+        assertFalse(sql.contains("INNER JOIN userId ON"), "Pre-fix broken-SQL pattern leaked into output:\n" + sql);
+    }
 }
 
 final class UserRoleUserEntity {

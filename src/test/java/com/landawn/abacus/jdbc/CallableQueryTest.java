@@ -983,6 +983,9 @@ public class CallableQueryTest extends TestBase {
     @Test
     public void testExecuteAndGetOutParameters() throws SQLException {
         when(callableStatement.execute()).thenReturn(false);
+        // Real drivers return -1 once results are drained; without this stub the post-execute
+        // drainRemainingResultsForOutParams() loop hangs (Mockito's default int return is 0).
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
         callableQuery.registerOutParameter(1, Types.INTEGER);
         Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
         assertNotNull(result);
@@ -1847,12 +1850,12 @@ public class CallableQueryTest extends TestBase {
         callableQuery.registerOutParameter(1, Types.INTEGER);
         when(callableStatement.getInt(1)).thenReturn(42);
 
-        com.landawn.abacus.util.Tuple.Tuple2<Long, Jdbc.OutParamResult> result = callableQuery
-                .queryAndGetOutParameters(rs -> {
-                    long count = 0;
-                    while (rs.next()) count++;
-                    return count;
-                });
+        com.landawn.abacus.util.Tuple.Tuple2<Long, Jdbc.OutParamResult> result = callableQuery.queryAndGetOutParameters(rs -> {
+            long count = 0;
+            while (rs.next())
+                count++;
+            return count;
+        });
 
         assertNotNull(result);
         assertEquals(0L, result._1);
@@ -1886,5 +1889,129 @@ public class CallableQueryTest extends TestBase {
         // Fix guarantees drain happened — verify getMoreResults was called at least once after extraction.
         verify(callableStatement, org.mockito.Mockito.atLeast(1)).getMoreResults();
         assertEquals(Integer.valueOf(99), result._2.getOutParamValue(1));
+    }
+
+    // Regression: executeAndGetOutParameters used to call JdbcUtil.getOutParameters immediately
+    // after cstmt.execute(), without draining any side-effect result sets / update counts the
+    // procedure may have produced. Per JDBC spec, OUT params are only guaranteed final once all
+    // results are consumed — SQL Server and Oracle in particular returned stale values pre-fix.
+    @Test
+    public void testExecuteAndGetOutParameters_DrainsRemainingResultsBeforeReadingOutParams() throws SQLException {
+        // Simulate procedure that produced one trailing update count before the drain finds nothing.
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getMoreResults()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(7, -1);
+
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.getInt(1)).thenReturn(123);
+
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(callableStatement);
+        Jdbc.OutParamResult result = callableQuery.executeAndGetOutParameters();
+
+        assertNotNull(result);
+        assertEquals(Integer.valueOf(123), result.getOutParamValue(1));
+        // The fix drains before reading OUT params: getMoreResults must be called BEFORE getInt(1).
+        inOrder.verify(callableStatement).execute();
+        inOrder.verify(callableStatement, org.mockito.Mockito.atLeast(1)).getMoreResults();
+        inOrder.verify(callableStatement).getInt(1);
+    }
+
+    // Regression: query2ResultSetsAndGetOutParameters consumed only the first two ResultSets via
+    // iterateAllResultSets; any trailing RSs/update counts remained buffered when getOutParameters
+    // ran, causing stale OUT params on SQL Server / Oracle. Fix adds a drain before getOutParameters.
+    @Test
+    public void testQuery2ResultSetsAndGetOutParameters_DrainsTrailingResults() throws SQLException {
+        ResultSet rs1 = mock(ResultSet.class);
+        ResultSet rs2 = mock(ResultSet.class);
+        ResultSetMetaData md = mock(ResultSetMetaData.class);
+        when(md.getColumnCount()).thenReturn(0);
+        when(rs1.getMetaData()).thenReturn(md);
+        when(rs2.getMetaData()).thenReturn(md);
+
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs1, rs2);
+        // KEEP_CURRENT_RESULT overload (called by iterator after each next()): another RS after rs1, then doesn't matter.
+        when(callableStatement.getMoreResults(java.sql.Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true);
+        // No-arg overload (called by drain): no more results.
+        when(callableStatement.getMoreResults()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.getInt(1)).thenReturn(55);
+
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(callableStatement);
+        com.landawn.abacus.util.Tuple.Tuple3<String, String, Jdbc.OutParamResult> result = callableQuery.query2ResultSetsAndGetOutParameters(
+                (Jdbc.BiResultExtractor<String>) (rs, labels) -> "r1", (Jdbc.BiResultExtractor<String>) (rs, labels) -> "r2");
+
+        assertNotNull(result);
+        assertEquals("r1", result._1);
+        assertEquals("r2", result._2);
+        assertEquals(Integer.valueOf(55), result._3.getOutParamValue(1));
+        // Pre-fix, the no-arg getMoreResults() was never called; iterateAllResultSets only uses the
+        // (int) overload. Post-fix, drain calls the no-arg overload at least once before getInt(1).
+        inOrder.verify(callableStatement, org.mockito.Mockito.atLeast(1)).getMoreResults();
+        inOrder.verify(callableStatement).getInt(1);
+    }
+
+    // Same regression as the 2-RS variant, for the 3-RS variant.
+    @Test
+    public void testQuery3ResultSetsAndGetOutParameters_DrainsTrailingResults() throws SQLException {
+        ResultSet rs1 = mock(ResultSet.class);
+        ResultSet rs2 = mock(ResultSet.class);
+        ResultSet rs3 = mock(ResultSet.class);
+        ResultSetMetaData md = mock(ResultSetMetaData.class);
+        when(md.getColumnCount()).thenReturn(0);
+        when(rs1.getMetaData()).thenReturn(md);
+        when(rs2.getMetaData()).thenReturn(md);
+        when(rs3.getMetaData()).thenReturn(md);
+
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs1, rs2, rs3);
+        when(callableStatement.getMoreResults(java.sql.Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true, true);
+        when(callableStatement.getMoreResults()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.getInt(1)).thenReturn(77);
+
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(callableStatement);
+        com.landawn.abacus.util.Tuple.Tuple4<String, String, String, Jdbc.OutParamResult> result = callableQuery.query3ResultSetsAndGetOutParameters(
+                (Jdbc.BiResultExtractor<String>) (rs, labels) -> "a", (Jdbc.BiResultExtractor<String>) (rs, labels) -> "b",
+                (Jdbc.BiResultExtractor<String>) (rs, labels) -> "c");
+
+        assertNotNull(result);
+        assertEquals("a", result._1);
+        assertEquals("b", result._2);
+        assertEquals("c", result._3);
+        assertEquals(Integer.valueOf(77), result._4.getOutParamValue(1));
+        inOrder.verify(callableStatement, org.mockito.Mockito.atLeast(1)).getMoreResults();
+        inOrder.verify(callableStatement).getInt(1);
+    }
+
+    // Regression: CallableQuery.executeQuery() override (which walks past update counts to find the
+    // first ResultSet) used to set FETCH_FORWARD without capturing the prior driver-default fetch
+    // direction. closeStatement() then couldn't restore it on pooled CallableStatement reuse.
+    // Fix mirrors the AbstractQuery.executeQuery fix — capture before mutating.
+    @Test
+    public void testExecuteQuery_CapturesDefaultFetchDirectionForRestoration() throws Exception {
+        when(callableStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
+        // Make the result-walk terminate quickly: execute returns false (no first RS), then
+        // getUpdateCount -1 means no more results, loop exits returning null.
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        // executeQuery is protected; invoke via reflection.
+        final java.lang.reflect.Method m = CallableQuery.class.getDeclaredMethod("executeQuery");
+        m.setAccessible(true);
+        m.invoke(callableQuery);
+
+        // The fix captures the prior direction before forcing FORWARD.
+        verify(callableStatement).getFetchDirection();
+        verify(callableStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+
+        // close() must restore the original FETCH_REVERSE direction. Pre-fix the capture never
+        // happened and the restoration in closeStatement was a no-op (default == -1).
+        callableQuery.close();
+        verify(callableStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
     }
 }

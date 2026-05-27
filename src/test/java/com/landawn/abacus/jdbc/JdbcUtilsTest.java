@@ -1359,16 +1359,19 @@ public class JdbcUtilsTest extends TestBase {
         final DataSource tgtDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:copy_tgt_order;DB_CLOSE_DELAY=-1", "sa", "");
 
         try {
-            try (Connection conn = srcDs.getConnection(); java.sql.Statement st = conn.createStatement()) {
+            try (Connection conn = srcDs.getConnection();
+                 java.sql.Statement st = conn.createStatement()) {
                 st.execute("CREATE TABLE T_ORDER (a INT, b INT, c INT)");
                 st.execute("INSERT INTO T_ORDER (a, b, c) VALUES (10, 20, 30)");
             }
             // Target has the SAME columns in REVERSE order: c, b, a
-            try (Connection conn = tgtDs.getConnection(); java.sql.Statement st = conn.createStatement()) {
+            try (Connection conn = tgtDs.getConnection();
+                 java.sql.Statement st = conn.createStatement()) {
                 st.execute("CREATE TABLE T_ORDER (c INT, b INT, a INT)");
             }
 
-            try (Connection srcConn = srcDs.getConnection(); Connection tgtConn = tgtDs.getConnection()) {
+            try (Connection srcConn = srcDs.getConnection();
+                 Connection tgtConn = tgtDs.getConnection()) {
                 long copied = JdbcUtils.copy(srcConn, tgtConn, "T_ORDER", "T_ORDER", 10);
                 assertEquals(1L, copied);
             }
@@ -1376,7 +1379,8 @@ public class JdbcUtilsTest extends TestBase {
             // After the fix, the target row must hold (a=10, b=20, c=30) matching the source.
             // Before the fix, positional binding into the target's (c, b, a) order would store
             // c=10, b=20, a=30 — i.e., a and c swapped.
-            try (Connection conn = tgtDs.getConnection(); java.sql.Statement st = conn.createStatement();
+            try (Connection conn = tgtDs.getConnection();
+                 java.sql.Statement st = conn.createStatement();
                  ResultSet rs = st.executeQuery("SELECT a, b, c FROM T_ORDER")) {
                 assertTrue(rs.next());
                 assertEquals(10, rs.getInt("a"), "column 'a' must hold the source value 10, not the swapped 30");

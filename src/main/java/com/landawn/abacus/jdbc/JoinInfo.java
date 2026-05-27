@@ -91,12 +91,18 @@ import com.landawn.abacus.util.stream.Stream.StreamEx;
  *     private List<Project> projects;
  * }
  *
- * // Get join info and load related entities
- * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
- *                                               "employees", "projects");
+ * // Get join info and load related entities (one-to-many).
+ * // NOTE: setJoinPropEntities(Collection, Collection) only supports one-to-many joins;
+ * // many-to-many joins must use setJoinPropEntities(Collection, Map) with keys derived from
+ * // the junction table, or be loaded via DaoImpl which augments the SELECT with the
+ * // junction-table column for matching. Pre-fix this method silently produced empty/wrong
+ * // results for M2M because srcEntityKeyExtractor and referencedEntityKeyExtractor read
+ * // unrelated columns.
+ * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(DepartmentDao.class, Department.class,
+ *                                               "departments", "employees");
+ * List<Department> departments = departmentDao.list();
  * List<Employee> employees = employeeDao.list();
- * List<Project> projects = projectDao.list();
- * joinInfo.setJoinPropEntities(employees, projects);
+ * joinInfo.setJoinPropEntities(departments, employees);
  * }</pre>
  *
  */
@@ -377,9 +383,20 @@ public final class JoinInfo {
                 selectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
 
                 final List<String> middleSelectWords = SqlParser.parse(middleSelectSql);
-                final String middleTableName = middleSelectWords.get(10);
-                final String middleSelectPropName = middleTableName + "." + middleSelectWords.get(2);
-                final String middleCondPropName = middleTableName + "." + middleSelectWords.get(14);
+                // Anchor token extraction on SELECT/FROM/WHERE keywords rather than fixed offsets.
+                // The pre-fix code used .get(2)/.get(10)/.get(14), which assumed every column slot
+                // emits ` AS "alias"`. SqlBuilder omits AS when the column name already equals the
+                // property name — true for PLC (LOWER_CAMEL_CASE) and for PSC props that are single
+                // lowercase words like "id" or "code". When AS was omitted, the magic indices read
+                // the wrong tokens; e.g., middleTableName resolved to "employeeId" instead of
+                // "employeeProject", producing batch SQL that the driver rejected at runtime.
+                final String middleSelectPropNameRaw = nextNonBlankToken(middleSelectWords, indexOfKeyword(middleSelectWords, "SELECT"));
+                final String middleTableName = nextNonBlankToken(middleSelectWords, indexOfKeyword(middleSelectWords, "FROM"));
+                final String middleCondPropNameRaw = nextNonBlankToken(middleSelectWords, indexOfKeyword(middleSelectWords, "WHERE"));
+                N.checkState(middleSelectPropNameRaw != null && middleTableName != null && middleCondPropNameRaw != null,
+                        "Cannot locate SELECT/FROM/WHERE in middle SELECT SQL: %s", middleSelectSql);
+                final String middleSelectPropName = middleTableName + "." + middleSelectPropNameRaw;
+                final String middleCondPropName = middleTableName + "." + middleCondPropNameRaw;
 
                 final int fromIndex = leftSelectSql.lastIndexOf(" FROM ");
                 final List<String> leftSelectLastWords = SqlParser.parse(leftSelectSql.substring(fromIndex + 6));
@@ -391,11 +408,16 @@ public final class JoinInfo {
 
                 final Collection<String> defaultSelectPropNames = JdbcUtil.getSelectPropNames(referencedEntityClass);
 
-                // same column name in reference entity and middle entity
-                final boolean hasSameColumnName = Stream.of(SqlParser.parse(leftSelectSql.substring(0, fromIndex)))
-                        .skip(2)
-                        .split(7)
-                        .anyMatch(it -> middleSelectWords.get(2).equalsIgnoreCase(it.get(0)));
+                // Same column name in referenced entity and middle entity → must alias the referenced
+                // table in batch SQL to avoid ambiguous-column errors. Pre-fix used a chunked-by-7
+                // scan that only examined token-0 of each chunk, missing the column-of-interest when
+                // it appeared later in a chunk (which happens when AS aliases shift token positions).
+                // Flat scan over all tokens catches the column at any position; false positives are
+                // implausible because the middle FK column name wouldn't appear as an unrelated SQL
+                // keyword or literal in the referenced entity's SELECT clause.
+                final boolean hasSameColumnName = SqlParser.parse(leftSelectSql.substring(0, fromIndex))
+                        .stream()
+                        .anyMatch(middleSelectPropNameRaw::equalsIgnoreCase);
 
                 final String leftSelectSqlForBatch = hasSameColumnName //
                         ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableName).build().query()
@@ -927,6 +949,19 @@ public final class JoinInfo {
      * @see #setJoinPropEntities(Collection, Map)
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities) {
+        if (isManyToManyJoin) {
+            // For many-to-many, srcEntityKeyExtractor reads the source-side join key (e.g.,
+            // employee.employeeId) while referencedEntityKeyExtractor reads the referenced-side
+            // join key (e.g., project.projectId) — these live in independent namespaces, so
+            // grouping by the referenced key and then looking up by the source key produces
+            // empty/wrong results (the M2M relationship is held by the junction table). Use the
+            // Map overload with junction-table-augmented keys — that's how DaoImpl wires this for
+            // M2M batch loads (see setJoinPropEntities(Collection, Map)).
+            throw new UnsupportedOperationException("setJoinPropEntities(Collection, Collection) does not support many-to-many joins. "
+                    + "Use setJoinPropEntities(Collection, Map) with keys derived from the junction table, "
+                    + "or have the framework load join entities via DaoImpl.");
+        }
+
         final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities).groupTo(referencedEntityKeyExtractor);
         setJoinPropEntities(entities, groupedPropEntities);
     }
@@ -1214,5 +1249,37 @@ public final class JoinInfo {
         });
 
         return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.emptyList());
+    }
+
+    /**
+     * Returns the index of the first token in {@code tokens} that case-insensitively equals
+     * {@code keyword}. Used to anchor token extraction on SQL keywords rather than fixed positions,
+     * so that conditionally-emitted clauses (e.g. {@code AS "alias"}) don't shift other tokens out
+     * from under hard-coded indices.
+     */
+    private static int indexOfKeyword(final List<String> tokens, final String keyword) {
+        for (int i = 0, n = tokens.size(); i < n; i++) {
+            if (keyword.equalsIgnoreCase(tokens.get(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Returns the first non-blank token in {@code tokens} after position {@code afterIndex}.
+     * Returns {@code null} if {@code afterIndex < 0} or no such token exists.
+     */
+    private static String nextNonBlankToken(final List<String> tokens, final int afterIndex) {
+        if (afterIndex < 0) {
+            return null;
+        }
+        for (int i = afterIndex + 1, n = tokens.size(); i < n; i++) {
+            final String tok = tokens.get(i);
+            if (!Strings.isBlank(tok)) {
+                return tok;
+            }
+        }
+        return null;
     }
 }

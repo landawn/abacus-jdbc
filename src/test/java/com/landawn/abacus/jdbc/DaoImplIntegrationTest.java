@@ -380,10 +380,8 @@ public class DaoImplIntegrationTest extends TestBase {
 
         // The fix: even though beginTransaction threw, the wrapper's finally block must have
         // restored both thread-locals.
-        assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(),
-                "SQL log thread-local must be restored after beginTransaction failure");
-        assertEquals(priorMinPerfLog, JdbcUtil.getMinExecutionTimeForSqlPerfLog(),
-                "Perf log thread-local must be restored after beginTransaction failure");
+        assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(), "SQL log thread-local must be restored after beginTransaction failure");
+        assertEquals(priorMinPerfLog, JdbcUtil.getMinExecutionTimeForSqlPerfLog(), "Perf log thread-local must be restored after beginTransaction failure");
     }
 
 }

@@ -1493,4 +1493,154 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         }
         file.delete();
     }
+
+    // Regression: schema-controlled identifiers containing a double-quote, backslash, or newline
+    // (legal in PostgreSQL/Oracle/SQL Server quoted/bracketed identifiers) used to be interpolated
+    // raw into @Table(name = "...") / @Column(name = "...") string literals, producing malformed
+    // (or syntactically valid-but-different) Java. Fix escapes via escapeJavaStringLiteral.
+    @Test
+    public void testEscapeJavaStringLiteral_HandlesQuoteBackslashNewline() {
+        assertEquals("plain", JdbcCodeGenerationUtil.escapeJavaStringLiteral("plain"));
+        assertEquals("a\\\"b", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\"b"));
+        assertEquals("a\\\\b", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\\b"));
+        assertEquals("a\\nb", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\nb"));
+        assertEquals("a\\rb", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\rb"));
+        assertEquals("a\\tb", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\tb"));
+        assertNull(JdbcCodeGenerationUtil.escapeJavaStringLiteral(null));
+        assertEquals("", JdbcCodeGenerationUtil.escapeJavaStringLiteral(""));
+    }
+
+    @Test
+    public void testGenerateEntityClass_EscapesColumnNameWithEmbeddedQuote() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMd = Mockito.mock(ResultSetMetaData.class);
+        final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getDatabaseProductVersion()).thenReturn("15");
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMd);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        when(md.getPrimaryKeys(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.anyString())).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(rsMd.getColumnCount()).thenReturn(1);
+        // Column name with an embedded double-quote — pathological but legal in PostgreSQL/Oracle.
+        when(rsMd.getColumnLabel(1)).thenReturn("my\"col");
+        when(rsMd.getColumnName(1)).thenReturn("my\"col");
+        when(rsMd.getColumnType(1)).thenReturn(Types.VARCHAR);
+        when(rsMd.getColumnClassName(1)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "weird_tbl", "SELECT * FROM weird_tbl WHERE 1 > 2");
+        assertNotNull(result);
+        // The raw column-name quote must be escaped; pre-fix the annotation broke compilation.
+        assertTrue(result.contains("@Column(name = \"my\\\"col\")"), "Expected escaped @Column annotation, got:\n" + result);
+        // The unescaped form (broken Java) must NOT appear.
+        assertFalse(result.contains("@Column(name = \"my\"col\")"), "Unescaped column name leaked into generated source");
+    }
+
+    // Regression: generated .java files used to be written with IOUtil's platform-default charset
+    // (Cp1252 on Windows). Non-ASCII identifiers / comments became mojibake when the file was
+    // later compiled by javac with -encoding UTF-8 (Maven/Gradle default). Fix forces UTF-8.
+    @Test
+    public void testGenerateEntityClass_WritesGeneratedFileAsUtf8() throws Exception {
+        // Non-ASCII characters in column name to force a non-ASCII byte in the generated source.
+        final Connection conn = Mockito.mock(Connection.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMd = Mockito.mock(ResultSetMetaData.class);
+        final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getDatabaseProductVersion()).thenReturn("15");
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMd);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        when(md.getPrimaryKeys(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.anyString())).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(false);
+        when(rsMd.getColumnCount()).thenReturn(1);
+        // German umlaut and Japanese characters: 2 bytes in UTF-8, single byte in Cp1252-or-broken.
+        final String exoticColumn = "größe漢字";
+        when(rsMd.getColumnLabel(1)).thenReturn(exoticColumn);
+        when(rsMd.getColumnName(1)).thenReturn(exoticColumn);
+        when(rsMd.getColumnType(1)).thenReturn(Types.VARCHAR);
+        when(rsMd.getColumnClassName(1)).thenReturn("java.lang.String");
+
+        final Path tempDir = Files.createTempDirectory("jdbcCodeGenCharset");
+        try {
+            final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                    .srcDir(tempDir.toString())
+                    .className("Exotic")
+                    .packageName("p")
+                    .build();
+            JdbcCodeGenerationUtil.generateEntityClass(conn, "weird_tbl", "SELECT * FROM weird_tbl WHERE 1 > 2", config);
+
+            final File expectedFile = new File(tempDir.toFile(), "p/Exotic.java");
+            assertTrue(expectedFile.exists());
+            // Read the file as UTF-8 bytes and confirm the non-ASCII column name round-trips
+            // exactly. Pre-fix, Cp1252 encoding would have replaced 漢字 with `??`.
+            final String onDisk = new String(Files.readAllBytes(expectedFile.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(onDisk.contains(exoticColumn), "Expected UTF-8 round-trip of exotic column name; on-disk content:\n" + onDisk);
+        } finally {
+            deleteRecursively(tempDir.toFile());
+        }
+    }
+
+    // Regression: PK auto-detection used to pass `entityName` verbatim to getPrimaryKeys, so a
+    // qualified name like "myschema.users" was queried as a literal table named "myschema.users"
+    // (drivers never match); @Id annotations were silently missing. Fix splits the qualified
+    // identifier into catalog/schema/table.
+    @Test
+    public void testGenerateEntityClass_QualifiedTableName_SplitsCatalogSchemaTableForPkLookup() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMd = Mockito.mock(ResultSetMetaData.class);
+        final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(md);
+        when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getDatabaseProductVersion()).thenReturn("15");
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMd);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        // Fix routes the call to (null, "myschema", "users") rather than (null, null, "myschema.users").
+        when(md.getPrimaryKeys(null, "myschema", "users")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+
+        when(rsMd.getColumnCount()).thenReturn(2);
+        when(rsMd.getColumnLabel(1)).thenReturn("id");
+        when(rsMd.getColumnName(1)).thenReturn("id");
+        when(rsMd.getColumnType(1)).thenReturn(Types.BIGINT);
+        when(rsMd.getColumnClassName(1)).thenReturn("java.lang.Long");
+        when(rsMd.getColumnLabel(2)).thenReturn("name");
+        when(rsMd.getColumnName(2)).thenReturn("name");
+        when(rsMd.getColumnType(2)).thenReturn(Types.VARCHAR);
+        when(rsMd.getColumnClassName(2)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "myschema.users");
+        assertNotNull(result);
+        // The PK column "id" should have produced an @Id annotation, proving the schema-qualified
+        // metadata lookup succeeded. Pre-fix, getPrimaryKeys(null, null, "myschema.users") matched
+        // nothing and no @Id was emitted.
+        assertTrue(result.contains("@Id"), "Expected @Id annotation from schema-qualified PK lookup; got:\n" + result);
+        // Verify the call signature exactly.
+        Mockito.verify(md).getPrimaryKeys(null, "myschema", "users");
+    }
 }

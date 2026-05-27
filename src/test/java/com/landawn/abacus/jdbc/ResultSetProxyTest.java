@@ -1584,15 +1584,19 @@ public class ResultSetProxyTest extends TestBase {
         assertEquals(now, proxy.getObject(1));
     }
 
-    // getObject(int) with oracle.sql.TIMESTAMPLTZ — lines 483-485 (exception at 485, unreachable without real Oracle connection)
+    // getObject(int) with oracle.sql.TIMESTAMPLTZ — pre-fix this threw because Datum.timestampValue()
+    // (no-arg) requires a Connection for LTZ. Fix delegates to driver getTimestamp which performs
+    // the session-timezone-aware conversion correctly.
     @Test
     public void testGetObjectByIndex_OracleTimestampLTZ() throws SQLException {
         ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
         when(meta.getColumnCount()).thenReturn(2);
         when(delegate.getMetaData()).thenReturn(meta);
         oracle.sql.TIMESTAMPLTZ oracleTstz = new oracle.sql.TIMESTAMPLTZ();
+        java.sql.Timestamp converted = new java.sql.Timestamp(System.currentTimeMillis());
         when(delegate.getObject(1)).thenReturn(oracleTstz);
-        assertThrows(SQLException.class, () -> proxy.getObject(1));
+        when(delegate.getTimestamp(1)).thenReturn(converted);
+        assertEquals(converted, proxy.getObject(1));
     }
 
     // getObject(int) with oracle.sql.DATE and Timestamp metadata — lines 486-491
@@ -1633,7 +1637,9 @@ public class ResultSetProxyTest extends TestBase {
         assertEquals(now, proxy.getObject("col"));
     }
 
-    // getObject(String) with oracle.sql.TIMESTAMPLTZ — lines 564-566 (exception at 566, unreachable without real Oracle connection)
+    // getObject(String) with oracle.sql.TIMESTAMPLTZ — pre-fix this threw because Datum.timestampValue()
+    // (no-arg) requires a Connection for LTZ. Fix delegates to driver getTimestamp which performs
+    // the session-timezone-aware conversion correctly.
     @Test
     public void testGetObjectByLabel_OracleTimestampLTZ() throws SQLException {
         ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
@@ -1641,8 +1647,10 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getMetaData()).thenReturn(meta);
         when(delegate.findColumn("col")).thenReturn(1);
         oracle.sql.TIMESTAMPLTZ oracleTstz = new oracle.sql.TIMESTAMPLTZ();
+        java.sql.Timestamp converted = new java.sql.Timestamp(System.currentTimeMillis());
         when(delegate.getObject(1)).thenReturn(oracleTstz);
-        assertThrows(SQLException.class, () -> proxy.getObject("col"));
+        when(delegate.getTimestamp(1)).thenReturn(converted);
+        assertEquals(converted, proxy.getObject("col"));
     }
 
     // getObject(String) with oracle.sql.DATE and Timestamp metadata — lines 567-572
@@ -1671,5 +1679,79 @@ public class ResultSetProxyTest extends TestBase {
         when(delegate.getObject(1)).thenReturn(new oracle.sql.DATE(date));
         when(delegate.getDate(1)).thenReturn(date);
         assertEquals(date, proxy.getObject("col"));
+    }
+
+    // Regression: pre-fix, getObject(int) on a Blob column returned the raw Blob on row 1 but
+    // byte[] on rows 2+ (because the cached GET_OBJECT getter materializes via
+    // JdbcUtil.getColumnValue, but the first-call return-path bypassed materialization). Fix
+    // materializes inline so row 1 matches subsequent rows.
+    @Test
+    public void testGetObjectByIndex_BlobColumn_FirstCallMaterializedToByteArray() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        Blob blob = Mockito.mock(Blob.class);
+        when(blob.length()).thenReturn(5L);
+        when(blob.getBytes(1, 5)).thenReturn(new byte[] { 1, 2, 3, 4, 5 });
+        when(delegate.getObject(1)).thenReturn(blob);
+
+        Object first = proxy.getObject(1);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new byte[] { 1, 2, 3, 4, 5 }, (byte[]) first);
+        // The Blob handle is materialized then freed (caller never sees the raw Blob).
+        Mockito.verify(blob).free();
+    }
+
+    // Regression: pre-fix, getObject(String) on a Blob column returned the raw Blob on row 1
+    // AND every subsequent row (label path's getter was `rs -> rs.getObject(idx)`), while
+    // getObject(int) returned byte[] on rows 2+. Fix routes label-path through
+    // JdbcUtil.getColumnValue so int and label paths produce the same type.
+    @Test
+    public void testGetObjectByLabel_BlobColumn_MaterializedToByteArray() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("data")).thenReturn(1);
+        Blob blob = Mockito.mock(Blob.class);
+        when(blob.length()).thenReturn(3L);
+        when(blob.getBytes(1, 3)).thenReturn(new byte[] { 7, 8, 9 });
+        when(delegate.getObject(1)).thenReturn(blob);
+
+        Object first = proxy.getObject("data");
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new byte[] { 7, 8, 9 }, (byte[]) first);
+        Mockito.verify(blob).free();
+    }
+
+    // Regression: pre-fix, the java.sql.Date branch only checked "java.sql.Timestamp" metadata —
+    // it missed "oracle.sql.TIMESTAMP". A column whose driver-side metadata reports
+    // oracle.sql.TIMESTAMP but whose getObject returned a java.sql.Date subclass would fall to
+    // GET_DATE and silently truncate the time portion. Fix mirrors the oracle.sql.DATE branch.
+    @Test
+    public void testGetObjectByIndex_JavaSqlDate_OracleTimestampMetadata_UsesGetTimestamp() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnClassName(1)).thenReturn("oracle.sql.TIMESTAMP");
+        when(delegate.getMetaData()).thenReturn(meta);
+        java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+        java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(date);
+        when(delegate.getTimestamp(1)).thenReturn(ts);
+
+        // Pre-fix this returned `date` (time truncated). Post-fix uses getTimestamp(1).
+        assertEquals(ts, proxy.getObject(1));
+    }
+
+    @Test
+    public void testGetObjectByLabel_JavaSqlDate_OracleTimestampMetadata_UsesGetTimestamp() throws SQLException {
+        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnClassName(1)).thenReturn("oracle.sql.TIMESTAMP");
+        when(delegate.getMetaData()).thenReturn(meta);
+        when(delegate.findColumn("d")).thenReturn(1);
+        java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+        java.sql.Timestamp ts = new java.sql.Timestamp(System.currentTimeMillis());
+        when(delegate.getObject(1)).thenReturn(date);
+        when(delegate.getTimestamp(1)).thenReturn(ts);
+
+        assertEquals(ts, proxy.getObject("d"));
     }
 }

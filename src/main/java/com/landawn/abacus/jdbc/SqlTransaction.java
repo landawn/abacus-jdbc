@@ -581,7 +581,21 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
             resetAndCloseConnection();
 
-            actionAfterRollback.run();
+            // Guard against the post-rollback action masking a primary rollback failure. When
+            // rollback itself failed (rollbackException != null), an UncheckedSQLException is
+            // propagating from the try block — letting an unchecked exception escape the finally
+            // would replace it and hide the more important SQL error from the caller.
+            try {
+                actionAfterRollback.run();
+            } catch (final RuntimeException actionEx) {
+                if (rollbackException != null) {
+                    logger.warn(actionEx,
+                            "actionAfterRollback threw after a rollback failure; suppressed to preserve the primary rollback exception (transaction id={})",
+                            _timedId);
+                } else {
+                    throw actionEx;
+                }
+            }
         }
     }
 
@@ -639,21 +653,29 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         _isMarkedByCommitOrRollbackPreviously = false;
 
-        if (_conn != null) {
-            try {
-                if (isolationLevel == IsolationLevel.DEFAULT) {
-                    // conn.setTransactionIsolation(originalIsolationLevel);
-                } else {
-                    _conn.setTransactionIsolation(isolationLevel.intValue());
-                }
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
-            }
-        }
-
-        if (_refCount.get() > 0) {
+        // Push recovery state BEFORE mutating the connection so a setTransactionIsolation failure
+        // doesn't leave the stacks/fields inconsistent with the actual connection state. Pre-fix the
+        // ordering was conn-mutate → stack-push → field-update → refcount-increment, so a throw at
+        // the conn-mutate step left _refCount and _isolationLevel reflecting the outer scope but
+        // potentially with a half-applied connection isolation.
+        final boolean shouldPushStacks = _refCount.get() > 0;
+        if (shouldPushStacks) {
             _isolationLevelStack.push(_isolationLevel);
             _isForUpdateOnlyStack.push(_isForUpdateOnly);
+        }
+
+        if (_conn != null && isolationLevel != IsolationLevel.DEFAULT) {
+            try {
+                _conn.setTransactionIsolation(isolationLevel.intValue());
+            } catch (final SQLException e) {
+                // Connection mutation failed — pop back what we just pushed so the outer scope's
+                // recovery state remains intact.
+                if (shouldPushStacks) {
+                    _isolationLevelStack.pop();
+                    _isForUpdateOnlyStack.pop();
+                }
+                throw new UncheckedSQLException(e);
+            }
         }
 
         _isolationLevel = isolationLevel;
@@ -694,6 +716,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             final boolean isolationPoppedFromStack = !_isolationLevelStack.isEmpty();
             final boolean forUpdateOnlyPoppedFromStack = !_isForUpdateOnlyStack.isEmpty();
 
+            // Capture pre-pop field values so a failed conn.setTransactionIsolation can restore
+            // BOTH the stacks AND the fields. Pre-fix the failure path only re-pushed the stack
+            // but left _isolationLevel/_isForUpdateOnly at the popped (outer) value, leaving the
+            // tx in an inconsistent state where stacks and fields disagree about which scope is
+            // current — observable via isolationLevel() and incorrect on the next nested push.
+            final IsolationLevel preIsolationLevel = _isolationLevel;
+            final boolean preIsForUpdateOnly = _isForUpdateOnly;
+
             if (isolationPoppedFromStack) {
                 _isolationLevel = _isolationLevelStack.pop();
             }
@@ -709,13 +739,15 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                         _conn.setTransactionIsolation(_isolationLevel.intValue());
                     }
                 } catch (final SQLException e) {
-                    // Restore both stacks symmetrically so that the next decrement sees a consistent state.
+                    // Restore both stacks AND fields symmetrically.
                     if (isolationPoppedFromStack) {
                         _isolationLevelStack.push(_isolationLevel);
                     }
                     if (forUpdateOnlyPoppedFromStack) {
                         _isForUpdateOnlyStack.push(_isForUpdateOnly);
                     }
+                    _isolationLevel = preIsolationLevel;
+                    _isForUpdateOnly = preIsForUpdateOnly;
                     logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, _isolationLevel);
                     throw new UncheckedSQLException(e);
                 }

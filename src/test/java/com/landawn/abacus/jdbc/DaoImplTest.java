@@ -839,16 +839,14 @@ public class DaoImplTest extends TestBase {
         Method handleLimit = DaoImpl.class.getDeclaredMethod("handleLimit", com.landawn.abacus.query.condition.Condition.class, int.class, DBVersion.class);
         handleLimit.setAccessible(true);
 
-        com.landawn.abacus.query.condition.Expression expr = com.landawn.abacus.query.Filters
-                .expr("id > 0 FETCH FIRST 10 ROWS ONLY");
+        com.landawn.abacus.query.condition.Expression expr = com.landawn.abacus.query.Filters.expr("id > 0 FETCH FIRST 10 ROWS ONLY");
 
         // Oracle: prior bug → wrapped in Criteria with extra FETCH FIRST appended. After fix, returned as-is.
         Object out = handleLimit.invoke(null, expr, 5, DBVersion.Oracle);
         assertSame(expr, out, "Expression already containing FETCH FIRST must not be re-wrapped");
 
         // Sanity: an Expression containing a plain LIMIT is also returned as-is (already covered before fix).
-        com.landawn.abacus.query.condition.Expression limitExpr = com.landawn.abacus.query.Filters
-                .expr("id > 0 LIMIT 10");
+        com.landawn.abacus.query.condition.Expression limitExpr = com.landawn.abacus.query.Filters.expr("id > 0 LIMIT 10");
         Object out2 = handleLimit.invoke(null, limitExpr, 5, DBVersion.MySQL_5_5);
         assertSame(limitExpr, out2, "Expression already containing LIMIT must not be re-wrapped");
     }
