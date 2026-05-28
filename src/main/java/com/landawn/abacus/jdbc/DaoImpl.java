@@ -1887,33 +1887,24 @@ final class DaoImpl {
                     }
                 });
 
-        final boolean addLimitForSingleQuery = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(DaoConfig.class)
-                .map(DaoConfig::addLimitForSingleQuery)
-                .first()
-                .orElse(false);
+        DaoConfig daoConfigAnno = null;
 
-        final boolean callGenerateIdForInsert = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(DaoConfig.class)
-                .map(DaoConfig::callGenerateIdForInsertIfIdNotSet)
-                .first()
-                .orElse(false);
+        for (final Class<?> itf : allInterfaces) {
+            for (final Annotation anno : itf.getAnnotations()) {
+                if (anno instanceof DaoConfig dc) {
+                    daoConfigAnno = dc;
+                    break;
+                }
+            }
+            if (daoConfigAnno != null) {
+                break;
+            }
+        }
 
-        final boolean callGenerateIdForInsertWithSql = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(DaoConfig.class)
-                .map(DaoConfig::callGenerateIdForInsertWithSqlIfIdNotSet)
-                .first()
-                .orElse(false);
-
-        final boolean fetchColumnByEntityClassForDatasetQuery = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(DaoConfig.class)
-                .map(DaoConfig::fetchColumnByEntityClassForDatasetQuery)
-                .first()
-                .orElse(true);
+        final boolean addLimitForSingleQuery = daoConfigAnno != null && daoConfigAnno.addLimitForSingleQuery();
+        final boolean callGenerateIdForInsert = daoConfigAnno != null && daoConfigAnno.callGenerateIdForInsertIfIdNotSet();
+        final boolean callGenerateIdForInsertWithSql = daoConfigAnno != null && daoConfigAnno.callGenerateIdForInsertWithSqlIfIdNotSet();
+        final boolean fetchColumnByEntityClassForDatasetQuery = daoConfigAnno == null || daoConfigAnno.fetchColumnByEntityClassForDatasetQuery();
 
         final Map<String, String> sqlScriptMap = StreamEx.of(allInterfaces)
                 .flatMapArray(Class::getDeclaredFields)
@@ -2246,17 +2237,28 @@ final class DaoImpl {
                 ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
                 : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
-        final CacheResult daoClassCacheResultAnno = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(CacheResult.class)
-                .first()
-                .orElseNull();
+        CacheResult tmpDaoClassCacheResultAnno = null;
+        RefreshCache tmpDaoClassRefreshCacheAnno = null;
+        com.landawn.abacus.jdbc.annotation.Cache tmpDaoClassCacheAnno = null;
 
-        final RefreshCache daoClassRefreshCacheAnno = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(RefreshCache.class)
-                .first()
-                .orElseNull();
+        for (final Class<?> itf : allInterfaces) {
+            for (final Annotation anno : itf.getAnnotations()) {
+                if (tmpDaoClassCacheResultAnno == null && anno instanceof CacheResult cr) {
+                    tmpDaoClassCacheResultAnno = cr;
+                } else if (tmpDaoClassRefreshCacheAnno == null && anno instanceof RefreshCache rc) {
+                    tmpDaoClassRefreshCacheAnno = rc;
+                } else if (tmpDaoClassCacheAnno == null && anno instanceof com.landawn.abacus.jdbc.annotation.Cache ca) {
+                    tmpDaoClassCacheAnno = ca;
+                }
+            }
+
+            if (tmpDaoClassCacheResultAnno != null && tmpDaoClassRefreshCacheAnno != null && tmpDaoClassCacheAnno != null) {
+                break;
+            }
+        }
+
+        final CacheResult daoClassCacheResultAnno = tmpDaoClassCacheResultAnno;
+        final RefreshCache daoClassRefreshCacheAnno = tmpDaoClassRefreshCacheAnno;
 
         if (NoUpdateDao.class.isAssignableFrom(daoInterface) || UncheckedNoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
@@ -2290,11 +2292,7 @@ final class DaoImpl {
                 })
                 .toMap(Field::getName, Fn.ff(it -> (Jdbc.Handler<?>) it.get(null)));
 
-        final com.landawn.abacus.jdbc.annotation.Cache daoClassCacheAnno = StreamEx.of(allInterfaces)
-                .flatMapArray(Class::getAnnotations)
-                .select(com.landawn.abacus.jdbc.annotation.Cache.class)
-                .first()
-                .orElseNull();
+        final com.landawn.abacus.jdbc.annotation.Cache daoClassCacheAnno = tmpDaoClassCacheAnno;
 
         if (NoUpdateDao.class.isAssignableFrom(daoInterface)) {
             // OK
