@@ -11133,11 +11133,28 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
+     * <p><b>Best practices:</b></p>
+     * <ul>
+     *   <li><b>Cache the returned instance.</b> The DAO proxy is thread-safe and stateless from
+     *       the caller's perspective — create it once per {@code (interface, DataSource)} pair
+     *       and reuse it. Never call {@code createDao} per request.</li>
+     *   <li><b>Defer creation when possible.</b> In a DI container, mark rarely used DAO beans
+     *       lazy-initialized (e.g. Spring {@code @Lazy} on the {@code @Bean} factory method).
+     *       This avoids initializing DAOs that are never used in the process.</li>
+     *   <li><b>Reduce inherited surface where you can.</b> If a DAO only needs a handful of
+     *       CRUD operations, prefer a narrower base interface than {@code CrudDao +
+     *       CrudJoinEntityHelper} so fewer invokers get built.</li>
+     *   <li><b>Don't share across {@link javax.sql.DataSource}s.</b> The returned DAO is bound
+     *       to the {@code DataSource} passed in. Routing the same DAO to a different
+     *       {@code DataSource} requires a separate {@code createDao} call.</li>
+     * </ul>
+     *
      * @param <TD> the type parameter of the DAO interface, must extend {@link Dao}
      * @param daoInterface the DAO interface class to implement, must not be {@code null}. The interface should
      *                     extend {@link Dao} or {@link CrudDao} and define the entity type and ID type
      * @param ds the {@link javax.sql.DataSource} to use for all database operations, must not be {@code null}
-     * @return a dynamically generated DAO instance implementing the specified interface with full CRUD capabilities
+     * @return a dynamically generated DAO instance implementing the specified interface with full CRUD capabilities.
+     *         Cache and reuse this instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @see Dao
      * @see CrudDao
@@ -11159,11 +11176,15 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Do not call
+     * {@code createDao} per request.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11175,12 +11196,17 @@ public final class JdbcUtil {
      * Creates a DAO instance with a custom SQL mapper and DAO cache.
      * The cache can improve performance by caching query results.
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
+     * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully
+     * and prefer the thread-local alternative below.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param daoCache the cache for DAO operations (should not be shared between DAOs)
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
@@ -11203,11 +11229,16 @@ public final class JdbcUtil {
      * CompletableFuture<List<User>> future = userDao.findAllAsync();
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the supplied
+     * {@code executor} across DAOs rather than allocating one per DAO, and prefer the default
+     * async executor unless you need isolation guarantees.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param ds the DataSource to use for database operations
      * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11226,12 +11257,16 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, executor);
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
+     * across DAOs.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11244,13 +11279,18 @@ public final class JdbcUtil {
      * Creates a DAO instance with all customization options.
      * Provides full control over SQL mapping, caching, and async execution.
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
+     * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully or
+     * prefer {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param daoCache the cache for DAO operations (should not be shared between DAOs)
      * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use {@link #createDao(Class, javax.sql.DataSource, SqlMapper, Executor)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
@@ -11272,11 +11312,15 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource);
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Prefer one DAO per
+     * logical table name.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param targetTableName the specific table name to use
      * @param ds the DataSource to use for database operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11294,12 +11338,16 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Prefer one DAO per
+     * logical table name.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param targetTableName the specific table name to use
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11311,13 +11359,17 @@ public final class JdbcUtil {
     /**
      * Creates a DAO instance for a specific table with SQL mapper and cache.
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code daoCache}
+     * retains query results for the DAO's lifetime; size it carefully.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param targetTableName the specific table name to use
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param daoCache the cache for DAO operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
@@ -11339,12 +11391,16 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, customPool);
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
+     * across DAOs.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param targetTableName the specific table name to use
      * @param ds the DataSource to use for database operations
      * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11364,13 +11420,17 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, sqlMapper, executor);
      * }</pre>
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
+     * across DAOs.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param targetTableName the specific table name to use
      * @param ds the DataSource to use for database operations
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}
      */
     @SuppressWarnings("rawtypes")
@@ -11383,6 +11443,10 @@ public final class JdbcUtil {
      * Creates a DAO instance with all customization options including table name.
      * Provides maximum flexibility for DAO configuration.
      *
+     * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code cache}
+     * parameter retains query results for the DAO's lifetime; size it carefully or prefer
+     * {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching.</p>
+     *
      * @param <TD> the type of the DAO
      * @param daoInterface the DAO interface class to implement
      * @param targetTableName the specific table name to use
@@ -11390,7 +11454,8 @@ public final class JdbcUtil {
      * @param sqlMapper the SQL mapper for externalizing queries
      * @param cache the cache for DAO operations (should not be shared between DAOs)
      * @param executor the executor for asynchronous operations
-     * @return a DAO instance implementing the specified interface
+     * @return a DAO instance implementing the specified interface. Cache and reuse this
+     *         instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if required parameters are invalid
      * @deprecated Use {@link #createDao(Class, String, javax.sql.DataSource, SqlMapper, Executor)} or
      *             {@link #openDaoCacheOnCurrentThread(Jdbc.DaoCache)} for thread-local caching instead.
