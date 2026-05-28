@@ -11133,19 +11133,68 @@ public final class JdbcUtil {
      * });
      * }</pre>
      *
+     * <p><b>Performance and memory considerations:</b></p>
+     *
+     * <p><i>Initialization is heavy; per-call usage is cheap.</i> Building a DAO walks every
+     * method on the interface (a typical {@code CrudDao + CrudJoinEntityHelper}-extending DAO
+     * inherits ~290 methods) and pre-builds one invoker per method: parses any {@code @Query}
+     * SQL, captures parameter binders, builds result extractors, and registers them all in
+     * maps held by the proxy's {@link java.lang.reflect.InvocationHandler}. It also
+     * materializes the entity's {@code BeanInfo} (property descriptors, getters, setters,
+     * column mapping) the first time the entity is seen. <b>Measured cost is on the order of
+     * ~50–100&nbsp;ms per DAO</b> on a typical workstation; subsequent CRUD / query calls on
+     * the returned DAO are fast because all that work is cached.</p>
+     *
+     * <p><i>Startup time scales linearly with DAO count.</i> Spring's default singleton
+     * pre-instantiation runs single-threaded, so {@code N} DAO beans take roughly
+     * {@code N × per-DAO-cost} of wall-clock during {@code ApplicationContext} refresh
+     * (e.g. ~12&nbsp;s for 150 DAOs, ~24&nbsp;s for 300). You cannot parallelize this away
+     * without either using lazy initialization (see "Best practices" below) or narrowing the
+     * inherited DAO interface so fewer methods get wired.</p>
+     *
+     * <p><i>Steady-state memory is modest with a recent {@code abacus-query} version.</i> A
+     * full app of ~300 DAOs against a ~1,100-entity datamodel comfortably fits in
+     * {@code -Xmx1g} with ~120&nbsp;MB live heap after startup. Each DAO proxy + its method
+     * invokers retain on the order of a few hundred KB; the dominant per-DAO retention is the
+     * entity's {@code BeanInfo} graph (column-name maps, prop-path tables), which is shared
+     * across DAOs targeting the same entity.</p>
+     *
+     * <p><b>WARNING — abacus-query &lt; 4.7.3:</b> Prior versions of {@code QueryUtil} expanded
+     * nested-bean prop-paths through every reachable FK relationship with only cycle
+     * detection bounding the recursion. For schemas with deep / branchy entity graphs
+     * (1,000+ entities with cross-references) this could grow {@code QueryUtil}'s static
+     * {@code entityTablePropColumnNameMap} to tens of millions of {@code String} +
+     * {@code HashMap$Node} entries, consuming multiple gigabytes and causing
+     * {@link OutOfMemoryError} during DAO registration. Fixed in 4.7.3 by capping recursion at
+     * {@code MAX_NESTED_PROP_DEPTH=2} (configurable via
+     * {@code -Dabacus.query.maxNestedPropDepth=N}). If you observe heap pressure on an older
+     * version, upgrade {@code abacus-query} or set the system property to {@code 2}.</p>
+     *
      * <p><b>Best practices:</b></p>
      * <ul>
-     *   <li><b>Cache the returned instance.</b> The DAO proxy is thread-safe and stateless from
-     *       the caller's perspective — create it once per {@code (interface, DataSource)} pair
-     *       and reuse it. Never call {@code createDao} per request.</li>
-     *   <li><b>Defer creation when possible.</b> In a DI container, mark rarely used DAO beans
-     *       lazy-initialized (e.g. Spring {@code @Lazy} on the {@code @Bean} factory method).
-     *       This avoids initializing DAOs that are never used in the process.</li>
-     *   <li><b>Reduce inherited surface where you can.</b> If a DAO only needs a handful of
-     *       CRUD operations, prefer a narrower base interface than {@code CrudDao +
-     *       CrudJoinEntityHelper} so fewer invokers get built.</li>
+     *   <li><b>Cache the returned instance.</b> The DAO proxy is thread-safe and effectively
+     *       stateless from the caller's perspective — create it once per
+     *       {@code (interface, DataSource)} pair and reuse it. Never call {@code createDao}
+     *       per request.</li>
+     *   <li><b>Don't expect {@code @Lazy} on the DAO {@code @Bean} alone to defer cost.</b>
+     *       Spring's {@code @Lazy} on a provider bean only defers instantiation until a
+     *       <i>non-lazy consumer</i> needs it. If your {@code @Service} classes inject DAOs
+     *       via constructor (the usual pattern), instantiating the service at startup forces
+     *       Spring to materialize the constructor-injected DAOs immediately — the
+     *       {@code @Lazy} on the provider is silently overridden. To genuinely defer DAO
+     *       creation you must <b>also</b> annotate the injection point as {@code @Lazy}, OR
+     *       enable {@code spring.main.lazy-initialization=true} globally (which has wider
+     *       side effects — it can mask config errors that would otherwise fail-fast).</li>
+     *   <li><b>Narrow the inherited surface.</b> If a DAO only needs basic CRUD and no
+     *       join navigation, extend {@code CrudDao} alone instead of
+     *       {@code CrudDao + CrudJoinEntityHelper} — that drops the inherited method count
+     *       from ~290 to ~200 and shaves a corresponding fraction off the per-DAO setup time.</li>
+     *   <li><b>Avoid duplicate proxies.</b> Spring DevTools' restart classloader creates each
+     *       DAO twice (once in the parent classloader, once in the restartedMain) — disable
+     *       it in non-dev runs ({@code spring.devtools.restart.enabled=false}) to avoid
+     *       paying the cost twice.</li>
      *   <li><b>Don't share across {@link javax.sql.DataSource}s.</b> The returned DAO is bound
-     *       to the {@code DataSource} passed in. Routing the same DAO to a different
+     *       to the {@code DataSource} passed in. Routing the same interface to a different
      *       {@code DataSource} requires a separate {@code createDao} call.</li>
      * </ul>
      *
@@ -11176,6 +11225,12 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper);
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Do not call
      * {@code createDao} per request.</p>
      *
@@ -11195,6 +11250,12 @@ public final class JdbcUtil {
     /**
      * Creates a DAO instance with a custom SQL mapper and DAO cache.
      * The cache can improve performance by caching query results.
+     *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
      *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
      * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully
@@ -11229,6 +11290,12 @@ public final class JdbcUtil {
      * CompletableFuture<List<User>> future = userDao.findAllAsync();
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the supplied
      * {@code executor} across DAOs rather than allocating one per DAO, and prefer the default
      * async executor unless you need isolation guarantees.</p>
@@ -11257,6 +11324,12 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, sqlMapper, executor);
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
      * across DAOs.</p>
      *
@@ -11278,6 +11351,12 @@ public final class JdbcUtil {
     /**
      * Creates a DAO instance with all customization options.
      * Provides full control over SQL mapping, caching, and async execution.
+     *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
      *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. A non-{@code null}
      * {@code daoCache} retains query results for the lifetime of the DAO; size it carefully or
@@ -11312,6 +11391,12 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "app_users", dataSource);
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Prefer one DAO per
      * logical table name.</p>
      *
@@ -11338,6 +11423,12 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "legacy_users", dataSource, sqlMapper);
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Prefer one DAO per
      * logical table name.</p>
      *
@@ -11358,6 +11449,12 @@ public final class JdbcUtil {
 
     /**
      * Creates a DAO instance for a specific table with SQL mapper and cache.
+     *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
      *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code daoCache}
      * retains query results for the DAO's lifetime; size it carefully.</p>
@@ -11391,6 +11488,12 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "users_2024", dataSource, customPool);
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
      * across DAOs.</p>
      *
@@ -11420,6 +11523,12 @@ public final class JdbcUtil {
      * UserDao userDao = JdbcUtil.createDao(UserDao.class, "custom_users", dataSource, sqlMapper, executor);
      * }</pre>
      *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
+     *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. Share the executor
      * across DAOs.</p>
      *
@@ -11442,6 +11551,12 @@ public final class JdbcUtil {
     /**
      * Creates a DAO instance with all customization options including table name.
      * Provides maximum flexibility for DAO configuration.
+     *
+     * <p><b>Performance and memory:</b> See {@link #createDao(Class, javax.sql.DataSource)}
+     * for the cost model — DAO creation runs ~50–100&nbsp;ms per interface, startup scales
+     * linearly with DAO count, steady-state memory is modest with {@code abacus-query 4.7.3+},
+     * and Spring's {@code @Lazy} on the DAO bean alone does NOT defer cost if a non-lazy
+     * {@code @Service} consumer injects the DAO via constructor.</p>
      *
      * <p><b>Best practice:</b> Cache and reuse the returned DAO instance. The {@code cache}
      * parameter retains query results for the DAO's lifetime; size it carefully or prefer
