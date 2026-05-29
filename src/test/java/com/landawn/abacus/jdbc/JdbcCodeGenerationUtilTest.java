@@ -33,6 +33,7 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedIOException;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.util.EscapeUtil;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.function.QuadFunction;
@@ -1497,17 +1498,17 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // Regression: schema-controlled identifiers containing a double-quote, backslash, or newline
     // (legal in PostgreSQL/Oracle/SQL Server quoted/bracketed identifiers) used to be interpolated
     // raw into @Table(name = "...") / @Column(name = "...") string literals, producing malformed
-    // (or syntactically valid-but-different) Java. Fix escapes via escapeJavaStringLiteral.
+    // (or syntactically valid-but-different) Java. Fix escapes via EscapeUtil.escapeJava.
     @Test
-    public void testEscapeJavaStringLiteral_HandlesQuoteBackslashNewline() {
-        assertEquals("plain", JdbcCodeGenerationUtil.escapeJavaStringLiteral("plain"));
-        assertEquals("a\\\"b", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\"b"));
-        assertEquals("a\\\\b", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\\b"));
-        assertEquals("a\\nb", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\nb"));
-        assertEquals("a\\rb", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\rb"));
-        assertEquals("a\\tb", JdbcCodeGenerationUtil.escapeJavaStringLiteral("a\tb"));
-        assertNull(JdbcCodeGenerationUtil.escapeJavaStringLiteral(null));
-        assertEquals("", JdbcCodeGenerationUtil.escapeJavaStringLiteral(""));
+    public void testEscapeJava_HandlesQuoteBackslashNewline() {
+        assertEquals("plain", EscapeUtil.escapeJava("plain"));
+        assertEquals("a\\\"b", EscapeUtil.escapeJava("a\"b"));
+        assertEquals("a\\\\b", EscapeUtil.escapeJava("a\\b"));
+        assertEquals("a\\nb", EscapeUtil.escapeJava("a\nb"));
+        assertEquals("a\\rb", EscapeUtil.escapeJava("a\rb"));
+        assertEquals("a\\tb", EscapeUtil.escapeJava("a\tb"));
+        assertNull(EscapeUtil.escapeJava(null));
+        assertEquals("", EscapeUtil.escapeJava(""));
     }
 
     @Test

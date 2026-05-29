@@ -49,6 +49,7 @@ import com.landawn.abacus.util.Charsets;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.CodeGenerationUtil;
 import com.landawn.abacus.util.EnumType;
+import com.landawn.abacus.util.EscapeUtil;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.N;
@@ -685,7 +686,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             sb.append("@Table(name = \"")
-                    .append(escapeJavaStringLiteral(entityName))
+                    .append(EscapeUtil.escapeJava(entityName))
                     .append("\")")
                     .append(LINE_SEPARATOR)
                     .append("public class ")
@@ -710,7 +711,7 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("    @NonUpdatable").append(LINE_SEPARATOR);
                 }
 
-                sb.append("    @Column(name = \"").append(escapeJavaStringLiteral(columnName)).append("\")").append(LINE_SEPARATOR);
+                sb.append("    @Column(name = \"").append(EscapeUtil.escapeJava(columnName)).append("\")").append(LINE_SEPARATOR);
 
                 final Tuple2<String, String> dbType = customizedFieldDbTypeMap.getOrDefault(fieldName, customizedFieldDbTypeMap.get(columnName));
 
@@ -1947,81 +1948,6 @@ public final class JdbcCodeGenerationUtil {
 
     private static String getTableColumnNameQuoteChar(final DBProductInfo dbProductInfo) {
         return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.productName(), "MySQL", "MariaDB") ? "`" : "\"";
-    }
-
-    /**
-     * Checks whether the supplied name is a syntactically valid Java identifier that is not a Java
-     * keyword or reserved literal. A name qualifies only when it is non-empty, its first character is a
-     * valid Java identifier start, every remaining character is a valid Java identifier part, and the
-     * name is not a reserved keyword or literal (as determined by
-     * {@link javax.lang.model.SourceVersion#isKeyword(CharSequence)}, which also rejects
-     * {@code true}, {@code false} and {@code null}).
-     *
-     * @param name the candidate identifier to validate; may be {@code null} or empty
-     * @return {@code true} if {@code name} is a valid, non-keyword Java identifier; {@code false} otherwise
-     */
-    static boolean isValidJavaIdentifier(final String name) {
-        if (Strings.isEmpty(name)) {
-            return false;
-        }
-
-        if (!Character.isJavaIdentifierStart(name.charAt(0))) {
-            return false;
-        }
-
-        for (int i = 1, len = name.length(); i < len; i++) {
-            if (!Character.isJavaIdentifierPart(name.charAt(i))) {
-                return false;
-            }
-        }
-
-        return !javax.lang.model.SourceVersion.isKeyword(name);
-    }
-
-    /**
-     * Escapes a string for safe embedding inside a generated Java double-quoted string literal.
-     * Without this, schema-declared identifiers containing a quote, backslash, or newline (legal in
-     * PostgreSQL/Oracle/SQL Server quoted/bracketed identifiers) would produce malformed Java when
-     * interpolated into {@code @Table(name = "...")} / {@code @Column(name = "...")} annotations.
-     */
-    static String escapeJavaStringLiteral(final String s) {
-        if (s == null || s.isEmpty()) {
-            return s;
-        }
-
-        // Fast-path: most identifiers contain no characters that need escaping.
-        for (int i = 0, len = s.length(); i < len; i++) {
-            final char ch = s.charAt(i);
-            if (ch == '"' || ch == '\\' || ch == '\n' || ch == '\r' || ch == '\t') {
-                final StringBuilder sb = new StringBuilder(s.length() + 8);
-                sb.append(s, 0, i);
-                for (int j = i; j < len; j++) {
-                    final char c = s.charAt(j);
-                    switch (c) {
-                        case '"':
-                            sb.append("\\\"");
-                            break;
-                        case '\\':
-                            sb.append("\\\\");
-                            break;
-                        case '\n':
-                            sb.append("\\n");
-                            break;
-                        case '\r':
-                            sb.append("\\r");
-                            break;
-                        case '\t':
-                            sb.append("\\t");
-                            break;
-                        default:
-                            sb.append(c);
-                    }
-                }
-                return sb.toString();
-            }
-        }
-
-        return s;
     }
 
     /**
