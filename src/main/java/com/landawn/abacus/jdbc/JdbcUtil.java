@@ -254,7 +254,7 @@ public final class JdbcUtil {
      * <p>This function unwraps statements produced by common connection pools (HikariCP and C3P0) and,
      * for Oracle prepared statements, returns the original SQL via
      * {@code oracle.jdbc.internal.OraclePreparedStatement#getOriginalSql()}. For all other statements it
-     * falls back to {@link Statement#toString()}, which most JDBC drivers implement to return the SQL.</p>
+     * falls back to {@link Object#toString() Statement.toString()}, which most JDBC drivers implement to return the SQL.</p>
      *
      * <p>If a {@link SQLException} is thrown while unwrapping or while calling {@code getOriginalSql()},
      * the function silently falls back to {@code toString()} rather than propagating the exception.</p>
